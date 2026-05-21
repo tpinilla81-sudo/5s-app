@@ -1,13 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { createHash } from 'crypto'
 import { db } from '@/lib/db'
 
 const SESSION_COOKIE = '5s_session'
 const COOKIE_MAX_AGE = 60 * 60 * 24 * 7 // 7 days
 
-// Use Node.js crypto for reliable hashing in server environment
 function hashPasswordSync(password: string): string {
-  // Use require to avoid Turbopack issues with dynamic import
-  const { createHash } = require('crypto')
   return createHash('sha256').update(password).digest('hex')
 }
 
