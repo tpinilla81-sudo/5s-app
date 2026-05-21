@@ -1,23 +1,30 @@
 ---
-Task ID: 1
+Task ID: 2
 Agent: Main Agent
-Task: Crear ficha de permisos por rol para miembros del equipo
+Task: Crear matriz editable de permisos en la aplicación
 
 Work Log:
-- Analicé la estructura del proyecto existente (4 roles: Administrador, Responsable, Empleado, Auditor)
-- Creé el componente `/src/components/auth/RolePermissions.tsx` con:
-  - 27 permisos detallados organizados en 9 categorías
-  - Vista "Por Rol" con tarjetas interactivas para cada rol y detalle expandible
-  - Vista "Matriz Comparativa" con tabla de permisos cruzados
-  - Animaciones con framer-motion
-  - Barra de progreso de permisos por rol
-  - Resumen rápido de accesos
-- Integré el componente en la página principal (page.tsx) con botón "Permisos" en la barra de navegación
-- Añadí pestaña "Permisos" en el diálogo de TeamManagement con resumen de cada rol
+- Añadido modelo `RolePermissionConfig` a Prisma schema con campos role, permission, allowed y unique constraint
+- Ejecutado `prisma db push` para sincronizar la base de datos
+- Creada API `/api/permissions/route.ts` con:
+  - GET: Obtener todos los permisos (auto-seed con defaults si no existen)
+  - PUT: Actualizar permisos (upsert por rol+permiso)
+  - POST: Restaurar permisos a valores por defecto
+- Creado hook `usePermissions` en `/src/hooks/usePermissions.ts`
+- Reescrito `RolePermissions.tsx` con:
+  - Vista "Consultar": tarjetas por rol + tabla comparativa + detalle por categoría
+  - Vista "Editar Permisos": matriz interactiva con switches para activar/desactivar cada permiso por rol
+  - Botones "Activar todo"/"Desactivar" por rol
+  - Botón "Activar todo en fila" por categoría
+  - Guardar cambios en base de datos
+  - Restaurar defaults
+  - Permisos bloqueados (no desactivables para admin)
+  - Solo administradores pueden editar
 - Build exitoso sin errores
 
 Stage Summary:
-- Nuevo componente: `/src/components/auth/RolePermissions.tsx`
-- Permisos definidos: 27 permisos en 9 categorías
-- 4 roles con permisos progresivos: Admin (27/27), Responsable (24/27), Empleado (13/27), Auditor (11/27)
-- Accesible desde: botón "Permisos" en header + pestaña en Gestión del Proyecto
+- Nuevo modelo: `RolePermissionConfig` en Prisma (role + permission + allowed)
+- Nueva API: `/api/permissions` (GET/PUT/POST)
+- Nuevo hook: `usePermissions` (hasPermission, canEditPermissions)
+- Componente `RolePermissions` completamente reescrito con matriz editable
+- Permisos se persisten en base de datos SQLite

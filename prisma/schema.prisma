@@ -131,3 +131,14 @@ model AuditResult {
   auditDate    DateTime @default(now())
   createdAt    DateTime @default(now())
 }
+
+model RolePermissionConfig {
+  id           String   @id @default(cuid())
+  role         String   // "admin", "responsable", "empleado", "auditor"
+  permission   String   // e.g. "view_board", "complete_steps", etc.
+  allowed      Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@unique([role, permission])
+}
