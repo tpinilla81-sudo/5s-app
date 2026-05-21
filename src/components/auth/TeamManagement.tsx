@@ -38,6 +38,11 @@ import {
   MapPin,
   Users,
   UserPlus,
+  Shield,
+  Crown,
+  UserCheck,
+  HardHat,
+  ClipboardCheck,
 } from 'lucide-react'
 
 const PRESET_COLORS = [
@@ -78,7 +83,7 @@ interface TeamManagementProps {
 
 export default function TeamManagement({ open, onClose }: TeamManagementProps) {
   const { currentProject } = use5SStore()
-  const [activeTab, setActiveTab] = useState<'info' | 'zones' | 'members'>('info')
+  const [activeTab, setActiveTab] = useState<'info' | 'zones' | 'members' | 'permissions'>('info')
 
   // Zones state
   const [zones, setZones] = useState<ZoneData[]>([])
@@ -220,6 +225,7 @@ export default function TeamManagement({ open, onClose }: TeamManagementProps) {
     { key: 'info' as const, label: 'Información', icon: Building2 },
     { key: 'zones' as const, label: 'Zonas', icon: MapPin },
     { key: 'members' as const, label: 'Miembros', icon: Users },
+    { key: 'permissions' as const, label: 'Permisos', icon: Shield },
   ]
 
   return (
@@ -561,6 +567,92 @@ export default function TeamManagement({ open, onClose }: TeamManagementProps) {
                     </Table>
                   </div>
                 )}
+              </motion.div>
+            )}
+            {/* Permissions Tab */}
+            {activeTab === 'permissions' && (
+              <motion.div
+                key="permissions"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                className="space-y-4"
+              >
+                <p className="text-sm text-muted-foreground">
+                  A continuación se muestra el resumen de permisos de cada rol. Para ver la ficha completa, usa el botón <strong>Permisos</strong> en la barra de navegación.
+                </p>
+
+                {/* Admin */}
+                <Card className="border-purple-200 bg-purple-50/50">
+                  <CardContent className="pt-4">
+                    <div className="flex items-center gap-3 mb-2">
+                      <div className="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center">
+                        <Crown className="h-4 w-4 text-purple-600" />
+                      </div>
+                      <h3 className="font-bold text-purple-700">Administrador</h3>
+                      <Badge className="bg-purple-100 text-purple-700 border-purple-200 border text-[10px]">
+                        Acceso completo
+                      </Badge>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Control total: puede gestionar proyecto, equipo, zonas, plantillas, formación, inventario, fotos, autoevaluaciones y auditorías. Puede eliminar el proyecto y reiniciar datos.
+                    </p>
+                  </CardContent>
+                </Card>
+
+                {/* Responsable */}
+                <Card className="border-blue-200 bg-blue-50/50">
+                  <CardContent className="pt-4">
+                    <div className="flex items-center gap-3 mb-2">
+                      <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
+                        <UserCheck className="h-4 w-4 text-blue-600" />
+                      </div>
+                      <h3 className="font-bold text-blue-700">Responsable</h3>
+                      <Badge className="bg-blue-100 text-blue-700 border-blue-200 border text-[10px]">
+                        Gestión de equipo
+                      </Badge>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Gestiona equipo y zonas. Completa pasos, gestiona formación, inventario y aprueba auditorías. No puede eliminar el proyecto ni reiniciar datos.
+                    </p>
+                  </CardContent>
+                </Card>
+
+                {/* Empleado */}
+                <Card className="border-green-200 bg-green-50/50">
+                  <CardContent className="pt-4">
+                    <div className="flex items-center gap-3 mb-2">
+                      <div className="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center">
+                        <HardHat className="h-4 w-4 text-green-600" />
+                      </div>
+                      <h3 className="font-bold text-green-700">Empleado</h3>
+                      <Badge className="bg-green-100 text-green-700 border-green-200 border text-[10px]">
+                        Ejecución
+                      </Badge>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Participa en la implementación: formación, exámenes, subir fotos, editar inventario, autoevaluación. Solo lectura en auditorías. No gestiona equipo ni proyecto.
+                    </p>
+                  </CardContent>
+                </Card>
+
+                {/* Auditor */}
+                <Card className="border-orange-200 bg-orange-50/50">
+                  <CardContent className="pt-4">
+                    <div className="flex items-center gap-3 mb-2">
+                      <div className="w-8 h-8 rounded-full bg-orange-100 flex items-center justify-center">
+                        <ClipboardCheck className="h-4 w-4 text-orange-600" />
+                      </div>
+                      <h3 className="font-bold text-orange-700">Auditor</h3>
+                      <Badge className="bg-orange-100 text-orange-700 border-orange-200 border text-[10px]">
+                        Auditoría externa
+                      </Badge>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Especializado en auditoría externa. Puede ver datos (solo lectura) y realizar/aprobar auditorías. Sin edición de datos, gestión de equipo ni proyecto.
+                    </p>
+                  </CardContent>
+                </Card>
               </motion.div>
             )}
           </AnimatePresence>

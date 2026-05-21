@@ -15,6 +15,7 @@ import AuditoriaModal from '@/components/5s/AuditoriaModal';
 import LoginPage from '@/components/auth/LoginPage';
 import ProjectSetup from '@/components/auth/ProjectSetup';
 import TeamManagement from '@/components/auth/TeamManagement';
+import RolePermissions from '@/components/auth/RolePermissions';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -24,7 +25,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Loader2, RefreshCw, LogOut, Settings, ChevronDown } from 'lucide-react';
+import { Loader2, RefreshCw, LogOut, Settings, ChevronDown, Shield } from 'lucide-react';
 
 const MODAL_MAP: Record<string, React.ComponentType<{
   open: boolean;
@@ -62,6 +63,7 @@ export default function HomePage() {
   const [isSeeding, setIsSeeding] = useState(false);
   const [isInitialized, setIsInitialized] = useState(false);
   const [showTeamManagement, setShowTeamManagement] = useState(false);
+  const [showRolePermissions, setShowRolePermissions] = useState(false);
 
   // Check session on mount - only once
   useEffect(() => {
@@ -205,6 +207,15 @@ export default function HomePage() {
                 <span className="hidden sm:inline">Gestión</span>
               </Button>
             )}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowRolePermissions(true)}
+              className="text-green-600 hover:text-green-700 hover:bg-green-50"
+            >
+              <Shield className="h-4 w-4 mr-1" />
+              <span className="hidden sm:inline">Permisos</span>
+            </Button>
             <Button
               variant="ghost"
               size="sm"
@@ -353,6 +364,12 @@ export default function HomePage() {
       <TeamManagement
         open={showTeamManagement}
         onClose={() => setShowTeamManagement(false)}
+      />
+
+      {/* Role Permissions Modal */}
+      <RolePermissions
+        open={showRolePermissions}
+        onClose={() => setShowRolePermissions(false)}
       />
     </div>
   );

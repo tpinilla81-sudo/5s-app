@@ -1,23 +1,23 @@
 ---
 Task ID: 1
 Agent: Main Agent
-Task: Add authentication, project setup, and team management to the 5S app
+Task: Crear ficha de permisos por rol para miembros del equipo
 
 Work Log:
-- Reviewed existing project state (Next.js 16 + Tailwind + shadcn/ui + Prisma + Zustand)
-- Updated Prisma schema with new models: User, Project, Zone, ProjectMember
-- Pushed schema changes to SQLite database
-- Created API routes for auth, projects, members, zones
-- Updated Zustand store with auth/project state and actions
-- Created LoginPage, ProjectSetup, TeamManagement components
-- Updated main page with full auth flow
-- Built and verified all APIs work
-- Reset database for clean user experience
+- Analicé la estructura del proyecto existente (4 roles: Administrador, Responsable, Empleado, Auditor)
+- Creé el componente `/src/components/auth/RolePermissions.tsx` con:
+  - 27 permisos detallados organizados en 9 categorías
+  - Vista "Por Rol" con tarjetas interactivas para cada rol y detalle expandible
+  - Vista "Matriz Comparativa" con tabla de permisos cruzados
+  - Animaciones con framer-motion
+  - Barra de progreso de permisos por rol
+  - Resumen rápido de accesos
+- Integré el componente en la página principal (page.tsx) con botón "Permisos" en la barra de navegación
+- Añadí pestaña "Permisos" en el diálogo de TeamManagement con resumen de cada rol
+- Build exitoso sin errores
 
 Stage Summary:
-- App now has complete auth flow: register/login → project setup → board
-- 4 roles: Administrador, Responsable, Empleado, Auditor
-- Project setup wizard creates project with zones and team members
-- Team management dialog for adding zones and members
-- All existing 5S board functionality preserved
-- Build passes successfully with no errors
+- Nuevo componente: `/src/components/auth/RolePermissions.tsx`
+- Permisos definidos: 27 permisos en 9 categorías
+- 4 roles con permisos progresivos: Admin (27/27), Responsable (24/27), Empleado (13/27), Auditor (11/27)
+- Accesible desde: botón "Permisos" en header + pestaña en Gestión del Proyecto
