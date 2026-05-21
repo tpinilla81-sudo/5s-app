@@ -100,15 +100,29 @@ export const MINI_STEPS: MiniStep[] = [
   },
   {
     id: 4,
-    name: 'Autoevaluación',
+    name: 'Autoevaluación (Interna)',
     icon: 'CheckSquare',
-    description: 'Realiza la autoevaluación con la checklist proporcionada',
+    description: 'Checklist de verificación interna con el mismo formato que la auditoría',
+    descriptionByS: {
+      1: 'Verifica internamente la clasificación de elementos mediante checklist',
+      2: 'Verifica internamente la organización y señalización mediante checklist',
+      3: 'Verifica internamente la limpieza y mantenimiento mediante checklist',
+      4: 'Verifica internamente la estandarización e indicadores mediante checklist',
+      5: 'Verifica internamente la disciplina y gestión de anomalías mediante checklist',
+    },
   },
   {
     id: 5,
     name: 'Auditoría Externa',
     icon: 'ShieldCheck',
-    description: 'Validación por parte de un auditor externo',
+    description: 'Validación por un auditor externo con el mismo checklist',
+    descriptionByS: {
+      1: 'Auditoría externa de la S1: Clasificación de innecesarios',
+      2: 'Auditoría externa de la S2: Organización y ubicación',
+      3: 'Auditoría externa de la S3: Limpieza y mantenimiento',
+      4: 'Auditoría externa de la S4: Estandarización e indicadores',
+      5: 'Auditoría externa de la S5: Disciplina y mejora continua',
+    },
   },
 ];
 
