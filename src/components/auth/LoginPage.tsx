@@ -1,0 +1,287 @@
+'use client'
+
+import { useState } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
+import { use5SStore } from '@/lib/store'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Card, CardContent, CardHeader, CardDescription } from '@/components/ui/card'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import { Loader2, Mail, Lock, User, Shield } from 'lucide-react'
+
+export default function LoginPage() {
+  const { login, register, isAuthLoading } = use5SStore()
+  const [mode, setMode] = useState<'login' | 'register'>('login')
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [name, setName] = useState('')
+  const [role, setRole] = useState('empleado')
+  const [error, setError] = useState('')
+
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setError('')
+    const success = await login(email, password)
+    if (!success) {
+      setError('Email o contraseña incorrectos')
+    }
+  }
+
+  const handleRegister = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setError('')
+    if (password.length < 6) {
+      setError('La contraseña debe tener al menos 6 caracteres')
+      return
+    }
+    const success = await register(name, email, password, role)
+    if (!success) {
+      setError('Error al crear cuenta. ¿El email ya está en uso?')
+    }
+  }
+
+  const toggleMode = () => {
+    setMode(mode === 'login' ? 'register' : 'login')
+    setError('')
+  }
+
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-green-50 via-white to-emerald-50 p-4">
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+        className="w-full max-w-md"
+      >
+        {/* Logo */}
+        <div className="flex flex-col items-center mb-8">
+          <motion.div
+            initial={{ scale: 0 }}
+            animate={{ scale: 1 }}
+            transition={{ type: 'spring', stiffness: 200, delay: 0.1 }}
+            className="w-20 h-20 rounded-full bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center text-white font-bold text-2xl shadow-lg shadow-green-200 mb-4"
+          >
+            5S
+          </motion.div>
+          <h1 className="text-2xl font-bold text-gray-900">Metodología 5S</h1>
+          <p className="text-sm text-muted-foreground mt-1">Juego de Mesa - Implementación</p>
+        </div>
+
+        <Card className="border-0 shadow-xl shadow-green-100/50">
+          <CardHeader className="text-center pb-2">
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={mode}
+                initial={{ opacity: 0, x: mode === 'login' ? -20 : 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: mode === 'login' ? 20 : -20 }}
+                transition={{ duration: 0.2 }}
+              >
+                <h2 className="text-xl font-semibold text-gray-900">
+                  {mode === 'login' ? 'Iniciar Sesión' : 'Crear Cuenta'}
+                </h2>
+                <CardDescription className="mt-1">
+                  {mode === 'login'
+                    ? 'Ingresa tus credenciales para continuar'
+                    : 'Regístrate para comenzar a usar 5S'}
+                </CardDescription>
+              </motion.div>
+            </AnimatePresence>
+          </CardHeader>
+
+          <CardContent className="pt-4">
+            {error && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg px-4 py-3 mb-4"
+              >
+                {error}
+              </motion.div>
+            )}
+
+            <AnimatePresence mode="wait">
+              {mode === 'login' ? (
+                <motion.form
+                  key="login"
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -20 }}
+                  transition={{ duration: 0.2 }}
+                  onSubmit={handleLogin}
+                  className="space-y-4"
+                >
+                  <div className="space-y-2">
+                    <Label htmlFor="login-email">Email</Label>
+                    <div className="relative">
+                      <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        id="login-email"
+                        type="email"
+                        placeholder="tu@email.com"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        className="pl-10"
+                        required
+                        disabled={isAuthLoading}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="login-password">Contraseña</Label>
+                    <div className="relative">
+                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        id="login-password"
+                        type="password"
+                        placeholder="••••••"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        className="pl-10"
+                        required
+                        disabled={isAuthLoading}
+                      />
+                    </div>
+                  </div>
+
+                  <Button
+                    type="submit"
+                    className="w-full bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white shadow-md"
+                    disabled={isAuthLoading}
+                  >
+                    {isAuthLoading ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Iniciando...
+                      </>
+                    ) : (
+                      'Iniciar Sesión'
+                    )}
+                  </Button>
+                </motion.form>
+              ) : (
+                <motion.form
+                  key="register"
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: 20 }}
+                  transition={{ duration: 0.2 }}
+                  onSubmit={handleRegister}
+                  className="space-y-4"
+                >
+                  <div className="space-y-2">
+                    <Label htmlFor="reg-name">Nombre completo</Label>
+                    <div className="relative">
+                      <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        id="reg-name"
+                        type="text"
+                        placeholder="Juan Pérez"
+                        value={name}
+                        onChange={(e) => setName(e.target.value)}
+                        className="pl-10"
+                        required
+                        disabled={isAuthLoading}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="reg-email">Email</Label>
+                    <div className="relative">
+                      <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        id="reg-email"
+                        type="email"
+                        placeholder="tu@email.com"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        className="pl-10"
+                        required
+                        disabled={isAuthLoading}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="reg-password">Contraseña</Label>
+                    <div className="relative">
+                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        id="reg-password"
+                        type="password"
+                        placeholder="Mínimo 6 caracteres"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        className="pl-10"
+                        required
+                        minLength={6}
+                        disabled={isAuthLoading}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="reg-role">Rol</Label>
+                    <Select value={role} onValueChange={setRole} disabled={isAuthLoading}>
+                      <SelectTrigger className="w-full">
+                        <Shield className="h-4 w-4 mr-2 text-muted-foreground" />
+                        <SelectValue placeholder="Seleccionar rol" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="admin">Administrador</SelectItem>
+                        <SelectItem value="responsable">Responsable</SelectItem>
+                        <SelectItem value="empleado">Empleado</SelectItem>
+                        <SelectItem value="auditor">Auditor</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <Button
+                    type="submit"
+                    className="w-full bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white shadow-md"
+                    disabled={isAuthLoading}
+                  >
+                    {isAuthLoading ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Creando cuenta...
+                      </>
+                    ) : (
+                      'Crear Cuenta'
+                    )}
+                  </Button>
+                </motion.form>
+              )}
+            </AnimatePresence>
+
+            <div className="mt-6 text-center">
+              <button
+                type="button"
+                onClick={toggleMode}
+                className="text-sm text-green-600 hover:text-green-700 hover:underline transition-colors"
+                disabled={isAuthLoading}
+              >
+                {mode === 'login'
+                  ? '¿No tienes cuenta? Regístrate'
+                  : '¿Ya tienes cuenta? Inicia sesión'}
+              </button>
+            </div>
+          </CardContent>
+        </Card>
+
+        <p className="text-center text-xs text-muted-foreground mt-6">
+          Metodología 5S — Juego de Mesa para la Implementación
+        </p>
+      </motion.div>
+    </div>
+  )
+}

@@ -10,6 +10,65 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String
+  password  String
+  role      String   @default("empleado") // "admin", "responsable", "empleado", "auditor"
+  avatar    String?
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  memberships ProjectMember[]
+}
+
+model Project {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  company     String
+  startDate   DateTime @default(now())
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  zones       Zone[]
+  members     ProjectMember[]
+  progress    Progress[]
+}
+
+model Zone {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  color       String   @default("#3B82F6")
+  projectId   String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  members     ProjectMember[]
+
+  @@unique([name, projectId])
+}
+
+model ProjectMember {
+  id        String   @id @default(cuid())
+  userId    String
+  projectId String
+  zoneId    String?
+  role      String   // "admin", "responsable", "empleado", "auditor"
+  joinedAt  DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  zone      Zone?    @relation(fields: [zoneId], references: [id], onDelete: SetNull)
+
+  @@unique([userId, projectId])
+}
+
 model Progress {
   id          String   @id @default(cuid())
   sStep       Int      // 1-5 (Revisar, Ordenar, Limpiar, Estandarizar, Mantener)
@@ -19,8 +78,11 @@ model Progress {
   notes       String?  // Notas adicionales
   photoUrls   String?  // URLs de fotos separadas por coma
   passedAt    DateTime? // Fecha en que se pasó el mini-paso
+  projectId   String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+
+  project     Project? @relation(fields: [projectId], references: [id])
 
   @@unique([sStep, miniStep])
 }
@@ -60,12 +122,12 @@ model InventoryItem {
 }
 
 model AuditResult {
-  id          String   @id @default(cuid())
-  sStep       Int
-  auditorName String
-  result      String   // "apto", "no_apto"
-  score       Float?
+  id           String   @id @default(cuid())
+  sStep        Int
+  auditorName  String
+  result       String   // "apto", "no_apto"
+  score        Float?
   observations String?
-  auditDate   DateTime @default(now())
-  createdAt   DateTime @default(now())
+  auditDate    DateTime @default(now())
+  createdAt    DateTime @default(now())
 }

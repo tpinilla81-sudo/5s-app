@@ -12,8 +12,19 @@ import FotosModal from '@/components/5s/FotosModal';
 import InventarioModal from '@/components/5s/InventarioModal';
 import AutoevaluacionModal from '@/components/5s/AutoevaluacionModal';
 import AuditoriaModal from '@/components/5s/AuditoriaModal';
+import LoginPage from '@/components/auth/LoginPage';
+import ProjectSetup from '@/components/auth/ProjectSetup';
+import TeamManagement from '@/components/auth/TeamManagement';
 import { Button } from '@/components/ui/button';
-import { Loader2, RefreshCw } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { Loader2, RefreshCw, LogOut, Settings, User, ChevronDown } from 'lucide-react';
 
 const MODAL_MAP: Record<string, React.ComponentType<{
   open: boolean;
@@ -39,35 +50,51 @@ export default function HomePage() {
     openModal,
     closeModal,
     seedDatabase,
+    // Auth & project state
+    currentUser,
+    currentProject,
+    authView,
+    isAuthLoading,
+    checkSession,
+    logout,
   } = use5SStore();
 
   const [isSeeding, setIsSeeding] = useState(false);
   const [isInitialized, setIsInitialized] = useState(false);
+  const [showTeamManagement, setShowTeamManagement] = useState(false);
 
+  // Check session on mount
   useEffect(() => {
-    const init = async () => {
-      try {
-        const res = await fetch('/api/progress');
-        const json = await res.json();
+    checkSession();
+  }, [checkSession]);
 
-        if (json.success && json.data && json.data.length > 0) {
-          use5SStore.setState({ progress: json.data, isLoadingProgress: false });
-          setIsInitialized(true);
-        } else {
+  // Initialize board data when auth view is board
+  useEffect(() => {
+    if (authView === 'board' && !isInitialized) {
+      const init = async () => {
+        try {
+          const res = await fetch('/api/progress');
+          const json = await res.json();
+
+          if (json.success && json.data && json.data.length > 0) {
+            use5SStore.setState({ progress: json.data, isLoadingProgress: false });
+            setIsInitialized(true);
+          } else {
+            setIsSeeding(true);
+            await seedDatabase();
+            setIsSeeding(false);
+            setIsInitialized(true);
+          }
+        } catch {
           setIsSeeding(true);
           await seedDatabase();
           setIsSeeding(false);
           setIsInitialized(true);
         }
-      } catch {
-        setIsSeeding(true);
-        await seedDatabase();
-        setIsSeeding(false);
-        setIsInitialized(true);
-      }
-    };
-    init();
-  }, []);
+      };
+      init();
+    }
+  }, [authView, isInitialized, seedDatabase]);
 
   const handleSStepClick = (sStep: number) => {
     selectSStep(sStep);
@@ -88,23 +115,95 @@ export default function HomePage() {
     setIsSeeding(false);
   };
 
+  const handleLogout = async () => {
+    await logout();
+    setIsInitialized(false);
+  };
+
+  const getRoleLabel = (role: string) => {
+    const map: Record<string, string> = {
+      admin: 'Administrador',
+      responsable: 'Responsable',
+      empleado: 'Empleado',
+      auditor: 'Auditor',
+    };
+    return map[role] || role;
+  };
+
+  const getRoleBadgeColor = (role: string) => {
+    const map: Record<string, string> = {
+      admin: 'bg-purple-100 text-purple-700 border-purple-200',
+      responsable: 'bg-blue-100 text-blue-700 border-blue-200',
+      empleado: 'bg-green-100 text-green-700 border-green-200',
+      auditor: 'bg-orange-100 text-orange-700 border-orange-200',
+    };
+    return map[role] || 'bg-gray-100 text-gray-700 border-gray-200';
+  };
+
+  const canManageTeam = currentUser && (currentUser.role === 'admin' || currentUser.role === 'responsable');
+
   const ActiveModalComponent = activeModal ? MODAL_MAP[activeModal] : null;
 
+  // Auth loading screen
+  if (isAuthLoading) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-green-50 via-white to-emerald-50 gap-4">
+        <motion.div
+          initial={{ scale: 0 }}
+          animate={{ scale: 1 }}
+          transition={{ type: 'spring', stiffness: 200 }}
+          className="w-16 h-16 rounded-full bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center text-white font-bold text-xl shadow-lg"
+        >
+          5S
+        </motion.div>
+        <Loader2 className="h-6 w-6 text-green-500 animate-spin" />
+        <p className="text-sm text-muted-foreground">Cargando...</p>
+      </div>
+    );
+  }
+
+  // Show Login page
+  if (authView === 'login' || authView === 'register') {
+    return <LoginPage />;
+  }
+
+  // Show Project Setup
+  if (authView === 'setup') {
+    return <ProjectSetup />;
+  }
+
+  // Show Board (authView === 'board')
   return (
     <div className="min-h-screen flex flex-col bg-gradient-to-b from-gray-50 to-white">
       {/* Header */}
       <header className="border-b bg-white/80 backdrop-blur-sm sticky top-0 z-10">
         <div className="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-green-500 flex items-center justify-center text-white font-bold text-lg shadow-md">
+            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center text-white font-bold text-lg shadow-md">
               5S
             </div>
             <div>
               <h1 className="text-lg font-bold text-gray-900">Metodología 5S</h1>
-              <p className="text-xs text-muted-foreground">Juego de Mesa - Implementación</p>
+              <div className="flex items-center gap-2">
+                <p className="text-xs text-muted-foreground">Juego de Mesa - Implementación</p>
+                {currentProject && (
+                  <span className="text-xs text-muted-foreground">· {currentProject.name}</span>
+                )}
+              </div>
             </div>
           </div>
           <div className="flex items-center gap-2">
+            {canManageTeam && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowTeamManagement(true)}
+                className="text-green-600 hover:text-green-700 hover:bg-green-50"
+              >
+                <Settings className="h-4 w-4 mr-1" />
+                <span className="hidden sm:inline">Gestión</span>
+              </Button>
+            )}
             <Button
               variant="ghost"
               size="sm"
@@ -113,8 +212,42 @@ export default function HomePage() {
               className="text-muted-foreground"
             >
               <RefreshCw className={`h-4 w-4 mr-1 ${isSeeding ? 'animate-spin' : ''}`} />
-              Reiniciar
+              <span className="hidden sm:inline">Reiniciar</span>
             </Button>
+
+            {/* User menu */}
+            {currentUser && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm" className="gap-2 h-8">
+                    <div className="w-6 h-6 rounded-full bg-green-100 flex items-center justify-center text-green-700 text-xs font-bold">
+                      {currentUser.name.charAt(0).toUpperCase()}
+                    </div>
+                    <span className="hidden sm:inline text-xs font-medium max-w-[100px] truncate">
+                      {currentUser.name}
+                    </span>
+                    <ChevronDown className="h-3 w-3 text-muted-foreground" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56">
+                  <div className="px-2 py-1.5">
+                    <p className="text-sm font-medium">{currentUser.name}</p>
+                    <p className="text-xs text-muted-foreground">{currentUser.email}</p>
+                    <Badge className={`${getRoleBadgeColor(currentUser.role)} border mt-1`}>
+                      {getRoleLabel(currentUser.role)}
+                    </Badge>
+                  </div>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    onClick={handleLogout}
+                    className="text-red-600 cursor-pointer"
+                  >
+                    <LogOut className="h-4 w-4 mr-2" />
+                    Cerrar Sesión
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
           </div>
         </div>
       </header>
@@ -214,6 +347,12 @@ export default function HomePage() {
           miniStep={activeMiniStep}
         />
       )}
+
+      {/* Team Management Modal */}
+      <TeamManagement
+        open={showTeamManagement}
+        onClose={() => setShowTeamManagement(false)}
+      />
     </div>
   );
 }
