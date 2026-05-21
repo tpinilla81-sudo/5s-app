@@ -6,10 +6,10 @@ export async function GET() {
     const progress = await db.progress.findMany({
       orderBy: [{ sStep: 'asc' }, { miniStep: 'asc' }],
     })
-    return NextResponse.json(progress)
+    return NextResponse.json({ success: true, data: progress })
   } catch (error) {
     console.error('Error fetching progress:', error)
-    return NextResponse.json({ error: 'Error fetching progress' }, { status: 500 })
+    return NextResponse.json({ success: false, error: 'Error fetching progress' }, { status: 500 })
   }
 }
 
@@ -19,7 +19,7 @@ export async function POST(request: NextRequest) {
     const { sStep, miniStep, completed, score, notes, photoUrls } = body
 
     if (!sStep || !miniStep) {
-      return NextResponse.json({ error: 'sStep and miniStep are required' }, { status: 400 })
+      return NextResponse.json({ success: false, error: 'sStep and miniStep are required' }, { status: 400 })
     }
 
     const existing = await db.progress.findUnique({
@@ -52,9 +52,9 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    return NextResponse.json(result)
+    return NextResponse.json({ success: true, data: result })
   } catch (error) {
     console.error('Error updating progress:', error)
-    return NextResponse.json({ error: 'Error updating progress' }, { status: 500 })
+    return NextResponse.json({ success: false, error: 'Error updating progress' }, { status: 500 })
   }
 }

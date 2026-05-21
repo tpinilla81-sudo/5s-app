@@ -4,19 +4,18 @@ import { db } from '@/lib/db'
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { sStep, answers } = body // answers: { questionIdx, answerIdx }[]
+    const { sStep, answers } = body
 
     if (!sStep || !answers) {
-      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
+      return NextResponse.json({ success: false, error: 'Missing required fields' }, { status: 400 })
     }
 
-    // Get exam template
     const template = await db.template.findFirst({
       where: { type: 'examen', sStep, active: true },
     })
 
     if (!template) {
-      return NextResponse.json({ error: 'No exam template found for this S' }, { status: 404 })
+      return NextResponse.json({ success: false, error: 'No exam template found for this S' }, { status: 404 })
     }
 
     const questions = JSON.parse(template.content) as Array<{
@@ -59,9 +58,18 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    return NextResponse.json({ score, passed, results, total: questions.length, correct })
+    return NextResponse.json({
+      success: true,
+      data: {
+        score,
+        passed,
+        correctCount: correct,
+        totalQuestions: questions.length,
+        results,
+      },
+    })
   } catch (error) {
     console.error('Error submitting exam:', error)
-    return NextResponse.json({ error: 'Error submitting exam' }, { status: 500 })
+    return NextResponse.json({ success: false, error: 'Error submitting exam' }, { status: 500 })
   }
 }

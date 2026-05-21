@@ -7,7 +7,7 @@ export async function GET(request: NextRequest) {
     const sStep = searchParams.get('sStep')
 
     if (!sStep) {
-      return NextResponse.json({ error: 'sStep is required' }, { status: 400 })
+      return NextResponse.json({ success: false, error: 'sStep is required' }, { status: 400 })
     }
 
     const audits = await db.auditResult.findMany({
@@ -15,10 +15,10 @@ export async function GET(request: NextRequest) {
       orderBy: { auditDate: 'desc' },
     })
 
-    return NextResponse.json(audits)
+    return NextResponse.json({ success: true, data: audits })
   } catch (error) {
     console.error('Error fetching audits:', error)
-    return NextResponse.json({ error: 'Error fetching audits' }, { status: 500 })
+    return NextResponse.json({ success: false, error: 'Error fetching audits' }, { status: 500 })
   }
 }
 
@@ -28,7 +28,7 @@ export async function POST(request: NextRequest) {
     const { sStep, auditorName, result, score, observations } = body
 
     if (!sStep || !auditorName || !result) {
-      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
+      return NextResponse.json({ success: false, error: 'Missing required fields' }, { status: 400 })
     }
 
     const audit = await db.auditResult.create({
@@ -41,7 +41,7 @@ export async function POST(request: NextRequest) {
       },
     })
 
-    // If audit passed, update progress
+    // If audit passed (apto), update progress for mini-step 5
     if (result === 'apto') {
       const existing = await db.progress.findUnique({
         where: { sStep_miniStep: { sStep, miniStep: 5 } },
@@ -58,9 +58,9 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    return NextResponse.json(audit)
+    return NextResponse.json({ success: true, data: audit })
   } catch (error) {
     console.error('Error creating audit:', error)
-    return NextResponse.json({ error: 'Error creating audit' }, { status: 500 })
+    return NextResponse.json({ success: false, error: 'Error creating audit' }, { status: 500 })
   }
 }

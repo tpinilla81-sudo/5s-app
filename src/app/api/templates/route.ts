@@ -12,10 +12,10 @@ export async function GET(request: NextRequest) {
     if (sStep) where.sStep = parseInt(sStep)
 
     const templates = await db.template.findMany({ where })
-    return NextResponse.json(templates)
+    return NextResponse.json({ success: true, data: templates })
   } catch (error) {
     console.error('Error fetching templates:', error)
-    return NextResponse.json({ error: 'Error fetching templates' }, { status: 500 })
+    return NextResponse.json({ success: false, error: 'Error fetching templates' }, { status: 500 })
   }
 }
 
@@ -25,16 +25,16 @@ export async function POST(request: NextRequest) {
     const { type, sStep, title, description, content } = body
 
     if (!type || !sStep || !title || !content) {
-      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
+      return NextResponse.json({ success: false, error: 'Missing required fields' }, { status: 400 })
     }
 
     const template = await db.template.create({
-      data: { type, sStep, title, description, content: JSON.stringify(content) },
+      data: { type, sStep, title, description, content: typeof content === 'string' ? content : JSON.stringify(content) },
     })
 
-    return NextResponse.json(template)
+    return NextResponse.json({ success: true, data: template })
   } catch (error) {
     console.error('Error creating template:', error)
-    return NextResponse.json({ error: 'Error creating template' }, { status: 500 })
+    return NextResponse.json({ success: false, error: 'Error creating template' }, { status: 500 })
   }
 }

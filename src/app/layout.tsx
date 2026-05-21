@@ -14,13 +14,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "5S Metodología - Juego de Mesa",
-  description: "Aplicación de la metodología 5S basada en un juego de mesa estilo Trivial Pursuit. REVISAR, ORDENAR, LIMPIAR, ESTANDARIZAR, MANTENER.",
-  keywords: ["5S", "metodología", "Seiri", "Seiton", "Seiso", "Seiketsu", "Shitsuke", "mejora continua"],
-  authors: [{ name: "5S Methodology" }],
-  icons: {
-    icon: "https://z-cdn.chatglm.cn/z-ai/static/logo.svg",
-  },
+  title: "Metodología 5S - Juego de Mesa",
+  description: "Aplicación para la implementación de la metodología 5S en empresas. Tablero tipo Trivial con seguimiento de progreso.",
+  keywords: ["5S", "metodología", "lean", "mejora continua", "Seiri", "Seiton", "Seiso", "Seiketsu", "Shitsuke"],
 };
 
 export default function RootLayout({
@@ -29,7 +25,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="es" suppressHydrationWarning>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased bg-background text-foreground`}
       >

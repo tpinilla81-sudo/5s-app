@@ -46,16 +46,20 @@ export default function HomePage() {
 
   useEffect(() => {
     const init = async () => {
-      // Fetch progress first
-      const res = await fetch('/api/progress');
-      const json = await res.json();
+      try {
+        const res = await fetch('/api/progress');
+        const json = await res.json();
 
-      if (json.success && json.data && json.data.length > 0) {
-        // Data exists, just load it
-        use5SStore.setState({ progress: json.data, isLoadingProgress: false });
-        setIsInitialized(true);
-      } else {
-        // No data, seed the database
+        if (json.success && json.data && json.data.length > 0) {
+          use5SStore.setState({ progress: json.data, isLoadingProgress: false });
+          setIsInitialized(true);
+        } else {
+          setIsSeeding(true);
+          await seedDatabase();
+          setIsSeeding(false);
+          setIsInitialized(true);
+        }
+      } catch {
         setIsSeeding(true);
         await seedDatabase();
         setIsSeeding(false);
@@ -84,7 +88,6 @@ export default function HomePage() {
     setIsSeeding(false);
   };
 
-  // Get the active modal component
   const ActiveModalComponent = activeModal ? MODAL_MAP[activeModal] : null;
 
   return (
