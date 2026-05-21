@@ -218,3 +218,292 @@ export const INVENTORY_CLASSIFY_THRESHOLD = 80;
 export const SELF_EVAL_THRESHOLD = 70;
 export const AUDIT_PASS_THRESHOLD = 75;
 export const EXAM_PASS_THRESHOLD = 80;
+
+// ============================================================
+// Audit Checklist Data (extracted from user's Excel template)
+// Same checklist for step 4 (internal) and step 5 (external)
+// ============================================================
+
+export interface AuditSection {
+  id: string;           // e.g. "1.1"
+  title: string;        // e.g. "MATERIALES"
+  items: AuditCheckItem[];
+}
+
+export interface AuditCheckItem {
+  id: string;           // e.g. "1.1.1"
+  description: string;  // The checklist criterion
+  hasOther?: boolean;   // If true, includes "Otros (Indicar cuál)" free text
+}
+
+export const AUDIT_CHECKLISTS: Record<number, AuditSection[]> = {
+  1: [
+    {
+      id: '1.1', title: 'MATERIALES',
+      items: [
+        { id: '1.1.1', description: 'Consumibles' },
+        { id: '1.1.2', description: 'Materia Prima' },
+        { id: '1.1.3', description: 'Producto acabado o en proceso' },
+        { id: '1.1.4', description: 'Otros (Indicar cuál)', hasOther: true },
+      ],
+    },
+    {
+      id: '1.2', title: 'MÁQUINAS Y EQUIPOS',
+      items: [
+        { id: '1.2.1', description: 'Máquinas (Inducción, bombeo, apriete, engrase…)' },
+        { id: '1.2.2', description: 'Utillajes (volteo, apoyo, montaje…)' },
+        { id: '1.2.3', description: 'Equipos y accesorios de Elevación (Grúas, eslingas, cáncamos, cables, grilletes…)' },
+        { id: '1.2.4', description: 'Equipos de transporte (Carretillas, transpaletas, plataformas elevadoras, vehículos…)' },
+        { id: '1.2.5', description: 'Equipos de ensayo (galgas, testers, banco de pruebas…)' },
+        { id: '1.2.6', description: 'Herramientas de ensamblaje' },
+        { id: '1.2.7', description: 'EQUIPOS INFORMÁTICOS' },
+      ],
+    },
+    {
+      id: '1.3', title: 'TRANSPORTE Y ALMACENAJE',
+      items: [
+        { id: '1.3.1', description: 'Contenedores vacíos, cajas, bidones, botes, cubos…' },
+        { id: '1.3.2', description: 'Pallets u otros elementos de apoyo, tacos' },
+        { id: '1.3.3', description: 'Bolsas, plásticos, protecciones, elementos de flejado' },
+        { id: '1.3.4', description: 'Productos de limpieza, paños, escobas…' },
+        { id: '1.3.5', description: 'Otros (Indicar cuál)', hasOther: true },
+      ],
+    },
+    {
+      id: '1.4', title: 'MOBILIARIO',
+      items: [
+        { id: '1.4.1', description: 'Bancos de trabajo' },
+        { id: '1.4.2', description: 'Paneles herramienta' },
+        { id: '1.4.3', description: 'Armarios o taquillas' },
+        { id: '1.4.4', description: 'Sillas, mesas' },
+        { id: '1.4.5', description: 'Paneles u otros soportes para información' },
+        { id: '1.4.6', description: 'Otros (Indicar cuál)', hasOther: true },
+      ],
+    },
+    {
+      id: '1.5', title: 'INFORMACIÓN',
+      items: [
+        { id: '1.5.1', description: 'Planos o Instrucciones de trabajo' },
+        { id: '1.5.2', description: 'Posters u otra información divulgativa' },
+        { id: '1.5.3', description: 'Gráficos o indicadores' },
+        { id: '1.5.4', description: 'Carpetas o bandejas con documentación innecesaria' },
+        { id: '1.5.5', description: 'Otros (Indicar cuál)', hasOther: true },
+      ],
+    },
+  ],
+
+  2: [
+    {
+      id: '2.1', title: 'EQUIPOS Y MÁQUINAS',
+      items: [
+        { id: '2.1.1', description: 'Los equipos y máquinas están identificados con su número de equipo correspondiente' },
+        { id: '2.1.2', description: 'La identificación anterior es visible (no es necesario manipular partes del equipo)' },
+        { id: '2.1.3', description: 'Otros (Indicar cuál)', hasOther: true },
+      ],
+    },
+    {
+      id: '2.2', title: 'PASILLOS Y LUGARES DE UBICACIÓN',
+      items: [
+        { id: '2.2.1', description: 'Los pasillos y zonas de trabajo delimitados claramente' },
+        { id: '2.2.2', description: 'Cuando algo falta, ¿todo el mundo sabe lo que falta? Todos pueden reconocer donde deben ubicarse.' },
+        { id: '2.2.3', description: 'Los pallets de entrada y salida de material' },
+        { id: '2.2.4', description: 'Los equipos móviles (escaleras, transpaletas, carros, utillajes sobre ruedas)' },
+        { id: '2.2.5', description: 'Los medios de transporte (transpaletas, plataformas, carretillas, coches, camiones…)' },
+        { id: '2.2.6', description: 'Las herramientas cuentan con ubicaciones señalizadas inequívocamente (sistemas poka-yoke, siluetas, etiquetas identificativas)' },
+        { id: '2.2.7', description: 'Consumibles' },
+      ],
+    },
+    {
+      id: '2.3', title: 'SEÑALIZACIÓN',
+      items: [
+        { id: '2.3.1', description: 'Están señalizados de forma visible e inequívoca los mandos de maniobra de los equipos y máquinas (sentido de movimiento, on/off, stop, parada de emergencia…)' },
+        { id: '2.3.2', description: 'Se puede reconocer cuando las máquinas están en tensión (con señal luminosa tipo led o similar)' },
+        { id: '2.3.3', description: 'Existe señalización de peligro cuando las máquinas están en funcionamiento (luz rotatoria luminosa, señal destellante, aviso sonoro, balizamiento o cartel advertencia)' },
+        { id: '2.3.4', description: 'La señalización del lugar es adecuada y visible desde todos los puntos (en especial la relativa a medios de extinción y vías de evacuación)' },
+        { id: '2.3.5', description: 'Otros (Indicar cuál)', hasOther: true },
+      ],
+    },
+    {
+      id: '2.4', title: 'STOCKS DE MATERIAL',
+      items: [
+        { id: '2.4.1', description: 'Están identificados los materiales en el área de trabajo?' },
+        { id: '2.4.2', description: 'Las etiquetas identificativas están en buenas condiciones, son claras y visibles' },
+        { id: '2.4.3', description: 'La identificación informa acerca del cliente y proveedor' },
+        { id: '2.4.4', description: 'La identificación contiene la denominación del material, referencia o artículo' },
+        { id: '2.4.5', description: 'Es correcta la información, coincide esta con el material al que identifican y su ubicación' },
+        { id: '2.4.6', description: 'Otros (Indicar cuál)', hasOther: true },
+      ],
+    },
+  ],
+
+  3: [
+    {
+      id: '3.1', title: 'MÁQUINAS O PUESTOS DE TRABAJO',
+      items: [
+        { id: '3.1.1', description: 'Máquinas herramienta o grandes utillajes anclados al suelo (volteo o anclaje de piezas para ensamblar)' },
+        { id: '3.1.2', description: 'Bancos de trabajo o de pruebas' },
+        { id: '3.1.3', description: 'Grúas, carretillas y otros vehículos móviles' },
+        { id: '3.1.4', description: 'Andamios' },
+        { id: '3.1.5', description: 'Mesas, taburetes, sillas' },
+        { id: '3.1.6', description: 'Otros (Indicar cuál)', hasOther: true },
+      ],
+    },
+    {
+      id: '3.2', title: 'ENTORNO DE TRABAJO',
+      items: [
+        { id: '3.2.1', description: 'Suelos' },
+        { id: '3.2.2', description: 'Paredes, columnas, techos, ventanas, puertas, alfeizares…' },
+        { id: '3.2.3', description: 'Paneles informativos y de gestión operativa (producción, indicadores…)' },
+        { id: '3.2.4', description: 'Otros (Indicar cuál)', hasOther: true },
+      ],
+    },
+    {
+      id: '3.3', title: 'HERRAMIENTAS Y EQUIPOS',
+      items: [
+        { id: '3.3.1', description: 'Están limpias las herramientas? Se pueden manipular sin mancharse? (no hay restos de grasas, silicona, pintura seca..)' },
+        { id: '3.3.2', description: 'Los equipos de trabajo, bombas de apriete, útiles...' },
+        { id: '3.3.3', description: 'Están limpios los equipos y accesorios de elevación' },
+        { id: '3.3.4', description: 'Se mantiene limpio el equipamiento en el interior de los armarios y/o cajones, incluso si no se está usando' },
+        { id: '3.3.5', description: 'Otros (Indicar cuál)', hasOther: true },
+      ],
+    },
+    {
+      id: '3.4', title: 'MANTENER LIMPIO',
+      items: [
+        { id: '3.4.1', description: '¿Se sabe quién debe limpiar, cuándo y dónde?' },
+        { id: '3.4.2', description: '¿Cubre las necesidades de la zona? (tener en cuenta el resultado en los puntos anteriores)' },
+        { id: '3.4.3', description: '¿Se realiza la limpieza según lo planificado? (frecuencia, dedicación de tiempo, etc..)' },
+        { id: '3.4.4', description: 'Están limpios los Equipos de Protección Individual EPI (gafas, protección respiratoria, cascos, guantes…)' },
+        { id: '3.4.5', description: 'Se evidencia una tendencia a manchar menos en la rutina del trabajo diario (la ropa de trabajo se mantiene limpia, no se dejan huellas en superficies limpias, se limpia cuando se ensucia, no hay basura en lugares de paso…)' },
+        { id: '3.4.6', description: 'Otros (Indicar cuál)', hasOther: true },
+      ],
+    },
+    {
+      id: '3.5', title: 'KIT DE LIMPIEZA',
+      items: [
+        { id: '3.5.1', description: 'Hay un kit de limpieza básico disponible en la zona?' },
+        { id: '3.5.2', description: 'Es adecuado el kit de limpieza al tipo de suciedad y superficies a limpiar? (desengrasante si hay que limpiar grasa, escoba si hay que barrer…)' },
+        { id: '3.5.3', description: 'La cantidad de contenedores es adecuada a los residuos generados, estos no están excesivamente llenos (tapa cerrada) ni hay basura fuera del contenedor.' },
+        { id: '3.5.4', description: 'Se realiza una recogida selectiva de los residuos (como mínimo los residuos peligrosos deben estar separados de los residuos inertes)' },
+        { id: '3.5.5', description: 'Otros (Indicar cuál)', hasOther: true },
+      ],
+    },
+  ],
+
+  4: [
+    {
+      id: '4.1', title: 'ESTANDARIZACIÓN',
+      items: [
+        { id: '4.1.1', description: 'Se respetan los estándares globales en cuanto a marcaje y uso en Suelos' },
+        { id: '4.1.2', description: 'Se respetan los estándares globales en cuanto a marcaje y uso en Pasillos' },
+        { id: '4.1.3', description: 'Se respetan los estándares globales en cuanto a marcaje y uso en Zonas de trabajo, entrada y salida de materiales' },
+        { id: '4.1.4', description: 'Se respetan los estándares globales en cuanto a marcaje y uso en Residuos, zonas de riesgo permanente y de paso no permitido' },
+        { id: '4.1.5', description: 'Está construido según el estándar corporativo el Panel PDCA' },
+        { id: '4.1.6', description: 'Está construido según el estándar corporativo el Panel Lay Out Global' },
+        { id: '4.1.7', description: 'Otros (Indicar cuál)', hasOther: true },
+      ],
+    },
+    {
+      id: '4.2', title: 'RESPETAR ESTÁNDARES',
+      items: [
+        { id: '4.2.1', description: 'Las ubicaciones en el suelo son respetadas, todo está ubicado en su lugar correspondiente' },
+        { id: '4.2.2', description: 'Las ubicaciones de las herramientas en los paneles y cajas (incluso en el interior) son respetadas, no se encuentran herramientas fuera de ubicación' },
+        { id: '4.2.3', description: 'Se aplican los estándares creados en una zona o departamento en el resto de zonas (copiar-pegar). No hay diferentes estándares para la misma función (diferentes códigos de colores, formatos, señalización, etc)' },
+        { id: '4.2.4', description: 'La documentación se encuentra organizada y clasificada de forma que facilita su localización' },
+        { id: '4.2.5', description: 'Otros (Indicar cuál)', hasOther: true },
+      ],
+    },
+    {
+      id: '4.3', title: 'INSPECCIÓN Y MANTENIMIENTO',
+      items: [
+        { id: '4.3.1', description: 'Existen planes de inspección para máquinas y equipos de trabajo que requieran mantenimiento periódico?' },
+        { id: '4.3.2', description: 'Podemos reconocer visualmente si las máquinas y equipos han pasado la inspección periódica correspondiente de forma favorable (con etiquetas de colores o sistemas análogos)' },
+        { id: '4.3.3', description: 'Se aplica un sistema con código de colores para la indicación visual del estado de revisión en los equipos y accesorios de elevación?' },
+        { id: '4.3.4', description: 'Otros (Indicar cuál)', hasOther: true },
+      ],
+    },
+    {
+      id: '4.4', title: 'INSTRUCCIONES VISUALES',
+      items: [
+        { id: '4.4.1', description: 'Existen instrucciones gráficas en puntos visibles del área de trabajo sobre estándares de uso común (check list, fichas o planes de izado, diagramas de flujo, secuencias de proceso, instrucciones punto a punto,…)' },
+        { id: '4.4.2', description: 'Los productos químicos están correctamente identificados, contenido, peligrosidad, riesgos para la salud,…y acompañados de su ficha de datos de seguridad' },
+        { id: '4.4.3', description: 'Las señalizaciones de peligro e instrucciones de las máquinas y equipos se conservan de forma que sigan siendo útiles al usuario del equipo' },
+        { id: '4.4.4', description: 'Se dispone de instrucciones visuales de cómo actuar en caso de emergencia (incendio, evacuación, derrame, accidente, etc.)' },
+        { id: '4.4.5', description: 'Otros (Indicar cuál)', hasOther: true },
+      ],
+    },
+    {
+      id: '4.5', title: 'INDICADORES VISUALES',
+      items: [
+        { id: '4.5.1', description: 'Existe un panel o documento en lugar visible para el seguimiento de la producción (previsto/real, hitos, o similar)' },
+        { id: '4.5.2', description: 'Se realiza un seguimiento visual de acciones correctivas, preventivas y de mejora continua (gráfico acciones PDCA, incidencias de calidad, etc..)' },
+        { id: '4.5.3', description: 'Se mantienen actualizados todos los indicadores visuales existentes en la zona/proceso. Es una rutina constante la actualización y seguimiento' },
+        { id: '4.5.4', description: 'Otros (Indicar cuál)', hasOther: true },
+      ],
+    },
+  ],
+
+  5: [
+    {
+      id: '5.1', title: 'AUDITORÍAS',
+      items: [
+        { id: '5.1.1', description: 'Se realizan auditorías semanales 5S' },
+        { id: '5.1.2', description: 'Se transforman las anomalías en acciones correctivas o de mejora con el fin de que no se repitan' },
+        { id: '5.1.3', description: 'Si están implantadas otras herramientas de inspección o comprobación, estas son utilizadas según el estándar' },
+        { id: '5.1.4', description: 'Otros (Indicar cuál)', hasOther: true },
+      ],
+    },
+    {
+      id: '5.2', title: 'GESTIÓN DE ANOMALÍAS',
+      items: [
+        { id: '5.2.1', description: 'Hay un sistema de declaración de anomalías implantado, entendiendo por "declaración de anomalías" hacerlas visibles, evitar que los problemas queden escondidos.' },
+        { id: '5.2.2', description: 'Se encuentran evidencias de que el sistema de declaración de anomalías es eficaz, las anomalías se registran y se resuelven de forma efectiva, evitando que se repitan' },
+        { id: '5.2.3', description: 'Existen instrucciones visuales del funcionamiento del sistema de declaración de anomalías' },
+        { id: '5.2.4', description: 'Otros (Indicar cuál)', hasOther: true },
+      ],
+    },
+    {
+      id: '5.3', title: 'ACCIÓN',
+      items: [
+        { id: '5.3.1', description: 'Se gestiona la mejora continua a través del panel PDCA visual de la zona' },
+        { id: '5.3.2', description: 'Las acciones de mejora se incluyen en el plan de acción y se realizan acciones semanalmente (mejora continua)' },
+        { id: '5.3.3', description: 'Se lleva a cabo un seguimiento por medio de indicadores que miden la continuidad del ciclo PDCA.' },
+        { id: '5.3.4', description: 'Otros (Indicar cuál)', hasOther: true },
+      ],
+    },
+  ],
+};
+
+/**
+ * Audit result for a single checklist item
+ */
+export interface AuditItemResult {
+  itemId: string;
+  status: 'ok' | 'nok' | 'na';   // OK / NOK / No aplica
+  hallazgo?: string;               // Referencia del hallazgo (desviación detectada)
+  mejora?: string;                 // Punto a Mejorar (sugerencia)
+  photoRef?: string;               // Referencia a foto (biblioteca de fotos paso 2)
+  otherText?: string;              // Texto libre para items "Otros"
+}
+
+/**
+ * Complete audit result for one S-step
+ */
+export interface AuditResult {
+  sStep: number;
+  miniStep: number;               // 4 (autoevaluación interna) or 5 (auditoría externa)
+  results: AuditItemResult[];
+  score: number;                   // 0-100
+  observaciones?: string;
+  auditor?: string;                // Nombre del auditor (solo para paso 5)
+  fecha?: string;                  // Fecha de la auditoría
+}
+
+/** Total items per S for scoring */
+export const AUDIT_TOTAL_ITEMS: Record<number, number> = {
+  1: 26,
+  2: 26,
+  3: 26,
+  4: 26,
+  5: 12,
+};

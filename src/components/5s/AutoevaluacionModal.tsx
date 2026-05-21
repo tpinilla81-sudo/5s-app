@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -10,14 +10,17 @@ import {
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { CheckSquare, CheckCircle, Star } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { CheckSquare, CheckCircle, Camera, ChevronDown, ChevronRight } from 'lucide-react';
 import { use5SStore } from '@/lib/store';
-import { S_STEPS, SELF_EVAL_THRESHOLD } from '@/lib/5s-constants';
-
-interface AutoevaluacionItem {
-  description: string;
-  maxScore: number;
-}
+import {
+  S_STEPS,
+  AUDIT_CHECKLISTS,
+  AUDIT_TOTAL_ITEMS,
+  SELF_EVAL_THRESHOLD,
+} from '@/lib/5s-constants';
+import type { AuditSection, AuditItemResult } from '@/lib/5s-constants';
 
 interface AutoevaluacionModalProps {
   open: boolean;
@@ -29,52 +32,61 @@ interface AutoevaluacionModalProps {
 export default function AutoevaluacionModal({ open, onClose, sStep, miniStep }: AutoevaluacionModalProps) {
   const { fetchProgress } = use5SStore();
   const sStepData = S_STEPS.find(s => s.id === sStep);
+  const sections = AUDIT_CHECKLISTS[sStep] || [];
 
-  const [checklistItems, setChecklistItems] = useState<AutoevaluacionItem[]>([]);
-  const [scores, setScores] = useState<Record<number, number>>({});
-  const [isLoading, setIsLoading] = useState(true);
+  const [results, setResults] = useState<Record<string, AuditItemResult>>({});
+  const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({});
+  const [observaciones, setObservaciones] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isCompleted, setIsCompleted] = useState(false);
   const [finalScore, setFinalScore] = useState(0);
 
+  // Initialize expanded sections
   useEffect(() => {
-    if (open) {
-      loadTemplate();
-      setScores({});
+    if (open && sections.length > 0) {
+      const expanded: Record<string, boolean> = {};
+      sections.forEach(s => { expanded[s.id] = true; });
+      setExpandedSections(expanded);
+      setResults({});
+      setObservaciones('');
       setIsCompleted(false);
       setFinalScore(0);
     }
   }, [open, sStep]);
 
-  const loadTemplate = async () => {
-    setIsLoading(true);
-    try {
-      const res = await fetch(`/api/templates?type=autoevaluacion&sStep=${sStep}`);
-      const json = await res.json();
-      if (json.success && json.data.length > 0) {
-        const content = JSON.parse(json.data[0].content);
-        setChecklistItems(content.items || []);
-      }
-    } catch (error) {
-      console.error('Error loading template:', error);
-    } finally {
-      setIsLoading(false);
-    }
+  const totalItems = AUDIT_TOTAL_ITEMS[sStep] || 26;
+
+  const scoring = useMemo(() => {
+    const allResults = Object.values(results);
+    const okCount = allResults.filter(r => r.status === 'ok').length;
+    const nokCount = allResults.filter(r => r.status === 'nok').length;
+    const answeredCount = okCount + nokCount;
+    const scorePercent = totalItems > 0 ? Math.round((okCount / totalItems) * 100) : 0;
+    return { okCount, nokCount, answeredCount, scorePercent };
+  }, [results, totalItems]);
+
+  const canSubmit = scoring.answeredCount > 0 && scoring.scorePercent >= SELF_EVAL_THRESHOLD;
+
+  const toggleSection = (sectionId: string) => {
+    setExpandedSections(prev => ({ ...prev, [sectionId]: !prev[sectionId] }));
   };
 
-  const handleScoreChange = (index: number, score: number) => {
-    setScores(prev => ({ ...prev, [index]: score }));
+  const setItemStatus = (itemId: string, status: 'ok' | 'nok' | 'na') => {
+    setResults(prev => ({
+      ...prev,
+      [itemId]: { ...prev[itemId], itemId, status },
+    }));
   };
 
-  const totalMaxScore = checklistItems.reduce((sum, item) => sum + item.maxScore, 0);
-  const totalScore = Object.values(scores).reduce((sum, score) => sum + score, 0);
-  const scorePercent = totalMaxScore > 0 ? Math.round((totalScore / totalMaxScore) * 100) : 0;
-  const allScored = Object.keys(scores).length === checklistItems.length;
-  const canSubmit = allScored && scorePercent >= SELF_EVAL_THRESHOLD;
+  const setItemField = (itemId: string, field: 'hallazgo' | 'mejora' | 'otherText', value: string) => {
+    setResults(prev => ({
+      ...prev,
+      [itemId]: { ...prev[itemId], itemId, [field]: value },
+    }));
+  };
 
   const handleSubmit = async () => {
     if (!canSubmit) return;
-
     setIsSubmitting(true);
     try {
       const res = await fetch(`/api/progress/${sStep}/${miniStep}`, {
@@ -82,15 +94,18 @@ export default function AutoevaluacionModal({ open, onClose, sStep, miniStep }: 
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           completed: true,
-          score: scorePercent,
-          notes: `Autoevaluación: ${totalScore}/${totalMaxScore} puntos`,
+          score: scoring.scorePercent,
+          notes: JSON.stringify({
+            type: 'autoevaluacion',
+            results: Object.values(results),
+            observaciones,
+          }),
         }),
       });
-
       const json = await res.json();
       if (json.success) {
         setIsCompleted(true);
-        setFinalScore(scorePercent);
+        setFinalScore(scoring.scorePercent);
         await fetchProgress();
       }
     } catch (error) {
@@ -102,13 +117,13 @@ export default function AutoevaluacionModal({ open, onClose, sStep, miniStep }: 
 
   return (
     <Dialog open={open} onOpenChange={() => onClose()}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <CheckSquare className="h-5 w-5" style={{ color: sStepData?.color }} />
-            <span>Autoevaluación</span>
+            <span>Autoevaluación Interna</span>
             <Badge variant="outline" style={{ borderColor: sStepData?.color, color: sStepData?.color }}>
-              {sStepData?.name}
+              {sStepData?.japaneseName} — {sStepData?.spanishName}
             </Badge>
           </DialogTitle>
         </DialogHeader>
@@ -117,74 +132,173 @@ export default function AutoevaluacionModal({ open, onClose, sStep, miniStep }: 
           <div className="text-center py-8">
             <CheckCircle className="h-16 w-16 text-green-500 mx-auto mb-3" />
             <h3 className="text-xl font-bold mb-2">¡Autoevaluación Completada!</h3>
-            <p className="text-lg mb-1">
-              Puntuación: <strong>{finalScore}%</strong>
-            </p>
+            <p className="text-lg mb-1">Puntuación: <strong>{finalScore}%</strong></p>
             <p className="text-muted-foreground">
-              {totalScore} de {totalMaxScore} puntos
+              {scoring.okCount} OK / {scoring.nokCount} NOK de {totalItems} puntos de verificación
             </p>
           </div>
         ) : (
           <div className="space-y-4">
+            {/* Info banner */}
+            <div className="p-3 rounded-lg border-l-4" style={{ borderColor: sStepData?.color, backgroundColor: `${sStepData?.color}08` }}>
+              <p className="text-sm font-medium" style={{ color: sStepData?.color }}>
+                Autoevaluación Interna — {sStepData?.japaneseName}
+              </p>
+              <p className="text-sm text-muted-foreground mt-1">
+                Evalúa cada punto de verificación. Marca OK si cumple, NOK si hay desviación. 
+                Los NOKs generan hallazgos y puntos de mejora como plan de acción.
+              </p>
+            </div>
+
             {/* Score indicator */}
             <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
               <div>
-                <span className="text-sm font-medium">Puntuación Total</span>
+                <span className="text-sm font-medium">Puntuación</span>
                 <p className="text-xs text-muted-foreground">
-                  {totalScore}/{totalMaxScore} puntos
+                  {scoring.okCount} OK / {scoring.nokCount} NOK de {totalItems} puntos
                 </p>
               </div>
               <div className="flex items-center gap-2">
-                <Badge variant={scorePercent >= SELF_EVAL_THRESHOLD ? 'default' : 'secondary'}>
-                  {scorePercent}% (mín. {SELF_EVAL_THRESHOLD}%)
+                <Badge className="bg-green-100 text-green-800">OK: {scoring.okCount}</Badge>
+                <Badge className="bg-red-100 text-red-800">NOK: {scoring.nokCount}</Badge>
+                <Badge variant={scoring.scorePercent >= SELF_EVAL_THRESHOLD ? 'default' : 'secondary'}>
+                  {scoring.scorePercent}% (mín. {SELF_EVAL_THRESHOLD}%)
                 </Badge>
               </div>
             </div>
 
-            {isLoading ? (
-              <div className="space-y-4">
-                {[1, 2, 3].map(i => (
-                  <div key={i} className="animate-pulse">
-                    <div className="h-4 bg-muted rounded w-3/4 mb-2" />
-                    <div className="h-8 bg-muted rounded" />
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {checklistItems.map((item, index) => (
-                  <Card key={index}>
-                    <CardContent className="p-4">
-                      <p className="text-sm font-medium mb-3">{index + 1}. {item.description}</p>
-                      <div className="flex items-center gap-1">
-                        {Array.from({ length: item.maxScore }, (_, score) => score + 1).map(scoreVal => (
-                          <button
-                            key={scoreVal}
-                            className={`w-9 h-9 rounded-lg border-2 flex items-center justify-center transition-all text-sm ${
-                              (scores[index] || 0) >= scoreVal
-                                ? 'border-green-400 bg-green-50 text-green-700'
-                                : 'border-gray-200 hover:border-gray-300 text-gray-400'
-                            }`}
-                            onClick={() => handleScoreChange(index, scoreVal)}
-                          >
-                            <Star
-                              className={`h-4 w-4 ${
-                                (scores[index] || 0) >= scoreVal
-                                  ? 'fill-green-500 text-green-500'
-                                  : 'text-gray-300'
-                              }`}
-                            />
-                          </button>
-                        ))}
-                        <span className="ml-2 text-xs text-muted-foreground">
-                          {(scores[index] || 0)}/{item.maxScore}
-                        </span>
-                      </div>
+            {/* Checklist sections */}
+            <div className="space-y-3">
+              {sections.map(section => (
+                <Card key={section.id} className="overflow-hidden">
+                  {/* Section header */}
+                  <button
+                    className="w-full p-3 flex items-center gap-2 hover:bg-muted/50 transition-colors text-left"
+                    onClick={() => toggleSection(section.id)}
+                  >
+                    {expandedSections[section.id] ? (
+                      <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                    ) : (
+                      <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                    )}
+                    <Badge variant="outline" className="text-xs font-mono">{section.id}</Badge>
+                    <span className="font-semibold text-sm">{section.title}</span>
+                    <span className="ml-auto text-xs text-muted-foreground">
+                      {section.items.length} puntos
+                    </span>
+                  </button>
+
+                  {/* Section items */}
+                  {expandedSections[section.id] && (
+                    <CardContent className="px-4 pb-4 pt-0 space-y-3">
+                      {section.items.map(item => {
+                        const result = results[item.id];
+                        const isNok = result?.status === 'nok';
+
+                        return (
+                          <div key={item.id} className="border rounded-lg p-3 space-y-2">
+                            {/* Item header: description + status buttons */}
+                            <div className="flex items-start gap-3">
+                              <span className="text-xs font-mono text-muted-foreground shrink-0 mt-0.5">
+                                {item.id}
+                              </span>
+                              <p className="text-sm flex-1">{item.description}</p>
+                              <div className="flex gap-1 shrink-0">
+                                <button
+                                  className={`px-2.5 py-1 rounded text-xs font-medium transition-colors ${
+                                    result?.status === 'ok'
+                                      ? 'bg-green-500 text-white'
+                                      : 'bg-green-50 text-green-700 hover:bg-green-100'
+                                  }`}
+                                  onClick={() => setItemStatus(item.id, 'ok')}
+                                >
+                                  OK
+                                </button>
+                                <button
+                                  className={`px-2.5 py-1 rounded text-xs font-medium transition-colors ${
+                                    result?.status === 'nok'
+                                      ? 'bg-red-500 text-white'
+                                      : 'bg-red-50 text-red-700 hover:bg-red-100'
+                                  }`}
+                                  onClick={() => setItemStatus(item.id, 'nok')}
+                                >
+                                  NOK
+                                </button>
+                                <button
+                                  className={`px-2.5 py-1 rounded text-xs font-medium transition-colors ${
+                                    result?.status === 'na'
+                                      ? 'bg-gray-500 text-white'
+                                      : 'bg-gray-50 text-gray-600 hover:bg-gray-100'
+                                  }`}
+                                  onClick={() => setItemStatus(item.id, 'na')}
+                                >
+                                  N/A
+                                </button>
+                              </div>
+                            </div>
+
+                            {/* "Otros" text field */}
+                            {item.hasOther && (
+                              <Input
+                                placeholder="Especificar..."
+                                value={result?.otherText || ''}
+                                onChange={e => setItemField(item.id, 'otherText', e.target.value)}
+                                className="text-sm"
+                              />
+                            )}
+
+                            {/* NOK details: hallazgo + mejora */}
+                            {isNok && (
+                              <div className="space-y-2 pl-6 border-l-2 border-red-200">
+                                <div>
+                                  <label className="text-xs font-medium text-red-700">Referencia del hallazgo (desviación)</label>
+                                  <Textarea
+                                    placeholder="Describa la desviación encontrada..."
+                                    value={result?.hallazgo || ''}
+                                    onChange={e => setItemField(item.id, 'hallazgo', e.target.value)}
+                                    className="text-sm mt-1"
+                                    rows={2}
+                                  />
+                                </div>
+                                <div>
+                                  <label className="text-xs font-medium text-amber-700">Punto a Mejorar (sugerencia)</label>
+                                  <Textarea
+                                    placeholder="Sugerencia de mejora..."
+                                    value={result?.mejora || ''}
+                                    onChange={e => setItemField(item.id, 'mejora', e.target.value)}
+                                    className="text-sm mt-1"
+                                    rows={2}
+                                  />
+                                </div>
+                                <div>
+                                  <Button variant="outline" size="sm" className="text-xs">
+                                    <Camera className="h-3 w-3 mr-1" /> Añadir foto (biblioteca paso 2)
+                                  </Button>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
                     </CardContent>
-                  </Card>
-                ))}
-              </div>
-            )}
+                  )}
+                </Card>
+              ))}
+            </div>
+
+            {/* Observaciones */}
+            <Card>
+              <CardContent className="p-4">
+                <label className="text-sm font-medium">Observaciones generales</label>
+                <Textarea
+                  placeholder="Observaciones adicionales de la autoevaluación..."
+                  value={observaciones}
+                  onChange={e => setObservaciones(e.target.value)}
+                  className="mt-2"
+                  rows={3}
+                />
+              </CardContent>
+            </Card>
 
             {/* Submit button */}
             <div className="flex justify-end">
@@ -193,7 +307,7 @@ export default function AutoevaluacionModal({ open, onClose, sStep, miniStep }: 
                 disabled={!canSubmit || isSubmitting}
                 style={canSubmit ? { backgroundColor: sStepData?.color } : undefined}
               >
-                {isSubmitting ? 'Enviando...' : `Completar Autoevaluación (${scorePercent}%)`}
+                {isSubmitting ? 'Enviando...' : `Completar Autoevaluación (${scoring.scorePercent}%)`}
               </Button>
             </div>
           </div>
