@@ -97,7 +97,7 @@ export default function MiniStepCard({
               </h3>
             </div>
             <p className={`text-xs mt-0.5 ${isLocked ? 'text-gray-400' : 'text-muted-foreground'}`}>
-              {miniStep.description}
+              {miniStep.descriptionByS?.[sStep] || miniStep.description}
             </p>
             {isCompleted && score !== null && (
               <p className="text-xs text-green-600 font-medium mt-1">
