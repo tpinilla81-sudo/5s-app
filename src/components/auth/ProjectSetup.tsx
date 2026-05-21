@@ -56,7 +56,7 @@ interface MemberInput {
 }
 
 export default function ProjectSetup() {
-  const { createProject, currentUser, isAuthLoading } = use5SStore()
+  const { createProject, currentUser } = use5SStore()
   const [step, setStep] = useState(1)
   const [isCreating, setIsCreating] = useState(false)
 

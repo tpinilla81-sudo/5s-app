@@ -1,12 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 
-async function hashPassword(password: string): Promise<string> {
-  const encoder = new TextEncoder()
-  const data = encoder.encode(password)
-  const hashBuffer = await crypto.subtle.digest('SHA-256', data)
-  const hashArray = Array.from(new Uint8Array(hashBuffer))
-  return hashArray.map((b) => b.toString(16).padStart(2, '0')).join('')
+function hashPasswordSync(password: string): string {
+  const { createHash } = require('crypto')
+  return createHash('sha256').update(password).digest('hex')
 }
 
 // GET /api/projects/[projectId]/members - List members with zone and role
@@ -90,7 +87,7 @@ export async function POST(
 
     if (!user) {
       // Create user with default password
-      const hashedPassword = await hashPassword('123456')
+      const hashedPassword = hashPasswordSync('123456')
       user = await db.user.create({
         data: {
           email: email.toLowerCase().trim(),

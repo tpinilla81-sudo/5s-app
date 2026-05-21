@@ -24,7 +24,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Loader2, RefreshCw, LogOut, Settings, User, ChevronDown } from 'lucide-react';
+import { Loader2, RefreshCw, LogOut, Settings, ChevronDown } from 'lucide-react';
 
 const MODAL_MAP: Record<string, React.ComponentType<{
   open: boolean;
@@ -63,10 +63,11 @@ export default function HomePage() {
   const [isInitialized, setIsInitialized] = useState(false);
   const [showTeamManagement, setShowTeamManagement] = useState(false);
 
-  // Check session on mount
+  // Check session on mount - only once
   useEffect(() => {
     checkSession();
-  }, [checkSession]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Initialize board data when auth view is board
   useEffect(() => {
@@ -144,7 +145,7 @@ export default function HomePage() {
 
   const ActiveModalComponent = activeModal ? MODAL_MAP[activeModal] : null;
 
-  // Auth loading screen
+  // ONLY show loading screen during initial session check
   if (isAuthLoading) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-green-50 via-white to-emerald-50 gap-4">

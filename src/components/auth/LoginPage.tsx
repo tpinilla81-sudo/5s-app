@@ -17,39 +17,52 @@ import {
 import { Loader2, Mail, Lock, User, Shield } from 'lucide-react'
 
 export default function LoginPage() {
-  const { login, register, isAuthLoading } = use5SStore()
+  const { login, register, isLoginLoading, authError, clearAuthError } = use5SStore()
   const [mode, setMode] = useState<'login' | 'register'>('login')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [name, setName] = useState('')
   const [role, setRole] = useState('empleado')
-  const [error, setError] = useState('')
+  const [localError, setLocalError] = useState('')
+
+  const displayError = localError || authError
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
-    setError('')
-    const success = await login(email, password)
+    setLocalError('')
+    clearAuthError()
+    if (!email.trim() || !password.trim()) {
+      setLocalError('Introduce email y contraseña')
+      return
+    }
+    const success = await login(email.trim(), password)
     if (!success) {
-      setError('Email o contraseña incorrectos')
+      // Error is set in the store
     }
   }
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault()
-    setError('')
-    if (password.length < 6) {
-      setError('La contraseña debe tener al menos 6 caracteres')
+    setLocalError('')
+    clearAuthError()
+    if (!name.trim() || !email.trim() || !password.trim()) {
+      setLocalError('Todos los campos son obligatorios')
       return
     }
-    const success = await register(name, email, password, role)
+    if (password.length < 6) {
+      setLocalError('La contraseña debe tener al menos 6 caracteres')
+      return
+    }
+    const success = await register(name.trim(), email.trim(), password, role)
     if (!success) {
-      setError('Error al crear cuenta. ¿El email ya está en uso?')
+      // Error is set in the store
     }
   }
 
   const toggleMode = () => {
     setMode(mode === 'login' ? 'register' : 'login')
-    setError('')
+    setLocalError('')
+    clearAuthError()
   }
 
   return (
@@ -97,13 +110,13 @@ export default function LoginPage() {
           </CardHeader>
 
           <CardContent className="pt-4">
-            {error && (
+            {displayError && (
               <motion.div
                 initial={{ opacity: 0, height: 0 }}
                 animate={{ opacity: 1, height: 'auto' }}
                 className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg px-4 py-3 mb-4"
               >
-                {error}
+                {displayError}
               </motion.div>
             )}
 
@@ -130,7 +143,7 @@ export default function LoginPage() {
                         onChange={(e) => setEmail(e.target.value)}
                         className="pl-10"
                         required
-                        disabled={isAuthLoading}
+                        disabled={isLoginLoading}
                       />
                     </div>
                   </div>
@@ -142,12 +155,12 @@ export default function LoginPage() {
                       <Input
                         id="login-password"
                         type="password"
-                        placeholder="••••••"
+                        placeholder="Tu contraseña"
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
                         className="pl-10"
                         required
-                        disabled={isAuthLoading}
+                        disabled={isLoginLoading}
                       />
                     </div>
                   </div>
@@ -155,9 +168,9 @@ export default function LoginPage() {
                   <Button
                     type="submit"
                     className="w-full bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white shadow-md"
-                    disabled={isAuthLoading}
+                    disabled={isLoginLoading}
                   >
-                    {isAuthLoading ? (
+                    {isLoginLoading ? (
                       <>
                         <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                         Iniciando...
@@ -189,7 +202,7 @@ export default function LoginPage() {
                         onChange={(e) => setName(e.target.value)}
                         className="pl-10"
                         required
-                        disabled={isAuthLoading}
+                        disabled={isLoginLoading}
                       />
                     </div>
                   </div>
@@ -206,7 +219,7 @@ export default function LoginPage() {
                         onChange={(e) => setEmail(e.target.value)}
                         className="pl-10"
                         required
-                        disabled={isAuthLoading}
+                        disabled={isLoginLoading}
                       />
                     </div>
                   </div>
@@ -224,14 +237,14 @@ export default function LoginPage() {
                         className="pl-10"
                         required
                         minLength={6}
-                        disabled={isAuthLoading}
+                        disabled={isLoginLoading}
                       />
                     </div>
                   </div>
 
                   <div className="space-y-2">
                     <Label htmlFor="reg-role">Rol</Label>
-                    <Select value={role} onValueChange={setRole} disabled={isAuthLoading}>
+                    <Select value={role} onValueChange={setRole} disabled={isLoginLoading}>
                       <SelectTrigger className="w-full">
                         <Shield className="h-4 w-4 mr-2 text-muted-foreground" />
                         <SelectValue placeholder="Seleccionar rol" />
@@ -248,9 +261,9 @@ export default function LoginPage() {
                   <Button
                     type="submit"
                     className="w-full bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white shadow-md"
-                    disabled={isAuthLoading}
+                    disabled={isLoginLoading}
                   >
-                    {isAuthLoading ? (
+                    {isLoginLoading ? (
                       <>
                         <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                         Creando cuenta...
@@ -268,7 +281,7 @@ export default function LoginPage() {
                 type="button"
                 onClick={toggleMode}
                 className="text-sm text-green-600 hover:text-green-700 hover:underline transition-colors"
-                disabled={isAuthLoading}
+                disabled={isLoginLoading}
               >
                 {mode === 'login'
                   ? '¿No tienes cuenta? Regístrate'

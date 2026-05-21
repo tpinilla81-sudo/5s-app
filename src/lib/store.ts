@@ -53,7 +53,9 @@ interface FiveSState {
   currentProject: Project | null
   authView: 'login' | 'register' | 'setup' | 'board'
   projects: Project[]
-  isAuthLoading: boolean
+  isAuthLoading: boolean       // Only for initial session check
+  isLoginLoading: boolean      // For login/register button loading state
+  authError: string | null     // Error message from auth operations
 
   // Progress & Board Actions
   fetchProgress: () => Promise<void>
@@ -77,6 +79,7 @@ interface FiveSState {
   createProject: (data: { name: string; description?: string; company: string; zones: { name: string; description?: string; color?: string }[] }) => Promise<void>
   setCurrentProject: (project: Project | null) => void
   setAuthView: (view: 'login' | 'register' | 'setup' | 'board') => void
+  clearAuthError: () => void
 }
 
 export const use5SStore = create<FiveSState>((set, get) => ({
@@ -94,13 +97,16 @@ export const use5SStore = create<FiveSState>((set, get) => ({
   authView: 'login',
   projects: [],
   isAuthLoading: true,
+  isLoginLoading: false,
+  authError: null,
 
   // Progress & Board Actions
   fetchProgress: async () => {
     try {
       const res = await fetch('/api/progress')
       const data = await res.json()
-      const progressData = Array.isArray(data) ? data : []
+      // API returns { success: true, data: [...] }
+      const progressData = data?.data ? data.data : (Array.isArray(data) ? data : [])
       set({ progress: progressData, isLoadingProgress: false })
     } catch (error) {
       console.error('Error fetching progress:', error)
@@ -162,7 +168,7 @@ export const use5SStore = create<FiveSState>((set, get) => ({
   // Auth & Project Actions
   login: async (email: string, password: string) => {
     try {
-      set({ isAuthLoading: true })
+      set({ isLoginLoading: true, authError: null })
       const res = await fetch('/api/auth', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -171,11 +177,12 @@ export const use5SStore = create<FiveSState>((set, get) => ({
       const data = await res.json()
 
       if (!res.ok) {
-        set({ isAuthLoading: false })
+        const errorMsg = data.error || 'Email o contraseña incorrectos'
+        set({ isLoginLoading: false, authError: errorMsg })
         return false
       }
 
-      set({ currentUser: data.user, isAuthLoading: false })
+      set({ currentUser: data.user, isLoginLoading: false, authError: null })
 
       // Check for projects after login
       await get().fetchProjects()
@@ -190,14 +197,14 @@ export const use5SStore = create<FiveSState>((set, get) => ({
       return true
     } catch (error) {
       console.error('Login error:', error)
-      set({ isAuthLoading: false })
+      set({ isLoginLoading: false, authError: 'Error de conexión. Inténtalo de nuevo.' })
       return false
     }
   },
 
   register: async (name: string, email: string, password: string, role: string) => {
     try {
-      set({ isAuthLoading: true })
+      set({ isLoginLoading: true, authError: null })
       const res = await fetch('/api/auth', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -206,11 +213,12 @@ export const use5SStore = create<FiveSState>((set, get) => ({
       const data = await res.json()
 
       if (!res.ok) {
-        set({ isAuthLoading: false })
+        const errorMsg = data.error || 'Error al crear cuenta'
+        set({ isLoginLoading: false, authError: errorMsg })
         return false
       }
 
-      set({ currentUser: data.user, isAuthLoading: false })
+      set({ currentUser: data.user, isLoginLoading: false, authError: null })
 
       // Check for projects after registration
       await get().fetchProjects()
@@ -225,7 +233,7 @@ export const use5SStore = create<FiveSState>((set, get) => ({
       return true
     } catch (error) {
       console.error('Registration error:', error)
-      set({ isAuthLoading: false })
+      set({ isLoginLoading: false, authError: 'Error de conexión. Inténtalo de nuevo.' })
       return false
     }
   },
@@ -241,6 +249,8 @@ export const use5SStore = create<FiveSState>((set, get) => ({
       currentProject: null,
       authView: 'login',
       projects: [],
+      isLoginLoading: false,
+      authError: null,
     })
   },
 
@@ -294,20 +304,27 @@ export const use5SStore = create<FiveSState>((set, get) => ({
         // Add the current user as admin member of the project
         const { currentUser } = get()
         if (currentUser) {
-          await fetch(`/api/projects/${result.project.id}/members`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              email: currentUser.email,
-              name: currentUser.name,
-              role: 'admin',
-              zoneId: result.project.zones?.[0]?.id || null,
-            }),
-          })
+          try {
+            await fetch(`/api/projects/${result.project.id}/members`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                email: currentUser.email,
+                name: currentUser.name,
+                role: 'admin',
+                zoneId: result.project.zones?.[0]?.id || null,
+              }),
+            })
+          } catch (memberError) {
+            console.error('Error adding admin as member:', memberError)
+            // Don't block project creation if member add fails
+          }
         }
 
         set({ currentProject: result.project, authView: 'board' })
         await get().fetchProjects()
+      } else {
+        console.error('Create project error:', result.error)
       }
     } catch (error) {
       console.error('Create project error:', error)
@@ -321,5 +338,7 @@ export const use5SStore = create<FiveSState>((set, get) => ({
     }
   },
 
-  setAuthView: (view) => set({ authView: view }),
+  setAuthView: (view) => set({ authView: view, authError: null }),
+
+  clearAuthError: () => set({ authError: null }),
 }))

@@ -4,12 +4,11 @@ import { db } from '@/lib/db'
 const SESSION_COOKIE = '5s_session'
 const COOKIE_MAX_AGE = 60 * 60 * 24 * 7 // 7 days
 
-async function hashPassword(password: string): Promise<string> {
-  const encoder = new TextEncoder()
-  const data = encoder.encode(password)
-  const hashBuffer = await crypto.subtle.digest('SHA-256', data)
-  const hashArray = Array.from(new Uint8Array(hashBuffer))
-  return hashArray.map((b) => b.toString(16).padStart(2, '0')).join('')
+// Use Node.js crypto for reliable hashing in server environment
+function hashPasswordSync(password: string): string {
+  // Use require to avoid Turbopack issues with dynamic import
+  const { createHash } = require('crypto')
+  return createHash('sha256').update(password).digest('hex')
 }
 
 // GET /api/auth - Get current session user
@@ -35,7 +34,7 @@ export async function GET(request: NextRequest) {
 
     if (!user || !user.active) {
       const response = NextResponse.json({ user: null }, { status: 200 })
-      response.cookies.delete(SESSION_COOKIE)
+      response.cookies.set(SESSION_COOKIE, '', { path: '/', maxAge: 0 })
       return response
     }
 
@@ -70,7 +69,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const hashedPassword = await hashPassword(password)
+    const hashedPassword = hashPasswordSync(password)
 
     if (user.password !== hashedPassword) {
       return NextResponse.json(
@@ -145,7 +144,7 @@ export async function PUT(request: NextRequest) {
       )
     }
 
-    const hashedPassword = await hashPassword(password)
+    const hashedPassword = hashPasswordSync(password)
 
     const user = await db.user.create({
       data: {
