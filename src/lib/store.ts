@@ -47,6 +47,7 @@ interface FiveSState {
   activeModal: 'formacion' | 'fotos' | 'inventario' | 'autoevaluacion' | 'auditoria' | null
   activeMiniStep: number | null
   isLoadingProgress: boolean
+  adminFreeNavigation: boolean  // Admin mode: skip progressive unlocking
 
   // Auth & Project State
   currentUser: User | null
@@ -64,6 +65,7 @@ interface FiveSState {
   openModal: (type: 'formacion' | 'fotos' | 'inventario' | 'autoevaluacion' | 'auditoria', miniStep: number) => void
   closeModal: () => void
   seedDatabase: () => Promise<void>
+  setAdminFreeNavigation: (enabled: boolean) => void
 
   // Computed helpers
   getMiniStepStatus: (sStep: number, miniStep: number) => 'locked' | 'available' | 'completed'
@@ -90,6 +92,7 @@ export const use5SStore = create<FiveSState>((set, get) => ({
   activeModal: null,
   activeMiniStep: null,
   isLoadingProgress: true,
+  adminFreeNavigation: true,  // Default: admin can navigate freely
 
   // Auth & Project State
   currentUser: null,
@@ -128,6 +131,8 @@ export const use5SStore = create<FiveSState>((set, get) => ({
 
   closeModal: () => set({ activeModal: null, activeMiniStep: null }),
 
+  setAdminFreeNavigation: (enabled: boolean) => set({ adminFreeNavigation: enabled }),
+
   seedDatabase: async () => {
     try {
       await fetch('/api/seed', { method: 'POST' })
@@ -138,15 +143,23 @@ export const use5SStore = create<FiveSState>((set, get) => ({
   },
 
   getMiniStepStatus: (sStep, miniStep) => {
-    const { progress } = get()
-    if (miniStep === 1) {
-      const step = progress.find(p => p.sStep === sStep && p.miniStep === miniStep)
-      return step?.completed ? 'completed' : 'available'
-    }
+    const { progress, currentUser, adminFreeNavigation } = get()
+    const isAdmin = currentUser?.role === 'admin'
+    const skipLocks = isAdmin && adminFreeNavigation
+
+    const currentStep = progress.find(p => p.sStep === sStep && p.miniStep === miniStep)
+    if (currentStep?.completed) return 'completed'
+
+    // Mini-step 1 is always available
+    if (miniStep === 1) return 'available'
+
+    // Admin with free navigation can access everything
+    if (skipLocks) return 'available'
+
+    // Normal progressive unlocking: previous step must be completed
     const prevStep = progress.find(p => p.sStep === sStep && p.miniStep === miniStep - 1)
     if (!prevStep?.completed) return 'locked'
-    const currentStep = progress.find(p => p.sStep === sStep && p.miniStep === miniStep)
-    return currentStep?.completed ? 'completed' : 'available'
+    return 'available'
   },
 
   isQuesitoEarned: (sStep) => {

@@ -25,7 +25,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Loader2, RefreshCw, LogOut, Settings, ChevronDown, Shield } from 'lucide-react';
+import { Loader2, RefreshCw, LogOut, Settings, ChevronDown, Shield, Unlock, Lock } from 'lucide-react';
 
 const MODAL_MAP: Record<string, React.ComponentType<{
   open: boolean;
@@ -58,6 +58,9 @@ export default function HomePage() {
     isAuthLoading,
     checkSession,
     logout,
+    // Admin navigation
+    adminFreeNavigation,
+    setAdminFreeNavigation,
   } = use5SStore();
 
   const [isSeeding, setIsSeeding] = useState(false);
@@ -144,6 +147,7 @@ export default function HomePage() {
   };
 
   const canManageTeam = currentUser && (currentUser.role === 'admin' || currentUser.role === 'responsable');
+  const isAdmin = currentUser?.role === 'admin';
 
   const ActiveModalComponent = activeModal ? MODAL_MAP[activeModal] : null;
 
@@ -196,6 +200,22 @@ export default function HomePage() {
             </div>
           </div>
           <div className="flex items-center gap-2">
+            {isAdmin && (
+              <Button
+                variant={adminFreeNavigation ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setAdminFreeNavigation(!adminFreeNavigation)}
+                className={`gap-1.5 text-xs ${
+                  adminFreeNavigation
+                    ? 'bg-amber-500 hover:bg-amber-600 text-white border-amber-500'
+                    : 'text-amber-600 border-amber-300 hover:bg-amber-50'
+                }`}
+                title={adminFreeNavigation ? 'Navegación libre activada: puedes acceder a todos los pasos sin completar los previos' : 'Navegación secuencial: debes completar los pasos en orden'}
+              >
+                {adminFreeNavigation ? <Unlock className="h-3.5 w-3.5" /> : <Lock className="h-3.5 w-3.5" />}
+                <span className="hidden sm:inline">{adminFreeNavigation ? 'Libre' : 'Secuencial'}</span>
+              </Button>
+            )}
             {canManageTeam && (
               <Button
                 variant="ghost"

@@ -31,10 +31,11 @@ const BEFORE_PROMPT_BY_S: Record<number, string> = {
 };
 
 export default function FotosModal({ open, onClose, sStep, miniStep }: FotosModalProps) {
-  const { fetchProgress } = use5SStore();
+  const { fetchProgress, currentUser, adminFreeNavigation } = use5SStore();
   const sStepData = S_STEPS.find(s => s.id === sStep);
   const miniStepData = MINI_STEPS.find(m => m.id === miniStep);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const isAdmin = currentUser?.role === 'admin' && adminFreeNavigation;
 
   const [beforePhotos, setBeforePhotos] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -96,6 +97,23 @@ export default function FotosModal({ open, onClose, sStep, miniStep }: FotosModa
     }
   };
 
+  const handleAdminSkip = async () => {
+    try {
+      const res = await fetch(`/api/progress/${sStep}/${miniStep}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ completed: true, score: 100, notes: 'Completado por administrador (skip)' }),
+      });
+      const json = await res.json();
+      if (json.success) {
+        await fetchProgress();
+        onClose();
+      }
+    } catch (error) {
+      console.error('Error admin skip:', error);
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={() => onClose()}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
@@ -108,6 +126,20 @@ export default function FotosModal({ open, onClose, sStep, miniStep }: FotosModa
             </Badge>
           </DialogTitle>
         </DialogHeader>
+
+        {isAdmin && !isCompleted && (
+          <div className="flex items-center gap-2 p-2 bg-amber-50 border border-amber-200 rounded-lg">
+            <span className="text-xs text-amber-700 font-medium">Modo Admin:</span>
+            <Button
+              variant="outline"
+              size="sm"
+              className="text-xs border-amber-300 text-amber-700 hover:bg-amber-100"
+              onClick={handleAdminSkip}
+            >
+              Completar paso sin subir fotos
+            </Button>
+          </div>
+        )}
 
         {isCompleted ? (
           <div className="text-center py-8">

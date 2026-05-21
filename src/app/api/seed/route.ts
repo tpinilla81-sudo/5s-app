@@ -306,12 +306,25 @@ export async function POST() {
       })
     }
 
+    // Create 25 progress records (5 S × 5 mini-steps)
+    for (let s = 1; s <= 5; s++) {
+      for (let m = 1; m <= 5; m++) {
+        await db.progress.upsert({
+          where: { sStep_miniStep: { sStep: s, miniStep: m } },
+          create: { sStep: s, miniStep: m, completed: false, score: null },
+          update: { completed: false, score: null },
+        })
+      }
+    }
+
     const templates = await db.template.findMany()
+    const progressCount = await db.progress.count()
     return NextResponse.json({
       success: true,
       data: {
         message: 'Base de datos inicializada correctamente',
         templatesCreated: templates.length,
+        progressRecords: progressCount,
       },
     })
   } catch (error) {
