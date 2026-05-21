@@ -1,0 +1,71 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Progress {
+  id          String   @id @default(cuid())
+  sStep       Int      // 1-5 (Revisar, Ordenar, Limpiar, Estandarizar, Mantener)
+  miniStep    Int      // 1-5 (Formación, Fotos, Inventario, Autoevaluación, Auditoría)
+  completed   Boolean  @default(false)
+  score       Float?   // Puntuación obtenida (0-100)
+  notes       String?  // Notas adicionales
+  photoUrls   String?  // URLs de fotos separadas por coma
+  passedAt    DateTime? // Fecha en que se pasó el mini-paso
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([sStep, miniStep])
+}
+
+model Template {
+  id          String   @id @default(cuid())
+  type        String   // "formacion", "examen", "inventario", "autoevaluacion", "auditoria"
+  sStep       Int      // 1-5
+  title       String
+  description String?
+  content     String   // JSON con el contenido de la plantilla
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model ExamAnswer {
+  id          String   @id @default(cuid())
+  sStep       Int
+  questionIdx Int
+  answerIdx   Int
+  correct     Boolean
+  createdAt   DateTime @default(now())
+}
+
+model InventoryItem {
+  id          String   @id @default(cuid())
+  sStep       Int
+  name        String
+  location    String?
+  category    String   // "util", "innecesario", "dudoso"
+  quantity    Int      @default(1)
+  action      String?  // Acción a tomar
+  photoUrl    String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model AuditResult {
+  id          String   @id @default(cuid())
+  sStep       Int
+  auditorName String
+  result      String   // "apto", "no_apto"
+  score       Float?
+  observations String?
+  auditDate   DateTime @default(now())
+  createdAt   DateTime @default(now())
+}
