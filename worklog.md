@@ -95,3 +95,23 @@ Stage Summary:
 - ✅ 25 plantillas (5 por cada S: formación, examen, inventario, autoevaluación, auditoría)
 - ✅ 31 imágenes de formación S1 servidas correctamente
 - ✅ Acceso web: puerto 81 (Caddy) y puerto 3000 (Next.js directo)
+
+---
+Task ID: 4
+Agent: Main Agent
+Task: Añadir contadores de datos (fotos, inventario, acciones, estándares) al dashboard principal
+
+Work Log:
+- Creó API /api/stats que devuelve contadores de todas las tablas de datos
+- Actualizó ProgressDashboard con nuevas secciones:
+  - 4 tarjetas de datos: Fotos, Inventario, Autoevaluaciones, Auditorías
+  - Tarjeta de Acciones de Mejora (solo visible si hay acciones)
+  - Contadores por S (fotos, items, checklist, acciones) en cada tarjeta de progreso S
+- Build exitoso con nueva ruta /api/stats
+- Servidor reiniciado con PM2, todo verificado
+
+Stage Summary:
+- ✅ Dashboard principal ahora muestra contadores reales de datos
+- ✅ API /api/stats funciona con y sin projectId
+- ✅ Los contadores se actualizan dinámicamente cuando cambian los datos
+- ✅ PM2 mantiene el servidor corriendo de forma persistente
