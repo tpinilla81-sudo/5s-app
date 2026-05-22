@@ -5,9 +5,9 @@ export PORT=3000
 export HOSTNAME=0.0.0.0
 
 while true; do
-  echo "[$(date)] Starting server..."
+  echo "[$(date)] Starting 5S server..."
   node server.js
   EXIT=$?
-  echo "[$(date)] Server exited with code $EXIT, restarting in 2s..."
-  sleep 2
+  echo "[$(date)] Server exited with code $EXIT, restarting in 3s..."
+  sleep 3
 done
