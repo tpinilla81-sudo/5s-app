@@ -106,7 +106,9 @@ export const use5SStore = create<FiveSState>((set, get) => ({
   // Progress & Board Actions
   fetchProgress: async () => {
     try {
-      const res = await fetch('/api/progress')
+      const { currentProject } = get()
+      const params = currentProject ? `?projectId=${currentProject.id}` : ''
+      const res = await fetch(`/api/progress${params}`)
       const data = await res.json()
       // API returns { success: true, data: [...] }
       const progressData = data?.data ? data.data : (Array.isArray(data) ? data : [])

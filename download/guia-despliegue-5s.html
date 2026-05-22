@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Guía de Despliegue - App 5S en Vercel + Supabase</title>
+<style>
+  @page { size: A4; margin: 0; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: #ffffff; font-family: 'Noto Sans SC', 'Segoe UI', sans-serif; color: #1e293b; }
+  
+  .page {
+    width: 210mm; min-height: 297mm; padding: 20mm 22mm; position: relative;
+    page-break-after: always;
+  }
+  .page:last-child { page-break-after: auto; }
+  
+  h1 { font-size: 28pt; font-weight: 800; color: #0f172a; margin: 0 0 8pt 0; line-height: 1.2; }
+  h2 { font-size: 18pt; font-weight: 700; color: #1e40af; margin: 24pt 0 10pt 0; border-bottom: 2px solid #3b82f6; padding-bottom: 6pt; }
+  h3 { font-size: 14pt; font-weight: 600; color: #334155; margin: 16pt 0 8pt 0; }
+  p { font-size: 10.5pt; line-height: 1.6; margin: 6pt 0; color: #475569; }
+  ul { margin: 6pt 0 6pt 18pt; padding: 0; }
+  li { font-size: 10.5pt; line-height: 1.6; margin: 3pt 0; color: #475569; }
+  
+  .cover { display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
+  .cover h1 { font-size: 36pt; color: #1e40af; margin-bottom: 12pt; }
+  .cover .subtitle { font-size: 16pt; color: #64748b; margin-bottom: 30pt; }
+  .cover .tech-badges { display: flex; gap: 12pt; justify-content: center; flex-wrap: wrap; margin: 20pt 0; }
+  .cover .badge { padding: 8pt 18pt; border-radius: 20pt; font-size: 11pt; font-weight: 600; color: white; }
+  .cover .badge.vercel { background: #000000; }
+  .cover .badge.supabase { background: #3ecf8e; color: #1e293b; }
+  .cover .badge.next { background: #0070f3; }
+  .cover .badge.pg { background: #336791; }
+  .cover .date { font-size: 11pt; color: #94a3b8; margin-top: 30pt; }
+  
+  .step-box { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8pt; padding: 14pt 16pt; margin: 10pt 0; }
+  .step-box .step-num { display: inline-block; background: #3b82f6; color: white; width: 26pt; height: 26pt; border-radius: 50%; text-align: center; line-height: 26pt; font-size: 12pt; font-weight: 700; margin-right: 10pt; vertical-align: middle; }
+  .step-box h3 { display: inline; margin: 0; vertical-align: middle; }
+  
+  .code-box { background: #1e293b; color: #e2e8f0; border-radius: 6pt; padding: 12pt 16pt; margin: 8pt 0; font-family: 'SFMono-Regular', 'Consolas', monospace; font-size: 9.5pt; line-height: 1.5; overflow-x: auto; white-space: pre-wrap; word-break: break-all; }
+  .code-box .comment { color: #64748b; }
+  .code-box .highlight { color: #3ecf8e; }
+  .code-box .string { color: #fbbf24; }
+  
+  .warning-box { background: #fef3c7; border-left: 4pt solid #f59e0b; padding: 10pt 14pt; margin: 10pt 0; border-radius: 0 6pt 6pt 0; }
+  .warning-box p { color: #92400e; margin: 0; font-size: 10pt; }
+  .warning-box .title { font-weight: 700; margin-bottom: 4pt; }
+  
+  .info-box { background: #eff6ff; border-left: 4pt solid #3b82f6; padding: 10pt 14pt; margin: 10pt 0; border-radius: 0 6pt 6pt 0; }
+  .info-box p { color: #1e40af; margin: 0; font-size: 10pt; }
+  .info-box .title { font-weight: 700; margin-bottom: 4pt; }
+  
+  .checklist { list-style: none; margin-left: 0; padding-left: 0; }
+  .checklist li { padding: 4pt 0 4pt 24pt; position: relative; }
+  .checklist li::before { content: '\2610'; position: absolute; left: 0; color: #3b82f6; font-size: 13pt; }
+  
+  table { width: 100%; border-collapse: collapse; margin: 10pt 0; }
+  th { background: #1e40af; color: white; padding: 8pt 12pt; text-align: left; font-size: 10pt; }
+  td { padding: 7pt 12pt; border-bottom: 1px solid #e2e8f0; font-size: 10pt; color: #475569; }
+  tr:nth-child(even) { background: #f8fafc; }
+  
+  .toc { margin: 30pt 0; }
+  .toc-item { display: flex; justify-content: space-between; padding: 6pt 0; border-bottom: 1px dotted #cbd5e1; font-size: 11pt; }
+  .toc-item .num { color: #3b82f6; font-weight: 600; margin-right: 8pt; }
+</style>
+</head>
+<body>
+
+<!-- COVER -->
+<div class="page cover">
+  <div style="margin-bottom: 30pt;">
+    <div style="font-size: 60pt; margin-bottom: 10pt;">🚀</div>
+  </div>
+  <h1>Guía de Despliegue</h1>
+  <div class="subtitle">App Metodología 5S → Vercel + Supabase</div>
+  <p style="font-size: 12pt; color: #64748b; max-width: 400pt;">Paso a paso para desplegar tu aplicación 5S de forma permanente y gratuita en la nube</p>
+  <div class="tech-badges">
+    <span class="badge next">Next.js 16</span>
+    <span class="badge vercel">Vercel</span>
+    <span class="badge supabase">Supabase</span>
+    <span class="badge pg">PostgreSQL</span>
+  </div>
+  <div class="date">Mayo 2026</div>
+</div>
+
+<!-- TABLE OF CONTENTS -->
+<div class="page">
+  <h1>Contenido</h1>
+  <div class="toc">
+    <div class="toc-item"><span><span class="num">1</span> Resumen de cambios realizados</span></div>
+    <div class="toc-item"><span><span class="num">2</span> Requisitos previos (cuentas gratuitas)</span></div>
+    <div class="toc-item"><span><span class="num">3</span> Paso 1: Crear proyecto en Supabase</span></div>
+    <div class="toc-item"><span><span class="num">4</span> Paso 2: Configurar base de datos PostgreSQL</span></div>
+    <div class="toc-item"><span><span class="num">5</span> Paso 3: Crear bucket de almacenamiento</span></div>
+    <div class="toc-item"><span><span class="num">6</span> Paso 4: Subir código a GitHub</span></div>
+    <div class="toc-item"><span><span class="num">7</span> Paso 5: Desplegar en Vercel</span></div>
+    <div class="toc-item"><span><span class="num">8</span> Paso 6: Configurar variables de entorno</span></div>
+    <div class="toc-item"><span><span class="num">9</span> Paso 7: Ejecutar migración de base de datos</span></div>
+    <div class="toc-item"><span><span class="num">10</span> Flujo de trabajo diario</span></div>
+    <div class="toc-item"><span><span class="num">11</span> Solución de problemas</span></div>
+  </div>
+</div>
+
+<!-- SECTION 1 -->
+<div class="page">
+  <h2>1. Resumen de cambios realizados</h2>
+  <p>Tu app ha sido adaptada para funcionar en Vercel (servidor sin estado) con Supabase (base de datos PostgreSQL + almacenamiento de fotos en la nube). Estos son los cambios principales:</p>
+  
+  <table>
+    <tr><th>Componente</th><th>Antes (Z)</th><th>Ahora (Vercel)</th></tr>
+    <tr><td>Base de datos</td><td>SQLite (archivo local)</td><td>PostgreSQL (Supabase)</td></tr>
+    <tr><td>Almacenamiento fotos</td><td>Archivos en /public/</td><td>Supabase Storage (nube)</td></tr>
+    <tr><td>Hosting</td><td>Servidor temporal Z</td><td>Vercel (permanente)</td></tr>
+    <tr><td>API Progress</td><td>Rutas dinámicas anidadas</td><td>Query parameters</td></tr>
+    <tr><td>ProjectId</td><td>Parcialmente usado</td><td>Obligatorio en todas las APIs</td></tr>
+  </table>
+  
+  <div class="info-box">
+    <p class="title">Compatibilidad hacia atrás</p>
+    <p>La app funciona tanto en Z (desarrollo local) como en Vercel (producción). Si Supabase no está configurado, las fotos se guardan localmente como antes.</p>
+  </div>
+  
+  <h3>Archivos creados/modificados</h3>
+  <ul>
+    <li><strong>Nuevo:</strong> <code>src/lib/supabase-storage.ts</code> - Subida de fotos a Supabase Storage</li>
+    <li><strong>Nuevo:</strong> <code>src/app/api/progress/step/route.ts</code> - API de progreso con query params</li>
+    <li><strong>Nuevo:</strong> <code>.env.example</code> - Plantilla de variables de entorno</li>
+    <li><strong>Modificado:</strong> <code>prisma/schema.prisma</code> - SQLite a PostgreSQL con índices</li>
+    <li><strong>Modificado:</strong> <code>src/lib/db.ts</code> - Optimizado para serverless</li>
+    <li><strong>Modificado:</strong> <code>src/app/api/upload/route.ts</code> - Supabase Storage con fallback local</li>
+    <li><strong>Modificado:</strong> <code>next.config.ts</code> - Sin standalone, con dominios Supabase</li>
+    <li><strong>Modificado:</strong> Todos los componentes 5S - Pasan projectId a las APIs</li>
+    <li><strong>Modificado:</strong> Todas las APIs - Usan projectId correctamente</li>
+  </ul>
+
+  <h2>2. Requisitos previos (cuentas gratuitas)</h2>
+  <p>Necesitas crear 3 cuentas gratuitas. No requieren tarjeta de crédito:</p>
+  
+  <table>
+    <tr><th>Servicio</th><th>URL</th><th>Para qué</th><th>Plan gratis</th></tr>
+    <tr><td>GitHub</td><td>github.com</td><td>Almacenar tu código</td><td>Ilimitado</td></tr>
+    <tr><td>Supabase</td><td>supabase.com</td><td>Base de datos + fotos</td><td>500MB DB + 1GB Storage</td></tr>
+    <tr><td>Vercel</td><td>vercel.com</td><td>Hosting de la app</td><td>Ilimitado (hobby)</td></tr>
+  </table>
+  
+  <div class="warning-box">
+    <p class="title">Importante</p>
+    <p>Regístrate con tu cuenta de GitHub en Supabase y Vercel. Así será más fácil conectar todo después.</p>
+  </div>
+
+  <ul class="checklist">
+    <li>Cuenta de GitHub creada</li>
+    <li>Cuenta de Supabase creada</li>
+    <li>Cuenta de Vercel creada (con GitHub)</li>
+  </ul>
+</div>
+
+<!-- SECTION 3 -->
+<div class="page">
+  <h2>3. Paso 1: Crear proyecto en Supabase</h2>
+  
+  <div class="step-box">
+    <span class="step-num">1</span>
+    <h3>Ir a Supabase y crear proyecto</h3>
+  </div>
+  
+  <ol>
+    <li>Ve a <strong>supabase.com</strong> e inicia sesión</li>
+    <li>Haz clic en <strong>"New Project"</strong></li>
+    <li>Completa el formulario:
+      <ul>
+        <li><strong>Name:</strong> app-5s (o el nombre que prefieras)</li>
+        <li><strong>Database Password:</strong> Elige una contraseña segura y guárdala</li>
+        <li><strong>Region:</strong> Selecciona la más cercana a tu ubicación</li>
+      </ul>
+    </li>
+    <li>Haz clic en <strong>"Create new project"</strong></li>
+    <li>Espera ~2 minutos mientras se crea el proyecto</li>
+  </ol>
+  
+  <h2>4. Paso 2: Configurar base de datos PostgreSQL</h2>
+  
+  <div class="step-box">
+    <span class="step-num">2</span>
+    <h3>Obtener las URLs de conexión</h3>
+  </div>
+  
+  <ol>
+    <li>En tu proyecto Supabase, ve a <strong>Settings → Database</strong></li>
+    <li>Busca la sección <strong>"Connection string"</strong></li>
+    <li>Copia la URL con <strong>"Connection pooling"</strong> (puerto 6543) — esta es tu <code>DATABASE_URL</code></li>
+    <li>Copia la URL <strong>"Direct connection"</strong> (puerto 5432) — esta es tu <code>DIRECT_URL</code></li>
+    <li>Reemplaza <code>[YOUR-PASSWORD]</code> con la contraseña que elegiste</li>
+  </ol>
+  
+  <div class="code-box"><span class="comment"># Ejemplo de URLs (las tuyas serán diferentes):</span>
+<span class="highlight">DATABASE_URL</span>=<span class="string">"postgresql://postgres.xxxx:PASSWORD@aws-0-eu-central-1.pooler.supabase.com:6543/postgres"</span>
+<span class="highlight">DIRECT_URL</span>=<span class="string">"postgresql://postgres.xxxx:PASSWORD@aws-0-eu-central-1.supabase.com:5432/postgres"</span></div>
+  
+  <div class="warning-box">
+    <p class="title">Contraseña</p>
+    <p>Si tu contraseña contiene caracteres especiales como @, #, %, debes codificarlos como URL (ej: @ → %40). Puedes usar urlencoder.org.</p>
+  </div>
+  
+  <h2>5. Paso 3: Crear bucket de almacenamiento</h2>
+  
+  <div class="step-box">
+    <span class="step-num">3</span>
+    <h3>Crear bucket "photos" en Supabase Storage</h3>
+  </div>
+  
+  <ol>
+    <li>En tu proyecto Supabase, ve a <strong>Storage</strong> en el menú lateral</li>
+    <li>Haz clic en <strong>"New bucket"</strong></li>
+    <li>Nombre: <strong>photos</strong></li>
+    <li>Marca la opción <strong>"Public bucket"</strong> para que las fotos sean accesibles</li>
+    <li>Haz clic en <strong>"Create bucket"</strong></li>
+  </ol>
+  
+  <p>Ahora obtén las credenciales de API:</p>
+  <ol>
+    <li>Ve a <strong>Settings → API</strong></li>
+    <li>Copia el <strong>Project URL</strong> — este es tu <code>NEXT_PUBLIC_SUPABASE_URL</code></li>
+    <li>Copia el <strong>Service role key</strong> (secret) — este es tu <code>SUPABASE_SERVICE_ROLE_KEY</code></li>
+  </ol>
+  
+  <div class="code-box"><span class="comment"># Ejemplo:</span>
+<span class="highlight">NEXT_PUBLIC_SUPABASE_URL</span>=<span class="string">"https://xxxx.supabase.co"</span>
+<span class="highlight">SUPABASE_SERVICE_ROLE_KEY</span>=<span class="string">"eyJhbGciOiJIUzI1NiIs..."</span></div>
+  
+  <div class="warning-box">
+    <p class="title">Seguridad</p>
+    <p>NUNCA compartas el Service Role Key. Es la clave maestra de tu Supabase. Solo se usa en el servidor (backend), nunca en el navegador.</p>
+  </div>
+</div>
+
+<!-- SECTION 6 -->
+<div class="page">
+  <h2>6. Paso 4: Subir código a GitHub</h2>
+  
+  <div class="step-box">
+    <span class="step-num">4</span>
+    <h3>Crear repositorio y subir el código</h3>
+  </div>
+  
+  <ol>
+    <li>Ve a <strong>github.com</strong> y haz clic en <strong>"New repository"</strong></li>
+    <li>Nombre: <strong>app-5s</strong></li>
+    <li>Marca <strong>"Private"</strong> (recomendado para apps de empresa)</li>
+    <li>No marques "Add a README"</li>
+    <li>Haz clic en <strong>"Create repository"</strong></li>
+  </ol>
+  
+  <p>Ahora, en tu computadora, abre una terminal y ejecuta:</p>
+  
+  <div class="code-box"><span class="comment"># Ir al directorio del proyecto</span>
+<span class="highlight">cd</span> /home/z/my-project
+
+<span class="comment"># Inicializar git (si no existe)</span>
+<span class="highlight">git init</span>
+
+<span class="comment"># Crear .gitignore</span>
+<span class="highlight">cat</span> > .gitignore << 'EOF'
+node_modules/
+.next/
+.env
+.env.local
+db/
+public/uploads/
+*.log
+EOF
+
+<span class="comment"># Agregar todos los archivos</span>
+<span class="highlight">git add</span> .
+
+<span class="comment"># Primer commit</span>
+<span class="highlight">git commit</span> -m "App 5S lista para Vercel + Supabase"
+
+<span class="comment"># Conectar con GitHub (reemplaza TU-USUARIO)</span>
+<span class="highlight">git remote add origin</span> https://github.com/TU-USUARIO/app-5s.git
+
+<span class="comment"># Subir el código</span>
+<span class="highlight">git push</span> -u origin main</div>
+  
+  <div class="info-box">
+    <p class="title">Autenticación GitHub</p>
+    <p>GitHub requiere un Personal Access Token (PAT) en vez de contraseña. Ve a GitHub → Settings → Developer settings → Personal access tokens → Genera uno con permisos de "repo".</p>
+  </div>
+  
+  <h2>7. Paso 5: Desplegar en Vercel</h2>
+  
+  <div class="step-box">
+    <span class="step-num">5</span>
+    <h3>Conectar repositorio y desplegar</h3>
+  </div>
+  
+  <ol>
+    <li>Ve a <strong>vercel.com</strong> e inicia sesión con GitHub</li>
+    <li>Haz clic en <strong>"Add New..." → "Project"</strong></li>
+    <li>Selecciona tu repositorio <strong>app-5s</strong></li>
+    <li>En "Configure Project", déjalo todo por defecto EXCEPTO:
+      <ul>
+        <li><strong>Framework Preset:</strong> Next.js (se detecta automáticamente)</li>
+        <li><strong>Build Command:</strong> <code>npx prisma generate && next build</code></li>
+      </ul>
+    </li>
+    <li><strong>NO desplegar todavía</strong> — primero necesitamos las variables de entorno (Paso 6)</li>
+  </ol>
+  
+  <div class="warning-box">
+    <p class="title">Build Command importante</p>
+    <p>El Build Command debe ser: <code>npx prisma generate && next build</code>. Esto genera el cliente de Prisma antes de compilar la app. Sin esto, el build fallará.</p>
+  </div>
+</div>
+
+<!-- SECTION 8 -->
+<div class="page">
+  <h2>8. Paso 6: Configurar variables de entorno</h2>
+  
+  <div class="step-box">
+    <span class="step-num">6</span>
+    <h3>Agregar variables de entorno en Vercel</h3>
+  </div>
+  
+  <ol>
+    <li>En la pantalla de configuración del proyecto en Vercel, busca <strong>"Environment Variables"</strong></li>
+    <li>Agrega las 4 variables siguientes:</li>
+  </ol>
+  
+  <table>
+    <tr><th>Nombre</th><th>Valor</th><th>Obtener de</th></tr>
+    <tr><td><code>DATABASE_URL</code></td><td>postgresql://postgres...pooler...6543/postgres</td><td>Supabase → Settings → Database (pooling)</td></tr>
+    <tr><td><code>DIRECT_URL</code></td><td>postgresql://postgres...5432/postgres</td><td>Supabase → Settings → Database (direct)</td></tr>
+    <tr><td><code>NEXT_PUBLIC_SUPABASE_URL</code></td><td>https://xxxx.supabase.co</td><td>Supabase → Settings → API</td></tr>
+    <tr><td><code>SUPABASE_SERVICE_ROLE_KEY</code></td><td>eyJhbGciOiJIUzI1NiIs...</td><td>Supabase → Settings → API (service_role)</td></tr>
+  </table>
+  
+  <div class="code-box"><span class="comment"># Ejemplo completo de las 4 variables:</span>
+
+<span class="highlight">DATABASE_URL</span>=<span class="string">"postgresql://postgres.xxxx:TU-PASSWORD@aws-0-eu-central-1.pooler.supabase.com:6543/postgres"</span>
+<span class="highlight">DIRECT_URL</span>=<span class="string">"postgresql://postgres.xxxx:TU-PASSWORD@aws-0-eu-central-1.supabase.com:5432/postgres"</span>
+<span class="highlight">NEXT_PUBLIC_SUPABASE_URL</span>=<span class="string">"https://xxxx.supabase.co"</span>
+<span class="highlight">SUPABASE_SERVICE_ROLE_KEY</span>=<span class="string">"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."</span></div>
+  
+  <p>Después de agregar las variables, haz clic en <strong>"Deploy"</strong>.</p>
+  
+  <h2>9. Paso 7: Ejecutar migración de base de datos</h2>
+  
+  <div class="step-box">
+    <span class="step-num">7</span>
+    <h3>Crear las tablas en Supabase</h3>
+  </div>
+  
+  <p>Después del primer despliegue (que puede fallar porque no hay tablas), necesitas crear las tablas en Supabase:</p>
+  
+  <ol>
+    <li>En tu proyecto Supabase, ve a <strong>SQL Editor</strong></li>
+    <li>Haz clic en <strong>"New query"</strong></li>
+    <li>Ejecuta la migración generada por Prisma. Para obtener el SQL:</li>
+  </ol>
+  
+  <div class="code-box"><span class="comment"># En tu terminal local (con DATABASE_URL configurado):</span>
+<span class="highlight">npx prisma migrate diff</span> \
+  --from-empty \
+  --to-schema-datamodel prisma/schema.prisma \
+  --script > migration.sql
+
+<span class="comment"># Luego copia el contenido de migration.sql</span>
+<span class="comment"># y pégalo en el SQL Editor de Supabase</span></div>
+  
+  <p>Alternativamente, si tienes <code>prisma-cli</code> configurado localmente con la URL de Supabase:</p>
+  
+  <div class="code-box"><span class="comment"># Configura temporalmente la URL de Supabase</span>
+<span class="highlight">export DATABASE_URL</span>=<span class="string">"postgresql://postgres.xxxx:PASSWORD@aws-0-eu-central-1.pooler.supabase.com:6543/postgres"</span>
+<span class="highlight">export DIRECT_URL</span>=<span class="string">"postgresql://postgres.xxxx:PASSWORD@aws-0-eu-central-1.supabase.com:5432/postgres"</span>
+
+<span class="comment"># Ejecuta la migración</span>
+<span class="highlight">npx prisma db push</span></div>
+  
+  <p>Después de crear las tablas, <strong>re-despliega en Vercel</strong> (Settings → Deployments → Redeploy).</p>
+  
+  <div class="info-box">
+    <p class="title">Tu app estará lista</p>
+    <p>Después de la migración y el redeploy, tu app 5S estará accesible permanentemente en una URL como: <code>app-5s.vercel.app</code></p>
+  </div>
+</div>
+
+<!-- SECTION 10 -->
+<div class="page">
+  <h2>10. Flujo de trabajo diario</h2>
+  
+  <p>Una vez desplegada, el flujo para hacer mejoras es simple:</p>
+  
+  <div style="background: #f1f5f9; border-radius: 8pt; padding: 16pt; margin: 10pt 0;">
+    <p style="text-align: center; font-weight: 600; margin-bottom: 10pt;">Ciclo de desarrollo</p>
+    <p style="text-align: center; font-size: 12pt;">
+      ✏️ Mejoras en Z → 💾 git commit → 🚀 git push → ✅ Vercel actualiza automáticamente
+    </p>
+  </div>
+  
+  <h3>Comandos habituales</h3>
+  
+  <div class="code-box"><span class="comment"># 1. Haces cambios en tu app (en Z)</span>
+
+<span class="comment"># 2. Guardas los cambios</span>
+<span class="highlight">git add</span> .
+<span class="highlight">git commit</span> -m "Descripción del cambio"
+
+<span class="comment"># 3. Subes a GitHub (Vercel detecta y despliega automáticamente)</span>
+<span class="highlight">git push</span></div>
+  
+  <p>En ~1-2 minutos, Vercel habrá desplegado la nueva versión. Tus usuarios verán la actualización automáticamente.</p>
+  
+  <h2>11. Solución de problemas</h2>
+  
+  <table>
+    <tr><th>Problema</th><th>Solución</th></tr>
+    <tr><td>Build falla en Vercel</td><td>Verifica que el Build Command sea: <code>npx prisma generate && next build</code></td></tr>
+    <tr><td>Error de conexión a BD</td><td>Verifica DATABASE_URL y DIRECT_URL en Vercel → Settings → Environment Variables</td></tr>
+    <tr><td>Las fotos no se suben</td><td>Verifica NEXT_PUBLIC_SUPABASE_URL y SUPABASE_SERVICE_ROLE_KEY. Verifica que el bucket "photos" sea público.</td></tr>
+    <tr><td>Página en blanco</td><td>Verifica que las tablas se crearon correctamente en Supabase → Table Editor</td></tr>
+    <tr><td>Error 500 en API</td><td>Revisa los logs en Vercel → Deployments → Function Logs</td></tr>
+    <tr><td>Los datos no se guardan</td><td>Verifica que DIRECT_URL use el puerto 5432 (no 6543) para migraciones</td></tr>
+  </table>
+  
+  <div class="info-box">
+    <p class="title">Límites del plan gratuito</p>
+    <p>Supabase: 500MB de base de datos + 1GB de almacenamiento de fotos. Con fotos comprimidas (~100KB cada una), puedes almacenar ~10,000 fotos. Vercel: ancho de banda ilimitado para proyectos hobby.</p>
+  </div>
+  
+  <div style="margin-top: 30pt; text-align: center; padding: 20pt; background: #eff6ff; border-radius: 10pt;">
+    <p style="font-size: 14pt; font-weight: 700; color: #1e40af; margin: 0;">¡Tu app 5S estará permanentemente en línea!</p>
+    <p style="font-size: 11pt; color: #64748b; margin: 8pt 0 0 0;">Sin costos, sin caducidad, sin servidor que mantener</p>
+  </div>
+</div>
+
+</body>
+</html>

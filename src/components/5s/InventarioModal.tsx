@@ -50,7 +50,7 @@ interface InventarioModalProps {
 }
 
 export default function InventarioModal({ open, onClose, sStep, miniStep }: InventarioModalProps) {
-  const { fetchProgress, currentUser, adminFreeNavigation } = use5SStore();
+  const { fetchProgress, currentUser, adminFreeNavigation, currentProject } = use5SStore();
   const sStepData = S_STEPS.find(s => s.id === sStep);
   const config: InventoryConfig = INVENTORY_CONFIGS[sStep] || INVENTORY_CONFIGS[1];
   const isAdmin = currentUser?.role === 'admin' && adminFreeNavigation;
@@ -78,7 +78,7 @@ export default function InventarioModal({ open, onClose, sStep, miniStep }: Inve
   const loadInventory = async () => {
     setIsLoading(true);
     try {
-      const res = await fetch(`/api/inventory?sStep=${sStep}`);
+      const res = await fetch(`/api/inventory?sStep=${sStep}&projectId=${currentProject?.id || ''}`);
       const json = await res.json();
       if (json.success) {
         setItems(json.data.map((item: InventoryItemData & { id: string; extra?: string }) => ({
@@ -107,6 +107,7 @@ export default function InventarioModal({ open, onClose, sStep, miniStep }: Inve
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           sStep,
+          projectId: currentProject?.id,
           name: newItem.name,
           location: newItem.location,
           category: newItem.category,
@@ -148,6 +149,7 @@ export default function InventarioModal({ open, onClose, sStep, miniStep }: Inve
           body: JSON.stringify(
             templateItems.map((item: InventoryItemData) => ({
               sStep,
+              projectId: currentProject?.id,
               name: item.name,
               location: item.location || '',
               category: item.category,
@@ -186,12 +188,13 @@ export default function InventarioModal({ open, onClose, sStep, miniStep }: Inve
     if (!canComplete) return;
 
     try {
-      const res = await fetch(`/api/progress/${sStep}/${miniStep}`, {
+      const res = await fetch(`/api/progress/step?sStep=${sStep}&miniStep=${miniStep}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           completed: true,
           score: classifyPercent,
+          projectId: currentProject?.id,
         }),
       });
 
@@ -207,10 +210,10 @@ export default function InventarioModal({ open, onClose, sStep, miniStep }: Inve
 
   const handleAdminSkip = async () => {
     try {
-      const res = await fetch(`/api/progress/${sStep}/${miniStep}`, {
+      const res = await fetch(`/api/progress/step?sStep=${sStep}&miniStep=${miniStep}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ completed: true, score: 100, notes: 'Completado por administrador (skip)' }),
+        body: JSON.stringify({ completed: true, score: 100, notes: 'Completado por administrador (skip)', projectId: currentProject?.id }),
       });
       const json = await res.json();
       if (json.success) {

@@ -4,11 +4,13 @@ import { db } from '@/lib/db'
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { sStep, answers } = body
+    const { sStep, answers, projectId } = body
 
     if (!sStep || !answers) {
       return NextResponse.json({ success: false, error: 'Missing required fields' }, { status: 400 })
     }
+
+    const lookupProjectId = projectId || 'default'
 
     const template = await db.template.findFirst({
       where: { type: 'examen', sStep, active: true },
@@ -34,26 +36,26 @@ export async function POST(request: NextRequest) {
     const score = Math.round((correct / questions.length) * 100)
     const passed = score >= 80
 
-    // Save answers
+    // Save answers with projectId
     for (const r of results) {
       await db.examAnswer.create({
-        data: { sStep, questionIdx: r.questionIdx, answerIdx: r.answerIdx, correct: r.correct },
+        data: { sStep, questionIdx: r.questionIdx, answerIdx: r.answerIdx, correct: r.correct, projectId: lookupProjectId },
       })
     }
 
     // Update progress if passed
     if (passed) {
       const existing = await db.progress.findUnique({
-        where: { sStep_miniStep: { sStep, miniStep: 1 } },
+        where: { sStep_miniStep_projectId: { sStep, miniStep: 1, projectId: lookupProjectId } },
       })
       if (existing) {
         await db.progress.update({
-          where: { sStep_miniStep: { sStep, miniStep: 1 } },
+          where: { id: existing.id },
           data: { completed: true, score, passedAt: new Date() },
         })
       } else {
         await db.progress.create({
-          data: { sStep, miniStep: 1, completed: true, score, passedAt: new Date() },
+          data: { sStep, miniStep: 1, completed: true, score, passedAt: new Date(), projectId: lookupProjectId },
         })
       }
     }

@@ -30,7 +30,7 @@ interface AutoevaluacionModalProps {
 }
 
 export default function AutoevaluacionModal({ open, onClose, sStep, miniStep }: AutoevaluacionModalProps) {
-  const { fetchProgress, currentUser, adminFreeNavigation } = use5SStore();
+  const { fetchProgress, currentUser, adminFreeNavigation, currentProject } = use5SStore();
   const sStepData = S_STEPS.find(s => s.id === sStep);
   const sections = AUDIT_CHECKLISTS[sStep] || [];
   const isAdmin = currentUser?.role === 'admin' && adminFreeNavigation;
@@ -90,7 +90,7 @@ export default function AutoevaluacionModal({ open, onClose, sStep, miniStep }: 
     if (!canSubmit) return;
     setIsSubmitting(true);
     try {
-      const res = await fetch(`/api/progress/${sStep}/${miniStep}`, {
+      const res = await fetch(`/api/progress/step?sStep=${sStep}&miniStep=${miniStep}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -101,6 +101,7 @@ export default function AutoevaluacionModal({ open, onClose, sStep, miniStep }: 
             results: Object.values(results),
             observaciones,
           }),
+          projectId: currentProject?.id,
         }),
       });
       const json = await res.json();
@@ -118,10 +119,10 @@ export default function AutoevaluacionModal({ open, onClose, sStep, miniStep }: 
 
   const handleAdminSkip = async () => {
     try {
-      const res = await fetch(`/api/progress/${sStep}/${miniStep}`, {
+      const res = await fetch(`/api/progress/step?sStep=${sStep}&miniStep=${miniStep}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ completed: true, score: 100, notes: 'Completado por administrador (skip)' }),
+        body: JSON.stringify({ completed: true, score: 100, notes: 'Completado por administrador (skip)', projectId: currentProject?.id }),
       });
       const json = await res.json();
       if (json.success) {

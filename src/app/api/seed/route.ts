@@ -306,14 +306,19 @@ export async function POST() {
       })
     }
 
-    // Create 25 progress records (5 S × 5 mini-steps)
-    for (let s = 1; s <= 5; s++) {
-      for (let m = 1; m <= 5; m++) {
-        await db.progress.upsert({
-          where: { sStep_miniStep: { sStep: s, miniStep: m } },
-          create: { sStep: s, miniStep: m, completed: false, score: null },
-          update: { completed: false, score: null },
-        })
+    // Create 25 progress records (5 S × 5 mini-steps) for each project
+    const projects = await db.project.findMany()
+    const projectIds = projects.length > 0 ? projects.map(p => p.id) : ['default']
+
+    for (const projectId of projectIds) {
+      for (let s = 1; s <= 5; s++) {
+        for (let m = 1; m <= 5; m++) {
+          await db.progress.upsert({
+            where: { sStep_miniStep_projectId: { sStep: s, miniStep: m, projectId } },
+            create: { sStep: s, miniStep: m, completed: false, score: null, projectId },
+            update: { completed: false, score: null },
+          })
+        }
       }
     }
 

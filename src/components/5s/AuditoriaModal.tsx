@@ -38,7 +38,7 @@ interface AuditoriaModalProps {
 }
 
 export default function AuditoriaModal({ open, onClose, sStep, miniStep }: AuditoriaModalProps) {
-  const { fetchProgress, currentUser, adminFreeNavigation } = use5SStore();
+  const { fetchProgress, currentUser, adminFreeNavigation, currentProject } = use5SStore();
   const sStepData = S_STEPS.find(s => s.id === sStep);
   const sections = AUDIT_CHECKLISTS[sStep] || [];
   const isAdmin = currentUser?.role === 'admin' && adminFreeNavigation;
@@ -109,13 +109,14 @@ export default function AuditoriaModal({ open, onClose, sStep, miniStep }: Audit
           result: scoring.scorePercent >= AUDIT_PASS_THRESHOLD ? 'apto' : 'no_apto',
           score: scoring.scorePercent,
           observations: observaciones || null,
+          projectId: currentProject?.id,
         }),
       });
 
       const auditJson = await auditRes.json();
       if (auditJson.success) {
         // Also mark the mini-step as completed
-        const progressRes = await fetch(`/api/progress/${sStep}/${miniStep}`, {
+        const progressRes = await fetch(`/api/progress/step?sStep=${sStep}&miniStep=${miniStep}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -127,6 +128,7 @@ export default function AuditoriaModal({ open, onClose, sStep, miniStep }: Audit
               results: Object.values(results),
               observaciones,
             }),
+            projectId: currentProject?.id,
           }),
         });
 
@@ -156,13 +158,14 @@ export default function AuditoriaModal({ open, onClose, sStep, miniStep }: Audit
           result: 'apto',
           score: 100,
           observations: 'Completado por administrador (skip)',
+          projectId: currentProject?.id,
         }),
       });
       // Mark progress as completed
-      const res = await fetch(`/api/progress/${sStep}/${miniStep}`, {
+      const res = await fetch(`/api/progress/step?sStep=${sStep}&miniStep=${miniStep}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ completed: true, score: 100, notes: 'Completado por administrador (skip)' }),
+        body: JSON.stringify({ completed: true, score: 100, notes: 'Completado por administrador (skip)', projectId: currentProject?.id }),
       });
       const json = await res.json();
       if (json.success) {

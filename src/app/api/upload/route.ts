@@ -1,16 +1,25 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { writeFile, mkdir } from 'fs/promises'
-import path from 'path'
+import { uploadToStorage, deleteFromStorage, isStorageConfigured } from '@/lib/supabase-storage'
 
-// Ensure the uploads directory exists
-async function ensureUploadsDir() {
-  const uploadsDir = path.join(process.cwd(), 'public', 'uploads', 'photos')
+// Fallback: local filesystem storage for development
+async function saveToLocal(file: File, filename: string): Promise<string | null> {
   try {
-    await mkdir(uploadsDir, { recursive: true })
-  } catch {
-    // Directory might already exist
+    const { writeFile, mkdir } = await import('fs/promises')
+    const path = await import('path')
+
+    const uploadsDir = path.join(process.cwd(), 'public', 'uploads', 'photos')
+    try { await mkdir(uploadsDir, { recursive: true }) } catch {}
+
+    const filepath = path.join(uploadsDir, filename)
+    const bytes = await file.arrayBuffer()
+    const buffer = Buffer.from(bytes)
+    await writeFile(filepath, buffer)
+
+    return `/uploads/photos/${filename}`
+  } catch (error) {
+    console.error('Local save error:', error)
+    return null
   }
-  return uploadsDir
 }
 
 export async function POST(request: NextRequest) {
@@ -33,19 +42,26 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: 'File too large (max 5MB)' }, { status: 400 })
     }
 
-    const uploadsDir = await ensureUploadsDir()
-
-    // Use provided filename or generate one
     const safeFilename = filename || `${Date.now()}_${Math.random().toString(36).substring(2, 8)}.jpg`
-    const filepath = path.join(uploadsDir, safeFilename)
 
-    // Write the file
-    const bytes = await file.arrayBuffer()
-    const buffer = Buffer.from(bytes)
-    await writeFile(filepath, buffer)
+    // Try Supabase Storage first (production), fallback to local (development)
+    let url: string | null = null
 
-    // Return the public URL path
-    const url = `/uploads/photos/${safeFilename}`
+    if (isStorageConfigured()) {
+      const result = await uploadToStorage(file, safeFilename, file.type || 'image/jpeg')
+      if (result) {
+        url = result.url
+      }
+    }
+
+    // Fallback to local filesystem if Supabase is not configured or upload failed
+    if (!url) {
+      url = await saveToLocal(file, safeFilename)
+    }
+
+    if (!url) {
+      return NextResponse.json({ success: false, error: 'Upload failed' }, { status: 500 })
+    }
 
     return NextResponse.json({
       success: true,
@@ -63,21 +79,27 @@ export async function DELETE(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
     const filename = searchParams.get('filename')
+    const storagePath = searchParams.get('path')
 
-    if (!filename) {
-      return NextResponse.json({ success: false, error: 'Filename required' }, { status: 400 })
+    if (!filename && !storagePath) {
+      return NextResponse.json({ success: false, error: 'Filename or path required' }, { status: 400 })
     }
 
-    // Security: only allow deleting from uploads/photos directory
-    const safeName = path.basename(filename) // Prevent directory traversal
-    const filepath = path.join(process.cwd(), 'public', 'uploads', 'photos', safeName)
+    // Try deleting from Supabase Storage
+    if (isStorageConfigured() && storagePath) {
+      await deleteFromStorage(storagePath)
+    }
 
-    const { unlink } = await import('fs/promises')
+    // Also try deleting from local filesystem (for development)
     try {
-      await unlink(filepath)
-    } catch {
-      // File might not exist
-    }
+      const path = await import('path')
+      const { unlink } = await import('fs/promises')
+      const safeName = path.basename(filename || '')
+      if (safeName) {
+        const filepath = path.join(process.cwd(), 'public', 'uploads', 'photos', safeName)
+        try { await unlink(filepath) } catch {}
+      }
+    } catch {}
 
     return NextResponse.json({ success: true })
   } catch (error) {

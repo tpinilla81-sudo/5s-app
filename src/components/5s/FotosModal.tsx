@@ -226,7 +226,7 @@ export default function FotosModal({ open, onClose, sStep, miniStep }: FotosModa
     setIsSubmitting(true);
     try {
       const urls = photos.map(p => p.serverUrl || p.preview).join(',');
-      const res = await fetch(`/api/progress/${sStep}/${miniStep}`, {
+      const res = await fetch(`/api/progress/step?sStep=${sStep}&miniStep=${miniStep}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ completed: true, photoUrls: urls, score: 100, projectId: currentProject?.id }),
@@ -242,7 +242,7 @@ export default function FotosModal({ open, onClose, sStep, miniStep }: FotosModa
 
   const handleAdminSkip = async () => {
     try {
-      const res = await fetch(`/api/progress/${sStep}/${miniStep}`, {
+      const res = await fetch(`/api/progress/step?sStep=${sStep}&miniStep=${miniStep}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ completed: true, score: 100, notes: 'Completado por administrador (skip)', projectId: currentProject?.id }),

@@ -5,13 +5,17 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
     const sStep = searchParams.get('sStep')
+    const projectId = searchParams.get('projectId')
 
     if (!sStep) {
       return NextResponse.json({ success: false, error: 'sStep is required' }, { status: 400 })
     }
 
+    const where: any = { sStep: parseInt(sStep) }
+    if (projectId) where.projectId = projectId
+
     const items = await db.inventoryItem.findMany({
-      where: { sStep: parseInt(sStep) },
+      where,
       orderBy: { createdAt: 'desc' },
     })
 
@@ -25,7 +29,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { sStep } = body
+    const { sStep, projectId } = body
 
     if (!sStep) {
       return NextResponse.json({ success: false, error: 'Missing required fields' }, { status: 400 })
@@ -46,6 +50,7 @@ export async function POST(request: NextRequest) {
           quantity: item.quantity || 1,
           action: item.action || null,
           photoUrl: item.photoUrl || null,
+          projectId: projectId || item.projectId || 'default',
         },
       })
       created.push(result)

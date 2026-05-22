@@ -1,24 +1,25 @@
 ---
 Task ID: 1
-Agent: main
-Task: Implement admin free navigation mode - allow admin to access all steps without completing prerequisites
+Agent: Main Agent
+Task: Preparar app 5S para despliegue en Vercel + Supabase
 
 Work Log:
-- Analyzed current codebase: store.ts getMiniStepStatus(), SStepDetail.tsx, MiniStepCard.tsx, Board5S.tsx, all modals
-- Added `adminFreeNavigation` boolean state to Zustand store (default: true for admin convenience)
-- Modified `getMiniStepStatus()` to check currentUser.role === 'admin' && adminFreeNavigation, bypassing progressive unlock
-- Added `setAdminFreeNavigation()` action to store
-- Added toggle button in page.tsx header: amber-colored "Libre/Secuencial" button visible only for admin role
-- Added "Modo Admin: Completar paso sin X" skip button in all 5 modals (FormacionModal, FotosModal, InventarioModal, AutoevaluacionModal, AuditoriaModal)
-- Each skip button calls PUT /api/progress/{sStep}/{miniStep} with completed:true, score:100
-- Fixed seed route to create 25 progress records (5S × 5 mini-steps) on database initialization
-- Verified build compiles successfully
-- Verified API endpoints work (auth, seed, progress) with dev server
-- Reset admin user credentials (admin@test.com / admin123)
+- Revisé todo el código fuente: schema, APIs, componentes, store
+- Cambié Prisma schema de SQLite a PostgreSQL con directUrl para Supabase
+- Agregué índices @@index([projectId]) en todas las tablas con projectId
+- Simplificé db.ts para serverless PostgreSQL (sin schema version hack)
+- Creé src/lib/supabase-storage.ts para subida de fotos a Supabase Storage
+- Actualicé src/app/api/upload/route.ts con soporte Supabase + fallback local
+- Actualicé next.config.ts: eliminé output: "standalone", agregué remotePatterns para Supabase
+- Corregí API de progress: cambié de rutas dinámicas anidadas a query params (/api/progress/step?sStep=X&miniStep=Y)
+- Actualicé todas las APIs (progress, inventory, exam, audit, seed) para usar projectId correctamente
+- Actualicé todos los componentes 5S (Formacion, Fotos, Inventario, Autoevaluacion, Auditoria) para pasar projectId
+- Actualicé store.ts: fetchProgress ahora pasa projectId como query param
+- Creé .env.example con documentación de todas las variables necesarias
+- Build compila exitosamente con npx next build
+- Generé guía de despliegue PDF en /download/guia-despliegue-5s.pdf (12 páginas)
 
 Stage Summary:
-- Admin users can now navigate freely through all mini-steps regardless of completion status
-- Toggle button in header switches between "Libre" (all unlocked) and "Secuencial" (normal progressive unlocking)
-- Each modal has a skip button for admin to complete steps without doing the activity
-- Seed route now creates progress records alongside templates
-- All changes compile and API endpoints verified working
+- App lista para Vercel + Supabase
+- Todos los cambios son compatibles hacia atrás (funciona en Z y en Vercel)
+- Próximos pasos del usuario: crear cuentas en GitHub/Supabase/Vercel y seguir la guía
