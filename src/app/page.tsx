@@ -74,12 +74,17 @@ export default function HomePage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Initialize board data when auth view is board
+  // Initialize board data when auth view is board - with retry
   useEffect(() => {
     if (authView === 'board' && !isInitialized) {
-      const init = async () => {
+      const init = async (retries = 3) => {
         try {
           const res = await fetch('/api/progress');
+          if (!res.ok && retries > 0) {
+            // Server might be restarting, wait and retry
+            await new Promise(r => setTimeout(r, 2000));
+            return init(retries - 1);
+          }
           const json = await res.json();
 
           if (json.success && json.data && json.data.length > 0) {
@@ -92,6 +97,11 @@ export default function HomePage() {
             setIsInitialized(true);
           }
         } catch {
+          if (retries > 0) {
+            // Server might be restarting, wait and retry
+            await new Promise(r => setTimeout(r, 2000));
+            return init(retries - 1);
+          }
           setIsSeeding(true);
           await seedDatabase();
           setIsSeeding(false);
