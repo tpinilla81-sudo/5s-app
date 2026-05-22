@@ -46,3 +46,28 @@ Stage Summary:
 - Admin: admin@5s.com / admin123
 - Proyecto Demo 5S con 4 zonas creado
 - Permisos de roles configurados (admin, responsable, empleado, auditor)
+
+---
+Task ID: 3
+Agent: Main Agent
+Task: Restaurar app 5S al estado con dibujos en formación S1
+
+Work Log:
+- Verificó estado: schema SQLite, imágenes en /public/formation/s1/, código intacto
+- Problema encontrado: BD vacía (sin tablas ni datos tras resets previos)
+- Ejecutó prisma db push para crear tablas
+- Re-seed de la BD vía POST /api/seed
+- Descubrió que el servidor standalone no encontraba la BD ni servía archivos estáticos
+- Eliminó output: 'standalone' de next.config.ts y rehizo build
+- Descubrió que DATABASE_URL con ruta relativa fallaba en producción
+- Cambió DATABASE_URL a ruta absoluta: file:/home/z/my-project/db/custom.db
+- Creó server.js custom y run-server.sh con auto-restart
+- Todas las verificaciones pasadas: 200 OK, auth, S1 con 11 secciones y 30 imágenes, todas las S con 5 plantillas, 25 registros de progreso
+
+Stage Summary:
+- App restaurada completamente al estado con dibujos integrados en S1
+- Admin: admin@5s.com / admin123
+- Proyecto Demo 5S con 4 zonas
+- S1 formación: 11 secciones con 30 dibujos/ilustraciones
+- Servidor estable en producción con auto-restart
+- Fix clave: DATABASE_URL con ruta absoluta
