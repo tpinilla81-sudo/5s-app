@@ -189,7 +189,7 @@ export default function ProgressDashboard() {
         </CardContent>
       </Card>
 
-      {/* Per-S progress with data counts */}
+      {/* Per-S progress with score percentage and data counts */}
       <div className="grid grid-cols-1 sm:grid-cols-5 gap-3">
         {S_STEPS.map((s, i) => {
           const sProgress = progress.filter(p => p.sStep === s.id);
@@ -197,6 +197,12 @@ export default function ProgressDashboard() {
           const sPercent = (sCompleted / 5) * 100;
           const earned = isQuesitoEarned(s.id);
           const sStats = stats?.perS?.[s.id];
+
+          // Calculate average score from completed mini-steps
+          const completedWithScore = sProgress.filter(p => p.completed && p.score !== null);
+          const avgScore = completedWithScore.length > 0
+            ? Math.round(completedWithScore.reduce((sum, p) => sum + (p.score ?? 0), 0) / completedWithScore.length)
+            : null;
 
           return (
             <motion.div
@@ -215,7 +221,21 @@ export default function ProgressDashboard() {
                     <span className="text-xs font-semibold truncate">{s.name}</span>
                     {earned && <span className="text-xs">✅</span>}
                   </div>
-                  <Progress value={sPercent} className="h-2 mb-1" />
+
+                  {/* Percentage score - prominent */}
+                  <div className="text-center mb-2">
+                    <p
+                      className="text-3xl font-black"
+                      style={{ color: avgScore !== null ? s.color : '#9ca3af' }}
+                    >
+                      {avgScore !== null ? `${avgScore}%` : '—'}
+                    </p>
+                    <p className="text-[10px] text-muted-foreground">
+                      Puntuación {s.japaneseName}
+                    </p>
+                  </div>
+
+                  <Progress value={avgScore ?? sPercent} className="h-2 mb-1" />
                   <p className="text-xs text-muted-foreground text-center mb-2">
                     {sCompleted}/5 pasos
                   </p>
