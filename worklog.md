@@ -7,7 +7,7 @@ Work Log:
 - Revisé todo el código fuente: schema, APIs, componentes, store
 - Cambié Prisma schema de SQLite a PostgreSQL con directUrl para Supabase
 - Agregué índices @@index([projectId]) en todas las tablas con projectId
-- Simplificé db.ts para serverless PostgreSQL (sin schema version hack)
+- Simplifiqué db.ts para serverless PostgreSQL (sin schema version hack)
 - Creé src/lib/supabase-storage.ts para subida de fotos a Supabase Storage
 - Actualicé src/app/api/upload/route.ts con soporte Supabase + fallback local
 - Actualicé next.config.ts: eliminé output: "standalone", agregué remotePatterns para Supabase
@@ -23,3 +23,26 @@ Stage Summary:
 - App lista para Vercel + Supabase
 - Todos los cambios son compatibles hacia atrás (funciona en Z y en Vercel)
 - Próximos pasos del usuario: crear cuentas en GitHub/Supabase/Vercel y seguir la guía
+
+---
+Task ID: 2
+Agent: Main Agent
+Task: Restaurar app 5S con dibujos en formación S1
+
+Work Log:
+- Analicé las imágenes subidas (page_01.png a page_29.png) del PDF "pildora s1.pdf" - son contenido de formación S1 sobre MUDA y Seiri
+- Copié 29 imágenes de formación + 2 diagramas WhatsApp a /public/formation/s1/
+- Actualicé FormacionModal.tsx: soporte para imágenes/dibujos en secciones con galería full-screen, zoom, navegación con flechas
+- Actualicé seed route (api/seed): S1 formación con 11 secciones detalladas y referencias a imágenes de los dibujos
+- Corregí contraseña admin en seed: ahora usa hash SHA256 (igual que el auth route)
+- Seed route crea: admin user, proyecto demo con 4 zonas, permisos de roles, 25 templates, 25 progress records
+- Rebuild exitoso con next build
+- Base de datos inicializada correctamente vía POST /api/seed
+- Servidor en producción con auto-restart (run-server.sh)
+
+Stage Summary:
+- Formación S1 restaurada con 11 secciones y dibujos integrados de la píldora S1
+- Galería de imágenes con zoom y navegación por teclado
+- Admin: admin@5s.com / admin123
+- Proyecto Demo 5S con 4 zonas creado
+- Permisos de roles configurados (admin, responsable, empleado, auditor)

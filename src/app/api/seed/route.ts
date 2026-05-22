@@ -1,15 +1,83 @@
 import { NextResponse } from 'next/server'
+import { createHash } from 'crypto'
 import { db } from '@/lib/db'
+
+function hashPassword(password: string): string {
+  return createHash('sha256').update(password).digest('hex')
+}
 
 const S_NAMES = ['Revisar', 'Ordenar', 'Limpiar', 'Estandarizar', 'Mantener']
 const S_JAPANESE = ['Seiri', 'Seiton', 'Seiso', 'Seiketsu', 'Shitsuke']
 
-const TRAINING_CONTENT: Record<number, { sections: Array<{ title: string; content: string }> }> = {
+const TRAINING_CONTENT: Record<number, { sections: Array<{ title: string; content: string; images?: string[]; layout?: string }> }> = {
   1: {
     sections: [
-      { title: '¿Qué es SEIRI (Revisar)?', content: 'Seiri significa clasificar y separar los elementos necesarios de los innecesarios en el lugar de trabajo. El objetivo es eliminar todo lo que no se necesita para realizar el trabajo diario, reduciendo el desorden y liberando espacio útil. Esta es la primera S y la base de todo el método 5S.\n\nSin una clasificación adecuada, es imposible organizar, limpiar o estandarizar eficazmente. Seiri nos enseña a ser selectivos y a cuestionar la necesidad de cada elemento presente en nuestro entorno de trabajo.' },
-      { title: 'Identificación de innecesarios', content: 'Para identificar lo innecesario, pregúntate:\n\n• ¿Se ha usado en el último año?\n• ¿Es probable que se use en el futuro?\n• ¿Es reemplazable fácilmente?\n• ¿Existe otro departamento que lo necesite más?\n\nSi la respuesta a la mayoría de estas preguntas es NO, probablemente sea innecesario. Es importante ser riguroso y no guardar cosas "por si acaso".' },
-      { title: 'Técnica de las tarjetas rojas', content: 'La técnica de las tarjetas rojas consiste en etiquetar todos los ítems dudosos o innecesarios con una tarjeta roja que incluye:\n\n• Nombre del ítem\n• Razón de la etiqueta (innecesario, dudoso, excesivo)\n• Fecha de etiquetado\n• Decisión propuesta (eliminar, reubicar, vender)\n\nEstos ítems se colocan en un área designada ("zona roja") y se decide su destino en un plazo definido. Esta técnica visual facilita la toma de decisiones y la participación de todo el equipo.' },
+      {
+        title: '¿Qué es SEIRI (Revisar)?',
+        content: 'Seiri significa clasificar y separar los elementos necesarios de los innecesarios en el lugar de trabajo. El objetivo es eliminar todo lo que no se necesita para realizar el trabajo diario, reduciendo el desorden y liberando espacio útil. Esta es la primera S y la base de todo el método 5S.\n\nSin una clasificación adecuada, es imposible organizar, limpiar o estandarizar eficazmente. Seiri nos enseña a ser selectivos y a cuestionar la necesidad de cada elemento presente en nuestro entorno de trabajo.',
+        images: ['/formation/s1/5s_diagrama.jpeg'],
+        layout: 'text-bottom',
+      },
+      {
+        title: 'Los 8 Desperdicios (MUDA)',
+        content: 'En Lean Manufacturing, los 8 desperdicios (MUDA) son actividades que no añaden valor al producto o servicio. Identificarlos es el primer paso para eliminarlos:\n\n1. Sobreproducción — Producir más de lo necesario\n2. Espera — Tiempos muertos entre procesos\n3. Transporte — Movimientos innecesarios de materiales\n4. Sobreprocesamiento — Hacer más de lo que el cliente requiere\n5. Exceso de inventario — Almacenar más de lo necesario\n6. Movimiento innecesario — Desplazamientos del operario\n7. Defectos — Productos que no cumplen especificaciones\n8. Talento no aprovechado — No utilizar las capacidades de las personas',
+        images: ['/formation/s1/page_01.png', '/formation/s1/page_02.png'],
+        layout: 'text-bottom',
+      },
+      {
+        title: 'Desperdicio de Transporte',
+        content: 'El transporte innecesario es uno de los desperdicios más comunes en entornos industriales. Se produce cuando los materiales, piezas o productos se mueven más de lo necesario entre procesos, áreas o edificios.\n\nCausas principales:\n• Layout inadecuado de la planta\n• Almacenamiento distante del punto de uso\n• Procesos no secuenciales\n• Falta de organización en el flujo de materiales\n\nSoluciones 5S:\n• Revisar el layout y eliminar distancias innecesarias\n• Ubicar los materiales cerca del punto de uso (Seiton)\n• Eliminar stocks intermedios innecesarios (Seiri)',
+        images: ['/formation/s1/page_03.png', '/formation/s1/page_04.png'],
+        layout: 'text-bottom',
+      },
+      {
+        title: 'No Aprovechar el Talento',
+        content: 'El desperdicio de talento ocurre cuando las capacidades, ideas y experiencia de los trabajadores no se utilizan plenamente. Los empleados que están más cerca del trabajo son quienes mejor conocen los problemas y las oportunidades de mejora.\n\n¿Cómo detectarlo?\n• Los empleados no participan en la mejora continua\n• No hay sistema de sugerencias\n• Las decisiones se toman solo desde la dirección\n• No se forma a los empleados en herramientas de mejora\n\nSolución con 5S:\n• Involucrar a todos en las actividades 5S\n• Crear equipos de mejora multidisciplinarios\n• Reconocer y premiar las contribuciones',
+        images: ['/formation/s1/page_05.png', '/formation/s1/page_06.png'],
+        layout: 'text-bottom',
+      },
+      {
+        title: 'Gestión de Jaulas y Contenedores',
+        content: 'Las jaulas, contenedores y elementos de transporte son áreas donde Seiri aplica directamente. Muchas veces se acumulan jaulas vacías, contenedores dañados o cajas que ya no se necesitan, ocupando espacio valioso.\n\nCriterios de clasificación:\n• ¿La jaula/contenedor está en uso activo?\n• ¿Tiene asignado un contenido específico?\n• ¿Está en buen estado?\n• ¿Hay más unidades de las necesarias?\n\nAcciones:\n• Eliminar las que estén dañadas o no se usen\n• Reubicar las que pertenezcan a otra área\n• Definir stock mínimo de jaulas/contenedores',
+        images: ['/formation/s1/page_07.png', '/formation/s1/page_08.png'],
+        layout: 'text-bottom',
+      },
+      {
+        title: 'Preguntas de Reflexión S1',
+        content: 'Antes de pasar a la práctica, reflexiona sobre estas preguntas clave para consolidar tu comprensión de Seiri:\n\n• ¿Qué elementos innecesarios tienes en tu puesto de trabajo?\n• ¿Hace cuánto tiempo que no los usas?\n• ¿Qué te impide eliminarlos?\n• ¿Cómo afectan esos elementos a tu productividad?\n• ¿Qué ganarías al eliminarlos?\n\nRecuerda: el primer paso para mejorar es identificar y eliminar lo innecesario. Solo entonces podremos organizar, limpiar y estandarizar eficazmente.',
+        images: ['/formation/s1/page_09.png', '/formation/s1/page_10.png'],
+        layout: 'text-bottom',
+      },
+      {
+        title: 'Identificación de Innecesarios',
+        content: 'Para identificar lo innecesario, pregúntate:\n\n• ¿Se ha usado en el último año?\n• ¿Es probable que se use en el futuro?\n• ¿Es reemplazable fácilmente?\n• ¿Existe otro departamento que lo necesite más?\n\nSi la respuesta a la mayoría de estas preguntas es NO, probablemente sea innecesario. Es importante ser riguroso y no guardar cosas "por si acaso".',
+        images: ['/formation/s1/page_11.png', '/formation/s1/page_12.png', '/formation/s1/page_13.png'],
+        layout: 'text-bottom',
+      },
+      {
+        title: 'Técnica de las Tarjetas Rojas',
+        content: 'La técnica de las tarjetas rojas consiste en etiquetar todos los ítems dudosos o innecesarios con una tarjeta roja que incluye:\n\n• Nombre del ítem\n• Razón de la etiqueta (innecesario, dudoso, excesivo)\n• Fecha de etiquetado\n• Decisión propuesta (eliminar, reubicar, vender)\n\nEstos ítems se colocan en un área designada ("zona roja") y se decide su destino en un plazo definido. Esta técnica visual facilita la toma de decisiones y la participación de todo el equipo.',
+        images: ['/formation/s1/page_14.png', '/formation/s1/page_15.png'],
+        layout: 'text-bottom',
+      },
+      {
+        title: 'Proceso de Clasificación Práctico',
+        content: 'El proceso práctico de clasificación en S1 sigue estos pasos:\n\n1. RECORRER la zona y observar cada elemento\n2. PREGUNTAR para cada uno: ¿es necesario?\n3. CLASIFICAR en tres categorías: necesario, dudoso, innecesario\n4. ETIQUETAR con tarjetas rojas los dudosos e innecesarios\n5. AISLAR en zona roja los elementos etiquetados\n6. DECIDIR el destino final dentro del plazo establecido\n7. ELIMINAR todo lo confirmado como innecesario\n\nEs fundamental que todo el equipo participe y se alcance un consenso sobre lo que es realmente necesario.',
+        images: ['/formation/s1/page_16.png', '/formation/s1/page_17.png', '/formation/s1/page_18.png'],
+        layout: 'text-bottom',
+      },
+      {
+        title: 'Casos Prácticos y Ejemplos',
+        content: 'Ejemplos reales de aplicación de Seiri en entornos industriales:\n\n• Herramientas rotas o obsoletas que se guardan "por si acaso"\n• Documentación anticuada que ocupa espacio en archivadores\n• Materiales de producción descatalogados que nunca se usarán\n• Equipos fuera de servicio que podrían reubicarse o venderse\n• Exceso de stock de consumibles que caducarán\n\nEn cada caso, la decisión debe basarse en datos objetivos (frecuencia de uso, estado, probabilidad de uso futuro), no en suposiciones o apego emocional a los objetos.',
+        images: ['/formation/s1/page_19.png', '/formation/s1/page_20.png', '/formation/s1/page_21.png'],
+        layout: 'text-bottom',
+      },
+      {
+        title: 'Beneficios de Seiri y Resumen',
+        content: 'Los beneficios de aplicar Seiri correctamente son significativos:\n\n• Más espacio disponible en el área de trabajo\n• Menos tiempo perdido buscando cosas\n• Menor riesgo de accidentes al eliminar obstáculos\n• Mejor control del inventario real\n• Reducción de costes de almacenamiento\n• Mayor claridad visual del estado del puesto\n\nResumen: Seiri es la primera S porque sin clasificar no se puede organizar. Eliminar lo innecesario es el cimiento sobre el que se construyen las demás S. Es la base de toda la metodología 5S.',
+        images: ['/formation/s1/page_22.png', '/formation/s1/page_23.png', '/formation/s1/page_24.png', '/formation/s1/page_25.png', '/formation/s1/page_26.png', '/formation/s1/page_27.png', '/formation/s1/page_28.png', '/formation/s1/page_29.png'],
+        layout: 'text-bottom',
+      },
     ],
   },
   2: {
@@ -236,15 +304,91 @@ const AUDIT_TEMPLATES: Record<number, { criteria: Array<{ criterion: string; wei
 
 export async function POST() {
   try {
-    // Try to clear existing templates (ignore errors on empty db)
+    // Create admin user if not exists
+    const existingAdmin = await db.user.findUnique({ where: { email: 'admin@5s.com' } })
+    if (!existingAdmin) {
+      await db.user.create({
+        data: {
+          email: 'admin@5s.com',
+          name: 'Administrador',
+          password: hashPassword('admin123'),
+          role: 'admin',
+          active: true,
+        },
+      })
+    }
+
+    // Create demo project if no projects exist
+    let projects = await db.project.findMany()
+    let demoProjectId: string
+    if (projects.length === 0) {
+      const demoProject = await db.project.create({
+        data: {
+          name: 'Proyecto Demo 5S',
+          description: 'Proyecto de demostración de la metodología 5S',
+          company: 'Empresa Demo',
+          active: true,
+        },
+      })
+      demoProjectId = demoProject.id
+
+      // Create default zones
+      const zones = [
+        { name: 'Taller Principal', description: 'Zona de producción principal', color: '#8B5CF6' },
+        { name: 'Almacén A', description: 'Almacén de materiales', color: '#3B82F6' },
+        { name: 'Oficinas', description: 'Área administrativa', color: '#EAB308' },
+        { name: 'Nave 2', description: 'Zona de montaje secundaria', color: '#F43F5E' },
+      ]
+      for (const zone of zones) {
+        await db.zone.create({
+          data: { ...zone, projectId: demoProjectId },
+        })
+      }
+
+      // Link admin to project
+      const admin = await db.user.findUnique({ where: { email: 'admin@5s.com' } })
+      if (admin) {
+        await db.projectMember.create({
+          data: { userId: admin.id, projectId: demoProjectId, role: 'admin' },
+        })
+      }
+    } else {
+      demoProjectId = projects[0].id
+    }
+
+    // Create role permissions
+    const permissions = [
+      { role: 'admin', permission: 'view_board', allowed: true },
+      { role: 'admin', permission: 'complete_steps', allowed: true },
+      { role: 'admin', permission: 'manage_users', allowed: true },
+      { role: 'admin', permission: 'manage_projects', allowed: true },
+      { role: 'admin', permission: 'skip_steps', allowed: true },
+      { role: 'admin', permission: 'view_reports', allowed: true },
+      { role: 'admin', permission: 'manage_zones', allowed: true },
+      { role: 'responsable', permission: 'view_board', allowed: true },
+      { role: 'responsable', permission: 'complete_steps', allowed: true },
+      { role: 'responsable', permission: 'manage_users', allowed: false },
+      { role: 'responsable', permission: 'view_reports', allowed: true },
+      { role: 'empleado', permission: 'view_board', allowed: true },
+      { role: 'empleado', permission: 'complete_steps', allowed: true },
+      { role: 'empleado', permission: 'manage_users', allowed: false },
+      { role: 'empleado', permission: 'view_reports', allowed: false },
+      { role: 'auditor', permission: 'view_board', allowed: true },
+      { role: 'auditor', permission: 'complete_steps', allowed: false },
+      { role: 'auditor', permission: 'conduct_audit', allowed: true },
+      { role: 'auditor', permission: 'view_reports', allowed: true },
+    ]
+    for (const perm of permissions) {
+      await db.rolePermissionConfig.upsert({
+        where: { role_permission: { role: perm.role, permission: perm.permission } },
+        create: perm,
+        update: { allowed: perm.allowed },
+      })
+    }
+
+    // Clear existing templates and recreate
     try {
       await db.template.deleteMany({})
-    } catch {
-      // Ignore delete errors
-    }
-    // Try to clear existing progress
-    try {
-      await db.progress.deleteMany({})
     } catch {
       // Ignore delete errors
     }
@@ -307,8 +451,8 @@ export async function POST() {
     }
 
     // Create 25 progress records (5 S × 5 mini-steps) for each project
-    const projects = await db.project.findMany()
-    const projectIds = projects.length > 0 ? projects.map(p => p.id) : ['default']
+    projects = await db.project.findMany()
+    const projectIds = projects.length > 0 ? projects.map(p => p.id) : [demoProjectId]
 
     for (const projectId of projectIds) {
       for (let s = 1; s <= 5; s++) {
@@ -316,7 +460,7 @@ export async function POST() {
           await db.progress.upsert({
             where: { sStep_miniStep_projectId: { sStep: s, miniStep: m, projectId } },
             create: { sStep: s, miniStep: m, completed: false, score: null, projectId },
-            update: { completed: false, score: null },
+            update: {},
           })
         }
       }
@@ -324,12 +468,17 @@ export async function POST() {
 
     const templates = await db.template.findMany()
     const progressCount = await db.progress.count()
+    const userCount = await db.user.count()
+    const projectCount = await db.project.count()
     return NextResponse.json({
       success: true,
       data: {
         message: 'Base de datos inicializada correctamente',
         templatesCreated: templates.length,
         progressRecords: progressCount,
+        users: userCount,
+        projects: projectCount,
+        adminCredentials: 'admin@5s.com / admin123',
       },
     })
   } catch (error) {
