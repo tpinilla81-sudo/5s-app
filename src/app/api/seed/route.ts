@@ -15,7 +15,7 @@ const TRAINING_CONTENT: Record<number, { sections: Array<{ title: string; conten
       {
         title: '¿Qué es SEIRI (Revisar)?',
         content: 'Seiri significa clasificar y separar los elementos necesarios de los innecesarios en el lugar de trabajo. El objetivo es eliminar todo lo que no se necesita para realizar el trabajo diario, reduciendo el desorden y liberando espacio útil. Esta es la primera S y la base de todo el método 5S.\n\nSin una clasificación adecuada, es imposible organizar, limpiar o estandarizar eficazmente. Seiri nos enseña a ser selectivos y a cuestionar la necesidad de cada elemento presente en nuestro entorno de trabajo.',
-        images: ['/formation/s1/5s_diagrama.jpeg'],
+        images: ['/formation/s1/5s_diagrama2.jpeg'],
         layout: 'text-bottom',
       },
       {
