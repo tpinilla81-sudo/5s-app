@@ -71,3 +71,27 @@ Stage Summary:
 - S1 formación: 11 secciones con 30 dibujos/ilustraciones
 - Servidor estable en producción con auto-restart
 - Fix clave: DATABASE_URL con ruta absoluta
+
+---
+Task ID: 3
+Agent: Main Agent
+Task: Restaurar la aplicación al estado de las 13h españolas (formación S1 con dibujos)
+
+Work Log:
+- Verificó base de datos SQLite: schema correcto, datos intactos
+- Confirmó S1 formación con 11 secciones y todas las imágenes integradas
+- Confirmó 1 usuario admin, 1 proyecto demo con 4 zonas, 25 plantillas, 25 registros de progreso
+- Verificó las 29 imágenes de formación S1 + 2 diagramas en /public/formation/s1/
+- Instaló pm2 como gestor de procesos persistente
+- Construyó y arrancó el servidor con pm2 (auto-restart)
+- Verificó todos los endpoints: auth, templates, progress, projects, imágenes
+- Verificó acceso a través de Caddy (puerto 81) funcionando
+
+Stage Summary:
+- ✅ App restaurada al estado completo con formación S1 + dibujos
+- ✅ Servidor persistente con PM2 (no se cae entre sesiones)
+- ✅ Credenciales: admin@5s.com / admin123
+- ✅ Proyecto Demo 5S con 4 zonas
+- ✅ 25 plantillas (5 por cada S: formación, examen, inventario, autoevaluación, auditoría)
+- ✅ 31 imágenes de formación S1 servidas correctamente
+- ✅ Acceso web: puerto 81 (Caddy) y puerto 3000 (Next.js directo)
