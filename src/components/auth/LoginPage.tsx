@@ -84,7 +84,7 @@ export default function LoginPage() {
             5S
           </motion.div>
           <h1 className="text-2xl font-bold text-gray-900">Metodología 5S</h1>
-          <p className="text-sm text-muted-foreground mt-1">Juego de Mesa - Implementación</p>
+          <p className="text-sm text-muted-foreground mt-1">Implementación</p>
         </div>
 
         <Card className="border-0 shadow-xl shadow-green-100/50">
@@ -292,7 +292,7 @@ export default function LoginPage() {
         </Card>
 
         <p className="text-center text-xs text-muted-foreground mt-6">
-          Metodología 5S — Juego de Mesa para la Implementación
+          Metodología 5S — Implementación
         </p>
       </motion.div>
     </div>

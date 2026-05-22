@@ -14,8 +14,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Metodología 5S - Juego de Mesa",
-  description: "Aplicación para la implementación de la metodología 5S en empresas. Tablero tipo Trivial con seguimiento de progreso.",
+  title: "Metodología 5S",
+  description: "Aplicación para la implementación de la metodología 5S en empresas. Seguimiento de progreso y mejora continua.",
   keywords: ["5S", "metodología", "lean", "mejora continua", "Seiri", "Seiton", "Seiso", "Seiketsu", "Shitsuke"],
 };
 

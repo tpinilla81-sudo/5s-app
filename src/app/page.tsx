@@ -192,7 +192,7 @@ export default function HomePage() {
             <div>
               <h1 className="text-lg font-bold text-gray-900">Metodología 5S</h1>
               <div className="flex items-center gap-2">
-                <p className="text-xs text-muted-foreground">Juego de Mesa - Implementación</p>
+                <p className="text-xs text-muted-foreground">Implementación</p>
                 {currentProject && (
                   <span className="text-xs text-muted-foreground">· {currentProject.name}</span>
                 )}
@@ -365,7 +365,7 @@ export default function HomePage() {
       <footer className="border-t bg-white mt-auto">
         <div className="max-w-4xl mx-auto px-4 py-4 text-center">
           <p className="text-xs text-muted-foreground">
-            Metodología 5S — Juego de Mesa para la Implementación
+            Metodología 5S — Implementación
           </p>
         </div>
       </footer>
