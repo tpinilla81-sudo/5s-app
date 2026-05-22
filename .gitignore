@@ -51,4 +51,7 @@ prompt
 
 server.log
 # Skills directory
-/skills/
+/skills/uploads/
+public/uploads/photos/
+db/custom.db
+.next/standalone

@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { createHash } from 'crypto'
 import { db } from '@/lib/db'
 
 function hashPasswordSync(password: string): string {
-  const { createHash } = require('crypto')
   return createHash('sha256').update(password).digest('hex')
 }
 

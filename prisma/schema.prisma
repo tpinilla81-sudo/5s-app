@@ -11,15 +11,15 @@ datasource db {
 }
 
 model User {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  name      String
-  password  String
-  role      String   @default("empleado") // "admin", "responsable", "empleado", "auditor"
-  avatar    String?
-  active    Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id          String          @id @default(cuid())
+  email       String          @unique
+  name        String
+  password    String
+  role        String          @default("empleado") // "admin", "responsable", "empleado", "auditor"
+  avatar      String?
+  active      Boolean         @default(true)
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
 
   memberships ProjectMember[]
 }
@@ -34,9 +34,14 @@ model Project {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  zones       Zone[]
-  members     ProjectMember[]
-  progress    Progress[]
+  zones              Zone[]
+  members            ProjectMember[]
+  progress           Progress[]
+  inventoryItems     InventoryItem[]
+  examAnswers        ExamAnswer[]
+  auditResults       AuditResult[]
+  checklistResponses ChecklistResponse[]
+  actionItems        ActionItem[]
 }
 
 model Zone {
@@ -59,7 +64,7 @@ model ProjectMember {
   userId    String
   projectId String
   zoneId    String?
-  role      String   // "admin", "responsable", "empleado", "auditor"
+  role      String // "admin", "responsable", "empleado", "auditor"
   joinedAt  DateTime @default(now())
 
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -70,21 +75,21 @@ model ProjectMember {
 }
 
 model Progress {
-  id          String   @id @default(cuid())
-  sStep       Int      // 1-5 (Revisar, Ordenar, Limpiar, Estandarizar, Mantener)
-  miniStep    Int      // 1-5 (Formación, Fotos, Inventario, Autoevaluación, Auditoría)
-  completed   Boolean  @default(false)
-  score       Float?   // Puntuación obtenida (0-100)
-  notes       String?  // Notas adicionales
-  photoUrls   String?  // URLs de fotos separadas por coma
+  id          String    @id @default(cuid())
+  sStep       Int       // 1-5 (Revisar, Ordenar, Limpiar, Estandarizar, Mantener)
+  miniStep    Int       // 1-5 (Formación, Fotos, Inventario, Autoevaluación, Auditoría)
+  completed   Boolean   @default(false)
+  score       Float?    // Puntuación obtenida (0-100)
+  notes       String?   // Notas adicionales
+  photoUrls   String?   // URLs de fotos separadas por coma
   passedAt    DateTime? // Fecha en que se pasó el mini-paso
-  projectId   String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  projectId   String
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 
-  project     Project? @relation(fields: [projectId], references: [id])
+  project     Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
-  @@unique([sStep, miniStep])
+  @@unique([sStep, miniStep, projectId])
 }
 
 model Template {
@@ -105,7 +110,10 @@ model ExamAnswer {
   questionIdx Int
   answerIdx   Int
   correct     Boolean
+  projectId   String
   createdAt   DateTime @default(now())
+
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
 }
 
 model InventoryItem {
@@ -117,8 +125,11 @@ model InventoryItem {
   quantity    Int      @default(1)
   action      String?  // Acción a tomar
   photoUrl    String?
+  projectId   String
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
 }
 
 model AuditResult {
@@ -129,7 +140,49 @@ model AuditResult {
   score        Float?
   observations String?
   auditDate    DateTime @default(now())
+  projectId    String
   createdAt    DateTime @default(now())
+
+  project      Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+}
+
+model ChecklistResponse {
+  id            String   @id @default(cuid())
+  sStep         Int      // 1-5
+  miniStep      Int      // 4 (autoevaluacion) or 5 (auditoria)
+  results       String   // JSON: { itemId: { status, hallazgo, mejora, otherText, photoRefs } }
+  score         Float    // 0-100
+  observaciones String?
+  auditor       String?  // Nombre del auditor (solo para paso 5)
+  projectId     String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  project       Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+}
+
+model ActionItem {
+  id              String    @id @default(cuid())
+  sStep           Int       // 1-5
+  miniStep        Int       // 4 (autoevaluacion) or 5 (auditoria)
+  itemId          String    // e.g. "1.2.3"
+  itemDescription String    // Checklist item description
+  hallazgo        String    // Descripción de la desviación detectada
+  mejora          String?   // Sugerencia de mejora / plan de acción
+  responsable     String?   // Persona responsable de resolver
+  prioridad       String    @default("media") // "alta", "media", "baja"
+  estado          String    @default("abierta") // "abierta", "en_proceso", "resuelta", "cerrada"
+  fechaLimite     DateTime?
+  fechaResolucion DateTime?
+  photoRefs       String?   // JSON array of photo references
+  notas           String?   // Notas adicionales sobre la resolución
+  source          String    @default("autoevaluacion") // "autoevaluacion" or "auditoria"
+  auditor         String?   // Nombre del auditor que detectó la deficiencia
+  projectId       String
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  project         Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
 }
 
 model RolePermissionConfig {
