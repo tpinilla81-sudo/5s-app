@@ -957,7 +957,7 @@ export default function AdminPanel() {
                                                 <TableHead className="text-xs">Email</TableHead>
                                                 <TableHead className="text-xs">Rol</TableHead>
                                                 <TableHead className="text-xs">Zona</TableHead>
-                                                <TableHead className="w-10"></TableHead>
+                                                <TableHead className="text-xs text-center">Acciones</TableHead>
                                               </TableRow>
                                             </TableHeader>
                                             <TableBody>
@@ -982,9 +982,10 @@ export default function AdminPanel() {
                                                       </div>
                                                     ) : <span className="text-muted-foreground">-</span>}
                                                   </TableCell>
-                                                  <TableCell>
-                                                    <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-red-400 hover:text-red-600 hover:bg-red-50" onClick={() => handleRemoveMember(member.id, member.user.name)} title="Eliminar miembro del proyecto">
-                                                      <Trash2 className="h-3.5 w-3.5" />
+                                                  <TableCell className="text-center">
+                                                    <Button variant="outline" size="sm" className="h-7 text-[10px] text-red-500 border-red-200 hover:bg-red-50 hover:text-red-700 hover:border-red-300 gap-1" onClick={() => handleRemoveMember(member.id, member.user.name)} title="Eliminar miembro del proyecto">
+                                                      <Trash2 className="h-3 w-3" />
+                                                      Eliminar
                                                     </Button>
                                                   </TableCell>
                                                 </TableRow>
