@@ -48,6 +48,7 @@ export async function POST(request: NextRequest) {
           location: item.location || null,
           category: item.category || 'dudoso',
           quantity: item.quantity || 1,
+          price: item.price != null ? parseFloat(String(item.price)) : null,
           action: item.action || null,
           photoUrl: item.photoUrl || null,
           projectId: projectId || item.projectId || 'default',

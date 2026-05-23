@@ -37,6 +37,7 @@ interface InventoryItemData {
   location: string;
   category: string;
   quantity: number;
+  price: number | null;
   action: string;
   /** Extra fields stored as JSON key-value */
   extra?: Record<string, string | number>;
@@ -65,6 +66,7 @@ export default function InventarioModal({ open, onClose, sStep, miniStep }: Inve
     location: '',
     category: '',
     quantity: 1,
+    price: null,
     action: '',
     extra: {},
   });
@@ -87,6 +89,7 @@ export default function InventarioModal({ open, onClose, sStep, miniStep }: Inve
           location: item.location || '',
           category: item.category,
           quantity: item.quantity,
+          price: item.price ?? null,
           action: item.action || '',
           extra: typeof item.extra === 'string' ? JSON.parse(item.extra) : (item.extra || {}),
         })));
@@ -112,6 +115,7 @@ export default function InventarioModal({ open, onClose, sStep, miniStep }: Inve
           location: newItem.location,
           category: newItem.category,
           quantity: newItem.quantity || 1,
+          price: newItem.price || null,
           action: newItem.action,
           extra: newItem.extra || {},
         }),
@@ -125,10 +129,11 @@ export default function InventarioModal({ open, onClose, sStep, miniStep }: Inve
           location: newItem.location || '',
           category: newItem.category || '',
           quantity: newItem.quantity || 1,
+          price: newItem.price || null,
           action: newItem.action || '',
           extra: newItem.extra || {},
         }]);
-        setNewItem({ name: '', location: '', category: '', quantity: 1, action: '', extra: {} });
+        setNewItem({ name: '', location: '', category: '', quantity: 1, price: null, action: '', extra: {} });
       }
     } catch (error) {
       console.error('Error adding item:', error);
@@ -154,6 +159,7 @@ export default function InventarioModal({ open, onClose, sStep, miniStep }: Inve
               location: item.location || '',
               category: item.category,
               quantity: item.quantity || 1,
+              price: item.price ?? null,
               action: item.action || '',
               extra: item.extra || {},
             }))
@@ -227,14 +233,15 @@ export default function InventarioModal({ open, onClose, sStep, miniStep }: Inve
 
   const handleExport = () => {
     const extraHeaders = config.extraFields.map(f => f.label);
-    const headerRow = ['Nombre', 'Ubicación', 'Categoría', 'Cantidad', ...extraHeaders, 'Acción'].join(',');
+    const headerRow = ['Nombre', 'Ubicación', 'Categoría', 'Cantidad', 'Precio (€)', ...extraHeaders, 'Acción'].join(',');
 
     const rows = items.map(item => {
       const extraValues = config.extraFields.map(f => {
         const val = item.extra?.[f.key] ?? '';
         return String(val).replace(/,/g, ';');
       });
-      return [item.name, item.location, item.category, item.quantity, ...extraValues, item.action].join(',');
+      const priceStr = item.price != null ? item.price.toFixed(2) : '';
+      return [item.name, item.location, item.category, item.quantity, priceStr, ...extraValues, item.action].join(',');
     });
 
     const csvContent = [headerRow, ...rows].join('\n');
@@ -335,8 +342,8 @@ export default function InventarioModal({ open, onClose, sStep, miniStep }: Inve
             <Card>
               <CardContent className="p-4">
                 <div className="space-y-3">
-                  {/* Row 1: Name, Location, Category, Quantity */}
-                  <div className="grid grid-cols-1 sm:grid-cols-5 gap-3 items-end">
+                  {/* Row 1: Name, Location, Category, Quantity, Price */}
+                  <div className="grid grid-cols-1 sm:grid-cols-6 gap-3 items-end">
                     <div className="sm:col-span-2">
                       <label className="text-xs font-medium">Elemento *</label>
                       <Input
@@ -378,6 +385,17 @@ export default function InventarioModal({ open, onClose, sStep, miniStep }: Inve
                         min="1"
                         value={newItem.quantity || 1}
                         onChange={e => setNewItem(prev => ({ ...prev, quantity: parseInt(e.target.value) || 1 }))}
+                      />
+                    </div>
+                    <div>
+                      <label className="text-xs font-medium">Precio (€)</label>
+                      <Input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        placeholder="0.00"
+                        value={newItem.price ?? ''}
+                        onChange={e => setNewItem(prev => ({ ...prev, price: e.target.value ? parseFloat(e.target.value) : null }))}
                       />
                     </div>
                   </div>
@@ -477,6 +495,7 @@ export default function InventarioModal({ open, onClose, sStep, miniStep }: Inve
                       <TableHead>Ubicación</TableHead>
                       <TableHead>Categoría</TableHead>
                       <TableHead className="text-center">Cant.</TableHead>
+                      <TableHead className="text-right">Precio (€)</TableHead>
                       {config.extraFields.slice(0, 2).map(f => (
                         <TableHead key={f.key}>{f.label}</TableHead>
                       ))}
@@ -490,6 +509,7 @@ export default function InventarioModal({ open, onClose, sStep, miniStep }: Inve
                         <TableCell className="text-sm text-muted-foreground">{item.location}</TableCell>
                         <TableCell>{getCategoryBadge(item.category)}</TableCell>
                         <TableCell className="text-center text-sm">{item.quantity}</TableCell>
+                        <TableCell className="text-right text-sm">{item.price != null ? `${item.price.toFixed(2)} €` : '—'}</TableCell>
                         {config.extraFields.slice(0, 2).map(f => (
                           <TableCell key={f.key} className="text-sm text-muted-foreground">
                             {getExtraValue(item, f.key)}

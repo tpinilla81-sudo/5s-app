@@ -129,6 +129,7 @@ model InventoryItem {
   location    String?
   category    String   // "util", "innecesario", "dudoso"
   quantity    Int      @default(1)
+  price       Float?   // Precio en euros
   action      String?  // Acción a tomar
   photoUrl    String?
   projectId   String

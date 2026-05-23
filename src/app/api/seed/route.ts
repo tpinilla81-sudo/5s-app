@@ -222,50 +222,50 @@ const EXAM_QUESTIONS: Record<number, { questions: Array<{ question: string; opti
   },
 }
 
-const INVENTORY_TEMPLATES: Record<number, { items: Array<{ name: string; location: string; category: string; quantity: number; action: string }> }> = {
+const INVENTORY_TEMPLATES: Record<number, { items: Array<{ name: string; location: string; category: string; quantity: number; price: number | null; action: string }> }> = {
   1: {
     items: [
-      { name: 'Herramientas rotas', location: 'Taller principal', category: 'innecesario', quantity: 3, action: 'Eliminar' },
-      { name: 'Material de oficina obsoleto', location: 'Oficina', category: 'innecesario', quantity: 10, action: 'Reciclar' },
-      { name: 'Piezas de repuesto activas', location: 'Almacén A', category: 'util', quantity: 25, action: 'Mantener organizado' },
-      { name: 'Documentación antigua', location: 'Archivo', category: 'dudoso', quantity: 50, action: 'Revisar y digitalizar' },
-      { name: 'Equipos en desuso', location: 'Nave 2', category: 'innecesario', quantity: 2, action: 'Vender o donar' },
+      { name: 'Herramientas rotas', location: 'Taller principal', category: 'innecesario', quantity: 3, price: 45.00, action: 'Eliminar' },
+      { name: 'Material de oficina obsoleto', location: 'Oficina', category: 'innecesario', quantity: 10, price: 120.50, action: 'Reciclar' },
+      { name: 'Piezas de repuesto activas', location: 'Almacén A', category: 'util', quantity: 25, price: 875.00, action: 'Mantener organizado' },
+      { name: 'Documentación antigua', location: 'Archivo', category: 'dudoso', quantity: 50, price: null, action: 'Revisar y digitalizar' },
+      { name: 'Equipos en desuso', location: 'Nave 2', category: 'innecesario', quantity: 2, price: 1500.00, action: 'Vender o donar' },
     ],
   },
   2: {
     items: [
-      { name: 'Caja de herramientas', location: 'Puesto de trabajo 1', category: 'util', quantity: 1, action: 'Asignar ubicación fija' },
-      { name: 'Carro de transporte', location: 'Pasillo B', category: 'util', quantity: 2, action: 'Zona marcada en suelo' },
-      { name: 'Extintores', location: 'Varios puntos', category: 'util', quantity: 4, action: 'Señalizar ubicación' },
-      { name: 'Palets vacíos', location: 'Zona de carga', category: 'dudoso', quantity: 8, action: 'Definir zona temporal' },
-      { name: 'Contenedores de residuos', location: 'Salida trasera', category: 'util', quantity: 3, action: 'Codificar por color' },
+      { name: 'Caja de herramientas', location: 'Puesto de trabajo 1', category: 'util', quantity: 1, price: 89.95, action: 'Asignar ubicación fija' },
+      { name: 'Carro de transporte', location: 'Pasillo B', category: 'util', quantity: 2, price: 320.00, action: 'Zona marcada en suelo' },
+      { name: 'Extintores', location: 'Varios puntos', category: 'util', quantity: 4, price: 180.00, action: 'Señalizar ubicación' },
+      { name: 'Palets vacíos', location: 'Zona de carga', category: 'dudoso', quantity: 8, price: 48.00, action: 'Definir zona temporal' },
+      { name: 'Contenedores de residuos', location: 'Salida trasera', category: 'util', quantity: 3, price: 75.00, action: 'Codificar por color' },
     ],
   },
   3: {
     items: [
-      { name: 'Kit de limpieza básico', location: 'Carro de limpieza', category: 'util', quantity: 2, action: 'Reponer semanalmente' },
-      { name: 'Productos químicos caducados', location: 'Almacén productos', category: 'innecesario', quantity: 5, action: 'Retirar y gestionar residuo' },
-      { name: 'Bayetas y trapos', location: 'Armario limpieza', category: 'util', quantity: 20, action: 'Renovar mensualmente' },
-      { name: 'Aspiradora industrial', location: 'Sala máquinas', category: 'util', quantity: 1, action: 'Mantenimiento trimestral' },
-      { name: 'Escobas desgastadas', location: 'Armario limpieza', category: 'innecesario', quantity: 4, action: 'Reemplazar' },
+      { name: 'Kit de limpieza básico', location: 'Carro de limpieza', category: 'util', quantity: 2, price: 35.50, action: 'Reponer semanalmente' },
+      { name: 'Productos químicos caducados', location: 'Almacén productos', category: 'innecesario', quantity: 5, price: 62.00, action: 'Retirar y gestionar residuo' },
+      { name: 'Bayetas y trapos', location: 'Armario limpieza', category: 'util', quantity: 20, price: 15.00, action: 'Renovar mensualmente' },
+      { name: 'Aspiradora industrial', location: 'Sala máquinas', category: 'util', quantity: 1, price: 450.00, action: 'Mantenimiento trimestral' },
+      { name: 'Escobas desgastadas', location: 'Armario limpieza', category: 'innecesario', quantity: 4, price: 28.00, action: 'Reemplazar' },
     ],
   },
   4: {
     items: [
-      { name: 'Procedimientos de trabajo', location: 'Tablón oficina', category: 'util', quantity: 12, action: 'Actualizar y digitalizar' },
-      { name: 'Fichas de control antiguas', location: 'Archivo', category: 'innecesario', quantity: 200, action: 'Digitalizar y eliminar papel' },
-      { name: 'Señales de seguridad', location: 'Taller', category: 'util', quantity: 8, action: 'Verificar visibilidad' },
-      { name: 'Manuales de equipo obsoletos', location: 'Oficina técnica', category: 'innecesario', quantity: 6, action: 'Actualizar versión' },
-      { name: 'Checklists de limpieza', location: 'Carro limpieza', category: 'util', quantity: 5, action: 'Revisar contenido' },
+      { name: 'Procedimientos de trabajo', location: 'Tablón oficina', category: 'util', quantity: 12, price: null, action: 'Actualizar y digitalizar' },
+      { name: 'Fichas de control antiguas', location: 'Archivo', category: 'innecesario', quantity: 200, price: null, action: 'Digitalizar y eliminar papel' },
+      { name: 'Señales de seguridad', location: 'Taller', category: 'util', quantity: 8, price: 96.00, action: 'Verificar visibilidad' },
+      { name: 'Manuales de equipo obsoletos', location: 'Oficina técnica', category: 'innecesario', quantity: 6, price: null, action: 'Actualizar versión' },
+      { name: 'Checklists de limpieza', location: 'Carro limpieza', category: 'util', quantity: 5, price: 12.50, action: 'Revisar contenido' },
     ],
   },
   5: {
     items: [
-      { name: 'Registro de auditorías', location: 'Oficina calidad', category: 'util', quantity: 24, action: 'Mantener actualizado' },
-      { name: 'Plan de formación 5S', location: 'RRHH', category: 'util', quantity: 1, action: 'Ejecutar según calendario' },
-      { name: 'Actas de reuniones antiguas', location: 'Archivo', category: 'dudoso', quantity: 36, action: 'Evaluar si conservar' },
-      { name: 'Panel de indicadores 5S', location: 'Entrada taller', category: 'util', quantity: 1, action: 'Actualizar semanalmente' },
-      { name: 'Normativas sin difundir', location: 'Oficina', category: 'dudoso', quantity: 15, action: 'Comunicar al equipo' },
+      { name: 'Registro de auditorías', location: 'Oficina calidad', category: 'util', quantity: 24, price: null, action: 'Mantener actualizado' },
+      { name: 'Plan de formación 5S', location: 'RRHH', category: 'util', quantity: 1, price: 500.00, action: 'Ejecutar según calendario' },
+      { name: 'Actas de reuniones antiguas', location: 'Archivo', category: 'dudoso', quantity: 36, price: null, action: 'Evaluar si conservar' },
+      { name: 'Panel de indicadores 5S', location: 'Entrada taller', category: 'util', quantity: 1, price: 75.00, action: 'Actualizar semanalmente' },
+      { name: 'Normativas sin difundir', location: 'Oficina', category: 'dudoso', quantity: 15, price: null, action: 'Comunicar al equipo' },
     ],
   },
 }
