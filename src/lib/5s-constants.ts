@@ -521,3 +521,12 @@ export const AUDIT_TOTAL_ITEMS: Record<number, number> = {
   4: 26,
   5: 12,
 };
+
+/** Combined quarterly audit (all 5 S together) — sStep=0 */
+export const QUARTERLY_AUDIT_CHECKLIST: AuditSection[] = Object.values(AUDIT_CHECKLISTS).flat();
+
+/** Total items for quarterly combined audit */
+export const QUARTERLY_AUDIT_TOTAL_ITEMS = QUARTERLY_AUDIT_CHECKLIST.reduce(
+  (sum, section) => sum + section.items.length,
+  0
+);

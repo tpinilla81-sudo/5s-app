@@ -26,7 +26,8 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import AdminPanel from '@/components/admin/AdminPanel';
-import { Loader2, RefreshCw, LogOut, Settings, ChevronDown, Shield, Unlock, Lock, LayoutDashboard } from 'lucide-react';
+import MaintenanceView from '@/components/5s/MaintenanceView';
+import { Loader2, RefreshCw, LogOut, Settings, ChevronDown, Shield, Unlock, Lock, LayoutDashboard, Wrench } from 'lucide-react';
 
 const MODAL_MAP: Record<string, React.ComponentType<{
   open: boolean;
@@ -62,6 +63,8 @@ export default function HomePage() {
     // Admin navigation
     adminFreeNavigation,
     setAdminFreeNavigation,
+    // 5S completion
+    is5SCompleted,
   } = use5SStore();
 
   const [isSeeding, setIsSeeding] = useState(false);
@@ -376,6 +379,20 @@ export default function HomePage() {
                     <Board5S onSStepClick={handleSStepClick} />
                   </div>
 
+                  {/* Maintenance button if 5S completed */}
+                  {is5SCompleted() && (
+                    <div className="flex justify-center mb-6">
+                      <Button
+                        onClick={() => setCurrentView('maintenance')}
+                        className="gap-2 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white shadow-lg"
+                        size="lg"
+                      >
+                        <Wrench className="h-5 w-5" />
+                        Mantenimiento y Auditorías Trimestrales
+                      </Button>
+                    </div>
+                  )}
+
                   {/* Instructions */}
                   <div className="text-center mb-6">
                     <p className="text-sm text-muted-foreground">
@@ -421,6 +438,18 @@ export default function HomePage() {
                     onBack={handleBack}
                     onOpenModal={handleOpenModal}
                   />
+                </motion.div>
+              )}
+
+              {currentView === 'maintenance' && (
+                <motion.div
+                  key="maintenance"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.3 }}
+                >
+                  <MaintenanceView />
                 </motion.div>
               )}
             </AnimatePresence>

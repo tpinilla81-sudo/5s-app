@@ -42,7 +42,7 @@ export interface Project {
 interface FiveSState {
   // Progress & Board State
   progress: ProgressItem[]
-  currentView: 'board' | 'detail' | 'admin'
+  currentView: 'board' | 'detail' | 'admin' | 'maintenance'
   selectedSStep: number | null
   activeModal: 'formacion' | 'fotos' | 'inventario' | 'autoevaluacion' | 'auditoria' | null
   activeMiniStep: number | null
@@ -61,7 +61,7 @@ interface FiveSState {
   // Progress & Board Actions
   fetchProgress: () => Promise<void>
   selectSStep: (s: number | null) => void
-  setCurrentView: (view: 'board' | 'detail' | 'admin') => void
+  setCurrentView: (view: 'board' | 'detail' | 'admin' | 'maintenance') => void
   openModal: (type: 'formacion' | 'fotos' | 'inventario' | 'autoevaluacion' | 'auditoria', miniStep: number) => void
   closeModal: () => void
   seedDatabase: () => Promise<void>
@@ -70,6 +70,7 @@ interface FiveSState {
   // Computed helpers
   getMiniStepStatus: (sStep: number, miniStep: number) => 'locked' | 'available' | 'completed'
   isQuesitoEarned: (sStep: number) => boolean
+  is5SCompleted: () => boolean
   getCompletedCount: () => { sSteps: number; miniSteps: number; total: number }
 
   // Auth & Project Actions
@@ -168,6 +169,13 @@ export const use5SStore = create<FiveSState>((set, get) => ({
     const { progress } = get()
     const sProgress = progress.filter(p => p.sStep === sStep && p.completed)
     return sProgress.length === 5
+  },
+
+  is5SCompleted: () => {
+    for (let i = 1; i <= 5; i++) {
+      if (!get().isQuesitoEarned(i)) return false
+    }
+    return true
   },
 
   getCompletedCount: () => {
