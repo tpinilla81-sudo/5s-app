@@ -128,6 +128,7 @@ const PERMISSIONS: Permission[] = [
 
 const ROLES: RoleDefinition[] = [
   { id: 'admin', name: 'Administrador', description: 'Control total sobre el proyecto y el equipo.', color: '#8B5CF6', bgColor: 'bg-purple-50', borderColor: 'border-purple-200', textColor: 'text-purple-700', icon: Crown },
+  { id: 'gerente', name: 'Gerente', description: 'Supervisión global: ve progreso, inventario y auditorías de todo el proyecto.', color: '#6366F1', bgColor: 'bg-indigo-50', borderColor: 'border-indigo-200', textColor: 'text-indigo-700', icon: Building2 },
   { id: 'responsable', name: 'Responsable', description: 'Gestiona el equipo y las zonas del proyecto.', color: '#3B82F6', bgColor: 'bg-blue-50', borderColor: 'border-blue-200', textColor: 'text-blue-700', icon: UserCheck },
   { id: 'empleado', name: 'Empleado', description: 'Participa activamente en la implementación 5S.', color: '#22C55E', bgColor: 'bg-green-50', borderColor: 'border-green-200', textColor: 'text-green-700', icon: HardHat },
   { id: 'auditor', name: 'Auditor', description: 'Rol especializado en auditoría externa.', color: '#F97316', bgColor: 'bg-orange-50', borderColor: 'border-orange-200', textColor: 'text-orange-700', icon: ClipboardCheck },

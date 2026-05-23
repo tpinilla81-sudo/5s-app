@@ -65,7 +65,7 @@ export async function POST(
       )
     }
 
-    const validRoles = ['admin', 'responsable', 'empleado', 'auditor']
+    const validRoles = ['admin', 'gerente', 'responsable', 'empleado', 'auditor']
     const memberRole = validRoles.includes(role) ? role : 'empleado'
 
     // Check if project exists

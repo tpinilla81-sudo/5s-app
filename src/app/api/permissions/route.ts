@@ -14,6 +14,16 @@ const DEFAULT_PERMISSIONS: Record<string, string[]> = {
     'view_team', 'add_members', 'remove_members', 'change_roles',
     'delete_project', 'reset_data', 'manage_templates',
   ],
+  gerente: [
+    'view_board', 'view_progress',
+    'view_training',
+    'view_photos',
+    'view_inventory', 'edit_inventory',
+    'view_selfeval',
+    'view_audits',
+    'view_project',
+    'view_team',
+  ],
   responsable: [
     'view_board', 'view_progress', 'complete_steps',
     'view_training', 'take_exam', 'manage_training',
@@ -59,7 +69,7 @@ const ALL_PERMISSIONS = [
   'delete_project', 'reset_data', 'manage_templates',
 ]
 
-const ALL_ROLES = ['admin', 'responsable', 'empleado', 'auditor']
+const ALL_ROLES = ['admin', 'gerente', 'responsable', 'empleado', 'auditor']
 
 // GET /api/permissions - Get all permissions configuration
 export async function GET() {

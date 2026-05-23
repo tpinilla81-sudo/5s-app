@@ -183,3 +183,23 @@ Stage Summary:
 - Users only see projects they're assigned to
 - Admin panel has dual-mode member addition (existing user or new user)
 - Database is clean and ready for testing
+
+---
+Task ID: 2
+Agent: Main Agent
+Task: Add Gerente role to the system
+
+Work Log:
+- Added "gerente" role to all role labels/maps in: AdminPanel, page.tsx, TeamManagement, ProjectSetup, RolePermissions
+- Added "gerente" to SelectItem dropdowns in: AdminPanel (4 places), TeamManagement, ProjectSetup
+- Added "gerente" color scheme: indigo (bg-indigo-100 text-indigo-700)
+- Updated permissions API: added gerente to DEFAULT_PERMISSIONS, ALL_ROLES
+- Gerente permissions: view_board, view_progress, view_training, view_photos, view_inventory, edit_inventory, view_selfeval, view_audits, view_project, view_team
+- Updated members API validRoles to include "gerente"
+- Cleared rolePermissionConfig table so it regenerates with gerente role
+- Tested gerente creation, login, and project access - all working
+
+Stage Summary:
+- Gerente role added with permissions for viewing everything + editing inventory
+- 5 roles now: admin, gerente, responsable, empleado, auditor
+- Database cleaned for fresh testing

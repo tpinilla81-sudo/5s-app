@@ -204,6 +204,7 @@ export default function TeamManagement({ open, onClose }: TeamManagementProps) {
   const getRoleLabel = (role: string) => {
     const map: Record<string, string> = {
       admin: 'Administrador',
+      gerente: 'Gerente',
       responsable: 'Responsable',
       empleado: 'Empleado',
       auditor: 'Auditor',
@@ -214,6 +215,7 @@ export default function TeamManagement({ open, onClose }: TeamManagementProps) {
   const getRoleBadgeColor = (role: string) => {
     const map: Record<string, string> = {
       admin: 'bg-purple-100 text-purple-700 border-purple-200',
+      gerente: 'bg-indigo-100 text-indigo-700 border-indigo-200',
       responsable: 'bg-blue-100 text-blue-700 border-blue-200',
       empleado: 'bg-green-100 text-green-700 border-green-200',
       auditor: 'bg-orange-100 text-orange-700 border-orange-200',
@@ -468,6 +470,7 @@ export default function TeamManagement({ open, onClose }: TeamManagementProps) {
                           </SelectTrigger>
                           <SelectContent>
                             <SelectItem value="admin">Administrador</SelectItem>
+                            <SelectItem value="gerente">Gerente</SelectItem>
                             <SelectItem value="responsable">Responsable</SelectItem>
                             <SelectItem value="empleado">Empleado</SelectItem>
                             <SelectItem value="auditor">Auditor</SelectItem>

@@ -140,6 +140,7 @@ export default function HomePage() {
   const getRoleLabel = (role: string) => {
     const map: Record<string, string> = {
       admin: 'Administrador',
+      gerente: 'Gerente',
       responsable: 'Responsable',
       empleado: 'Empleado',
       auditor: 'Auditor',
@@ -150,6 +151,7 @@ export default function HomePage() {
   const getRoleBadgeColor = (role: string) => {
     const map: Record<string, string> = {
       admin: 'bg-purple-100 text-purple-700 border-purple-200',
+      gerente: 'bg-indigo-100 text-indigo-700 border-indigo-200',
       responsable: 'bg-blue-100 text-blue-700 border-blue-200',
       empleado: 'bg-green-100 text-green-700 border-green-200',
       auditor: 'bg-orange-100 text-orange-700 border-orange-200',
