@@ -398,16 +398,23 @@ export default function AdminPanel() {
     }
   }
 
-  const handleRemoveMember = async (memberId: string) => {
+  const handleRemoveMember = async (memberId: string, memberName: string) => {
     if (!selectedProjectId) return
+    if (!confirm(`¿Estás seguro de eliminar a "${memberName}" de este proyecto?`)) return
     try {
-      await fetch(`/api/projects/${selectedProjectId}/members`, {
+      const res = await fetch(`/api/projects/${selectedProjectId}/members`, {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ memberId }),
       })
-      await loadProjectDetail(selectedProjectId)
-      await loadProjects()
+      if (res.ok) {
+        await loadProjectDetail(selectedProjectId)
+        await loadProjects()
+        await loadUsers()
+      } else {
+        const data = await res.json()
+        alert(data.error || 'Error al eliminar miembro')
+      }
     } catch (error) {
       console.error('Error removing member:', error)
     }
@@ -968,8 +975,8 @@ export default function AdminPanel() {
                                                     ) : <span className="text-muted-foreground">-</span>}
                                                   </TableCell>
                                                   <TableCell>
-                                                    <Button variant="ghost" size="sm" className="h-6 w-6 p-0 text-red-400 hover:text-red-600" onClick={() => handleRemoveMember(member.id)}>
-                                                      <X className="h-3 w-3" />
+                                                    <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-red-400 hover:text-red-600 hover:bg-red-50" onClick={() => handleRemoveMember(member.id, member.user.name)} title="Eliminar miembro del proyecto">
+                                                      <Trash2 className="h-3.5 w-3.5" />
                                                     </Button>
                                                   </TableCell>
                                                 </TableRow>
