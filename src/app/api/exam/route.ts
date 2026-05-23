@@ -20,15 +20,16 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: 'No exam template found for this S' }, { status: 404 })
     }
 
-    const questions = JSON.parse(template.content) as Array<{
+    const parsedContent = JSON.parse(template.content)
+    const questions = (parsedContent.questions || parsedContent) as Array<{
       question: string
       options: string[]
-      correctAnswer: number
+      correctIndex: number
     }>
 
     let correct = 0
     const results = answers.map((a: { questionIdx: number; answerIdx: number }) => {
-      const isCorrect = questions[a.questionIdx]?.correctAnswer === a.answerIdx
+      const isCorrect = questions[a.questionIdx]?.correctIndex === a.answerIdx
       if (isCorrect) correct++
       return { questionIdx: a.questionIdx, answerIdx: a.answerIdx, correct: isCorrect }
     })

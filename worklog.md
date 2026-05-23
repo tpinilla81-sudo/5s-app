@@ -115,3 +115,24 @@ Stage Summary:
 - ✅ API /api/stats funciona con y sin projectId
 - ✅ Los contadores se actualizan dinámicamente cuando cambian los datos
 - ✅ PM2 mantiene el servidor corriendo de forma persistente
+---
+Task ID: 1
+Agent: Main Agent
+Task: Fix formations (remove drawings, match píldora text) and fix S1 exam grading
+
+Work Log:
+- Identified S1 exam bug: API route used `correctAnswer` field but seed data stored `correctIndex`
+- Found second exam bug: `JSON.parse(template.content)` was treated as array, but seed stores `{ questions: [...] }` object
+- Updated S1 training content to match the píldora PDF text (17 sections, no images)
+- Removed all image references from S1 training content
+- Updated S1 exam questions to match the 7 questions from píldora PDF with correct answers (D, D, B, A, D, C, D)
+- Removed image rendering, gallery, and related code from FormacionModal.tsx
+- Fixed exam API route: changed `correctAnswer` to `correctIndex` and added `.questions` extraction
+- Re-seeded database with updated content
+- Verified exam grading works correctly: 100% for all correct, 0% for all wrong
+
+Stage Summary:
+- S1 exam now grades correctly (was always failing before due to field name mismatch and wrong JSON parsing)
+- Formation content now shows only text matching the píldora (no images/drawings)
+- S1 exam has 7 questions matching the píldora questionnaire instead of 5 generic ones
+- FormacionModal simplified - no image gallery, just clean text display
