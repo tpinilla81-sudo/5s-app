@@ -20,6 +20,9 @@ import {
   ChevronDown,
   ChevronRight,
   AlertCircle,
+  Plus,
+  Trash2,
+  TrendingUp,
 } from 'lucide-react';
 import { use5SStore } from '@/lib/store';
 import {
@@ -51,6 +54,10 @@ export default function AuditoriaModal({ open, onClose, sStep, miniStep }: Audit
   const [isCompleted, setIsCompleted] = useState(false);
   const [finalScore, setFinalScore] = useState(0);
 
+  // Mejoras realizadas
+  const [haMejoras, setHaMejoras] = useState<boolean | null>(null);
+  const [mejoras, setMejoras] = useState<Array<{ id: string; descripcion: string; responsable: string; fecha: string }>>([]);
+
   useEffect(() => {
     if (open && sections.length > 0) {
       const expanded: Record<string, boolean> = {};
@@ -61,6 +68,8 @@ export default function AuditoriaModal({ open, onClose, sStep, miniStep }: Audit
       setObservaciones('');
       setIsCompleted(false);
       setFinalScore(0);
+      setHaMejoras(null);
+      setMejoras([]);
     }
   }, [open, sStep]);
 
@@ -127,6 +136,8 @@ export default function AuditoriaModal({ open, onClose, sStep, miniStep }: Audit
               auditor: auditorName,
               results: Object.values(results),
               observaciones,
+              mejorasRealizadas: haMejoras,
+              mejoras: haMejoras ? mejoras.filter(m => m.descripcion.trim()) : [],
             }),
             projectId: currentProject?.id,
           }),
@@ -215,6 +226,28 @@ export default function AuditoriaModal({ open, onClose, sStep, miniStep }: Audit
             <p className="text-sm text-muted-foreground mt-2">
               Auditor: <strong>{auditorName}</strong>
             </p>
+            {haMejoras && mejoras.filter(m => m.descripcion.trim()).length > 0 && (
+              <div className="mt-4 text-left max-w-md mx-auto">
+                <div className="flex items-center gap-2 mb-2">
+                  <TrendingUp className="h-4 w-4 text-green-600" />
+                  <span className="text-sm font-semibold text-green-800">Mejoras realizadas ({mejoras.filter(m => m.descripcion.trim()).length})</span>
+                </div>
+                <div className="space-y-2">
+                  {mejoras.filter(m => m.descripcion.trim()).map((mejora, idx) => (
+                    <div key={mejora.id} className="bg-green-50 border border-green-200 rounded-lg p-2 text-sm">
+                      <p className="font-medium text-green-900">{idx + 1}. {mejora.descripcion}</p>
+                      {(mejora.responsable || mejora.fecha) && (
+                        <p className="text-xs text-green-700 mt-1">
+                          {mejora.responsable && <>Responsable: {mejora.responsable}</>}
+                          {mejora.responsable && mejora.fecha && <> · </>}
+                          {mejora.fecha && <>Fecha: {mejora.fecha}</>}
+                        </p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
             {finalScore >= AUDIT_PASS_THRESHOLD ? (
               <Badge className="mt-3 bg-green-500">Apto — Mini-paso completado</Badge>
             ) : (
@@ -380,6 +413,117 @@ export default function AuditoriaModal({ open, onClose, sStep, miniStep }: Audit
                 </Card>
               ))}
             </div>
+
+            {/* Mejoras realizadas */}
+            <Card className="border-green-200 bg-green-50/30">
+              <CardContent className="p-4 space-y-3">
+                <div className="flex items-center gap-2">
+                  <TrendingUp className="h-4 w-4 text-green-600" />
+                  <label className="text-sm font-semibold text-green-800">¿Se han realizado mejoras desde la última auditoría?</label>
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    className={`px-4 py-1.5 rounded-md text-xs font-medium transition-colors ${
+                      haMejoras === true
+                        ? 'bg-green-600 text-white'
+                        : 'bg-white text-green-700 border border-green-300 hover:bg-green-50'
+                    }`}
+                    onClick={() => { setHaMejoras(true); if (mejoras.length === 0) setMejoras([{ id: Date.now().toString(), descripcion: '', responsable: '', fecha: '' }]); }}
+                  >
+                    Sí
+                  </button>
+                  <button
+                    type="button"
+                    className={`px-4 py-1.5 rounded-md text-xs font-medium transition-colors ${
+                      haMejoras === false
+                        ? 'bg-gray-600 text-white'
+                        : 'bg-white text-gray-600 border border-gray-300 hover:bg-gray-50'
+                    }`}
+                    onClick={() => { setHaMejoras(false); setMejoras([]); }}
+                  >
+                    No
+                  </button>
+                </div>
+
+                {haMejoras && (
+                  <div className="space-y-3 pt-2">
+                    <div className="flex items-center justify-between">
+                      <p className="text-xs font-medium text-green-700">
+                        Mejoras realizadas ({mejoras.filter(m => m.descripcion.trim()).length})
+                      </p>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="text-xs border-green-300 text-green-700 hover:bg-green-50 h-7"
+                        onClick={() => setMejoras([...mejoras, { id: Date.now().toString(), descripcion: '', responsable: '', fecha: '' }])}
+                      >
+                        <Plus className="h-3 w-3 mr-1" /> Añadir mejora
+                      </Button>
+                    </div>
+                    {mejoras.map((mejora, idx) => (
+                      <div key={mejora.id} className="bg-white border border-green-200 rounded-lg p-3 space-y-2">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-semibold text-green-700">Mejora {idx + 1}</span>
+                          {mejoras.length > 1 && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-6 w-6 p-0 text-red-400 hover:text-red-600"
+                              onClick={() => setMejoras(mejoras.filter(m => m.id !== mejora.id))}
+                            >
+                              <Trash2 className="h-3 w-3" />
+                            </Button>
+                          )}
+                        </div>
+                        <div>
+                          <label className="text-[10px] font-medium text-muted-foreground">Descripción de la mejora *</label>
+                          <Textarea
+                            placeholder="Describa la mejora realizada..."
+                            value={mejora.descripcion}
+                            onChange={e => {
+                              const updated = [...mejoras];
+                              updated[idx] = { ...updated[idx], descripcion: e.target.value };
+                              setMejoras(updated);
+                            }}
+                            className="text-sm mt-0.5"
+                            rows={2}
+                          />
+                        </div>
+                        <div className="grid grid-cols-2 gap-2">
+                          <div>
+                            <label className="text-[10px] font-medium text-muted-foreground">Responsable</label>
+                            <Input
+                              placeholder="Nombre del responsable"
+                              value={mejora.responsable}
+                              onChange={e => {
+                                const updated = [...mejoras];
+                                updated[idx] = { ...updated[idx], responsable: e.target.value };
+                                setMejoras(updated);
+                              }}
+                              className="text-sm h-8 mt-0.5"
+                            />
+                          </div>
+                          <div>
+                            <label className="text-[10px] font-medium text-muted-foreground">Fecha</label>
+                            <Input
+                              type="date"
+                              value={mejora.fecha}
+                              onChange={e => {
+                                const updated = [...mejoras];
+                                updated[idx] = { ...updated[idx], fecha: e.target.value };
+                                setMejoras(updated);
+                              }}
+                              className="text-sm h-8 mt-0.5"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
 
             {/* Observaciones */}
             <Card>
