@@ -80,9 +80,14 @@ export default function AuditoriaModal({ open, onClose, sStep, miniStep }: Audit
     const okCount = allResults.filter(r => r.status === 'ok').length;
     const nokCount = allResults.filter(r => r.status === 'nok').length;
     const answeredCount = okCount + nokCount;
-    const scorePercent = totalItems > 0 ? Math.round((okCount / totalItems) * 100) : 0;
-    return { okCount, nokCount, answeredCount, scorePercent };
-  }, [results, totalItems]);
+    // Checklist maxes at 90%
+    const checklistScore = totalItems > 0 ? Math.round((okCount / totalItems) * 90) : 0;
+    // Each mejora with description adds 5%, max 2 mejoras = +10%
+    const validMejorasCount = haMejoras ? mejoras.filter(m => m.descripcion.trim()).length : 0;
+    const mejorasScore = Math.min(validMejorasCount, 2) * 5;
+    const scorePercent = Math.min(checklistScore + mejorasScore, 100);
+    return { okCount, nokCount, answeredCount, checklistScore, mejorasScore, validMejorasCount, scorePercent };
+  }, [results, totalItems, haMejoras, mejoras]);
 
   const canSubmit = auditorName.trim() !== '' && scoring.answeredCount > 0 && scoring.scorePercent >= AUDIT_PASS_THRESHOLD;
 
@@ -219,7 +224,11 @@ export default function AuditoriaModal({ open, onClose, sStep, miniStep }: Audit
           <div className="text-center py-8">
             <CheckCircle className="h-16 w-16 text-green-500 mx-auto mb-3" />
             <h3 className="text-xl font-bold mb-2">¡Auditoría Externa Completada!</h3>
-            <p className="text-lg mb-1">Puntuación: <strong>{finalScore}%</strong></p>
+            <p className="text-lg mb-1">Puntuación Total: <strong>{finalScore}%</strong></p>
+            <div className="flex justify-center gap-3 my-2">
+              <Badge className="bg-blue-100 text-blue-800">Checklist: {scoring.checklistScore}%</Badge>
+              <Badge className="bg-green-100 text-green-800">Mejoras: +{scoring.mejorasScore}%</Badge>
+            </div>
             <p className="text-muted-foreground">
               {scoring.okCount} OK / {scoring.nokCount} NOK de {totalItems} puntos de verificación
             </p>
@@ -262,7 +271,7 @@ export default function AuditoriaModal({ open, onClose, sStep, miniStep }: Audit
                 Auditoría Externa — {sStepData?.japaneseName}
               </p>
               <p className="text-sm text-muted-foreground mt-1">
-                El auditor externo evalúa cada punto de verificación. Para aprobar se necesita ≥{AUDIT_PASS_THRESHOLD}%.
+                El auditor evalúa cada punto (máx. 90%). Cada mejora realizada suma +5% (máx. 2 mejoras = +10%). Para aprobar se necesita ≥{AUDIT_PASS_THRESHOLD}%.
                 Los NOKs generan hallazgos y puntos de mejora como plan de acción.
               </p>
             </div>
@@ -282,20 +291,25 @@ export default function AuditoriaModal({ open, onClose, sStep, miniStep }: Audit
             </Card>
 
             {/* Score indicator */}
-            <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
-              <div>
-                <span className="text-sm font-medium">Puntuación</span>
-                <p className="text-xs text-muted-foreground">
-                  {scoring.okCount} OK / {scoring.nokCount} NOK de {totalItems} puntos
-                </p>
-              </div>
-              <div className="flex items-center gap-2">
-                <Badge className="bg-green-100 text-green-800">OK: {scoring.okCount}</Badge>
-                <Badge className="bg-red-100 text-red-800">NOK: {scoring.nokCount}</Badge>
-                <Badge variant={scoring.scorePercent >= AUDIT_PASS_THRESHOLD ? 'default' : 'secondary'}>
-                  {scoring.scorePercent}% (mín. {AUDIT_PASS_THRESHOLD}%)
+            <div className="p-3 bg-muted rounded-lg space-y-2">
+              <div className="flex items-center justify-between">
+                <div>
+                  <span className="text-sm font-medium">Puntuación Total</span>
+                  <p className="text-xs text-muted-foreground">
+                    {scoring.okCount} OK / {scoring.nokCount} NOK de {totalItems} puntos
+                  </p>
+                </div>
+                <Badge variant={scoring.scorePercent >= AUDIT_PASS_THRESHOLD ? 'default' : 'secondary'} className="text-base px-3 py-1">
+                  {scoring.scorePercent}%
                 </Badge>
               </div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <Badge className="bg-blue-100 text-blue-800">Checklist: {scoring.checklistScore}% (máx. 90%)</Badge>
+                <Badge className="bg-green-100 text-green-800">Mejoras: +{scoring.mejorasScore}% ({scoring.validMejorasCount} {scoring.validMejorasCount === 1 ? 'mejora' : 'mejoras'}, máx. +10%)</Badge>
+                <Badge className="bg-green-100 text-green-800">OK: {scoring.okCount}</Badge>
+                <Badge className="bg-red-100 text-red-800">NOK: {scoring.nokCount}</Badge>
+              </div>
+              <p className="text-[10px] text-muted-foreground">Mínimo para aprobar: {AUDIT_PASS_THRESHOLD}%</p>
             </div>
 
             {/* Checklist sections - same checklist as autoevaluación */}
