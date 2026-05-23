@@ -136,3 +136,25 @@ Stage Summary:
 - Formation content now shows only text matching the píldora (no images/drawings)
 - S1 exam has 7 questions matching the píldora questionnaire instead of 5 generic ones
 - FormacionModal simplified - no image gallery, just clean text display
+---
+Task ID: 2
+Agent: Main Agent
+Task: Integrate 5 píldoras PPTX with exams for all 5 S steps
+
+Work Log:
+- Extracted text content from all 5 PPTX files using python-pptx
+- Updated TRAINING_CONTENT for all 5 S steps with exact text from píldoras (no images)
+- Updated EXAM_QUESTIONS for all 5 S steps with exact questions from píldoras:
+  - S1: 8 questions (answers: D,D,B,A,B,D,C,D)
+  - S2: 8 questions (answers: D,D,A,D,B,D,C,D)
+  - S3: 8 questions (answers: D,D,A,C,B,D,C,D)
+  - S4: 6 questions (answers: D,D,A,C,B,D)
+  - S5: 5 questions (answers: D,D,A,C,B)
+- Re-seeded database with new content
+- Verified all 5 exams grade correctly (100% score with correct answers)
+
+Stage Summary:
+- All 5 píldoras fully integrated with matching training text and exam questions
+- No images/drawings in any formation - text only as requested
+- All exams now correct answers matching the píldora answer keys
+- Training content matches píldora structure: concept, advantages, criteria, process steps
