@@ -7,14 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardHeader, CardDescription } from '@/components/ui/card'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
-import { Loader2, Mail, Lock, User, Shield } from 'lucide-react'
+import { Loader2, Mail, Lock, User } from 'lucide-react'
 
 export default function LoginPage() {
   const { login, register, isLoginLoading, authError, clearAuthError } = use5SStore()
@@ -22,7 +15,7 @@ export default function LoginPage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [name, setName] = useState('')
-  const [role, setRole] = useState('empleado')
+// Role is always 'empleado' for self-registration — admin creates users with specific roles
   const [localError, setLocalError] = useState('')
 
   const displayError = localError || authError
@@ -53,7 +46,7 @@ export default function LoginPage() {
       setLocalError('La contraseña debe tener al menos 6 caracteres')
       return
     }
-    const success = await register(name.trim(), email.trim(), password, role)
+    const success = await register(name.trim(), email.trim(), password, 'empleado')
     if (!success) {
       // Error is set in the store
     }
@@ -103,7 +96,7 @@ export default function LoginPage() {
                 <CardDescription className="mt-1">
                   {mode === 'login'
                     ? 'Ingresa tus credenciales para continuar'
-                    : 'Regístrate para comenzar a usar 5S'}
+                    : 'Crea tu cuenta de empleado'}
                 </CardDescription>
               </motion.div>
             </AnimatePresence>
@@ -242,21 +235,9 @@ export default function LoginPage() {
                     </div>
                   </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="reg-role">Rol</Label>
-                    <Select value={role} onValueChange={setRole} disabled={isLoginLoading}>
-                      <SelectTrigger className="w-full">
-                        <Shield className="h-4 w-4 mr-2 text-muted-foreground" />
-                        <SelectValue placeholder="Seleccionar rol" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="admin">Administrador</SelectItem>
-                        <SelectItem value="responsable">Responsable</SelectItem>
-                        <SelectItem value="empleado">Empleado</SelectItem>
-                        <SelectItem value="auditor">Auditor</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
+                  <p className="text-xs text-muted-foreground text-center">
+                    Tu cuenta se creará como Empleado. El administrador te asignará un rol y proyecto.
+                  </p>
 
                   <Button
                     type="submit"

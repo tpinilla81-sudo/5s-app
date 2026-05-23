@@ -127,8 +127,8 @@ export async function PUT(request: NextRequest) {
       )
     }
 
-    const validRoles = ['admin', 'responsable', 'empleado', 'auditor']
-    const userRole = validRoles.includes(role) ? role : 'empleado'
+    // Self-registration is always 'empleado' role — admin creates users with specific roles
+    const userRole = 'empleado'
 
     // Check if user already exists
     const existingUser = await db.user.findUnique({

@@ -145,6 +145,8 @@ export default function AdminPanel() {
   const [newMemberRole, setNewMemberRole] = useState('empleado')
   const [newMemberZone, setNewMemberZone] = useState('')
   const [newMemberPassword, setNewMemberPassword] = useState('')
+  const [addMemberMode, setAddMemberMode] = useState<'existing' | 'new'>('existing')
+  const [selectedExistingUserId, setSelectedExistingUserId] = useState('')
 
   // ─── Users state ─────────────────────────────────────────────────────────
   const [users, setUsers] = useState<UserData[]>([])
@@ -338,29 +340,55 @@ export default function AdminPanel() {
   }
 
   const handleAddMember = async () => {
-    if (!selectedProjectId || !newMemberName.trim() || !newMemberEmail.trim()) return
+    if (!selectedProjectId) return
     try {
-      const body: any = {
-        email: newMemberEmail,
-        name: newMemberName,
-        role: newMemberRole,
-        zoneId: newMemberZone && newMemberZone !== 'none' ? newMemberZone : undefined,
-      }
-      if (newMemberPassword && newMemberPassword.length >= 6) {
-        body.password = newMemberPassword
-      }
-      const res = await fetch(`/api/projects/${selectedProjectId}/members`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      })
-      if (res.ok) {
-        setNewMemberName('')
-        setNewMemberEmail('')
-        setNewMemberRole('empleado')
-        setNewMemberZone('')
-        setNewMemberPassword('')
-        await loadProjectDetail(selectedProjectId)
+      if (addMemberMode === 'existing') {
+        // Add existing user to project
+        const selectedUser = users.find(u => u.id === selectedExistingUserId)
+        if (!selectedUser) return
+
+        const body: any = {
+          email: selectedUser.email,
+          name: selectedUser.name,
+          role: newMemberRole,
+          zoneId: newMemberZone && newMemberZone !== 'none' ? newMemberZone : undefined,
+        }
+        const res = await fetch(`/api/projects/${selectedProjectId}/members`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        })
+        if (res.ok) {
+          setSelectedExistingUserId('')
+          setNewMemberRole('empleado')
+          setNewMemberZone('')
+          await loadProjectDetail(selectedProjectId)
+        }
+      } else {
+        // Create new user and add to project
+        if (!newMemberName.trim() || !newMemberEmail.trim()) return
+        const body: any = {
+          email: newMemberEmail,
+          name: newMemberName,
+          role: newMemberRole,
+          zoneId: newMemberZone && newMemberZone !== 'none' ? newMemberZone : undefined,
+        }
+        if (newMemberPassword && newMemberPassword.length >= 6) {
+          body.password = newMemberPassword
+        }
+        const res = await fetch(`/api/projects/${selectedProjectId}/members`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        })
+        if (res.ok) {
+          setNewMemberName('')
+          setNewMemberEmail('')
+          setNewMemberRole('empleado')
+          setNewMemberZone('')
+          setNewMemberPassword('')
+          await loadProjectDetail(selectedProjectId)
+        }
       }
     } catch (error) {
       console.error('Error adding member:', error)
@@ -489,7 +517,13 @@ export default function AdminPanel() {
       <header className="border-b bg-white/80 backdrop-blur-sm sticky top-0 z-10">
         <div className="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <Button variant="ghost" size="sm" onClick={() => setCurrentView('board')} className="gap-1.5">
+            <Button variant="ghost" size="sm" onClick={() => {
+              // If no current project but projects exist, select the first one
+              if (!currentProject && allProjects.length > 0) {
+                setCurrentProject(allProjects[0])
+              }
+              setCurrentView('board')
+            }} className="gap-1.5">
               <ArrowLeft className="h-4 w-4" />
               Volver al Tablero
             </Button>
@@ -749,39 +783,129 @@ export default function AdminPanel() {
                                       {/* Add member form */}
                                       <Card className="mb-3 border-gray-200">
                                         <CardContent className="p-3">
-                                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                                            <Input placeholder="Nombre" value={newMemberName} onChange={e => setNewMemberName(e.target.value)} className="h-8 text-xs" />
-                                            <Input placeholder="Email" type="email" value={newMemberEmail} onChange={e => setNewMemberEmail(e.target.value)} className="h-8 text-xs" />
-                                            <Input placeholder="Contraseña (nuevo usuario)" type="password" value={newMemberPassword} onChange={e => setNewMemberPassword(e.target.value)} className="h-8 text-xs" />
+                                          {/* Mode toggle */}
+                                          <div className="flex gap-2 mb-3">
+                                            <button
+                                              type="button"
+                                              onClick={() => setAddMemberMode('existing')}
+                                              className={`flex-1 text-xs px-3 py-1.5 rounded-md font-medium transition-colors ${
+                                                addMemberMode === 'existing'
+                                                  ? 'bg-purple-100 text-purple-700 border border-purple-200'
+                                                  : 'bg-gray-50 text-gray-500 border border-gray-200 hover:bg-gray-100'
+                                              }`}
+                                            >
+                                              <UserPlus className="h-3 w-3 inline mr-1" />
+                                              Usuario Existente
+                                            </button>
+                                            <button
+                                              type="button"
+                                              onClick={() => setAddMemberMode('new')}
+                                              className={`flex-1 text-xs px-3 py-1.5 rounded-md font-medium transition-colors ${
+                                                addMemberMode === 'new'
+                                                  ? 'bg-purple-100 text-purple-700 border border-purple-200'
+                                                  : 'bg-gray-50 text-gray-500 border border-gray-200 hover:bg-gray-100'
+                                              }`}
+                                            >
+                                              <Plus className="h-3 w-3 inline mr-1" />
+                                              Nuevo Usuario
+                                            </button>
                                           </div>
-                                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mt-2">
-                                            <Select value={newMemberRole} onValueChange={setNewMemberRole}>
-                                              <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
-                                              <SelectContent>
-                                                <SelectItem value="admin">Administrador</SelectItem>
-                                                <SelectItem value="responsable">Responsable</SelectItem>
-                                                <SelectItem value="empleado">Empleado</SelectItem>
-                                                <SelectItem value="auditor">Auditor</SelectItem>
-                                              </SelectContent>
-                                            </Select>
-                                            <Select value={newMemberZone} onValueChange={setNewMemberZone}>
-                                              <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Sin zona" /></SelectTrigger>
-                                              <SelectContent>
-                                                <SelectItem value="none">Sin zona asignada</SelectItem>
-                                                {projectZones.map(z => (
-                                                  <SelectItem key={z.id} value={z.id}>
-                                                    <div className="flex items-center gap-1.5">
-                                                      <div className="w-2 h-2 rounded-full" style={{ backgroundColor: z.color }} />
-                                                      {z.name}
-                                                    </div>
-                                                  </SelectItem>
-                                                ))}
-                                              </SelectContent>
-                                            </Select>
-                                            <Button size="sm" onClick={handleAddMember} disabled={!newMemberName.trim() || !newMemberEmail.trim()} className="h-8 text-xs bg-purple-600 text-white">
-                                              <UserPlus className="h-3 w-3 mr-1" /> Agregar Miembro
-                                            </Button>
-                                          </div>
+
+                                          {addMemberMode === 'existing' ? (
+                                            /* Existing user selection */
+                                            <div className="space-y-2">
+                                              <Select value={selectedExistingUserId} onValueChange={setSelectedExistingUserId}>
+                                                <SelectTrigger className="h-8 text-xs">
+                                                  <SelectValue placeholder="Seleccionar usuario existente..." />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                  {users
+                                                    .filter(u => !projectMembers.some(m => m.user.id === u.id))
+                                                    .map(u => (
+                                                      <SelectItem key={u.id} value={u.id}>
+                                                        <div className="flex items-center gap-2">
+                                                          <span>{u.name}</span>
+                                                          <span className="text-muted-foreground">({u.email})</span>
+                                                          <Badge className={`${ROLE_COLORS[u.role] || ''} border text-[9px] py-0`}>
+                                                            {ROLE_LABELS[u.role] || u.role}
+                                                          </Badge>
+                                                          {u.projects.length === 0 && (
+                                                            <Badge className="bg-amber-100 text-amber-700 border border-amber-200 text-[9px] py-0">
+                                                              Sin proyecto
+                                                            </Badge>
+                                                          )}
+                                                        </div>
+                                                      </SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                              </Select>
+                                              <div className="grid grid-cols-2 gap-2">
+                                                <Select value={newMemberRole} onValueChange={setNewMemberRole}>
+                                                  <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                                                  <SelectContent>
+                                                    <SelectItem value="admin">Administrador</SelectItem>
+                                                    <SelectItem value="responsable">Responsable</SelectItem>
+                                                    <SelectItem value="empleado">Empleado</SelectItem>
+                                                    <SelectItem value="auditor">Auditor</SelectItem>
+                                                  </SelectContent>
+                                                </Select>
+                                                <Select value={newMemberZone} onValueChange={setNewMemberZone}>
+                                                  <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Sin zona" /></SelectTrigger>
+                                                  <SelectContent>
+                                                    <SelectItem value="none">Sin zona asignada</SelectItem>
+                                                    {projectZones.map(z => (
+                                                      <SelectItem key={z.id} value={z.id}>
+                                                        <div className="flex items-center gap-1.5">
+                                                          <div className="w-2 h-2 rounded-full" style={{ backgroundColor: z.color }} />
+                                                          {z.name}
+                                                        </div>
+                                                      </SelectItem>
+                                                    ))}
+                                                  </SelectContent>
+                                                </Select>
+                                              </div>
+                                              <Button size="sm" onClick={handleAddMember} disabled={!selectedExistingUserId} className="w-full h-8 text-xs bg-purple-600 text-white">
+                                                <UserPlus className="h-3 w-3 mr-1" /> Asignar al Proyecto
+                                              </Button>
+                                            </div>
+                                          ) : (
+                                            /* New user form */
+                                            <>
+                                              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                                                <Input placeholder="Nombre" value={newMemberName} onChange={e => setNewMemberName(e.target.value)} className="h-8 text-xs" />
+                                                <Input placeholder="Email" type="email" value={newMemberEmail} onChange={e => setNewMemberEmail(e.target.value)} className="h-8 text-xs" />
+                                                <Input placeholder="Contraseña (mín. 6 chars)" type="password" value={newMemberPassword} onChange={e => setNewMemberPassword(e.target.value)} className="h-8 text-xs" />
+                                              </div>
+                                              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mt-2">
+                                                <Select value={newMemberRole} onValueChange={setNewMemberRole}>
+                                                  <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                                                  <SelectContent>
+                                                    <SelectItem value="admin">Administrador</SelectItem>
+                                                    <SelectItem value="responsable">Responsable</SelectItem>
+                                                    <SelectItem value="empleado">Empleado</SelectItem>
+                                                    <SelectItem value="auditor">Auditor</SelectItem>
+                                                  </SelectContent>
+                                                </Select>
+                                                <Select value={newMemberZone} onValueChange={setNewMemberZone}>
+                                                  <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Sin zona" /></SelectTrigger>
+                                                  <SelectContent>
+                                                    <SelectItem value="none">Sin zona asignada</SelectItem>
+                                                    {projectZones.map(z => (
+                                                      <SelectItem key={z.id} value={z.id}>
+                                                        <div className="flex items-center gap-1.5">
+                                                          <div className="w-2 h-2 rounded-full" style={{ backgroundColor: z.color }} />
+                                                          {z.name}
+                                                        </div>
+                                                      </SelectItem>
+                                                    ))}
+                                                  </SelectContent>
+                                                </Select>
+                                                <Button size="sm" onClick={handleAddMember} disabled={!newMemberName.trim() || !newMemberEmail.trim()} className="h-8 text-xs bg-purple-600 text-white">
+                                                  <Plus className="h-3 w-3 mr-1" /> Crear y Añadir
+                                                </Button>
+                                              </div>
+                                            </>
+                                          )}
                                         </CardContent>
                                       </Card>
 

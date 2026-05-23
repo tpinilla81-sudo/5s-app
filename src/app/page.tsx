@@ -185,9 +185,47 @@ export default function HomePage() {
     return <LoginPage />;
   }
 
-  // Show Project Setup
+  // Show Project Setup (admin only)
   if (authView === 'setup') {
     return <ProjectSetup />;
+  }
+
+  // Show waiting screen for non-admin users without projects
+  if (authView === 'no_projects') {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-green-50 via-white to-emerald-50 p-4">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+          className="w-full max-w-md text-center"
+        >
+          <div className="w-20 h-20 rounded-full bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center text-white font-bold text-2xl shadow-lg shadow-green-200 mx-auto mb-6">
+            5S
+          </div>
+          <h1 className="text-2xl font-bold text-gray-900 mb-3">Bienvenido, {currentUser?.name || 'Usuario'}</h1>
+          <p className="text-muted-foreground mb-6">
+            Tu cuenta ha sido creada correctamente. Aún no tienes ningún proyecto asignado.
+          </p>
+          <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-6">
+            <p className="text-sm text-amber-800">
+              El administrador del sistema te asignará un proyecto y un rol. Una vez asignado, podrás acceder a la plataforma.
+            </p>
+          </div>
+          <p className="text-xs text-muted-foreground mb-4">
+            Si crees que esto es un error, contacta con tu administrador.
+          </p>
+          <Button
+            variant="outline"
+            onClick={handleLogout}
+            className="gap-2"
+          >
+            <LogOut className="h-4 w-4" />
+            Cerrar Sesión
+          </Button>
+        </motion.div>
+      </div>
+    );
   }
 
   // Show Admin Panel

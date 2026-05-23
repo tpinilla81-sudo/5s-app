@@ -52,7 +52,7 @@ interface FiveSState {
   // Auth & Project State
   currentUser: User | null
   currentProject: Project | null
-  authView: 'login' | 'register' | 'setup' | 'board'
+  authView: 'login' | 'register' | 'setup' | 'board' | 'no_projects'
   projects: Project[]
   isAuthLoading: boolean       // Only for initial session check
   isLoginLoading: boolean      // For login/register button loading state
@@ -206,7 +206,14 @@ export const use5SStore = create<FiveSState>((set, get) => ({
       if (projects.length > 0) {
         set({ currentProject: projects[0], authView: 'board' })
       } else {
-        set({ authView: 'setup' })
+        // Only admin can create projects via setup wizard
+        // Non-admin users see a waiting screen
+        const { currentUser } = get()
+        if (currentUser?.role === 'admin') {
+          set({ authView: 'setup' })
+        } else {
+          set({ authView: 'no_projects' })
+        }
       }
 
       return true
@@ -242,7 +249,8 @@ export const use5SStore = create<FiveSState>((set, get) => ({
       if (projects.length > 0) {
         set({ currentProject: projects[0], authView: 'board' })
       } else {
-        set({ authView: 'setup' })
+        // Self-registered users are always 'empleado' — they need admin to assign a project
+        set({ authView: 'no_projects' })
       }
 
       return true
@@ -283,7 +291,13 @@ export const use5SStore = create<FiveSState>((set, get) => ({
         if (projects.length > 0) {
           set({ currentProject: projects[0], authView: 'board' })
         } else {
-          set({ authView: 'setup' })
+          // Only admin can create projects via setup wizard
+          const { currentUser } = get()
+          if (currentUser?.role === 'admin') {
+            set({ authView: 'setup' })
+          } else {
+            set({ authView: 'no_projects' })
+          }
         }
       } else {
         set({ authView: 'login' })
@@ -353,7 +367,7 @@ export const use5SStore = create<FiveSState>((set, get) => ({
     }
   },
 
-  setAuthView: (view) => set({ authView: view, authError: null }),
+  setAuthView: (view) => set({ authView: view as 'login' | 'register' | 'setup' | 'board' | 'no_projects', authError: null }),
 
   clearAuthError: () => set({ authError: null }),
 }))

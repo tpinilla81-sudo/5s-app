@@ -158,3 +158,28 @@ Stage Summary:
 - No images/drawings in any formation - text only as requested
 - All exams now correct answers matching the píldora answer keys
 - Training content matches píldora structure: concept, advantages, criteria, process steps
+
+---
+Task ID: 1
+Agent: Main Agent
+Task: Implement admin-only flow for project/user/access management
+
+Work Log:
+- Explored full codebase: schema, APIs, components, auth flow
+- Removed role selector from LoginPage - self-registration is always "empleado"
+- Added "no_projects" authView state for non-admin users without projects
+- Updated store.ts to route non-admins without projects to "no_projects" screen instead of ProjectSetup wizard
+- Added waiting screen in page.tsx for non-admin users without projects ("El administrador te asignará un proyecto")
+- Restricted API self-registration to always use "empleado" role (even if "admin" is requested)
+- Updated GET /api/projects to filter projects by membership for non-admin users
+- Enhanced AdminPanel member addition with two modes: "Usuario Existente" (select from dropdown) and "Nuevo Usuario" (create + assign)
+- Fixed AdminPanel "Volver al Tablero" button to auto-select first project if none selected
+- Ran full end-to-end tests with curl - all pass
+- Cleaned database for fresh start (only admin@5s.com / admin123)
+
+Stage Summary:
+- Admin flow is complete: admin creates projects, adds members, assigns roles
+- Non-admin users who self-register see "contacta al administrador" screen
+- Users only see projects they're assigned to
+- Admin panel has dual-mode member addition (existing user or new user)
+- Database is clean and ready for testing

@@ -1,11 +1,39 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 
-// GET /api/projects - List all projects with zones and member count
-export async function GET() {
+// GET /api/projects - List projects with zones and member count
+// Admin sees all active projects; non-admin sees only their assigned projects
+export async function GET(request: NextRequest) {
   try {
+    // Check if user is logged in via session cookie
+    const sessionId = request.cookies.get('5s_session')?.value
+    let userRole = 'empleado'
+    let userId: string | null = null
+
+    if (sessionId) {
+      const user = await db.user.findUnique({
+        where: { id: sessionId },
+        select: { id: true, role: true, active: true },
+      })
+      if (user && user.active) {
+        userRole = user.role
+        userId = user.id
+      }
+    }
+
+    const isAdmin = userRole === 'admin'
+
     const projects = await db.project.findMany({
-      where: { active: true },
+      where: {
+        active: true,
+        ...(!isAdmin && userId ? {
+          members: {
+            some: {
+              userId: userId,
+            },
+          },
+        } : {}),
+      },
       include: {
         zones: {
           orderBy: { createdAt: 'asc' },
