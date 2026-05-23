@@ -13,7 +13,7 @@ export async function GET(
       where: { projectId },
       include: {
         _count: {
-          select: { members: true },
+          select: { memberZones: true },
         },
       },
       orderBy: { createdAt: 'asc' },
@@ -25,7 +25,7 @@ export async function GET(
       description: zone.description,
       color: zone.color,
       projectId: zone.projectId,
-      memberCount: zone._count.members,
+      memberCount: zone._count.memberZones,
     }))
 
     return NextResponse.json({ zones: result }, { status: 200 })

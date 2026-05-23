@@ -319,14 +319,19 @@ export default function AdminPanel() {
         setNewZoneColor(PRESET_COLORS[(projectZones.length) % PRESET_COLORS.length])
         await loadProjectDetail(selectedProjectId)
         await loadProjects()
+      } else {
+        const data = await res.json()
+        alert(data.error || 'Error al agregar zona')
       }
     } catch (error) {
       console.error('Error adding zone:', error)
+      alert('Error de conexión al agregar zona')
     }
   }
 
-  const handleDeleteZone = async (zoneId: string) => {
+  const handleDeleteZone = async (zoneId: string, zoneName: string) => {
     if (!selectedProjectId) return
+    if (!confirm(`¿Estás seguro de eliminar la zona "${zoneName}"? Los miembros asignados a esta zona perderán la asignación.`)) return
     try {
       const res = await fetch(`/api/projects/${selectedProjectId}/zones`, {
         method: 'DELETE',
@@ -336,6 +341,9 @@ export default function AdminPanel() {
       if (res.ok) {
         await loadProjectDetail(selectedProjectId)
         await loadProjects()
+      } else {
+        const data = await res.json()
+        alert(data.error || 'Error al eliminar zona')
       }
     } catch (error) {
       console.error('Error deleting zone:', error)
@@ -767,7 +775,7 @@ export default function AdminPanel() {
                                           <div key={zone.id} className="flex items-center gap-1.5 px-2.5 py-1 rounded-full border bg-white text-xs">
                                             <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: zone.color }} />
                                             <span className="font-medium">{zone.name}</span>
-                                            <button onClick={() => handleDeleteZone(zone.id)} className="text-red-400 hover:text-red-600 ml-1"><X className="h-3 w-3" /></button>
+                                            <button onClick={() => handleDeleteZone(zone.id, zone.name)} className="text-red-400 hover:text-red-600 ml-1" title="Eliminar zona"><Trash2 className="h-3 w-3" /></button>
                                           </div>
                                         ))}
                                       </div>
