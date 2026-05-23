@@ -87,15 +87,15 @@ export const MINI_STEPS: MiniStep[] = [
   },
   {
     id: 3,
-    name: 'Inventario',
-    icon: 'ClipboardList',
-    description: 'Realiza el inventario correspondiente según la S',
+    name: 'Plan de Acción',
+    icon: 'ListChecks',
+    description: 'Define las acciones a realizar para implementar esta S',
     descriptionByS: {
-      1: 'Inventaria los elementos innecesarios encontrados en la zona',
-      2: 'Inventaria los elementos necesarios y su ubicación asignada',
-      3: 'Inventaria los puntos de suciedad detectados en la zona',
-      4: 'Inventaria los estándares implantados y su estado de cumplimiento',
-      5: 'Inventaria los hábitos y prácticas de disciplina observados',
+      1: 'Define qué elementos eliminar, reubicar o mantener y quién lo hará',
+      2: 'Define las ubicaciones, etiquetas y señalización para cada elemento',
+      3: 'Define las tareas de limpieza, frecuencias, responsables y métodos',
+      4: 'Define las normas, procedimientos y controles visuales a implantar',
+      5: 'Define los hábitos a mantener, revisiones periódicas y compromisos',
     },
   },
   {
@@ -229,6 +229,7 @@ export const INVENTORY_CONFIGS: Record<number, InventoryConfig> = {
 
 export const MIN_PHOTOS = 3;
 export const INVENTORY_CLASSIFY_THRESHOLD = 80;
+export const ACTION_PLAN_MIN_ITEMS = 3;
 export const SELF_EVAL_THRESHOLD = 70;
 export const AUDIT_PASS_THRESHOLD = 75;
 export const EXAM_PASS_THRESHOLD = 80;
@@ -524,6 +525,29 @@ export const AUDIT_TOTAL_ITEMS: Record<number, number> = {
 
 /** Combined quarterly audit (all 5 S together) — sStep=0 */
 export const QUARTERLY_AUDIT_CHECKLIST: AuditSection[] = Object.values(AUDIT_CHECKLISTS).flat();
+
+/** Weekly audit — only cleaning (S3) checklist */
+export const WEEKLY_AUDIT_CHECKLIST: AuditSection[] = AUDIT_CHECKLISTS[3];
+
+/** Monthly audit — abbreviated version: first 2 items from each section per S */
+export const MONTHLY_AUDIT_CHECKLIST: AuditSection[] = Object.entries(AUDIT_CHECKLISTS).flatMap(([sStep, sections]) =>
+  sections.map(section => ({
+    ...section,
+    items: section.items.slice(0, 2), // First 2 items per section for abbreviated audit
+  }))
+);
+
+/** Total items for weekly audit */
+export const WEEKLY_AUDIT_TOTAL_ITEMS = WEEKLY_AUDIT_CHECKLIST.reduce(
+  (sum, section) => sum + section.items.length,
+  0
+);
+
+/** Total items for monthly audit */
+export const MONTHLY_AUDIT_TOTAL_ITEMS = MONTHLY_AUDIT_CHECKLIST.reduce(
+  (sum, section) => sum + section.items.length,
+  0
+);
 
 /** Total items for quarterly combined audit */
 export const QUARTERLY_AUDIT_TOTAL_ITEMS = QUARTERLY_AUDIT_CHECKLIST.reduce(

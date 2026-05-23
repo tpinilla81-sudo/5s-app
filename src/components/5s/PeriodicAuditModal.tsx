@@ -20,24 +20,40 @@ import {
   Plus,
   Trash2,
   TrendingUp,
+  Sparkles,
 } from 'lucide-react';
 import { use5SStore } from '@/lib/store';
 import {
   S_STEPS,
-  QUARTERLY_AUDIT_CHECKLIST,
-  QUARTERLY_AUDIT_TOTAL_ITEMS,
   AUDIT_PASS_THRESHOLD,
+  type AuditSection,
+  type AuditItemResult,
 } from '@/lib/5s-constants';
-import type { AuditItemResult } from '@/lib/5s-constants';
 
-interface QuarterlyAuditModalProps {
+interface PeriodicAuditModalProps {
   open: boolean;
   onClose: () => void;
+  auditType: 'weekly' | 'monthly';
+  sections: AuditSection[];
+  totalItems: number;
+  title: string;
+  subtitle: string;
+  color: string;
+  icon: React.ReactNode;
 }
 
-export default function QuarterlyAuditModal({ open, onClose }: QuarterlyAuditModalProps) {
+export default function PeriodicAuditModal({
+  open,
+  onClose,
+  auditType,
+  sections,
+  totalItems,
+  title,
+  subtitle,
+  color,
+  icon,
+}: PeriodicAuditModalProps) {
   const { fetchProgress, currentUser, adminFreeNavigation, currentProject } = use5SStore();
-  const sections = QUARTERLY_AUDIT_CHECKLIST;
 
   const [auditorName, setAuditorName] = useState('');
   const [results, setResults] = useState<Record<string, AuditItemResult>>({});
@@ -47,14 +63,14 @@ export default function QuarterlyAuditModal({ open, onClose }: QuarterlyAuditMod
   const [isCompleted, setIsCompleted] = useState(false);
   const [finalScore, setFinalScore] = useState(0);
 
-  // Mejoras realizadas
+  // Mejoras
   const [haMejoras, setHaMejoras] = useState<boolean | null>(null);
   const [mejoras, setMejoras] = useState<Array<{ id: string; descripcion: string; responsable: string; fecha: string }>>([]);
 
   useEffect(() => {
     if (open && sections.length > 0) {
       const expanded: Record<string, boolean> = {};
-      sections.forEach(s => { expanded[s.id] = false; }); // Start collapsed since there are many
+      sections.forEach(s => { expanded[s.id] = true; }); // Start expanded since fewer items
       setExpandedSections(expanded);
       setResults({});
       setAuditorName('');
@@ -65,8 +81,6 @@ export default function QuarterlyAuditModal({ open, onClose }: QuarterlyAuditMod
       setMejoras([]);
     }
   }, [open]);
-
-  const totalItems = QUARTERLY_AUDIT_TOTAL_ITEMS;
 
   const scoring = useMemo(() => {
     const allResults = Object.values(results);
@@ -100,11 +114,21 @@ export default function QuarterlyAuditModal({ open, onClose }: QuarterlyAuditMod
     }));
   };
 
-  // Find which S a section belongs to based on section id prefix
   const getSStepForSection = (sectionId: string): number => {
     const prefix = sectionId.split('.')[0];
     return parseInt(prefix, 10) || 1;
   };
+
+  // Group sections by S step
+  const sectionsByS = useMemo(() => {
+    const groups: Record<number, typeof sections> = {};
+    sections.forEach(section => {
+      const sStep = getSStepForSection(section.id);
+      if (!groups[sStep]) groups[sStep] = [];
+      groups[sStep].push(section);
+    });
+    return groups;
+  }, [sections]);
 
   const handleSubmit = async () => {
     if (!canSubmit) return;
@@ -121,17 +145,18 @@ export default function QuarterlyAuditModal({ open, onClose }: QuarterlyAuditMod
         });
       });
 
-      // Save audit result with sStep=0 (combined quarterly)
+      const sStepValue = auditType === 'weekly' ? -1 : -2;
+
       const auditRes = await fetch('/api/audit', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          sStep: 0, // 0 = quarterly combined audit
+          sStep: sStepValue,
           auditorName,
           result: scoring.scorePercent >= AUDIT_PASS_THRESHOLD ? 'apto' : 'no_apto',
           score: scoring.scorePercent,
           observations: observaciones || null,
-          auditType: 'quarterly',
+          auditType,
           checklistData: JSON.stringify(checklistObj),
           mejorasData: haMejoras ? JSON.stringify(mejoras.filter(m => m.descripcion.trim())) : null,
           projectId: currentProject?.id,
@@ -145,32 +170,21 @@ export default function QuarterlyAuditModal({ open, onClose }: QuarterlyAuditMod
         await fetchProgress();
       }
     } catch (error) {
-      console.error('Error submitting quarterly audit:', error);
+      console.error(`Error submitting ${auditType} audit:`, error);
     } finally {
       setIsSubmitting(false);
     }
   };
-
-  // Group sections by S step for display
-  const sectionsByS = useMemo(() => {
-    const groups: Record<number, typeof sections> = {};
-    sections.forEach(section => {
-      const sStep = getSStepForSection(section.id);
-      if (!groups[sStep]) groups[sStep] = [];
-      groups[sStep].push(section);
-    });
-    return groups;
-  }, [sections]);
 
   return (
     <Dialog open={open} onOpenChange={() => onClose()}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <ShieldCheck className="h-5 w-5 text-orange-500" />
-            <span>Auditoría Trimestral 5S</span>
-            <Badge className="bg-orange-100 text-orange-700 border border-orange-200">
-              Completa
+            {icon}
+            <span>{title}</span>
+            <Badge className="border" style={{ borderColor: color, color, backgroundColor: `${color}10` }}>
+              {auditType === 'weekly' ? 'Semanal' : 'Mensual'}
             </Badge>
           </DialogTitle>
         </DialogHeader>
@@ -178,7 +192,7 @@ export default function QuarterlyAuditModal({ open, onClose }: QuarterlyAuditMod
         {isCompleted ? (
           <div className="text-center py-8">
             <CheckCircle className="h-16 w-16 text-green-500 mx-auto mb-3" />
-            <h3 className="text-xl font-bold mb-2">¡Auditoría Trimestral Completada!</h3>
+            <h3 className="text-xl font-bold mb-2">¡Auditoría {auditType === 'weekly' ? 'Semanal' : 'Mensual'} Completada!</h3>
             <p className="text-lg mb-1">Puntuación Total: <strong>{finalScore}%</strong></p>
             <div className="flex justify-center gap-3 my-2">
               <Badge className="bg-blue-100 text-blue-800">Checklist: {scoring.checklistScore}%</Badge>
@@ -187,46 +201,22 @@ export default function QuarterlyAuditModal({ open, onClose }: QuarterlyAuditMod
             <p className="text-muted-foreground">
               {scoring.okCount} OK / {scoring.nokCount} NOK de {totalItems} puntos
             </p>
-            <p className="text-sm text-muted-foreground mt-2">
-              Auditor: <strong>{auditorName}</strong>
-            </p>
-            {haMejoras && mejoras.filter(m => m.descripcion.trim()).length > 0 && (
-              <div className="mt-4 text-left max-w-md mx-auto">
-                <div className="flex items-center gap-2 mb-2">
-                  <TrendingUp className="h-4 w-4 text-green-600" />
-                  <span className="text-sm font-semibold text-green-800">Mejoras realizadas ({mejoras.filter(m => m.descripcion.trim()).length})</span>
-                </div>
-                <div className="space-y-2">
-                  {mejoras.filter(m => m.descripcion.trim()).map((mejora, idx) => (
-                    <div key={mejora.id} className="bg-green-50 border border-green-200 rounded-lg p-2 text-sm">
-                      <p className="font-medium text-green-900">{idx + 1}. {mejora.descripcion}</p>
-                      {(mejora.responsable || mejora.fecha) && (
-                        <p className="text-xs text-green-700 mt-1">
-                          {mejora.responsable && <>Responsable: {mejora.responsable}</>}
-                          {mejora.responsable && mejora.fecha && <> · </>}
-                          {mejora.fecha && <>Fecha: {mejora.fecha}</>}
-                        </p>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
             {finalScore >= AUDIT_PASS_THRESHOLD ? (
               <Badge className="mt-3 bg-green-500">Apto</Badge>
             ) : (
-              <Badge className="mt-3 bg-red-500">No Apto — Se requiere corrección</Badge>
+              <Badge className="mt-3 bg-red-500">No Apto</Badge>
             )}
           </div>
         ) : (
           <div className="space-y-4">
             {/* Info banner */}
-            <div className="p-3 rounded-lg border-l-4 border-orange-500 bg-orange-50">
-              <p className="text-sm font-medium text-orange-700">
-                Auditoría Trimestral 5S — Completa
+            <div className="p-3 rounded-lg border-l-4" style={{ borderColor: color, backgroundColor: `${color}08` }}>
+              <p className="text-sm font-medium" style={{ color }}>
+                {subtitle}
               </p>
               <p className="text-sm text-muted-foreground mt-1">
-                Se evalúan las 5S de forma conjunta. Checklist máx. 90%, cada mejora +5% (máx. 2). Mínimo para aprobar: {AUDIT_PASS_THRESHOLD}%.
+                Checklist máx. 90%, cada mejora +5% (máx. 2). Mínimo para aprobar: {AUDIT_PASS_THRESHOLD}%.
+                Las anomalías NOK se añadirán automáticamente al Plan de Acción.
               </p>
             </div>
 
@@ -258,31 +248,30 @@ export default function QuarterlyAuditModal({ open, onClose }: QuarterlyAuditMod
               </div>
               <div className="flex items-center gap-2 flex-wrap">
                 <Badge className="bg-blue-100 text-blue-800">Checklist: {scoring.checklistScore}% (máx. 90%)</Badge>
-                <Badge className="bg-green-100 text-green-800">Mejoras: +{scoring.mejorasScore}% ({scoring.validMejorasCount} {scoring.validMejorasCount === 1 ? 'mejora' : 'mejoras'})</Badge>
+                <Badge className="bg-green-100 text-green-800">Mejoras: +{scoring.mejorasScore}%</Badge>
                 <Badge className="bg-green-100 text-green-800">OK: {scoring.okCount}</Badge>
                 <Badge className="bg-red-100 text-red-800">NOK: {scoring.nokCount}</Badge>
               </div>
-              <p className="text-[10px] text-muted-foreground">Mínimo para aprobar: {AUDIT_PASS_THRESHOLD}%</p>
             </div>
 
             {/* Checklist sections grouped by S */}
             <div className="space-y-4">
-              {S_STEPS.map(sStep => {
-                const sSections = sectionsByS[sStep.id];
-                if (!sSections || sSections.length === 0) return null;
+              {Object.entries(sectionsByS).map(([sStepId, sSections]) => {
+                const sStep = S_STEPS.find(s => s.id === parseInt(sStepId));
+                if (!sStep) return null;
                 const sResults = sSections.flatMap(s => s.items.map(item => results[item.id])).filter(Boolean);
                 const sOk = sResults.filter(r => r.status === 'ok').length;
                 const sNok = sResults.filter(r => r.status === 'nok').length;
 
                 return (
-                  <div key={sStep.id}>
+                  <div key={sStepId}>
                     <div className="flex items-center gap-2 mb-2 px-1">
                       <div className="w-3 h-3 rounded-full" style={{ backgroundColor: sStep.color }} />
                       <span className="text-sm font-bold" style={{ color: sStep.color }}>
                         S{sStep.id} — {sStep.name} ({sStep.japaneseName})
                       </span>
                       <Badge className="bg-green-100 text-green-800 text-[10px]">OK: {sOk}</Badge>
-                      <Badge className="bg-red-100 text-red-800 text-[10px]">NOK: {sNok}</Badge>
+                      {sNok > 0 && <Badge className="bg-red-100 text-red-800 text-[10px]">NOK: {sNok}</Badge>}
                     </div>
                     <div className="space-y-2">
                       {sSections.map(section => (
@@ -298,9 +287,7 @@ export default function QuarterlyAuditModal({ open, onClose }: QuarterlyAuditMod
                             )}
                             <Badge variant="outline" className="text-[10px] font-mono">{section.id}</Badge>
                             <span className="font-semibold text-xs">{section.title}</span>
-                            <span className="ml-auto text-[10px] text-muted-foreground">
-                              {section.items.length} pts
-                            </span>
+                            <span className="ml-auto text-[10px] text-muted-foreground">{section.items.length} pts</span>
                           </button>
                           {expandedSections[section.id] && (
                             <CardContent className="px-3 pb-3 pt-0 space-y-2">
@@ -333,12 +320,12 @@ export default function QuarterlyAuditModal({ open, onClose }: QuarterlyAuditMod
                                     {isNok && (
                                       <div className="space-y-1.5 pl-4 border-l-2 border-red-200">
                                         <div>
-                                          <label className="text-[10px] font-medium text-red-700">Hallazgo (desviación)</label>
-                                          <Textarea placeholder="Desviación encontrada..." value={result?.hallazgo || ''} onChange={e => setItemField(item.id, 'hallazgo', e.target.value)} className="text-xs mt-0.5" rows={2} />
+                                          <label className="text-[10px] font-medium text-red-700">Anomalía detectada</label>
+                                          <Textarea placeholder="Describa la anomalía..." value={result?.hallazgo || ''} onChange={e => setItemField(item.id, 'hallazgo', e.target.value)} className="text-xs mt-0.5" rows={2} />
                                         </div>
                                         <div>
-                                          <label className="text-[10px] font-medium text-amber-700">Punto a Mejorar</label>
-                                          <Textarea placeholder="Sugerencia de mejora..." value={result?.mejora || ''} onChange={e => setItemField(item.id, 'mejora', e.target.value)} className="text-xs mt-0.5" rows={2} />
+                                          <label className="text-[10px] font-medium text-amber-700">Acción correctora</label>
+                                          <Textarea placeholder="Acción propuesta..." value={result?.mejora || ''} onChange={e => setItemField(item.id, 'mejora', e.target.value)} className="text-xs mt-0.5" rows={2} />
                                         </div>
                                       </div>
                                     )}
@@ -423,8 +410,8 @@ export default function QuarterlyAuditModal({ open, onClose }: QuarterlyAuditMod
 
             {/* Submit */}
             <div className="flex justify-end">
-              <Button onClick={handleSubmit} disabled={!canSubmit || isSubmitting} className="bg-orange-500 hover:bg-orange-600 text-white">
-                {isSubmitting ? 'Enviando...' : `Registrar Auditoría Trimestral (${scoring.scorePercent}%)`}
+              <Button onClick={handleSubmit} disabled={!canSubmit || isSubmitting} style={{ backgroundColor: color }}>
+                {isSubmitting ? 'Enviando...' : `Registrar Auditoría ${auditType === 'weekly' ? 'Semanal' : 'Mensual'} (${scoring.scorePercent}%)`}
               </Button>
             </div>
           </div>

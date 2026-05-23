@@ -156,11 +156,14 @@ model InventoryItem {
 
 model AuditResult {
   id           String   @id @default(cuid())
-  sStep        Int
+  sStep        Int      // 0=combined quarterly, 1-5=individual S, -1=weekly, -2=monthly
   auditorName  String
   result       String   // "apto", "no_apto"
   score        Float?
   observations String?
+  auditType    String   @default("quarterly") // "weekly", "monthly", "quarterly"
+  checklistData String? // JSON: full checklist results for this audit
+  mejorasData  String?  // JSON: improvements data
   auditDate    DateTime @default(now())
   projectId    String
   createdAt    DateTime @default(now())
@@ -168,6 +171,7 @@ model AuditResult {
   project      Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
   @@index([projectId])
+  @@index([auditType])
 }
 
 model ChecklistResponse {

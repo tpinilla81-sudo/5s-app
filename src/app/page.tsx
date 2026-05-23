@@ -10,6 +10,7 @@ import ProgressDashboard from '@/components/5s/ProgressDashboard';
 import FormacionModal from '@/components/5s/FormacionModal';
 import FotosModal from '@/components/5s/FotosModal';
 import InventarioModal from '@/components/5s/InventarioModal';
+import ActionPlanModal from '@/components/5s/ActionPlanModal';
 import AutoevaluacionModal from '@/components/5s/AutoevaluacionModal';
 import AuditoriaModal from '@/components/5s/AuditoriaModal';
 import LoginPage from '@/components/auth/LoginPage';
@@ -27,7 +28,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import AdminPanel from '@/components/admin/AdminPanel';
 import MaintenanceView from '@/components/5s/MaintenanceView';
-import { Loader2, RefreshCw, LogOut, Settings, ChevronDown, Shield, Unlock, Lock, LayoutDashboard, Wrench } from 'lucide-react';
+import { Loader2, RefreshCw, LogOut, Settings, ChevronDown, Shield, Unlock, Lock, LayoutDashboard, Wrench, Sparkles } from 'lucide-react';
 
 const MODAL_MAP: Record<string, React.ComponentType<{
   open: boolean;
@@ -37,7 +38,7 @@ const MODAL_MAP: Record<string, React.ComponentType<{
 }>> = {
   formacion: FormacionModal,
   fotos: FotosModal,
-  inventario: InventarioModal,
+  actionplan: ActionPlanModal,
   autoevaluacion: AutoevaluacionModal,
   auditoria: AuditoriaModal,
 };
@@ -125,7 +126,7 @@ export default function HomePage() {
     setCurrentView('board');
   };
 
-  const handleOpenModal = (type: 'formacion' | 'fotos' | 'inventario' | 'autoevaluacion' | 'auditoria', miniStep: number) => {
+  const handleOpenModal = (type: 'formacion' | 'fotos' | 'actionplan' | 'autoevaluacion' | 'auditoria', miniStep: number) => {
     openModal(type, miniStep);
   };
 
@@ -379,16 +380,16 @@ export default function HomePage() {
                     <Board5S onSStepClick={handleSStepClick} />
                   </div>
 
-                  {/* Maintenance button if 5S completed */}
+                  {/* Mejora Continua button if 5S completed */}
                   {is5SCompleted() && (
                     <div className="flex justify-center mb-6">
                       <Button
                         onClick={() => setCurrentView('maintenance')}
-                        className="gap-2 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white shadow-lg"
+                        className="gap-2 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white shadow-lg"
                         size="lg"
                       >
-                        <Wrench className="h-5 w-5" />
-                        Mantenimiento y Auditorías Trimestrales
+                        <Sparkles className="h-5 w-5" />
+                        Fase 6: Mejora Continua
                       </Button>
                     </div>
                   )}

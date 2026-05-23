@@ -12,13 +12,13 @@ import QuesitoDisplay from './QuesitoDisplay';
 interface SStepDetailProps {
   sStep: number;
   onBack: () => void;
-  onOpenModal: (type: 'formacion' | 'fotos' | 'inventario' | 'autoevaluacion' | 'auditoria', miniStep: number) => void;
+  onOpenModal: (type: 'formacion' | 'fotos' | 'actionplan' | 'autoevaluacion' | 'auditoria', miniStep: number) => void;
 }
 
-const MODAL_TYPE_MAP: Record<number, 'formacion' | 'fotos' | 'inventario' | 'autoevaluacion' | 'auditoria'> = {
+const MODAL_TYPE_MAP: Record<number, 'formacion' | 'fotos' | 'actionplan' | 'autoevaluacion' | 'auditoria'> = {
   1: 'formacion',
   2: 'fotos',
-  3: 'inventario',
+  3: 'actionplan',
   4: 'autoevaluacion',
   5: 'auditoria',
 };

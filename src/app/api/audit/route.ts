@@ -6,10 +6,12 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     const sStep = searchParams.get('sStep')
     const projectId = searchParams.get('projectId')
+    const auditType = searchParams.get('auditType')
 
     const where: any = {}
     if (sStep !== null) where.sStep = parseInt(sStep)
     if (projectId) where.projectId = projectId
+    if (auditType) where.auditType = auditType
 
     const audits = await db.auditResult.findMany({
       where,
@@ -26,7 +28,17 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { sStep, auditorName, result, score, observations, projectId } = body
+    const {
+      sStep,
+      auditorName,
+      result,
+      score,
+      observations,
+      auditType,
+      checklistData,
+      mejorasData,
+      projectId,
+    } = body
 
     if (auditorName === undefined || !result) {
       return NextResponse.json({ success: false, error: 'Missing required fields' }, { status: 400 })
@@ -34,6 +46,7 @@ export async function POST(request: NextRequest) {
 
     const lookupProjectId = projectId || 'default'
     const sStepValue = sStep !== undefined ? sStep : 0
+    const auditTypeValue = auditType || 'quarterly'
 
     const audit = await db.auditResult.create({
       data: {
@@ -42,6 +55,9 @@ export async function POST(request: NextRequest) {
         result,
         score: score || null,
         observations: observations || null,
+        auditType: auditTypeValue,
+        checklistData: checklistData || null,
+        mejorasData: mejorasData || null,
         projectId: lookupProjectId,
       },
     })
@@ -61,6 +77,35 @@ export async function POST(request: NextRequest) {
         await db.progress.create({
           data: { sStep: sStepValue, miniStep: 5, completed: true, score: score || 100, passedAt: new Date(), projectId: lookupProjectId },
         })
+      }
+    }
+
+    // For NOK items, create action items automatically
+    if (checklistData) {
+      try {
+        const parsed = typeof checklistData === 'string' ? JSON.parse(checklistData) : checklistData
+        const nokItems = Object.entries(parsed).filter(([, val]: [string, any]) => val.status === 'nok')
+
+        for (const [itemId, val] of nokItems) {
+          const itemResult = val as { status: string; hallazgo?: string; mejora?: string; description?: string }
+          await db.actionItem.create({
+            data: {
+              sStep: sStepValue,
+              miniStep: auditTypeValue === 'weekly' ? -1 : auditTypeValue === 'monthly' ? -2 : 5,
+              itemId: itemId,
+              itemDescription: itemResult.description || itemId,
+              hallazgo: itemResult.hallazgo || `Anomalía detectada en auditoría ${auditTypeValue}: ${itemId}`,
+              mejora: itemResult.mejora || null,
+              responsable: null,
+              prioridad: 'media',
+              estado: 'abierta',
+              source: `auditoria_${auditTypeValue}`,
+              projectId: lookupProjectId,
+            },
+          })
+        }
+      } catch (parseError) {
+        console.error('Error parsing checklist data for action items:', parseError)
       }
     }
 
