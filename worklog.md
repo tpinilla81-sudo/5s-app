@@ -203,3 +203,28 @@ Stage Summary:
 - Gerente role added with permissions for viewing everything + editing inventory
 - 5 roles now: admin, gerente, responsable, empleado, auditor
 - Database cleaned for fresh testing
+---
+Task ID: 1
+Agent: main
+Task: Support multiple zones per member and add gerente role
+
+Work Log:
+- Updated Prisma schema: removed zoneId from ProjectMember, added MemberZone junction table
+- Ran prisma db push --force-reset to apply schema changes
+- Updated members API route (GET/POST) to handle zoneIds array instead of single zoneId
+- Updated users API route to return zones array instead of single zone in project memberships
+- Updated AdminPanel.tsx: changed zone selector from dropdown to checkboxes for multiple selection
+- Updated AdminPanel.tsx: MemberData type now uses zones array, member table shows multiple zone badges
+- Updated TeamManagement.tsx: same multi-zone checkbox changes
+- Updated ProjectSetup.tsx: same multi-zone checkbox changes
+- Updated store.ts: changed zoneId to zoneIds array when adding admin to project
+- Verified gerente role is available in all role selectors
+- Build successful, PM2 restarted
+- Tested API: successfully created responsable with 3 zones, gerente with 4 zones, empleado with 1 zone
+- Reset database for fresh start (admin@5s.com / admin123)
+
+Stage Summary:
+- Multi-zone assignment now fully supported via MemberZone junction table
+- All roles (admin, gerente, responsable, empleado, auditor) available in admin panel
+- Checkbox-based zone selector replaces dropdown for member assignment
+- Member list shows multiple zone badges per member

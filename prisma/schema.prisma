@@ -53,8 +53,8 @@ model Zone {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  members     ProjectMember[]
+  project     Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  memberZones MemberZone[]
 
   @@unique([name, projectId])
   @@index([projectId])
@@ -64,17 +64,30 @@ model ProjectMember {
   id        String   @id @default(cuid())
   userId    String
   projectId String
-  zoneId    String?
-  role      String // "admin", "responsable", "empleado", "auditor"
+  role      String // "admin", "gerente", "responsable", "empleado", "auditor"
   joinedAt  DateTime @default(now())
 
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  zone      Zone?    @relation(fields: [zoneId], references: [id], onDelete: SetNull)
+  user      User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  project   Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  zones     MemberZone[]
 
   @@unique([userId, projectId])
   @@index([projectId])
   @@index([userId])
+}
+
+model MemberZone {
+  id         String   @id @default(cuid())
+  memberId   String
+  zoneId     String
+  assignedAt DateTime @default(now())
+
+  member     ProjectMember @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  zone       Zone          @relation(fields: [zoneId], references: [id], onDelete: Cascade)
+
+  @@unique([memberId, zoneId])
+  @@index([memberId])
+  @@index([zoneId])
 }
 
 model Progress {

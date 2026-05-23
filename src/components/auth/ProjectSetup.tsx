@@ -36,6 +36,7 @@ import {
   Users,
   ClipboardCheck,
 } from 'lucide-react'
+import { Checkbox } from '@/components/ui/checkbox'
 
 const PRESET_COLORS = [
   '#8B5CF6', '#EAB308', '#3B82F6', '#F43F5E',
@@ -52,7 +53,7 @@ interface MemberInput {
   name: string
   email: string
   role: string
-  zoneId: string
+  zoneIds: string[]
 }
 
 export default function ProjectSetup() {
@@ -76,7 +77,7 @@ export default function ProjectSetup() {
     name: '',
     email: '',
     role: 'empleado',
-    zoneId: '',
+    zoneIds: [],
   })
 
   const canGoNext = () => {
@@ -114,7 +115,7 @@ export default function ProjectSetup() {
   const handleAddMember = () => {
     if (newMember.name.trim() && newMember.email.trim()) {
       setMembers([...members, { ...newMember }])
-      setNewMember({ name: '', email: '', role: 'empleado', zoneId: '' })
+      setNewMember({ name: '', email: '', role: 'empleado', zoneIds: [] })
     }
   }
 
@@ -140,11 +141,14 @@ export default function ProjectSetup() {
       const { currentProject } = use5SStore.getState()
       if (currentProject) {
         for (const member of members) {
-          // Map temporary zoneId (e.g., "zone-0") to real zone ID from created project
-          let realZoneId: string | undefined
-          if (member.zoneId && member.zoneId.startsWith('zone-')) {
-            const zoneIndex = parseInt(member.zoneId.replace('zone-', ''), 10)
-            realZoneId = currentProject.zones[zoneIndex]?.id
+          // Map temporary zoneIds (e.g., "zone-0") to real zone IDs from created project
+          const realZoneIds: string[] = []
+          for (const zId of member.zoneIds) {
+            if (zId && zId.startsWith('zone-')) {
+              const zoneIndex = parseInt(zId.replace('zone-', ''), 10)
+              const realZoneId = currentProject.zones[zoneIndex]?.id
+              if (realZoneId) realZoneIds.push(realZoneId)
+            }
           }
 
           await fetch(`/api/projects/${currentProject.id}/members`, {
@@ -154,7 +158,7 @@ export default function ProjectSetup() {
               email: member.email,
               name: member.name,
               role: member.role,
-              zoneId: realZoneId,
+              zoneIds: realZoneIds.length > 0 ? realZoneIds : undefined,
             }),
           })
         }
@@ -490,32 +494,32 @@ export default function ProjectSetup() {
                         </Select>
                       </div>
                       <div className="space-y-1">
-                        <Label className="text-xs">Zona asignada</Label>
-                        <Select
-                          value={newMember.zoneId}
-                          onValueChange={(value) =>
-                            setNewMember({ ...newMember, zoneId: value })
-                          }
-                        >
-                          <SelectTrigger className="w-full">
-                            <SelectValue placeholder="Seleccionar zona" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {zones
-                              .filter((z) => z.name.trim())
-                              .map((zone, i) => (
-                                <SelectItem key={i} value={`zone-${i}`}>
-                                  <div className="flex items-center gap-2">
-                                    <div
-                                      className="w-2.5 h-2.5 rounded-full"
-                                      style={{ backgroundColor: zone.color }}
-                                    />
-                                    {zone.name}
-                                  </div>
-                                </SelectItem>
-                              ))}
-                          </SelectContent>
-                        </Select>
+                        <Label className="text-xs">Zonas asignadas</Label>
+                        <div className="space-y-0.5 max-h-32 overflow-y-auto border rounded-md p-2">
+                          {zones
+                            .filter((z) => z.name.trim())
+                            .map((zone, i) => (
+                              <label key={i} className="flex items-center gap-1.5 text-sm cursor-pointer hover:bg-gray-50 rounded px-1 py-0.5">
+                                <Checkbox
+                                  checked={newMember.zoneIds.includes(`zone-${i}`)}
+                                  onCheckedChange={(checked) => {
+                                    const zId = `zone-${i}`
+                                    if (checked) {
+                                      setNewMember({ ...newMember, zoneIds: [...newMember.zoneIds, zId] })
+                                    } else {
+                                      setNewMember({ ...newMember, zoneIds: newMember.zoneIds.filter(id => id !== zId) })
+                                    }
+                                  }}
+                                  className="h-4 w-4"
+                                />
+                                <div
+                                  className="w-2.5 h-2.5 rounded-full"
+                                  style={{ backgroundColor: zone.color }}
+                                />
+                                <span>{zone.name}</span>
+                              </label>
+                            ))}
+                        </div>
                       </div>
                     </div>
                     <Button
@@ -557,8 +561,11 @@ export default function ProjectSetup() {
                                 </Badge>
                               </TableCell>
                               <TableCell className="text-sm">
-                                {member.zoneId
-                                  ? zones[parseInt(member.zoneId.replace('zone-', ''))]?.name || '-'
+                                {member.zoneIds.length > 0
+                                  ? member.zoneIds.map(zId => {
+                                      const idx = parseInt(zId.replace('zone-', ''), 10)
+                                      return zones[idx]?.name
+                                    }).filter(Boolean).join(', ')
                                   : '-'}
                               </TableCell>
                               <TableCell>

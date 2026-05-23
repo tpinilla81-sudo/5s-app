@@ -44,6 +44,7 @@ import {
   HardHat,
   ClipboardCheck,
 } from 'lucide-react'
+import { Checkbox } from '@/components/ui/checkbox'
 
 const PRESET_COLORS = [
   '#8B5CF6', '#EAB308', '#3B82F6', '#F43F5E',
@@ -69,11 +70,11 @@ interface MemberData {
     avatar: string | null
     active: boolean
   }
-  zone: {
+  zones: Array<{
     id: string
     name: string
     color: string
-  } | null
+  }>
 }
 
 interface TeamManagementProps {
@@ -97,7 +98,7 @@ export default function TeamManagement({ open, onClose }: TeamManagementProps) {
   const [newMemberName, setNewMemberName] = useState('')
   const [newMemberEmail, setNewMemberEmail] = useState('')
   const [newMemberRole, setNewMemberRole] = useState('empleado')
-  const [newMemberZone, setNewMemberZone] = useState('')
+  const [newMemberZones, setNewMemberZones] = useState<string[]>([])
   const [isLoadingMembers, setIsLoadingMembers] = useState(false)
 
   const fetchZones = useCallback(async () => {
@@ -185,14 +186,14 @@ export default function TeamManagement({ open, onClose }: TeamManagementProps) {
           email: newMemberEmail,
           name: newMemberName,
           role: newMemberRole,
-          zoneId: newMemberZone || undefined,
+          zoneIds: newMemberZones.length > 0 ? newMemberZones : undefined,
         }),
       })
       if (res.ok) {
         setNewMemberName('')
         setNewMemberEmail('')
         setNewMemberRole('empleado')
-        setNewMemberZone('')
+        setNewMemberZones([])
         await fetchMembers()
         await fetchZones()
       }
@@ -478,29 +479,29 @@ export default function TeamManagement({ open, onClose }: TeamManagementProps) {
                         </Select>
                       </div>
                       <div className="space-y-1">
-                        <Label className="text-xs">Zona</Label>
-                        <Select
-                          value={newMemberZone}
-                          onValueChange={setNewMemberZone}
-                        >
-                          <SelectTrigger className="w-full">
-                            <SelectValue placeholder="Sin zona" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="none">Sin zona asignada</SelectItem>
-                            {zones.map((zone) => (
-                              <SelectItem key={zone.id} value={zone.id}>
-                                <div className="flex items-center gap-2">
-                                  <div
-                                    className="w-2.5 h-2.5 rounded-full"
-                                    style={{ backgroundColor: zone.color }}
-                                  />
-                                  {zone.name}
-                                </div>
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                        <Label className="text-xs">Zonas</Label>
+                        <div className="space-y-0.5 max-h-32 overflow-y-auto border rounded-md p-2">
+                          {zones.map((zone) => (
+                            <label key={zone.id} className="flex items-center gap-1.5 text-sm cursor-pointer hover:bg-gray-50 rounded px-1 py-0.5">
+                              <Checkbox
+                                checked={newMemberZones.includes(zone.id)}
+                                onCheckedChange={(checked) => {
+                                  if (checked) {
+                                    setNewMemberZones([...newMemberZones, zone.id])
+                                  } else {
+                                    setNewMemberZones(newMemberZones.filter(id => id !== zone.id))
+                                  }
+                                }}
+                                className="h-4 w-4"
+                              />
+                              <div
+                                className="w-2.5 h-2.5 rounded-full"
+                                style={{ backgroundColor: zone.color }}
+                              />
+                              <span>{zone.name}</span>
+                            </label>
+                          ))}
+                        </div>
                       </div>
                     </div>
                     <Button
@@ -552,13 +553,14 @@ export default function TeamManagement({ open, onClose }: TeamManagementProps) {
                               </Badge>
                             </TableCell>
                             <TableCell className="text-sm">
-                              {member.zone ? (
-                                <div className="flex items-center gap-1.5">
-                                  <div
-                                    className="w-2.5 h-2.5 rounded-full"
-                                    style={{ backgroundColor: member.zone.color }}
-                                  />
-                                  {member.zone.name}
+                              {member.zones.length > 0 ? (
+                                <div className="flex flex-wrap gap-1">
+                                  {member.zones.map(z => (
+                                    <span key={z.id} className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-gray-50 border text-[10px]">
+                                      <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: z.color }} />
+                                      {z.name}
+                                    </span>
+                                  ))}
                                 </div>
                               ) : (
                                 <span className="text-muted-foreground">-</span>

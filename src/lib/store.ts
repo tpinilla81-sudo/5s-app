@@ -341,7 +341,7 @@ export const use5SStore = create<FiveSState>((set, get) => ({
                 email: currentUser.email,
                 name: currentUser.name,
                 role: 'admin',
-                zoneId: result.project.zones?.[0]?.id || null,
+                zoneIds: result.project.zones?.map((z: any) => z.id) || [],
               }),
             })
           } catch (memberError) {

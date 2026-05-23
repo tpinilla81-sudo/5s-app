@@ -6,7 +6,7 @@ function hashPasswordSync(password: string): string {
   return createHash('sha256').update(password).digest('hex')
 }
 
-// GET /api/projects/[projectId]/members - List members with zone and role
+// GET /api/projects/[projectId]/members - List members with zones and role
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ projectId: string }> }
@@ -27,18 +27,36 @@ export async function GET(
             active: true,
           },
         },
-        zone: {
-          select: {
-            id: true,
-            name: true,
-            color: true,
+        zones: {
+          include: {
+            zone: {
+              select: {
+                id: true,
+                name: true,
+                color: true,
+              },
+            },
           },
+          orderBy: { assignedAt: 'asc' },
         },
       },
       orderBy: { joinedAt: 'asc' },
     })
 
-    return NextResponse.json({ members }, { status: 200 })
+    // Transform to include zones array instead of nested MemberZone
+    const transformedMembers = members.map(m => ({
+      id: m.id,
+      role: m.role,
+      joinedAt: m.joinedAt,
+      user: m.user,
+      zones: m.zones.map(mz => ({
+        id: mz.zone.id,
+        name: mz.zone.name,
+        color: mz.zone.color,
+      })),
+    }))
+
+    return NextResponse.json({ members: transformedMembers }, { status: 200 })
   } catch (error) {
     console.error('Fetch members error:', error)
     return NextResponse.json(
@@ -56,7 +74,7 @@ export async function POST(
   try {
     const { projectId } = await params
     const body = await request.json()
-    const { email, name, role, zoneId, password } = body
+    const { email, name, role, zoneIds, password } = body
 
     if (!email || !name) {
       return NextResponse.json(
@@ -115,25 +133,31 @@ export async function POST(
       )
     }
 
-    // Validate zoneId if provided
-    if (zoneId) {
-      const zone = await db.zone.findUnique({
-        where: { id: zoneId },
-      })
-      if (!zone || zone.projectId !== projectId) {
-        return NextResponse.json(
-          { error: 'Zona no válida para este proyecto' },
-          { status: 400 }
-        )
+    // Validate zoneIds if provided
+    const validZoneIds: string[] = []
+    if (zoneIds && Array.isArray(zoneIds)) {
+      for (const zoneId of zoneIds) {
+        if (!zoneId || zoneId === 'none') continue
+        const zone = await db.zone.findUnique({
+          where: { id: zoneId },
+        })
+        if (zone && zone.projectId === projectId) {
+          validZoneIds.push(zoneId)
+        }
       }
     }
 
+    // Create member with zones
     const member = await db.projectMember.create({
       data: {
         userId: user.id,
         projectId,
-        zoneId: zoneId || null,
         role: memberRole,
+        zones: {
+          create: validZoneIds.map(zoneId => ({
+            zoneId,
+          })),
+        },
       },
       include: {
         user: {
@@ -146,17 +170,34 @@ export async function POST(
             active: true,
           },
         },
-        zone: {
-          select: {
-            id: true,
-            name: true,
-            color: true,
+        zones: {
+          include: {
+            zone: {
+              select: {
+                id: true,
+                name: true,
+                color: true,
+              },
+            },
           },
         },
       },
     })
 
-    return NextResponse.json({ member }, { status: 201 })
+    // Transform response
+    const transformedMember = {
+      id: member.id,
+      role: member.role,
+      joinedAt: member.joinedAt,
+      user: member.user,
+      zones: member.zones.map(mz => ({
+        id: mz.zone.id,
+        name: mz.zone.name,
+        color: mz.zone.color,
+      })),
+    }
+
+    return NextResponse.json({ member: transformedMember }, { status: 201 })
   } catch (error) {
     console.error('Add member error:', error)
     return NextResponse.json(
@@ -194,6 +235,7 @@ export async function DELETE(
       )
     }
 
+    // MemberZone records will be cascade deleted
     await db.projectMember.delete({
       where: { id: memberId },
     })

@@ -50,6 +50,7 @@ import {
   Eye,
   EyeOff,
 } from 'lucide-react'
+import { Checkbox } from '@/components/ui/checkbox'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -65,7 +66,7 @@ interface UserData {
     projectName: string
     projectCompany: string
     role: string
-    zone: { id: string; name: string; color: string } | null
+    zones: Array<{ id: string; name: string; color: string }>
   }>
 }
 
@@ -91,7 +92,7 @@ interface MemberData {
   id: string
   role: string
   user: { id: string; email: string; name: string; role: string; active: boolean }
-  zone: { id: string; name: string; color: string } | null
+  zones: Array<{ id: string; name: string; color: string }>
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -145,7 +146,7 @@ export default function AdminPanel() {
   const [newMemberName, setNewMemberName] = useState('')
   const [newMemberEmail, setNewMemberEmail] = useState('')
   const [newMemberRole, setNewMemberRole] = useState('empleado')
-  const [newMemberZone, setNewMemberZone] = useState('')
+  const [newMemberZones, setNewMemberZones] = useState<string[]>([])
   const [newMemberPassword, setNewMemberPassword] = useState('')
   const [addMemberMode, setAddMemberMode] = useState<'existing' | 'new'>('existing')
   const [selectedExistingUserId, setSelectedExistingUserId] = useState('')
@@ -247,7 +248,7 @@ export default function AdminPanel() {
           await fetch(`/api/projects/${data.project.id}/members`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email: currentUser.email, name: currentUser.name, role: 'admin', zoneId: data.project.zones?.[0]?.id || null }),
+            body: JSON.stringify({ email: currentUser.email, name: currentUser.name, role: 'admin', zoneIds: data.project.zones?.map((z: any) => z.id) || [] }),
           })
         }
         setShowNewProject(false)
@@ -353,7 +354,7 @@ export default function AdminPanel() {
           email: selectedUser.email,
           name: selectedUser.name,
           role: newMemberRole,
-          zoneId: newMemberZone && newMemberZone !== 'none' ? newMemberZone : undefined,
+          zoneIds: newMemberZones.length > 0 ? newMemberZones : undefined,
         }
         const res = await fetch(`/api/projects/${selectedProjectId}/members`, {
           method: 'POST',
@@ -363,7 +364,7 @@ export default function AdminPanel() {
         if (res.ok) {
           setSelectedExistingUserId('')
           setNewMemberRole('empleado')
-          setNewMemberZone('')
+          setNewMemberZones([])
           await loadProjectDetail(selectedProjectId)
         }
       } else {
@@ -373,7 +374,7 @@ export default function AdminPanel() {
           email: newMemberEmail,
           name: newMemberName,
           role: newMemberRole,
-          zoneId: newMemberZone && newMemberZone !== 'none' ? newMemberZone : undefined,
+          zoneIds: newMemberZones.length > 0 ? newMemberZones : undefined,
         }
         if (newMemberPassword && newMemberPassword.length >= 6) {
           body.password = newMemberPassword
@@ -387,7 +388,7 @@ export default function AdminPanel() {
           setNewMemberName('')
           setNewMemberEmail('')
           setNewMemberRole('empleado')
-          setNewMemberZone('')
+          setNewMemberZones([])
           setNewMemberPassword('')
           await loadProjectDetail(selectedProjectId)
         }
@@ -852,20 +853,28 @@ export default function AdminPanel() {
                                                     <SelectItem value="auditor">Auditor</SelectItem>
                                                   </SelectContent>
                                                 </Select>
-                                                <Select value={newMemberZone} onValueChange={setNewMemberZone}>
-                                                  <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Sin zona" /></SelectTrigger>
-                                                  <SelectContent>
-                                                    <SelectItem value="none">Sin zona asignada</SelectItem>
+                                                <div className="space-y-1">
+                                                  <p className="text-[10px] text-muted-foreground font-medium">Zonas asignadas</p>
+                                                  <div className="space-y-0.5 max-h-32 overflow-y-auto">
                                                     {projectZones.map(z => (
-                                                      <SelectItem key={z.id} value={z.id}>
-                                                        <div className="flex items-center gap-1.5">
-                                                          <div className="w-2 h-2 rounded-full" style={{ backgroundColor: z.color }} />
-                                                          {z.name}
-                                                        </div>
-                                                      </SelectItem>
+                                                      <label key={z.id} className="flex items-center gap-1.5 text-xs cursor-pointer hover:bg-gray-50 rounded px-1 py-0.5">
+                                                        <Checkbox
+                                                          checked={newMemberZones.includes(z.id)}
+                                                          onCheckedChange={(checked) => {
+                                                            if (checked) {
+                                                              setNewMemberZones([...newMemberZones, z.id])
+                                                            } else {
+                                                              setNewMemberZones(newMemberZones.filter(id => id !== z.id))
+                                                            }
+                                                          }}
+                                                          className="h-3.5 w-3.5"
+                                                        />
+                                                        <div className="w-2 h-2 rounded-full" style={{ backgroundColor: z.color }} />
+                                                        <span>{z.name}</span>
+                                                      </label>
                                                     ))}
-                                                  </SelectContent>
-                                                </Select>
+                                                  </div>
+                                                </div>
                                               </div>
                                               <Button size="sm" onClick={handleAddMember} disabled={!selectedExistingUserId} className="w-full h-8 text-xs bg-purple-600 text-white">
                                                 <UserPlus className="h-3 w-3 mr-1" /> Asignar al Proyecto
@@ -879,7 +888,7 @@ export default function AdminPanel() {
                                                 <Input placeholder="Email" type="email" value={newMemberEmail} onChange={e => setNewMemberEmail(e.target.value)} className="h-8 text-xs" />
                                                 <Input placeholder="Contraseña (mín. 6 chars)" type="password" value={newMemberPassword} onChange={e => setNewMemberPassword(e.target.value)} className="h-8 text-xs" />
                                               </div>
-                                              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mt-2">
+                                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-2">
                                                 <Select value={newMemberRole} onValueChange={setNewMemberRole}>
                                                   <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
                                                   <SelectContent>
@@ -890,24 +899,32 @@ export default function AdminPanel() {
                                                     <SelectItem value="auditor">Auditor</SelectItem>
                                                   </SelectContent>
                                                 </Select>
-                                                <Select value={newMemberZone} onValueChange={setNewMemberZone}>
-                                                  <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Sin zona" /></SelectTrigger>
-                                                  <SelectContent>
-                                                    <SelectItem value="none">Sin zona asignada</SelectItem>
+                                                <div className="space-y-1">
+                                                  <p className="text-[10px] text-muted-foreground font-medium">Zonas asignadas</p>
+                                                  <div className="space-y-0.5 max-h-32 overflow-y-auto">
                                                     {projectZones.map(z => (
-                                                      <SelectItem key={z.id} value={z.id}>
-                                                        <div className="flex items-center gap-1.5">
-                                                          <div className="w-2 h-2 rounded-full" style={{ backgroundColor: z.color }} />
-                                                          {z.name}
-                                                        </div>
-                                                      </SelectItem>
+                                                      <label key={z.id} className="flex items-center gap-1.5 text-xs cursor-pointer hover:bg-gray-50 rounded px-1 py-0.5">
+                                                        <Checkbox
+                                                          checked={newMemberZones.includes(z.id)}
+                                                          onCheckedChange={(checked) => {
+                                                            if (checked) {
+                                                              setNewMemberZones([...newMemberZones, z.id])
+                                                            } else {
+                                                              setNewMemberZones(newMemberZones.filter(id => id !== z.id))
+                                                            }
+                                                          }}
+                                                          className="h-3.5 w-3.5"
+                                                        />
+                                                        <div className="w-2 h-2 rounded-full" style={{ backgroundColor: z.color }} />
+                                                        <span>{z.name}</span>
+                                                      </label>
                                                     ))}
-                                                  </SelectContent>
-                                                </Select>
-                                                <Button size="sm" onClick={handleAddMember} disabled={!newMemberName.trim() || !newMemberEmail.trim()} className="h-8 text-xs bg-purple-600 text-white">
-                                                  <Plus className="h-3 w-3 mr-1" /> Crear y Añadir
-                                                </Button>
+                                                  </div>
+                                                </div>
                                               </div>
+                                              <Button size="sm" onClick={handleAddMember} disabled={!newMemberName.trim() || !newMemberEmail.trim()} className="w-full h-8 text-xs bg-purple-600 text-white mt-2">
+                                                <Plus className="h-3 w-3 mr-1" /> Crear y Añadir
+                                              </Button>
                                             </>
                                           )}
                                         </CardContent>
@@ -939,10 +956,14 @@ export default function AdminPanel() {
                                                     </Badge>
                                                   </TableCell>
                                                   <TableCell className="text-xs">
-                                                    {member.zone ? (
-                                                      <div className="flex items-center gap-1">
-                                                        <div className="w-2 h-2 rounded-full" style={{ backgroundColor: member.zone.color }} />
-                                                        {member.zone.name}
+                                                    {member.zones.length > 0 ? (
+                                                      <div className="flex flex-wrap gap-1">
+                                                        {member.zones.map(z => (
+                                                          <span key={z.id} className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-gray-50 border text-[10px]">
+                                                            <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: z.color }} />
+                                                            {z.name}
+                                                          </span>
+                                                        ))}
                                                       </div>
                                                     ) : <span className="text-muted-foreground">-</span>}
                                                   </TableCell>
@@ -1126,11 +1147,16 @@ export default function AdminPanel() {
                             ) : (
                               <div className="space-y-0.5">
                                 {user.projects.map((p, i) => (
-                                  <div key={i} className="flex items-center gap-1">
+                                  <div key={i} className="flex items-center gap-1 flex-wrap">
                                     <span>{p.projectName}</span>
                                     <Badge className={`${ROLE_COLORS[p.role] || ''} border text-[9px] px-1 py-0`}>
                                       {ROLE_LABELS[p.role]}
                                     </Badge>
+                                    {p.zones.length > 0 && (
+                                      <span className="text-[9px] text-muted-foreground">
+                                        ({p.zones.map(z => z.name).join(', ')})
+                                      </span>
+                                    )}
                                   </div>
                                 ))}
                               </div>

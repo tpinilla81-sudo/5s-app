@@ -16,8 +16,13 @@ export async function GET() {
             project: {
               select: { id: true, name: true, company: true }
             },
-            zone: {
-              select: { id: true, name: true, color: true }
+            zones: {
+              include: {
+                zone: {
+                  select: { id: true, name: true, color: true }
+                }
+              },
+              orderBy: { assignedAt: 'asc' },
             }
           }
         }
@@ -38,7 +43,11 @@ export async function GET() {
         projectName: m.project.name,
         projectCompany: m.project.company,
         role: m.role,
-        zone: m.zone ? { id: m.zone.id, name: m.zone.name, color: m.zone.color } : null,
+        zones: m.zones.map(mz => ({
+          id: mz.zone.id,
+          name: mz.zone.name,
+          color: mz.zone.color,
+        })),
       })),
     }))
 
