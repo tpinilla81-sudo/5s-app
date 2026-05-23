@@ -25,7 +25,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Loader2, RefreshCw, LogOut, Settings, ChevronDown, Shield, Unlock, Lock } from 'lucide-react';
+import AdminPanel from '@/components/admin/AdminPanel';
+import { Loader2, RefreshCw, LogOut, Settings, ChevronDown, Shield, Unlock, Lock, LayoutDashboard } from 'lucide-react';
 
 const MODAL_MAP: Record<string, React.ComponentType<{
   open: boolean;
@@ -189,6 +190,11 @@ export default function HomePage() {
     return <ProjectSetup />;
   }
 
+  // Show Admin Panel
+  if (currentView === 'admin' && isAdmin) {
+    return <AdminPanel />;
+  }
+
   // Show Board (authView === 'board')
   return (
     <div className="min-h-screen flex flex-col bg-gradient-to-b from-gray-50 to-white">
@@ -210,6 +216,17 @@ export default function HomePage() {
             </div>
           </div>
           <div className="flex items-center gap-2">
+            {isAdmin && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentView('admin')}
+                className="gap-1.5 text-xs border-purple-300 text-purple-600 hover:bg-purple-50 hover:text-purple-700"
+              >
+                <LayoutDashboard className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">Admin</span>
+              </Button>
+            )}
             {isAdmin && (
               <Button
                 variant={adminFreeNavigation ? 'default' : 'outline'}

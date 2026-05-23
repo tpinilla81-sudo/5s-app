@@ -56,7 +56,7 @@ export async function POST(
   try {
     const { projectId } = await params
     const body = await request.json()
-    const { email, name, role, zoneId } = body
+    const { email, name, role, zoneId, password } = body
 
     if (!email || !name) {
       return NextResponse.json(
@@ -86,8 +86,8 @@ export async function POST(
     })
 
     if (!user) {
-      // Create user with default password
-      const hashedPassword = hashPasswordSync('123456')
+      // Create user with provided password or default
+      const hashedPassword = hashPasswordSync(password && password.length >= 6 ? password : '123456')
       user = await db.user.create({
         data: {
           email: email.toLowerCase().trim(),
@@ -161,6 +161,48 @@ export async function POST(
     console.error('Add member error:', error)
     return NextResponse.json(
       { error: 'Error al agregar miembro' },
+      { status: 500 }
+    )
+  }
+}
+
+// DELETE /api/projects/[projectId]/members - Remove a member from project
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ projectId: string }> }
+) {
+  try {
+    const { projectId } = await params
+    const body = await request.json()
+    const { memberId } = body
+
+    if (!memberId) {
+      return NextResponse.json(
+        { error: 'ID de miembro requerido' },
+        { status: 400 }
+      )
+    }
+
+    const member = await db.projectMember.findUnique({
+      where: { id: memberId },
+    })
+
+    if (!member || member.projectId !== projectId) {
+      return NextResponse.json(
+        { error: 'Miembro no encontrado en este proyecto' },
+        { status: 404 }
+      )
+    }
+
+    await db.projectMember.delete({
+      where: { id: memberId },
+    })
+
+    return NextResponse.json({ success: true })
+  } catch (error) {
+    console.error('Remove member error:', error)
+    return NextResponse.json(
+      { error: 'Error al eliminar miembro' },
       { status: 500 }
     )
   }
