@@ -24,7 +24,7 @@ interface AuditScore {
 interface Props {
   projectId: string;
   auditScores?: AuditScore[];
-  periodLabel?: string; // e.g. "Trimestre 1"
+  periodLabel?: string; // e.g. "TRIMESTRE 1"
   compact?: boolean;
 }
 
@@ -74,7 +74,7 @@ export default function RadarChart5S({ projectId, auditScores, periodLabel, comp
 
   if (loading) {
     return (
-      <Card>
+      <Card className="overflow-hidden">
         <CardContent className="p-4 flex justify-center items-center min-h-[300px]">
           <div className="animate-spin h-6 w-6 border-2 border-blue-500 border-t-transparent rounded-full" />
         </CardContent>
@@ -118,170 +118,211 @@ export default function RadarChart5S({ projectId, auditScores, periodLabel, comp
   const avgMin = minValues.reduce((a, b) => a + b, 0) / minValues.length;
   const avgMax = maxValues.reduce((a, b) => a + b, 0) / maxValues.length;
 
+  const periodText = periodLabel || 'T1';
+
   return (
-    <Card className="overflow-hidden">
-      <CardHeader className="pb-2 bg-gradient-to-r from-blue-600 to-indigo-700 text-white">
+    <Card className="overflow-hidden shadow-lg">
+      {/* Header matching image style */}
+      <CardHeader className="pb-2 bg-gradient-to-r from-blue-700 to-indigo-800 text-white">
         <CardTitle className="text-sm font-bold flex items-center justify-between">
-          <span>AUDIT. 5S{periodLabel ? `. ${periodLabel}` : ''}</span>
+          <span className="uppercase tracking-wide">AUDIT. 5S. {periodText}</span>
           <div className="flex items-center gap-2">
             <span className="text-xs font-normal opacity-80">RESULTADO</span>
-            <span className="text-xl font-black">{avgAudit > 0 ? avgAudit.toFixed(1) : '—'}</span>
+            <span className="text-2xl font-black bg-white/20 rounded-md px-3 py-0.5">
+              {avgAudit > 0 ? avgAudit.toFixed(1).replace('.', ',') : '—'}
+            </span>
           </div>
         </CardTitle>
       </CardHeader>
-      <CardContent className="p-4">
-        <div className={`grid ${compact ? 'grid-cols-1' : 'grid-cols-1 md:grid-cols-2'} gap-4`}>
-          {/* Left: Radar Chart */}
-          <div className="flex justify-center">
-            <ResponsiveContainer width={compact ? 280 : 320} height={compact ? 280 : 320}>
-              <RadarChart data={chartData} cx="50%" cy="50%" outerRadius="75%">
-                <PolarGrid stroke="#e5e7eb" />
-                <PolarAngleAxis
-                  dataKey="S"
-                  tick={{ fontSize: 12, fontWeight: 600, fill: '#374151' }}
-                />
-                <PolarRadiusAxis
-                  angle={90}
-                  domain={[0, 100]}
-                  tick={{ fontSize: 9, fill: '#9ca3af' }}
-                  tickCount={6}
-                />
-                {/* Max area (purple) - outermost */}
-                <Radar
-                  name="Máx"
-                  dataKey="max"
-                  stroke="#8B5CF6"
-                  fill="#8B5CF6"
-                  fillOpacity={0.08}
-                  strokeWidth={1.5}
-                  strokeDasharray="4 2"
-                />
-                {/* Objetivo (red) */}
-                <Radar
-                  name="Objetivo"
-                  dataKey="objetivo"
-                  stroke="#EF4444"
-                  fill="#EF4444"
-                  fillOpacity={0.08}
-                  strokeWidth={2}
-                />
-                {/* Min (green) */}
-                <Radar
-                  name="Mín"
-                  dataKey="min"
-                  stroke="#22C55E"
-                  fill="#22C55E"
-                  fillOpacity={0.08}
-                  strokeWidth={1.5}
-                  strokeDasharray="4 2"
-                />
-                {/* Actual audit (blue) - innermost */}
-                <Radar
-                  name="Auditoría"
-                  dataKey="audit"
-                  stroke="#3B82F6"
-                  fill="#3B82F6"
-                  fillOpacity={0.25}
-                  strokeWidth={2.5}
-                />
-                <Tooltip
-                  formatter={(value: number, name: string) => [`${value}`, name]}
-                  contentStyle={{ fontSize: 12, borderRadius: 8 }}
-                />
-                <Legend
-                  wrapperStyle={{ fontSize: 11 }}
-                  iconSize={10}
-                />
-              </RadarChart>
-            </ResponsiveContainer>
-          </div>
+      <CardContent className="p-0">
+        {/* Two main sections: DATOS (left) + RADARES (right) */}
+        <div className={`grid ${compact ? 'grid-cols-1' : 'grid-cols-1 md:grid-cols-2'}`}>
 
-          {/* Right: Data Table */}
-          <div>
-            <h3 className="text-xs font-bold text-gray-600 uppercase mb-2 text-center">
-              Datos de Evaluación{periodLabel ? ` ${periodLabel}` : ''}
-            </h3>
-            <div className="overflow-x-auto">
-              <table className="w-full text-xs border-collapse">
+          {/* LEFT: DATOS - Data Table */}
+          <div className={`${!compact ? 'border-r border-gray-200' : ''}`}>
+            <div className="bg-gray-100 px-3 py-2 text-center border-b border-gray-200">
+              <h3 className="text-xs font-black text-gray-700 uppercase tracking-wider">
+                DATOS
+              </h3>
+              <p className="text-[10px] text-gray-500 font-medium">
+                Datos de Evaluación {periodText}
+              </p>
+            </div>
+            <div className="p-3">
+              <table className="w-full text-xs border-collapse border-2 border-gray-400">
                 <thead>
                   <tr>
-                    <th className="border border-gray-300 px-2 py-1.5 bg-gray-100 text-left font-semibold"></th>
+                    <th className="border border-gray-400 px-2 py-2 bg-yellow-300 text-left font-black text-gray-800 w-20">
+                    </th>
                     {S_STEPS.map(s => (
-                      <th key={s.id} className="border border-gray-300 px-2 py-1.5 bg-gray-100 text-center font-semibold" style={{ color: s.color }}>
+                      <th key={s.id} className="border border-gray-400 px-2 py-2 bg-yellow-300 text-center font-black text-gray-800">
                         {s.id}S
                       </th>
                     ))}
-                    <th className="border border-gray-300 px-2 py-1.5 bg-gray-200 text-center font-bold">
+                    <th className="border border-gray-400 px-2 py-2 bg-yellow-400 text-center font-black text-gray-900">
                       Resultado
                     </th>
                   </tr>
                 </thead>
                 <tbody>
-                  {/* Audit row */}
-                  <tr className="bg-blue-50">
-                    <td className="border border-gray-300 px-2 py-1.5 font-semibold text-blue-700">AUDIT.</td>
+                  {/* AUDIT row - Gray background */}
+                  <tr>
+                    <td className="border border-gray-400 px-2 py-2 font-black text-gray-800 bg-gray-300">
+                      AUDIT. {periodText}
+                    </td>
                     {chartData.map((d, i) => (
-                      <td key={i} className="border border-gray-300 px-2 py-1.5 text-center font-bold text-blue-700">
-                        {d.audit > 0 ? d.audit.toFixed(1) : '—'}
+                      <td key={i} className="border border-gray-400 px-2 py-2 text-center font-bold text-gray-800 bg-gray-200">
+                        {d.audit > 0 ? d.audit.toFixed(1).replace('.', ',') : '—'}
                       </td>
                     ))}
-                    <td className="border border-gray-300 px-2 py-1.5 text-center font-black text-blue-800 bg-blue-100">
-                      {avgAudit > 0 ? avgAudit.toFixed(1) : '—'}
+                    <td className="border border-gray-400 px-2 py-2 text-center font-black text-gray-900 bg-gray-300">
+                      {avgAudit > 0 ? avgAudit.toFixed(1).replace('.', ',') : '—'}
                     </td>
                   </tr>
-                  {/* Objetivo row */}
-                  <tr className="bg-yellow-50">
-                    <td className="border border-gray-300 px-2 py-1.5 font-semibold text-amber-700">Objetivo</td>
+                  {/* Objetivo row - White/light background */}
+                  <tr>
+                    <td className="border border-gray-400 px-2 py-2 font-bold text-red-700 bg-white">
+                      Objetivo
+                    </td>
                     {chartData.map((d, i) => (
-                      <td key={i} className="border border-gray-300 px-2 py-1.5 text-center font-medium text-amber-700">
+                      <td key={i} className="border border-gray-400 px-2 py-2 text-center font-semibold text-gray-700 bg-white">
                         {d.objetivo}
                       </td>
                     ))}
-                    <td className="border border-gray-300 px-2 py-1.5 text-center font-bold text-amber-800 bg-yellow-100">
+                    <td className="border border-gray-400 px-2 py-2 text-center font-bold text-gray-800 bg-gray-50">
                       {avgObjetivo.toFixed(0)}
                     </td>
                   </tr>
-                  {/* Min row */}
-                  <tr className="bg-green-50">
-                    <td className="border border-gray-300 px-2 py-1.5 font-semibold text-green-700">Mín</td>
+                  {/* Min row - Red background */}
+                  <tr>
+                    <td className="border border-gray-400 px-2 py-2 font-bold text-white bg-red-500">
+                      Min
+                    </td>
                     {chartData.map((d, i) => (
-                      <td key={i} className="border border-gray-300 px-2 py-1.5 text-center font-medium text-green-700">
+                      <td key={i} className="border border-gray-400 px-2 py-2 text-center font-semibold text-white bg-red-400">
                         {d.min}
                       </td>
                     ))}
-                    <td className="border border-gray-300 px-2 py-1.5 text-center font-bold text-green-800 bg-green-100">
+                    <td className="border border-gray-400 px-2 py-2 text-center font-bold text-white bg-red-500">
                       {avgMin.toFixed(0)}
                     </td>
                   </tr>
-                  {/* Max row */}
-                  <tr className="bg-purple-50">
-                    <td className="border border-gray-300 px-2 py-1.5 font-semibold text-purple-700">Máx</td>
+                  {/* Max row - Green background */}
+                  <tr>
+                    <td className="border border-gray-400 px-2 py-2 font-bold text-white bg-green-600">
+                      Max
+                    </td>
                     {chartData.map((d, i) => (
-                      <td key={i} className="border border-gray-300 px-2 py-1.5 text-center font-medium text-purple-700">
+                      <td key={i} className="border border-gray-400 px-2 py-2 text-center font-semibold text-white bg-green-500">
                         {d.max}
                       </td>
                     ))}
-                    <td className="border border-gray-300 px-2 py-1.5 text-center font-bold text-purple-800 bg-purple-100">
+                    <td className="border border-gray-400 px-2 py-2 text-center font-bold text-white bg-green-600">
                       {avgMax.toFixed(0)}
                     </td>
                   </tr>
                 </tbody>
               </table>
-            </div>
 
-            {/* Score vs Target comparison */}
-            {avgAudit > 0 && (
-              <div className="mt-3 p-2 rounded-lg border text-center" style={{
-                backgroundColor: avgAudit >= avgObjetivo ? '#f0fdf4' : avgAudit >= avgMin ? '#fffbeb' : '#fef2f2',
-                borderColor: avgAudit >= avgObjetivo ? '#bbf7d0' : avgAudit >= avgMin ? '#fde68a' : '#fecaca',
-              }}>
-                <span className="text-xs font-semibold" style={{
-                  color: avgAudit >= avgObjetivo ? '#16a34a' : avgAudit >= avgMin ? '#d97706' : '#dc2626',
+              {/* Score vs Target comparison */}
+              {avgAudit > 0 && (
+                <div className="mt-3 p-2.5 rounded-lg border-2 text-center" style={{
+                  backgroundColor: avgAudit >= avgObjetivo ? '#dcfce7' : avgAudit >= avgMin ? '#fef9c3' : '#fee2e2',
+                  borderColor: avgAudit >= avgObjetivo ? '#86efac' : avgAudit >= avgMin ? '#fde047' : '#fca5a5',
                 }}>
-                  {avgAudit >= avgObjetivo ? '✓ Objetivo alcanzado' : avgAudit >= avgMin ? '⚠ Por debajo del objetivo' : '✗ Por debajo del mínimo'}
-                </span>
+                  <span className="text-xs font-black" style={{
+                    color: avgAudit >= avgObjetivo ? '#15803d' : avgAudit >= avgMin ? '#a16207' : '#dc2626',
+                  }}>
+                    {avgAudit >= avgObjetivo ? '✓ OBJETIVO ALCANZADO' : avgAudit >= avgMin ? '⚠ POR DEBAJO DEL OBJETIVO' : '✗ POR DEBAJO DEL MÍNIMO'}
+                  </span>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* RIGHT: RADARES - Radar Chart */}
+          <div>
+            <div className="bg-gray-100 px-3 py-2 text-center border-b border-gray-200">
+              <h3 className="text-xs font-black text-gray-700 uppercase tracking-wider">
+                RADARES
+              </h3>
+              <p className="text-[10px] text-gray-500 font-medium">
+                AUDIT. 5S. {periodText}
+              </p>
+            </div>
+            <div className="p-2 flex flex-col items-center justify-center">
+              <ResponsiveContainer width={compact ? 260 : 320} height={compact ? 260 : 320}>
+                <RadarChart data={chartData} cx="50%" cy="50%" outerRadius="70%">
+                  <PolarGrid stroke="#d1d5db" />
+                  <PolarAngleAxis
+                    dataKey="S"
+                    tick={{ fontSize: 13, fontWeight: 800, fill: '#374151' }}
+                  />
+                  <PolarRadiusAxis
+                    angle={90}
+                    domain={[0, 100]}
+                    tick={{ fontSize: 9, fill: '#9ca3af' }}
+                    tickCount={6}
+                  />
+                  {/* Max area (green) - outermost */}
+                  <Radar
+                    name="Max"
+                    dataKey="max"
+                    stroke="#16a34a"
+                    fill="#22c55e"
+                    fillOpacity={0.08}
+                    strokeWidth={2}
+                    strokeDasharray="5 3"
+                  />
+                  {/* Objetivo (red) */}
+                  <Radar
+                    name="Objetivo"
+                    dataKey="objetivo"
+                    stroke="#dc2626"
+                    fill="#ef4444"
+                    fillOpacity={0.08}
+                    strokeWidth={2.5}
+                  />
+                  {/* Min (red dashed) */}
+                  <Radar
+                    name="Min"
+                    dataKey="min"
+                    stroke="#f87171"
+                    fill="#fca5a5"
+                    fillOpacity={0.06}
+                    strokeWidth={1.5}
+                    strokeDasharray="4 3"
+                  />
+                  {/* Actual audit (blue) - innermost */}
+                  <Radar
+                    name="Auditoría"
+                    dataKey="audit"
+                    stroke="#2563eb"
+                    fill="#3b82f6"
+                    fillOpacity={0.3}
+                    strokeWidth={3}
+                  />
+                  <Tooltip
+                    formatter={(value: number, name: string) => [`${value}`, name]}
+                    contentStyle={{ fontSize: 12, borderRadius: 8, fontWeight: 'bold' }}
+                  />
+                  <Legend
+                    wrapperStyle={{ fontSize: 11, fontWeight: 600 }}
+                    iconSize={12}
+                  />
+                </RadarChart>
+              </ResponsiveContainer>
+
+              {/* Result display box like the image */}
+              <div className="mt-1 bg-white border-2 border-gray-300 rounded-lg px-6 py-2 shadow-sm text-center">
+                <p className="text-[10px] text-gray-500 font-semibold uppercase tracking-wide">Resultado</p>
+                <p className={`text-2xl font-black ${
+                  avgAudit >= avgObjetivo ? 'text-green-600' : avgAudit >= avgMin ? 'text-amber-600' : 'text-red-600'
+                }`}>
+                  {avgAudit > 0 ? avgAudit.toFixed(1).replace('.', ',') : '—'}
+                </p>
               </div>
-            )}
+            </div>
           </div>
         </div>
       </CardContent>

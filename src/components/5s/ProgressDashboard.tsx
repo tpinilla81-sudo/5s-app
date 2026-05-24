@@ -7,7 +7,7 @@ import { use5SStore } from '@/lib/store';
 import { Progress } from '@/components/ui/progress';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
-  ShieldCheck, TrendingUp, Zap, Trophy, Clock, CheckCircle2, AlertCircle, CircleDot
+  ShieldCheck, TrendingUp, Zap, Trophy, CheckCircle2, AlertCircle, CircleDot
 } from 'lucide-react';
 import QuesitoDisplay from './QuesitoDisplay';
 import RadarChart5S from './RadarChart5S';
@@ -72,7 +72,7 @@ export default function ProgressDashboard() {
 
   return (
     <div className="space-y-4">
-      {/* 3 Main Indicators */}
+      {/* 3 Main KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         {/* 1. Resultado de Auditorías */}
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0 }}>
@@ -139,7 +139,6 @@ export default function ProgressDashboard() {
                 <h3 className="text-sm font-semibold text-gray-700">Plan de Acción</h3>
               </div>
               <div className="space-y-2">
-                {/* Abiertas */}
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <AlertCircle className="h-4 w-4 text-red-500" />
@@ -147,7 +146,6 @@ export default function ProgressDashboard() {
                   </div>
                   <span className="text-lg font-bold text-red-600">{stats?.actions.abierta ?? 0}</span>
                 </div>
-                {/* En curso */}
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <CircleDot className="h-4 w-4 text-amber-500" />
@@ -155,7 +153,6 @@ export default function ProgressDashboard() {
                   </div>
                   <span className="text-lg font-bold text-amber-600">{stats?.actions.en_proceso ?? 0}</span>
                 </div>
-                {/* Cerradas */}
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <CheckCircle2 className="h-4 w-4 text-green-500" />
@@ -170,6 +167,11 @@ export default function ProgressDashboard() {
           </Card>
         </motion.div>
       </div>
+
+      {/* 5S Progress Indicator — Radar + Table (MAIN indicator as shown by user) */}
+      {currentProject && (
+        <RadarChart5S projectId={currentProject.id} />
+      )}
 
       {/* Per-S progress bars */}
       <Card>
@@ -220,11 +222,6 @@ export default function ProgressDashboard() {
           })}
         </CardContent>
       </Card>
-
-      {/* 5S Radar Chart */}
-      {currentProject && (
-        <RadarChart5S projectId={currentProject.id} />
-      )}
 
       {/* Quesitos display */}
       <Card>

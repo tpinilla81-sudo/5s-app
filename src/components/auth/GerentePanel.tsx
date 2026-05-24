@@ -5,10 +5,9 @@ import { motion } from 'framer-motion';
 import { use5SStore } from '@/lib/store';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Progress } from '@/components/ui/progress';
 import {
   ArrowLeft, ShieldCheck, TrendingUp, Zap, Trophy, Building2,
-  AlertCircle, CircleDot, CheckCircle2, BarChart3, ChevronDown, ChevronUp
+  AlertCircle, CircleDot, CheckCircle2, ChevronDown, ChevronUp
 } from 'lucide-react';
 import RadarChart5S from '@/components/5s/RadarChart5S';
 
@@ -60,6 +59,10 @@ export default function GerentePanel() {
       const json = await res.json();
       if (json.success) {
         setStats(json.data);
+        // Auto-expand first project
+        if (json.data?.perProjectBreakdown?.length > 0) {
+          setExpandedProject(json.data.perProjectBreakdown[0].id);
+        }
       }
     } catch (error) {
       console.error('Error loading company stats:', error);
@@ -90,7 +93,7 @@ export default function GerentePanel() {
     <div className="min-h-screen flex flex-col bg-gradient-to-b from-indigo-50/50 to-white">
       {/* Header */}
       <header className="border-b bg-white/80 backdrop-blur-sm sticky top-0 z-10">
-        <div className="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
+        <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Button variant="ghost" size="sm" onClick={() => setCurrentView('board')} className="gap-1.5">
               <ArrowLeft className="h-4 w-4" />
@@ -109,7 +112,7 @@ export default function GerentePanel() {
       </header>
 
       {/* Content */}
-      <main className="flex-1 max-w-5xl mx-auto w-full px-4 py-6">
+      <main className="flex-1 max-w-6xl mx-auto w-full px-4 py-6">
         {isLoading ? (
           <div className="flex justify-center py-20">
             <div className="animate-spin h-8 w-8 border-4 border-indigo-500 border-t-transparent rounded-full" />
@@ -208,20 +211,29 @@ export default function GerentePanel() {
               </motion.div>
             </div>
 
-            {/* Per-Project Breakdown with Radar Charts */}
-            {stats?.perProjectBreakdown && stats.perProjectBreakdown.length > 0 && (
-              <div className="space-y-4">
+            {/* Section title */}
+            <div className="flex items-center gap-3 mt-8">
+              <div className="h-px flex-1 bg-gradient-to-r from-transparent via-gray-300 to-transparent" />
+              <h2 className="text-sm font-black text-gray-600 uppercase tracking-widest">
+                Indicador 5S por Zona / Proyecto
+              </h2>
+              <div className="h-px flex-1 bg-gradient-to-r from-transparent via-gray-300 to-transparent" />
+            </div>
+
+            {/* Per-Project: Full 5S Indicator (Radar + Table) per project */}
+            {stats?.perProjectBreakdown && stats.perProjectBreakdown.length > 0 ? (
+              <div className="space-y-6">
                 {stats.perProjectBreakdown.map((proj, idx) => (
                   <motion.div
                     key={proj.id}
-                    initial={{ opacity: 0, y: 10 }}
+                    initial={{ opacity: 0, y: 15 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.1 + idx * 0.05 }}
                   >
-                    {/* Project header with expand button */}
-                    <Card className="overflow-hidden">
+                    {/* Project header with mini KPIs */}
+                    <div className="mb-2">
                       <div
-                        className="flex items-center justify-between p-4 cursor-pointer hover:bg-gray-50 transition-colors"
+                        className="flex items-center justify-between p-3 bg-white rounded-t-xl border border-gray-200 cursor-pointer hover:bg-gray-50 transition-colors shadow-sm"
                         onClick={() => setExpandedProject(expandedProject === proj.id ? null : proj.id)}
                       >
                         <div className="flex items-center gap-3">
@@ -229,33 +241,33 @@ export default function GerentePanel() {
                             <Building2 className="h-5 w-5 text-indigo-500" />
                           </div>
                           <div>
-                            <h4 className="text-sm font-semibold">{proj.name}</h4>
+                            <h4 className="text-sm font-bold text-gray-900">{proj.name}</h4>
                             <p className="text-xs text-muted-foreground">{proj.company}</p>
                           </div>
                         </div>
 
-                        <div className="flex items-center gap-4">
+                        <div className="flex items-center gap-3">
                           {/* Mini indicators */}
-                          <div className="hidden sm:flex items-center gap-3">
-                            <div className="text-center px-3 py-1 rounded-md bg-gray-50">
-                              <p className={`text-sm font-bold ${getScoreColor(proj.avgAuditScore)}`}>
+                          <div className="hidden sm:flex items-center gap-2">
+                            <div className="text-center px-3 py-1.5 rounded-lg bg-blue-50 border border-blue-100">
+                              <p className={`text-sm font-black ${getScoreColor(proj.avgAuditScore)}`}>
                                 {proj.avgAuditScore !== null ? `${proj.avgAuditScore}%` : '—'}
                               </p>
-                              <p className="text-[9px] text-muted-foreground">Auditoría</p>
+                              <p className="text-[9px] text-gray-500 font-semibold">Auditoría</p>
                             </div>
-                            <div className="text-center px-3 py-1 rounded-md bg-gray-50">
-                              <p className="text-sm font-bold text-emerald-600">{proj.progressPercent}%</p>
-                              <p className="text-[9px] text-muted-foreground">Progreso</p>
+                            <div className="text-center px-3 py-1.5 rounded-lg bg-emerald-50 border border-emerald-100">
+                              <p className="text-sm font-black text-emerald-600">{proj.progressPercent}%</p>
+                              <p className="text-[9px] text-gray-500 font-semibold">Progreso</p>
                             </div>
-                            <div className="text-center px-3 py-1 rounded-md bg-gray-50">
-                              <div className="flex justify-center gap-0.5">
-                                <span className="text-xs font-bold text-red-500">{proj.actions.abierta}</span>
-                                <span className="text-[9px] text-muted-foreground">/</span>
-                                <span className="text-xs font-bold text-amber-500">{proj.actions.en_proceso}</span>
-                                <span className="text-[9px] text-muted-foreground">/</span>
-                                <span className="text-xs font-bold text-green-500">{proj.actions.resuelta + proj.actions.cerrada}</span>
+                            <div className="text-center px-3 py-1.5 rounded-lg bg-orange-50 border border-orange-100">
+                              <div className="flex justify-center gap-1">
+                                <span className="text-xs font-black text-red-500">{proj.actions.abierta}</span>
+                                <span className="text-[9px] text-gray-400">/</span>
+                                <span className="text-xs font-black text-amber-500">{proj.actions.en_proceso}</span>
+                                <span className="text-[9px] text-gray-400">/</span>
+                                <span className="text-xs font-black text-green-500">{proj.actions.resuelta + proj.actions.cerrada}</span>
                               </div>
-                              <p className="text-[9px] text-muted-foreground">A/E/C</p>
+                              <p className="text-[9px] text-gray-500 font-semibold">A/E/C</p>
                             </div>
                           </div>
 
@@ -266,16 +278,24 @@ export default function GerentePanel() {
                         </div>
                       </div>
 
-                      {/* Expanded: Radar Chart */}
+                      {/* Expanded: Full 5S Radar Indicator */}
                       {expandedProject === proj.id && (
-                        <div className="px-4 pb-4 pt-2 border-t">
-                          <RadarChart5S projectId={proj.id} compact />
+                        <div className="border border-t-0 border-gray-200 rounded-b-xl overflow-hidden">
+                          <RadarChart5S projectId={proj.id} />
                         </div>
                       )}
-                    </Card>
+                    </div>
                   </motion.div>
                 ))}
               </div>
+            ) : (
+              <Card className="border-dashed">
+                <CardContent className="py-10 text-center">
+                  <Building2 className="h-10 w-10 text-gray-300 mx-auto mb-3" />
+                  <p className="text-sm text-muted-foreground">No hay proyectos activos</p>
+                  <p className="text-xs text-muted-foreground mt-1">Crea proyectos desde el panel de administración para ver indicadores</p>
+                </CardContent>
+              </Card>
             )}
           </div>
         )}
