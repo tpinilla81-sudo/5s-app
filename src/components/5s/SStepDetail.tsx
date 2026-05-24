@@ -9,19 +9,30 @@ import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import QuesitoDisplay from './QuesitoDisplay';
 
+export type ModalType = 'formacion' | 'fotos' | 'inventario' | 'actionplan' | 'autoevaluacion' | 'auditoria';
+
 interface SStepDetailProps {
   sStep: number;
   onBack: () => void;
-  onOpenModal: (type: 'formacion' | 'fotos' | 'actionplan' | 'autoevaluacion' | 'auditoria', miniStep: number) => void;
+  onOpenModal: (type: ModalType, miniStep: number) => void;
 }
 
-const MODAL_TYPE_MAP: Record<number, 'formacion' | 'fotos' | 'actionplan' | 'autoevaluacion' | 'auditoria'> = {
-  1: 'formacion',
-  2: 'fotos',
-  3: 'actionplan',
-  4: 'autoevaluacion',
-  5: 'auditoria',
-};
+/**
+ * For miniStep 3: S1-S4 open 'inventario', S5 opens 'actionplan'
+ * All other miniSteps are the same for every S.
+ */
+function getModalType(miniStepId: number, sStep: number): ModalType {
+  if (miniStepId === 3) {
+    return sStep === 5 ? 'actionplan' : 'inventario';
+  }
+  const map: Record<number, ModalType> = {
+    1: 'formacion',
+    2: 'fotos',
+    4: 'autoevaluacion',
+    5: 'auditoria',
+  };
+  return map[miniStepId] || 'formacion';
+}
 
 export default function SStepDetail({ sStep, onBack, onOpenModal }: SStepDetailProps) {
   const { getMiniStepStatus, isQuesitoEarned, progress } = use5SStore();
@@ -126,7 +137,7 @@ export default function SStepDetail({ sStep, onBack, onOpenModal }: SStepDetailP
                   color={sStepData.color}
                   onClick={() => {
                     if (status !== 'locked') {
-                      onOpenModal(MODAL_TYPE_MAP[miniStep.id], miniStep.id);
+                      onOpenModal(getModalType(miniStep.id, sStep), miniStep.id);
                     }
                   }}
                 />

@@ -141,11 +141,12 @@ model InventoryItem {
   sStep       Int
   name        String
   location    String?
-  category    String   // "util", "innecesario", "dudoso"
+  category    String   // S1: innecesario/dudoso/util, S2: muy_frecuente/frecuente/ocasional/raro, S3: polvo/grasa/mancha/etc, S4: visual/procedimiento/checklist/etc, S5: cumplido/parcial/incumplido
   quantity    Int      @default(1)
   price       Float?   // Precio en euros
   action      String?  // Acción a tomar
   photoUrl    String?
+  extra       String?  // JSON: S-specific fields (estado, frecuenciaUso, nivel, fuente, etc.)
   projectId   String
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt

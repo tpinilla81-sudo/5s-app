@@ -222,50 +222,48 @@ const EXAM_QUESTIONS: Record<number, { questions: Array<{ question: string; opti
   },
 }
 
-const INVENTORY_TEMPLATES: Record<number, { items: Array<{ name: string; location: string; category: string; quantity: number; price: number | null; action: string }> }> = {
+const INVENTORY_TEMPLATES: Record<number, { items: Array<{ name: string; location: string; category: string; quantity: number; price: number | null; action: string; extra?: Record<string, string | number> }> }> = {
   1: {
     items: [
-      { name: 'Herramientas rotas', location: 'Taller principal', category: 'innecesario', quantity: 3, price: 45.00, action: 'Eliminar' },
-      { name: 'Material de oficina obsoleto', location: 'Oficina', category: 'innecesario', quantity: 10, price: 120.50, action: 'Reciclar' },
-      { name: 'Piezas de repuesto activas', location: 'Almacén A', category: 'util', quantity: 25, price: 875.00, action: 'Mantener organizado' },
-      { name: 'Documentación antigua', location: 'Archivo', category: 'dudoso', quantity: 50, price: null, action: 'Revisar y digitalizar' },
-      { name: 'Equipos en desuso', location: 'Nave 2', category: 'innecesario', quantity: 2, price: 1500.00, action: 'Vender o donar' },
+      { name: 'Herramientas rotas', location: 'Taller principal', category: 'innecesario', quantity: 3, price: 45.00, action: 'Enviar a jaula', extra: { estado: 'Malo', frecuenciaUso: 'Nunca', decision: 'Eliminar' } },
+      { name: 'Material de oficina obsoleto', location: 'Oficina', category: 'innecesario', quantity: 10, price: 120.50, action: 'Enviar a jaula Tipo A', extra: { estado: 'Regular', frecuenciaUso: 'Nunca', decision: 'Eliminar' } },
+      { name: 'Piezas de repuesto activas', location: 'Almacén A', category: 'util', quantity: 25, price: 875.00, action: 'Mantener organizado', extra: { estado: 'Bueno', frecuenciaUso: 'Mensual', decision: 'Reubicar' } },
+      { name: 'Documentación antigua', location: 'Archivo', category: 'dudoso', quantity: 50, price: null, action: 'Enviar a jaula Tipo B - revisar', extra: { estado: 'Regular', frecuenciaUso: 'Anual', decision: 'Revisar' } },
+      { name: 'Equipos en desuso', location: 'Nave 2', category: 'innecesario', quantity: 2, price: 1500.00, action: 'Etiqueta roja - enviar a jaula', extra: { estado: 'Malo', frecuenciaUso: 'Nunca', decision: 'Eliminar' } },
     ],
   },
   2: {
     items: [
-      { name: 'Caja de herramientas', location: 'Puesto de trabajo 1', category: 'util', quantity: 1, price: 89.95, action: 'Asignar ubicación fija' },
-      { name: 'Carro de transporte', location: 'Pasillo B', category: 'util', quantity: 2, price: 320.00, action: 'Zona marcada en suelo' },
-      { name: 'Extintores', location: 'Varios puntos', category: 'util', quantity: 4, price: 180.00, action: 'Señalizar ubicación' },
-      { name: 'Palets vacíos', location: 'Zona de carga', category: 'dudoso', quantity: 8, price: 48.00, action: 'Definir zona temporal' },
-      { name: 'Contenedores de residuos', location: 'Salida trasera', category: 'util', quantity: 3, price: 75.00, action: 'Codificar por color' },
+      { name: 'Caja de herramientas', location: 'Puesto de trabajo 1', category: 'muy_frecuente', quantity: 1, price: 89.95, action: 'Asignar ubicación fija - sombra', extra: { ubicacionAsignada: 'Panel herramientas PT1', metodoIdentificacion: 'Sombra/Contorno', cercania: 'Muy cerca (brazo)' } },
+      { name: 'Carro de transporte', location: 'Pasillo B', category: 'frecuente', quantity: 2, price: 320.00, action: 'Zona marcada en suelo', extra: { ubicacionAsignada: 'Pasillo B - zona verde', metodoIdentificacion: 'Señal visual', cercania: 'Cerca (1-3 pasos)' } },
+      { name: 'Extintores', location: 'Varios puntos', category: 'ocasional', quantity: 4, price: 180.00, action: 'Señalizar ubicación', extra: { ubicacionAsignada: 'Columnas señaladas', metodoIdentificacion: 'Señalización', cercania: 'Media distancia' } },
+      { name: 'Documentación archivo muerto', location: 'Archivo exterior', category: 'raro', quantity: 8, price: 48.00, action: 'Almacén exterior', extra: { ubicacionAsignada: 'Archivo exterior nave 3', metodoIdentificacion: 'Etiqueta', cercania: 'Poco accesible' } },
+      { name: 'Contenedores de residuos', location: 'Salida trasera', category: 'frecuente', quantity: 3, price: 75.00, action: 'Codificar por color', extra: { ubicacionAsignada: 'Zona residuos señalizada', metodoIdentificacion: 'Código color', cercania: 'Cerca (1-3 pasos)' } },
     ],
   },
   3: {
     items: [
-      { name: 'Kit de limpieza básico', location: 'Carro de limpieza', category: 'util', quantity: 2, price: 35.50, action: 'Reponer semanalmente' },
-      { name: 'Productos químicos caducados', location: 'Almacén productos', category: 'innecesario', quantity: 5, price: 62.00, action: 'Retirar y gestionar residuo' },
-      { name: 'Bayetas y trapos', location: 'Armario limpieza', category: 'util', quantity: 20, price: 15.00, action: 'Renovar mensualmente' },
-      { name: 'Aspiradora industrial', location: 'Sala máquinas', category: 'util', quantity: 1, price: 450.00, action: 'Mantenimiento trimestral' },
-      { name: 'Escobas desgastadas', location: 'Armario limpieza', category: 'innecesario', quantity: 4, price: 28.00, action: 'Reemplazar' },
+      { name: 'Polvo acumulado en estanterías', location: 'Almacén A', category: 'polvo', quantity: 1, price: null, action: 'Aspirar y establecer frecuencia', extra: { nivel: 'Moderado', fuente: 'Falta de limpieza', metodoLimpieza: 'Aspirado', frecuenciaLimpieza: 'Semanal' } },
+      { name: 'Manchas de grasa en suelo', location: 'Taller principal', category: 'grasa', quantity: 3, price: null, action: 'Desengrasar y identificar fuga', extra: { nivel: 'Grave', fuente: 'Proceso productivo', metodoLimpieza: 'Fregado', frecuenciaLimpieza: 'Diaria' } },
+      { name: 'Residuos en zona de carga', location: 'Zona de carga', category: 'residuos', quantity: 5, price: null, action: 'Recoger y instalar contenedores', extra: { nivel: 'Moderado', fuente: 'Derrame', metodoLimpieza: 'Reparación', frecuenciaLimpieza: 'Diaria' } },
+      { name: 'Oxidación en estructuras', location: 'Nave 2', category: 'oxidacion', quantity: 2, price: null, action: 'Tratar y pintar superficie', extra: { nivel: 'Leve', fuente: 'Humedad', metodoLimpieza: 'Pulido', frecuenciaLimpieza: 'Mensual' } },
+      { name: 'Humedad en paredes', location: 'Almacén B', category: 'humedad', quantity: 1, price: null, action: 'Reparar filtración y ventilar', extra: { nivel: 'Moderado', fuente: 'Medio ambiente', metodoLimpieza: 'Otro', frecuenciaLimpieza: 'Quincenal' } },
     ],
   },
   4: {
     items: [
-      { name: 'Procedimientos de trabajo', location: 'Tablón oficina', category: 'util', quantity: 12, price: null, action: 'Actualizar y digitalizar' },
-      { name: 'Fichas de control antiguas', location: 'Archivo', category: 'innecesario', quantity: 200, price: null, action: 'Digitalizar y eliminar papel' },
-      { name: 'Señales de seguridad', location: 'Taller', category: 'util', quantity: 8, price: 96.00, action: 'Verificar visibilidad' },
-      { name: 'Manuales de equipo obsoletos', location: 'Oficina técnica', category: 'innecesario', quantity: 6, price: null, action: 'Actualizar versión' },
-      { name: 'Checklists de limpieza', location: 'Carro limpieza', category: 'util', quantity: 5, price: 12.50, action: 'Revisar contenido' },
+      { name: 'Procedimiento de trabajo PT-001', location: 'Tablón oficina', category: 'procedimiento', quantity: 1, price: null, action: 'Actualizar y difundir', extra: { estadoEstandar: 'Implantado', documentado: 'Sí', cumplimiento: 85, fechaRevision: '2025-06-15' } },
+      { name: 'Señalización de seguridad zona A', location: 'Taller', category: 'senalizacion', quantity: 8, price: 96.00, action: 'Verificar visibilidad', extra: { estadoEstandar: 'Implantado', documentado: 'Sí', cumplimiento: 90, fechaRevision: '2025-07-01' } },
+      { name: 'Checklist de limpieza diaria', location: 'Carro limpieza', category: 'checklist', quantity: 5, price: 12.50, action: 'Revisar contenido', extra: { estadoEstandar: 'En proceso', documentado: 'Parcialmente', cumplimiento: 60, fechaRevision: '2025-05-30' } },
+      { name: 'Diagrama de flujo proceso montaje', location: 'Oficina técnica', category: 'diagrama', quantity: 1, price: null, action: 'Colocar en zona visible', extra: { estadoEstandar: 'Pendiente', documentado: 'No', cumplimiento: 0, fechaRevision: '' } },
+      { name: 'Panel visual indicadores 5S', location: 'Entrada taller', category: 'visual', quantity: 1, price: 75.00, action: 'Actualizar semanalmente', extra: { estadoEstandar: 'Implantado', documentado: 'Sí', cumplimiento: 75, fechaRevision: '2025-06-01' } },
     ],
   },
   5: {
     items: [
-      { name: 'Registro de auditorías', location: 'Oficina calidad', category: 'util', quantity: 24, price: null, action: 'Mantener actualizado' },
-      { name: 'Plan de formación 5S', location: 'RRHH', category: 'util', quantity: 1, price: 500.00, action: 'Ejecutar según calendario' },
-      { name: 'Actas de reuniones antiguas', location: 'Archivo', category: 'dudoso', quantity: 36, price: null, action: 'Evaluar si conservar' },
-      { name: 'Panel de indicadores 5S', location: 'Entrada taller', category: 'util', quantity: 1, price: 75.00, action: 'Actualizar semanalmente' },
-      { name: 'Normativas sin difundir', location: 'Oficina', category: 'dudoso', quantity: 15, price: null, action: 'Comunicar al equipo' },
+      { name: 'Cumplimiento horario limpieza', location: 'Taller principal', category: 'cumplido', quantity: 1, price: null, action: 'Mantener', extra: { practica: 'Limpieza diaria al inicio turno', responsable: 'Equipo A', frecuencia: 'Diaria' } },
+      { name: 'Declaración de anomalías', location: 'Taller', category: 'parcial', quantity: 1, price: null, action: 'Fomentar uso del sistema', extra: { practica: 'Declarar anomalías al detectarlas', responsable: 'Todos', frecuencia: 'Diaria' } },
+      { name: 'Actualización indicadores', location: 'Panel 5S', category: 'incumplido', quantity: 1, price: null, action: 'Asignar responsable y frecuencia', extra: { practica: 'Actualizar indicadores PDCA', responsable: 'Responsable zona', frecuencia: 'Semanal' } },
     ],
   },
 }

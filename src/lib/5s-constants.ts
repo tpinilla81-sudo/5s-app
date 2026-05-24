@@ -87,15 +87,15 @@ export const MINI_STEPS: MiniStep[] = [
   },
   {
     id: 3,
-    name: 'Plan de Acción',
-    icon: 'ListChecks',
-    description: 'Define las acciones a realizar para implementar esta S',
+    name: 'Inventario',
+    icon: 'ClipboardList',
+    description: 'Registra los elementos correspondientes a esta S',
     descriptionByS: {
-      1: 'Define qué elementos eliminar, reubicar o mantener y quién lo hará',
-      2: 'Define las ubicaciones, etiquetas y señalización para cada elemento',
-      3: 'Define las tareas de limpieza, frecuencias, responsables y métodos',
-      4: 'Define las normas, procedimientos y controles visuales a implantar',
-      5: 'Define los hábitos a mantener, revisiones periódicas y compromisos',
+      1: 'Inventaria los elementos innecesarios, dudosos y necesarios. Incluye precio (€) y decisión (jaula, eliminar, reubicar)',
+      2: 'Inventaria los elementos necesarios, su ubicación, frecuencia de uso y método de identificación',
+      3: 'Inventaria los puntos de suciedad: tipo, nivel, fuente y método de limpieza',
+      4: 'Inventaria los estándares implantados: tipo, estado, documentación y cumplimiento. Incluye la Biblioteca de Estándares',
+      5: 'Plan de Acción: Define las acciones a realizar para mantener la disciplina y mejora continua',
     },
   },
   {

@@ -39,6 +39,7 @@ const MODAL_MAP: Record<string, React.ComponentType<{
 }>> = {
   formacion: FormacionModal,
   fotos: FotosModal,
+  inventario: InventarioModal,
   actionplan: ActionPlanModal,
   autoevaluacion: AutoevaluacionModal,
   auditoria: AuditoriaModal,
@@ -127,7 +128,7 @@ export default function HomePage() {
     setCurrentView('board');
   };
 
-  const handleOpenModal = (type: 'formacion' | 'fotos' | 'actionplan' | 'autoevaluacion' | 'auditoria', miniStep: number) => {
+  const handleOpenModal = (type: 'formacion' | 'fotos' | 'inventario' | 'actionplan' | 'autoevaluacion' | 'auditoria', miniStep: number) => {
     openModal(type, miniStep);
   };
 

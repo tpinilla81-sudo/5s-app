@@ -44,7 +44,7 @@ interface FiveSState {
   progress: ProgressItem[]
   currentView: 'board' | 'detail' | 'admin' | 'maintenance' | 'gerente'
   selectedSStep: number | null
-  activeModal: 'formacion' | 'fotos' | 'actionplan' | 'autoevaluacion' | 'auditoria' | null
+  activeModal: 'formacion' | 'fotos' | 'inventario' | 'actionplan' | 'autoevaluacion' | 'auditoria' | null
   activeMiniStep: number | null
   isLoadingProgress: boolean
   adminFreeNavigation: boolean  // Admin mode: skip progressive unlocking
@@ -62,7 +62,7 @@ interface FiveSState {
   fetchProgress: () => Promise<void>
   selectSStep: (s: number | null) => void
   setCurrentView: (view: 'board' | 'detail' | 'admin' | 'maintenance' | 'gerente') => void
-  openModal: (type: 'formacion' | 'fotos' | 'actionplan' | 'autoevaluacion' | 'auditoria', miniStep: number) => void
+  openModal: (type: 'formacion' | 'fotos' | 'inventario' | 'actionplan' | 'autoevaluacion' | 'auditoria', miniStep: number) => void
   closeModal: () => void
   seedDatabase: () => Promise<void>
   setAdminFreeNavigation: (enabled: boolean) => void

@@ -26,7 +26,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { ClipboardList, Plus, CheckCircle, Download, Upload, FileSpreadsheet } from 'lucide-react';
+import { ClipboardList, Plus, CheckCircle, Download, Upload, FileSpreadsheet, BookOpen } from 'lucide-react';
 import { use5SStore } from '@/lib/store';
 import { S_STEPS, INVENTORY_CONFIGS, INVENTORY_CLASSIFY_THRESHOLD } from '@/lib/5s-constants';
 import type { InventoryConfig } from '@/lib/5s-constants';
@@ -308,6 +308,72 @@ export default function InventarioModal({ open, onClose, sStep, miniStep }: Inve
               </p>
             </div>
 
+            {/* 1S: Jaula info panel */}
+            {sStep === 1 && (
+              <Card className="border-2 border-red-200 bg-red-50/30">
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="text-lg">📦</span>
+                    <h4 className="font-semibold text-red-800">Sistema de Jaulas y Tarjetas</h4>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+                    <div className="bg-white rounded-lg border p-3">
+                      <div className="flex items-center gap-1 mb-1">
+                        <div className="w-3 h-3 rounded bg-red-500"></div>
+                        <span className="font-medium">Etiqueta ROJA</span>
+                      </div>
+                      <p className="text-muted-foreground">Enviar a la JAULA. Elemento claramente innecesario.</p>
+                    </div>
+                    <div className="bg-white rounded-lg border p-3">
+                      <div className="flex items-center gap-1 mb-1">
+                        <div className="w-3 h-3 rounded bg-orange-500"></div>
+                        <span className="font-medium">Etiqueta NARANJA</span>
+                      </div>
+                      <p className="text-muted-foreground">Cuestionar si se envía a la JAULA. Requiere revisión.</p>
+                    </div>
+                    <div className="bg-white rounded-lg border p-3">
+                      <div className="flex items-center gap-1 mb-1">
+                        <div className="w-3 h-3 rounded bg-green-500"></div>
+                        <span className="font-medium">Sin etiqueta</span>
+                      </div>
+                      <p className="text-muted-foreground">Elemento necesario. Mantener en su ubicación.</p>
+                    </div>
+                  </div>
+                  <div className="mt-2 flex gap-4 text-xs text-red-700">
+                    <span>Innecesarios: {items.filter(i => i.category === 'innecesario').length}</span>
+                    <span>Dudosos: {items.filter(i => i.category === 'dudoso').length}</span>
+                    <span>Necesarios: {items.filter(i => i.category === 'util').length}</span>
+                    {items.filter(i => i.category === 'innecesario' || i.category === 'dudoso').length > 0 && (
+                      <span className="font-medium">
+                        Valor en jaula: {items.filter(i => i.category === 'innecesario' || i.category === 'dudoso').reduce((sum, i) => sum + (i.price || 0) * i.quantity, 0).toFixed(2)} €
+                      </span>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* 1S: Jaula summary for items to send */}
+            {sStep === 1 && items.filter(i => i.category === 'innecesario').length > 0 && (
+              <Card className="border border-red-300">
+                <CardContent className="p-3">
+                  <h5 className="text-sm font-semibold text-red-700 mb-2">Elementos a enviar a la Jaula</h5>
+                  <div className="space-y-1">
+                    {items.filter(i => i.category === 'innecesario').map(item => (
+                      <div key={item.id} className="flex items-center justify-between text-xs bg-red-50 rounded p-1.5">
+                        <span className="font-medium">{item.name}</span>
+                        <div className="flex items-center gap-2">
+                          <span className="text-muted-foreground">{item.location}</span>
+                          <span className="font-medium text-red-700">{item.price ? `${(item.price * item.quantity).toFixed(2)} €` : ''}</span>
+                          <span className="text-muted-foreground">→ {item.action}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
             {/* Classification progress */}
             <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
               <div>
@@ -472,6 +538,65 @@ export default function InventarioModal({ open, onClose, sStep, miniStep }: Inve
                 </div>
               </CardContent>
             </Card>
+
+            {/* Biblioteca de Estándares — only for 4S */}
+            {sStep === 4 && items.length > 0 && (
+              <Card className="border-2 border-blue-200 bg-blue-50/30">
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-2 mb-3">
+                    <BookOpen className="h-5 w-5 text-blue-600" />
+                    <h4 className="font-semibold text-blue-800">Biblioteca de Estándares</h4>
+                  </div>
+                  <p className="text-xs text-blue-700 mb-3">
+                    Resumen de todos los estándares inventariados organizados por tipo y estado de implantación.
+                  </p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {/* Group by category */}
+                    {Object.entries(
+                      items.reduce((acc, item) => {
+                        const cat = config.categories.find(c => c.value === item.category);
+                        const label = cat?.label || item.category;
+                        if (!acc[label]) acc[label] = [];
+                        acc[label].push(item);
+                        return acc;
+                      }, {} as Record<string, InventoryItemData[]>)
+                    ).map(([catLabel, catItems]) => (
+                      <div key={catLabel} className="bg-white rounded-lg border p-3">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-sm font-medium">{catLabel}</span>
+                          <Badge variant="secondary" className="text-xs">{catItems.length}</Badge>
+                        </div>
+                        <div className="space-y-1">
+                          {catItems.map(item => {
+                            const estado = item.extra?.estadoEstandar || '—';
+                            const cumplimiento = item.extra?.cumplimiento;
+                            const estadoColor = estado === 'Implantado' ? 'text-green-600' : estado === 'En proceso' ? 'text-amber-600' : 'text-red-600';
+                            return (
+                              <div key={item.id} className="flex items-center justify-between text-xs">
+                                <span className="truncate flex-1 mr-2">{item.name}</span>
+                                <div className="flex items-center gap-2 shrink-0">
+                                  {cumplimiento != null && (
+                                    <span className="text-muted-foreground">{cumplimiento}%</span>
+                                  )}
+                                  <span className={estadoColor}>{estado}</span>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  {/* Summary stats */}
+                  <div className="mt-3 flex gap-4 text-xs text-blue-700">
+                    <span>Total: {items.length}</span>
+                    <span>Implantados: {items.filter(i => i.extra?.estadoEstandar === 'Implantado').length}</span>
+                    <span>En proceso: {items.filter(i => i.extra?.estadoEstandar === 'En proceso').length}</span>
+                    <span>Pendientes: {items.filter(i => i.extra?.estadoEstandar === 'Pendiente').length}</span>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
 
             {/* Items table */}
             {isLoading ? (
