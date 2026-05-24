@@ -42,6 +42,7 @@ model Project {
   auditResults       AuditResult[]
   checklistResponses ChecklistResponse[]
   actionItems        ActionItem[]
+  auditTargets       AuditTarget[]
 }
 
 model Zone {
@@ -215,6 +216,22 @@ model ActionItem {
 
   project         Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
+  @@index([projectId])
+}
+
+model AuditTarget {
+  id           String   @id @default(cuid())
+  projectId    String
+  sStep        Int      // 1-5 (which S step)
+  objetivo     Float    @default(80)  // Target score
+  min          Float    @default(50)  // Minimum acceptable score
+  max          Float    @default(100) // Maximum score
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  project      Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, sStep])
   @@index([projectId])
 }
 

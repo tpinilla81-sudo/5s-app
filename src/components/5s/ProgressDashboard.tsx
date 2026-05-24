@@ -10,6 +10,7 @@ import {
   ShieldCheck, TrendingUp, Zap, Trophy, Clock, CheckCircle2, AlertCircle, CircleDot
 } from 'lucide-react';
 import QuesitoDisplay from './QuesitoDisplay';
+import RadarChart5S from './RadarChart5S';
 
 interface StatsData {
   auditScore: number | null;
@@ -219,6 +220,11 @@ export default function ProgressDashboard() {
           })}
         </CardContent>
       </Card>
+
+      {/* 5S Radar Chart */}
+      {currentProject && (
+        <RadarChart5S projectId={currentProject.id} />
+      )}
 
       {/* Quesitos display */}
       <Card>

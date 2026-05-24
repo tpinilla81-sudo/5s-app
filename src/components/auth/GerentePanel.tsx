@@ -8,8 +8,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import {
   ArrowLeft, ShieldCheck, TrendingUp, Zap, Trophy, Building2,
-  AlertCircle, CircleDot, CheckCircle2, BarChart3, Users, MapPin
+  AlertCircle, CircleDot, CheckCircle2, BarChart3, ChevronDown, ChevronUp
 } from 'lucide-react';
+import RadarChart5S from '@/components/5s/RadarChart5S';
 
 interface ProjectStats {
   id: string;
@@ -46,6 +47,7 @@ export default function GerentePanel() {
   const { setCurrentView } = use5SStore();
   const [stats, setStats] = useState<CompanyStats | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [expandedProject, setExpandedProject] = useState<string | null>(null);
 
   useEffect(() => {
     loadStats();
@@ -206,28 +208,25 @@ export default function GerentePanel() {
               </motion.div>
             </div>
 
-            {/* Per-Project Breakdown */}
+            {/* Per-Project Breakdown with Radar Charts */}
             {stats?.perProjectBreakdown && stats.perProjectBreakdown.length > 0 && (
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-medium flex items-center gap-2">
-                    <BarChart3 className="h-4 w-4 text-indigo-500" />
-                    Desglose por Proyecto
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="pb-4">
-                  <div className="space-y-4">
-                    {stats.perProjectBreakdown.map((proj, idx) => (
-                      <motion.div
-                        key={proj.id}
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.1 + idx * 0.05 }}
-                        className="border rounded-lg p-4 bg-white"
+              <div className="space-y-4">
+                {stats.perProjectBreakdown.map((proj, idx) => (
+                  <motion.div
+                    key={proj.id}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.1 + idx * 0.05 }}
+                  >
+                    {/* Project header with expand button */}
+                    <Card className="overflow-hidden">
+                      <div
+                        className="flex items-center justify-between p-4 cursor-pointer hover:bg-gray-50 transition-colors"
+                        onClick={() => setExpandedProject(expandedProject === proj.id ? null : proj.id)}
                       >
-                        <div className="flex items-center gap-3 mb-3">
-                          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-100 to-indigo-50 flex items-center justify-center">
-                            <Building2 className="h-4 w-4 text-indigo-500" />
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-indigo-100 to-indigo-50 flex items-center justify-center">
+                            <Building2 className="h-5 w-5 text-indigo-500" />
                           </div>
                           <div>
                             <h4 className="text-sm font-semibold">{proj.name}</h4>
@@ -235,41 +234,48 @@ export default function GerentePanel() {
                           </div>
                         </div>
 
-                        <div className="grid grid-cols-3 gap-3">
-                          {/* Audit Score */}
-                          <div className="text-center p-2 rounded-md bg-gray-50">
-                            <ShieldCheck className="h-4 w-4 text-blue-500 mx-auto mb-1" />
-                            <p className={`text-lg font-bold ${getScoreColor(proj.avgAuditScore)}`}>
-                              {proj.avgAuditScore !== null ? `${proj.avgAuditScore}%` : '—'}
-                            </p>
-                            <p className="text-[10px] text-muted-foreground">Auditoría</p>
-                          </div>
-
-                          {/* Progress */}
-                          <div className="text-center p-2 rounded-md bg-gray-50">
-                            <TrendingUp className="h-4 w-4 text-emerald-500 mx-auto mb-1" />
-                            <p className="text-lg font-bold text-emerald-600">{proj.progressPercent}%</p>
-                            <p className="text-[10px] text-muted-foreground">Progreso</p>
-                          </div>
-
-                          {/* Actions summary */}
-                          <div className="text-center p-2 rounded-md bg-gray-50">
-                            <Zap className="h-4 w-4 text-orange-500 mx-auto mb-1" />
-                            <div className="flex justify-center gap-1">
-                              <span className="text-xs font-bold text-red-500">{proj.actions.abierta}</span>
-                              <span className="text-[10px] text-muted-foreground">/</span>
-                              <span className="text-xs font-bold text-amber-500">{proj.actions.en_proceso}</span>
-                              <span className="text-[10px] text-muted-foreground">/</span>
-                              <span className="text-xs font-bold text-green-500">{proj.actions.resuelta + proj.actions.cerrada}</span>
+                        <div className="flex items-center gap-4">
+                          {/* Mini indicators */}
+                          <div className="hidden sm:flex items-center gap-3">
+                            <div className="text-center px-3 py-1 rounded-md bg-gray-50">
+                              <p className={`text-sm font-bold ${getScoreColor(proj.avgAuditScore)}`}>
+                                {proj.avgAuditScore !== null ? `${proj.avgAuditScore}%` : '—'}
+                              </p>
+                              <p className="text-[9px] text-muted-foreground">Auditoría</p>
                             </div>
-                            <p className="text-[10px] text-muted-foreground">A/E/C</p>
+                            <div className="text-center px-3 py-1 rounded-md bg-gray-50">
+                              <p className="text-sm font-bold text-emerald-600">{proj.progressPercent}%</p>
+                              <p className="text-[9px] text-muted-foreground">Progreso</p>
+                            </div>
+                            <div className="text-center px-3 py-1 rounded-md bg-gray-50">
+                              <div className="flex justify-center gap-0.5">
+                                <span className="text-xs font-bold text-red-500">{proj.actions.abierta}</span>
+                                <span className="text-[9px] text-muted-foreground">/</span>
+                                <span className="text-xs font-bold text-amber-500">{proj.actions.en_proceso}</span>
+                                <span className="text-[9px] text-muted-foreground">/</span>
+                                <span className="text-xs font-bold text-green-500">{proj.actions.resuelta + proj.actions.cerrada}</span>
+                              </div>
+                              <p className="text-[9px] text-muted-foreground">A/E/C</p>
+                            </div>
                           </div>
+
+                          {expandedProject === proj.id
+                            ? <ChevronUp className="h-5 w-5 text-gray-400" />
+                            : <ChevronDown className="h-5 w-5 text-gray-400" />
+                          }
                         </div>
-                      </motion.div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
+                      </div>
+
+                      {/* Expanded: Radar Chart */}
+                      {expandedProject === proj.id && (
+                        <div className="px-4 pb-4 pt-2 border-t">
+                          <RadarChart5S projectId={proj.id} compact />
+                        </div>
+                      )}
+                    </Card>
+                  </motion.div>
+                ))}
+              </div>
             )}
           </div>
         )}
