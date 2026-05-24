@@ -42,7 +42,7 @@ export interface Project {
 interface FiveSState {
   // Progress & Board State
   progress: ProgressItem[]
-  currentView: 'board' | 'detail' | 'admin' | 'maintenance'
+  currentView: 'board' | 'detail' | 'admin' | 'maintenance' | 'gerente'
   selectedSStep: number | null
   activeModal: 'formacion' | 'fotos' | 'actionplan' | 'autoevaluacion' | 'auditoria' | null
   activeMiniStep: number | null
@@ -61,7 +61,7 @@ interface FiveSState {
   // Progress & Board Actions
   fetchProgress: () => Promise<void>
   selectSStep: (s: number | null) => void
-  setCurrentView: (view: 'board' | 'detail' | 'admin' | 'maintenance') => void
+  setCurrentView: (view: 'board' | 'detail' | 'admin' | 'maintenance' | 'gerente') => void
   openModal: (type: 'formacion' | 'fotos' | 'actionplan' | 'autoevaluacion' | 'auditoria', miniStep: number) => void
   closeModal: () => void
   seedDatabase: () => Promise<void>

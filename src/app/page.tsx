@@ -28,7 +28,8 @@ import {
 } from '@/components/ui/dropdown-menu';
 import AdminPanel from '@/components/admin/AdminPanel';
 import MaintenanceView from '@/components/5s/MaintenanceView';
-import { Loader2, RefreshCw, LogOut, Settings, ChevronDown, Shield, Unlock, Lock, LayoutDashboard, Wrench, Sparkles } from 'lucide-react';
+import GerentePanel from '@/components/auth/GerentePanel';
+import { Loader2, RefreshCw, LogOut, Settings, ChevronDown, Shield, Unlock, Lock, LayoutDashboard, Wrench, Sparkles, BarChart3 } from 'lucide-react';
 
 const MODAL_MAP: Record<string, React.ComponentType<{
   open: boolean;
@@ -165,6 +166,8 @@ export default function HomePage() {
 
   const canManageTeam = currentUser && (currentUser.role === 'admin' || currentUser.role === 'responsable');
   const isAdmin = currentUser?.role === 'admin';
+  const isGerente = currentUser?.role === 'gerente';
+  const canSeeGerentePanel = isAdmin || isGerente;
 
   const ActiveModalComponent = activeModal ? MODAL_MAP[activeModal] : null;
 
@@ -239,6 +242,11 @@ export default function HomePage() {
     return <AdminPanel />;
   }
 
+  // Show Gerente Panel
+  if (currentView === 'gerente' && canSeeGerentePanel) {
+    return <GerentePanel />;
+  }
+
   // Show Board (authView === 'board')
   return (
     <div className="min-h-screen flex flex-col bg-gradient-to-b from-gray-50 to-white">
@@ -269,6 +277,17 @@ export default function HomePage() {
               >
                 <LayoutDashboard className="h-3.5 w-3.5" />
                 <span className="hidden sm:inline">Admin</span>
+              </Button>
+            )}
+            {canSeeGerentePanel && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentView('gerente')}
+                className="gap-1.5 text-xs border-indigo-300 text-indigo-600 hover:bg-indigo-50 hover:text-indigo-700"
+              >
+                <BarChart3 className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">Gerencia</span>
               </Button>
             )}
             {isAdmin && (
@@ -451,6 +470,18 @@ export default function HomePage() {
                   transition={{ duration: 0.3 }}
                 >
                   <MaintenanceView />
+                </motion.div>
+              )}
+
+              {currentView === 'gerente' && (
+                <motion.div
+                  key="gerente"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.3 }}
+                >
+                  <GerentePanel />
                 </motion.div>
               )}
             </AnimatePresence>
