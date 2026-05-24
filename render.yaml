@@ -1,16 +1,14 @@
 services:
   - type: web
-    name: metodologia-5s
+    name: 5s-methodology-app
     runtime: node
     plan: free
     buildCommand: npm install && npx prisma generate && npm run build
-    startCommand: npm run start
+    startCommand: bash start-railway.sh
     envVars:
       - key: NODE_ENV
         value: production
       - key: DATABASE_URL
         value: file:./db/custom.db
-    disk:
-      name: data
-      mountPath: /opt/render/project/src
-      sizeGB: 1
+      - key: PORT
+        value: 3000
