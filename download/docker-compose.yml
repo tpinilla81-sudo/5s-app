@@ -1,0 +1,37 @@
+# ============================================
+# 5S Methodology App - Docker Compose
+# ============================================
+# Usage:
+#   docker compose up -d        → Start the app
+#   docker compose logs -f      → View logs
+#   docker compose down         → Stop
+#   docker compose up -d --build → Rebuild and start
+# ============================================
+
+version: '3.8'
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: 5s-app
+    ports:
+      - "3000:3000"
+    volumes:
+      - 5s-data:/app/db
+    environment:
+      - DATABASE_URL=file:/app/db/custom.db
+      - PORT=3000
+      - HOSTNAME=0.0.0.0
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+volumes:
+  5s-data:
+    driver: local
