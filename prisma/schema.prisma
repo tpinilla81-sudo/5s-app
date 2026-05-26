@@ -272,6 +272,23 @@ model ActionItem {
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 
+  // Plan de Acción table fields (matching the standard 5S action plan format)
+  numeroEntrada     Int?      // Nº de entrada (auto-increment per project)
+  fechaEntrada      DateTime? // Fecha de la entrada
+  comunicadoPor     String?   // Quién comunicó el problema
+  semana            String?   // Semana en que se detectó
+  seccionDemandante String?   // Sección que demanda la acción
+  clienteZona       String?   // Cliente o zona afectada
+  personaDemandada  String?   // Persona a la que se demanda
+  seccionDemandada  String?   // Sección a la que se demanda
+  impactoObjetivo   String?   // Impacto objetivo esperado
+  enviado           String?   // Estado de envío (Sí/No/Pendiente)
+  accionCorrectiva  String?   // Acción correctiva a tomar
+  accionesPreventivas String? // Acciones preventivas
+  semanaPrevista    String?   // Semana prevista para resolución
+  porcentaje        Float?    @default(0) // Porcentaje de completado
+  semanaReal        String?   // Semana real de resolución
+
   project         Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
   zone            Zone?     @relation(fields: [zoneId], references: [id], onDelete: SetNull)
 

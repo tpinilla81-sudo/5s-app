@@ -144,6 +144,22 @@ export async function POST(request: NextRequest) {
       projectId,
       zoneId,
       verificadoPor,
+      // Plan de Acción table fields
+      numeroEntrada,
+      fechaEntrada,
+      comunicadoPor,
+      semana,
+      seccionDemandante,
+      clienteZona,
+      personaDemandada,
+      seccionDemandada,
+      impactoObjetivo,
+      enviado,
+      accionCorrectiva,
+      accionesPreventivas,
+      semanaPrevista,
+      porcentaje,
+      semanaReal,
     } = body
 
     if (!hallazgo && !itemDescription) {
@@ -159,6 +175,16 @@ export async function POST(request: NextRequest) {
     const projectExists = await db.project.findUnique({ where: { id: projectId } })
     if (!projectExists) {
       return NextResponse.json({ success: false, error: `Project with id '${projectId}' not found` }, { status: 400 })
+    }
+
+    // Auto-increment numeroEntrada per project if not provided
+    let nextNumero = numeroEntrada;
+    if (nextNumero === undefined || nextNumero === null) {
+      const lastAction = await db.actionItem.findFirst({
+        where: { projectId },
+        orderBy: { numeroEntrada: 'desc' },
+      });
+      nextNumero = (lastAction?.numeroEntrada || 0) + 1;
     }
 
     const action = await db.actionItem.create({
@@ -180,6 +206,21 @@ export async function POST(request: NextRequest) {
         zoneId: zoneId || null,
         verificadoPor: verificadoPor || null,
         projectId: projectId || '',
+        numeroEntrada: nextNumero,
+        fechaEntrada: fechaEntrada ? new Date(fechaEntrada) : new Date(),
+        comunicadoPor: comunicadoPor || null,
+        semana: semana || null,
+        seccionDemandante: seccionDemandante || null,
+        clienteZona: clienteZona || null,
+        personaDemandada: personaDemandada || null,
+        seccionDemandada: seccionDemandada || null,
+        impactoObjetivo: impactoObjetivo || null,
+        enviado: enviado || null,
+        accionCorrectiva: accionCorrectiva || null,
+        accionesPreventivas: accionesPreventivas || null,
+        semanaPrevista: semanaPrevista || null,
+        porcentaje: porcentaje !== undefined ? porcentaje : 0,
+        semanaReal: semanaReal || null,
       },
     })
 
@@ -212,6 +253,22 @@ export async function PUT(request: NextRequest) {
     if (body.fechaReal !== undefined) updateData.fechaReal = body.fechaReal ? new Date(body.fechaReal) : null
     if (body.zoneId !== undefined) updateData.zoneId = body.zoneId || null
     if (body.verificadoPor !== undefined) updateData.verificadoPor = body.verificadoPor || null
+    // Plan de Acción table fields
+    if (body.numeroEntrada !== undefined) updateData.numeroEntrada = body.numeroEntrada
+    if (body.fechaEntrada !== undefined) updateData.fechaEntrada = body.fechaEntrada ? new Date(body.fechaEntrada) : null
+    if (body.comunicadoPor !== undefined) updateData.comunicadoPor = body.comunicadoPor
+    if (body.semana !== undefined) updateData.semana = body.semana
+    if (body.seccionDemandante !== undefined) updateData.seccionDemandante = body.seccionDemandante
+    if (body.clienteZona !== undefined) updateData.clienteZona = body.clienteZona
+    if (body.personaDemandada !== undefined) updateData.personaDemandada = body.personaDemandada
+    if (body.seccionDemandada !== undefined) updateData.seccionDemandada = body.seccionDemandada
+    if (body.impactoObjetivo !== undefined) updateData.impactoObjetivo = body.impactoObjetivo
+    if (body.enviado !== undefined) updateData.enviado = body.enviado
+    if (body.accionCorrectiva !== undefined) updateData.accionCorrectiva = body.accionCorrectiva
+    if (body.accionesPreventivas !== undefined) updateData.accionesPreventivas = body.accionesPreventivas
+    if (body.semanaPrevista !== undefined) updateData.semanaPrevista = body.semanaPrevista
+    if (body.porcentaje !== undefined) updateData.porcentaje = body.porcentaje
+    if (body.semanaReal !== undefined) updateData.semanaReal = body.semanaReal
 
     // If resolving, set resolution date
     if (body.estado === 'resuelta' || body.estado === 'cerrada') {

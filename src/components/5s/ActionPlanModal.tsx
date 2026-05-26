@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -8,7 +8,6 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -19,23 +18,42 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { ListChecks, Plus, CheckCircle, Trash2, User, Calendar, AlertTriangle, MapPin } from 'lucide-react';
+import { ListChecks, Plus, Trash2, ChevronDown, ChevronRight, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
 import { use5SStore } from '@/lib/store';
 import { S_STEPS, ACTION_PLAN_MIN_ITEMS } from '@/lib/5s-constants';
 
 interface ActionItemData {
   id: string;
+  numeroEntrada: number;
+  fechaEntrada: string;
+  comunicadoPor: string;
+  semana: string;
+  seccionDemandante: string;
+  clienteZona: string;
+  personaDemandada: string;
+  seccionDemandada: string;
+  hallazgo: string; // DESCRIPCIÓN
+  impactoObjetivo: string;
+  enviado: string;
+  accionCorrectiva: string;
+  accionesPreventivas: string;
+  semanaPrevista: string;
+  responsable: string; // PERSONA RESPONSABLE
+  porcentaje: number;
+  estado: string;
+  semanaReal: string;
+  // Legacy fields kept for compatibility
   descripcion: string;
-  responsable: string;
   fechaCompromiso: string;
   fechaLimite: string;
   fechaReal: string;
-  prioridad: 'alta' | 'media' | 'baja';
-  estado: 'pendiente' | 'en_curso' | 'completada';
+  prioridad: string;
   zoneId: string;
   zoneName: string;
   verificadoPor: string;
+  sStep: number;
+  miniStep: number;
 }
 
 interface ZoneData {
@@ -50,22 +68,29 @@ interface ActionPlanModalProps {
   miniStep: number;
 }
 
-const PRIORIDAD_COLORS = {
-  alta: 'bg-red-100 text-red-800',
-  media: 'bg-amber-100 text-amber-800',
-  baja: 'bg-green-100 text-green-800',
+const ESTADO_OPTIONS = [
+  { value: 'abierta', label: 'Abierta', color: 'bg-red-100 text-red-800' },
+  { value: 'en_proceso', label: 'En Proceso', color: 'bg-yellow-100 text-yellow-800' },
+  { value: 'resuelta', label: 'Resuelta', color: 'bg-green-100 text-green-800' },
+  { value: 'cerrada', label: 'Cerrada', color: 'bg-gray-100 text-gray-600' },
+];
+
+const ENVIADO_OPTIONS = ['Sí', 'No', 'Pendiente'];
+
+// Generate week options (W1-W52)
+const WEEK_OPTIONS = Array.from({ length: 53 }, (_, i) => `W${i + 1}`);
+
+// Color sections matching the uploaded image
+const SECTION_COLORS = {
+  demandante: 'bg-amber-50 border-amber-300 text-amber-900', // Yellow section
+  accion: 'bg-sky-50 border-sky-300 text-sky-900',           // Blue section
+  seguimiento: 'bg-orange-50 border-orange-300 text-orange-900', // Orange section
 };
 
-const ESTADO_COLORS = {
-  pendiente: 'bg-gray-100 text-gray-800',
-  en_curso: 'bg-blue-100 text-blue-800',
-  completada: 'bg-green-100 text-green-800',
-};
-
-const ESTADO_LABELS = {
-  pendiente: 'Pendiente',
-  en_curso: 'En curso',
-  completada: 'Completada',
+const HEADER_COLORS = {
+  demandante: 'bg-amber-400 text-white',
+  accion: 'bg-sky-400 text-white',
+  seguimiento: 'bg-orange-400 text-white',
 };
 
 export default function ActionPlanModal({ open, onClose, sStep, miniStep }: ActionPlanModalProps) {
@@ -76,19 +101,7 @@ export default function ActionPlanModal({ open, onClose, sStep, miniStep }: Acti
   const [actions, setActions] = useState<ActionItemData[]>([]);
   const [isCompleted, setIsCompleted] = useState(false);
   const [zones, setZones] = useState<ZoneData[]>([]);
-
-  // New action form
-  const [newAction, setNewAction] = useState<Partial<ActionItemData>>({
-    descripcion: '',
-    responsable: '',
-    fechaCompromiso: '',
-    fechaLimite: '',
-    fechaReal: '',
-    prioridad: 'media',
-    estado: 'pendiente',
-    zoneId: '',
-    verificadoPor: '',
-  });
+  const [expandedRow, setExpandedRow] = useState<string | null>(null);
 
   const loadZones = async () => {
     if (!currentProject) return;
@@ -109,7 +122,6 @@ export default function ActionPlanModal({ open, onClose, sStep, miniStep }: Acti
       params.set('sStep', String(sStep));
       params.set('source', 'actionplan');
       if (currentProject?.id) params.set('projectId', currentProject.id);
-      // Pass role-based filtering so empleado sees only their zone, responsable their projects
       if (currentUser?.id) params.set('userId', currentUser.id);
       if (currentUser?.role) params.set('userRole', currentUser.role);
       const res = await fetch(`/api/actions?${params.toString()}`);
@@ -117,19 +129,36 @@ export default function ActionPlanModal({ open, onClose, sStep, miniStep }: Acti
       if (json.success && json.data) {
         setActions(json.data.map((a: any) => ({
           id: a.id,
-          descripcion: a.itemDescription || a.hallazgo || '',
+          numeroEntrada: a.numeroEntrada || 0,
+          fechaEntrada: a.fechaEntrada ? new Date(a.fechaEntrada).toISOString().split('T')[0] : (a.createdAt ? new Date(a.createdAt).toISOString().split('T')[0] : ''),
+          comunicadoPor: a.comunicadoPor || '',
+          semana: a.semana || '',
+          seccionDemandante: a.seccionDemandante || '',
+          clienteZona: a.clienteZona || a.zone?.name || '',
+          personaDemandada: a.personaDemandada || '',
+          seccionDemandada: a.seccionDemandada || '',
+          hallazgo: a.hallazgo || a.itemDescription || '',
+          impactoObjetivo: a.impactoObjetivo || '',
+          enviado: a.enviado || '',
+          accionCorrectiva: a.accionCorrectiva || a.mejora || '',
+          accionesPreventivas: a.accionesPreventivas || '',
+          semanaPrevista: a.semanaPrevista || '',
           responsable: a.responsable || '',
+          porcentaje: a.porcentaje || 0,
+          estado: a.estado === 'abierta' ? 'abierta' : a.estado === 'en_proceso' ? 'en_proceso' : a.estado === 'resuelta' || a.estado === 'cerrada' ? 'resuelta' : 'abierta',
+          semanaReal: a.semanaReal || '',
+          // Legacy
+          descripcion: a.itemDescription || a.hallazgo || '',
           fechaCompromiso: a.fechaCompromiso ? new Date(a.fechaCompromiso).toISOString().split('T')[0] : '',
           fechaLimite: a.fechaLimite ? new Date(a.fechaLimite).toISOString().split('T')[0] : '',
           fechaReal: a.fechaReal ? new Date(a.fechaReal).toISOString().split('T')[0] : '',
           prioridad: a.prioridad || 'media',
-          estado: a.estado === 'abierta' ? 'pendiente' : a.estado === 'en_proceso' ? 'en_curso' : a.estado === 'resuelta' || a.estado === 'cerrada' ? 'completada' : 'pendiente',
           zoneId: a.zoneId || '',
           zoneName: a.zone?.name || '',
           verificadoPor: a.verificadoPor || '',
+          sStep: a.sStep || sStep,
+          miniStep: a.miniStep || 3,
         })));
-      } else {
-        console.error('Error loading actions:', json.error);
       }
     } catch (error) {
       console.error('Error loading actions:', error);
@@ -144,15 +173,28 @@ export default function ActionPlanModal({ open, onClose, sStep, miniStep }: Acti
     }
   }, [open, sStep]);
 
+  const getNextNumero = () => {
+    if (actions.length === 0) return 1;
+    return Math.max(...actions.map(a => a.numeroEntrada || 0)) + 1;
+  };
+
+  const getCurrentWeek = () => {
+    const now = new Date();
+    const start = new Date(now.getFullYear(), 0, 1);
+    const diff = now.getTime() - start.getTime();
+    const oneWeek = 1000 * 60 * 60 * 24 * 7;
+    return `W${Math.ceil((diff / oneWeek) + start.getDay() / 7)}`;
+  };
+
   const handleAddAction = async () => {
-    if (!newAction.descripcion?.trim()) {
-      toast.error('Describe la acción a realizar');
-      return;
-    }
     if (!currentProject?.id) {
-      toast.error('No hay proyecto seleccionado. Selecciona un proyecto antes de agregar acciones.');
+      toast.error('No hay proyecto seleccionado.');
       return;
     }
+
+    const nextNumero = getNextNumero();
+    const today = new Date().toISOString().split('T')[0];
+    const currentWeek = getCurrentWeek();
 
     try {
       const res = await fetch('/api/actions', {
@@ -162,112 +204,65 @@ export default function ActionPlanModal({ open, onClose, sStep, miniStep }: Acti
           sStep,
           miniStep: 3,
           itemId: `PA-${sStep}-${Date.now()}`,
-          itemDescription: newAction.descripcion,
-          hallazgo: newAction.descripcion,
-          responsable: newAction.responsable || null,
-          prioridad: newAction.prioridad || 'media',
-          estado: 'abierta',
-          fechaCompromiso: newAction.fechaCompromiso || null,
-          fechaLimite: newAction.fechaLimite || null,
-          fechaReal: newAction.fechaReal || null,
+          itemDescription: '',
+          hallazgo: '',
           source: 'actionplan',
           projectId: currentProject.id,
-          zoneId: newAction.zoneId || null,
-          verificadoPor: null,
+          zoneId: currentZone?.id || null,
+          // New Plan de Acción fields
+          numeroEntrada: nextNumero,
+          fechaEntrada: today,
+          semana: currentWeek,
+          estado: 'abierta',
+          enviado: 'Pendiente',
+          porcentaje: 0,
         }),
       });
 
       const json = await res.json();
       if (json.success) {
-        toast.success('Acción agregada correctamente');
-        const zoneName = zones.find(z => z.id === newAction.zoneId)?.name || '';
-        setActions(prev => [...prev, {
-          id: json.data.id,
-          descripcion: newAction.descripcion || '',
-          responsable: newAction.responsable || '',
-          fechaCompromiso: newAction.fechaCompromiso || '',
-          fechaLimite: newAction.fechaLimite || '',
-          fechaReal: newAction.fechaReal || '',
-          prioridad: (newAction.prioridad as 'alta' | 'media' | 'baja') || 'media',
-          estado: 'pendiente',
-          zoneId: newAction.zoneId || '',
-          zoneName,
-          verificadoPor: '',
-        }]);
-        setNewAction({
-          descripcion: '',
-          responsable: '',
-          fechaCompromiso: '',
-          fechaLimite: '',
-          fechaReal: '',
-          prioridad: 'media',
-          estado: 'pendiente',
-          zoneId: '',
-          verificadoPor: '',
-        });
+        toast.success('Entrada agregada correctamente');
+        await loadActions();
       } else {
-        toast.error(`Error al agregar acción: ${json.error || 'Error desconocido'}`);
+        toast.error(`Error: ${json.error || 'Error desconocido'}`);
       }
     } catch (error) {
       console.error('Error adding action:', error);
-      toast.error('Error de conexión al agregar la acción');
+      toast.error('Error de conexión al agregar la entrada');
     }
   };
 
-  const handleUpdateEstado = async (actionId: string, newEstado: string) => {
-    const apiEstado = newEstado === 'pendiente' ? 'abierta' : newEstado === 'en_curso' ? 'en_proceso' : 'resuelta';
-    const updates: any = { estado: apiEstado };
-    if (newEstado === 'completada') {
-      updates.fechaReal = new Date().toISOString();
-    }
+  const handleUpdateField = async (actionId: string, field: string, value: any) => {
+    // Optimistic update
+    setActions(prev => prev.map(a =>
+      a.id === actionId ? { ...a, [field]: value } : a
+    ));
+
     try {
       const res = await fetch(`/api/actions?id=${actionId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(updates),
+        body: JSON.stringify({ [field]: value }),
       });
       const json = await res.json();
-      if (json.success) {
-        setActions(prev => prev.map(a =>
-          a.id === actionId ? { ...a, estado: newEstado as ActionItemData['estado'], fechaReal: newEstado === 'completada' ? new Date().toISOString().split('T')[0] : a.fechaReal } : a
-        ));
-      } else {
+      if (!json.success) {
         toast.error(`Error al actualizar: ${json.error || 'Error desconocido'}`);
+        await loadActions(); // Revert
       }
     } catch (error) {
       console.error('Error updating action:', error);
-      toast.error('Error de conexión al actualizar');
-    }
-  };
-
-  const handleUpdateVerificado = async (actionId: string, verificadoPor: string) => {
-    try {
-      const res = await fetch(`/api/actions?id=${actionId}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ verificadoPor }),
-      });
-      const json = await res.json();
-      if (json.success) {
-        setActions(prev => prev.map(a =>
-          a.id === actionId ? { ...a, verificadoPor } : a
-        ));
-      } else {
-        toast.error(`Error al actualizar verificación: ${json.error || 'Error desconocido'}`);
-      }
-    } catch (error) {
-      console.error('Error updating verificado:', error);
-      toast.error('Error de conexión al actualizar verificación');
+      await loadActions(); // Revert
     }
   };
 
   const handleDeleteAction = async (id: string) => {
+    if (!confirm('¿Eliminar esta entrada?')) return;
     try {
       const res = await fetch(`/api/actions?id=${id}`, { method: 'DELETE' });
       const json = await res.json();
       if (json.success) {
         setActions(prev => prev.filter(a => a.id !== id));
-        toast.success('Acción eliminada');
+        toast.success('Entrada eliminada');
       } else {
         toast.error(`Error al eliminar: ${json.error || 'Error desconocido'}`);
       }
@@ -278,20 +273,13 @@ export default function ActionPlanModal({ open, onClose, sStep, miniStep }: Acti
   };
 
   // Count completed actions
-  const completedCount = actions.filter(a => a.estado === 'completada').length;
+  const completedCount = actions.filter(a => a.estado === 'resuelta' || a.estado === 'cerrada').length;
   const totalActions = actions.length;
   const canComplete = totalActions >= ACTION_PLAN_MIN_ITEMS;
   const progressPercent = totalActions > 0 ? Math.round((completedCount / totalActions) * 100) : 0;
 
-  // Check for overdue actions
-  const today = new Date().toISOString().split('T')[0];
-  const overdueActions = actions.filter(a => 
-    a.estado !== 'completada' && a.fechaLimite && a.fechaLimite < today
-  );
-
   const handleComplete = async () => {
     if (!canComplete) return;
-
     try {
       const res = await fetch(`/api/progress/step?sStep=${sStep}&miniStep=${miniStep}`, {
         method: 'PUT',
@@ -303,7 +291,6 @@ export default function ActionPlanModal({ open, onClose, sStep, miniStep }: Acti
           zoneId: currentZone?.id || null,
         }),
       });
-
       const json = await res.json();
       if (json.success) {
         setIsCompleted(true);
@@ -331,9 +318,14 @@ export default function ActionPlanModal({ open, onClose, sStep, miniStep }: Acti
     }
   };
 
+  const getEstadoBadge = (estado: string) => {
+    const opt = ESTADO_OPTIONS.find(e => e.value === estado);
+    return opt || ESTADO_OPTIONS[0];
+  };
+
   return (
     <Dialog open={open} onOpenChange={() => onClose()}>
-      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-[95vw] max-h-[90vh] overflow-hidden flex flex-col">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <ListChecks className="h-5 w-5" style={{ color: sStepData?.color }} />
@@ -360,260 +352,317 @@ export default function ActionPlanModal({ open, onClose, sStep, miniStep }: Acti
 
         {isCompleted ? (
           <div className="text-center py-8">
-            <CheckCircle className="h-16 w-16 text-green-500 mx-auto mb-3" />
+            <div className="text-4xl mb-3">✅</div>
             <h3 className="text-xl font-bold mb-2">¡Plan de Acción Completado!</h3>
             <p className="text-muted-foreground">
               Se han definido {totalActions} acciones, {completedCount} completadas ({progressPercent}%).
             </p>
           </div>
         ) : (
-          <div className="space-y-4">
-            {/* S-specific subtitle */}
-            <div className="p-3 rounded-lg border-l-4" style={{ borderColor: sStepData?.color, backgroundColor: `${sStepData?.color}08` }}>
-              <p className="text-sm font-medium" style={{ color: sStepData?.color }}>
-                {sStepData?.id === 1 && 'Define qué elementos eliminar, reubicar o mantener y quién lo hará'}
-                {sStepData?.id === 2 && 'Define las ubicaciones, etiquetas y señalización para cada elemento'}
-                {sStepData?.id === 3 && 'Define las tareas de limpieza, frecuencias, responsables y métodos'}
-                {sStepData?.id === 4 && 'Define las normas, procedimientos y controles visuales a implantar'}
-                {sStepData?.id === 5 && 'Define los hábitos a mantener, revisiones periódicas y compromisos'}
-              </p>
-            </div>
-
-            {/* Overdue alert */}
-            {overdueActions.length > 0 && (
-              <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-lg">
-                <AlertTriangle className="h-4 w-4 text-red-600 shrink-0" />
-                <span className="text-sm text-red-700 font-medium">
-                  {overdueActions.length} acción(es) con fecha vencida
-                </span>
-              </div>
-            )}
-
-            {/* Progress summary */}
-            <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
-              <div>
-                <span className="text-sm font-medium">Progreso del Plan</span>
-                <p className="text-xs text-muted-foreground">
-                  {completedCount}/{totalActions} acciones completadas
-                </p>
+          <div className="flex-1 flex flex-col min-h-0 space-y-3">
+            {/* Stats bar */}
+            <div className="flex items-center justify-between p-2 bg-muted rounded-lg text-sm">
+              <div className="flex items-center gap-3">
+                <span className="font-medium">{totalActions} entradas</span>
+                <span className="text-muted-foreground">({completedCount} resueltas — {progressPercent}%)</span>
               </div>
               <div className="flex items-center gap-2">
-                {overdueActions.length > 0 && (
-                  <Badge className="bg-red-100 text-red-800">{overdueActions.length} vencida(s)</Badge>
-                )}
-                <Badge variant={canComplete ? 'default' : 'secondary'}>
-                  {totalActions} acciones (mín. {ACTION_PLAN_MIN_ITEMS})
-                </Badge>
+                <Button
+                  onClick={handleAddAction}
+                  size="sm"
+                  style={{ backgroundColor: sStepData?.color }}
+                  className="text-white"
+                >
+                  <Plus className="h-4 w-4 mr-1" /> Nueva Entrada
+                </Button>
               </div>
             </div>
 
-            {/* Add action form */}
-            <Card>
-              <CardContent className="p-4">
-                <div className="space-y-3">
-                  <div>
-                    <label className="text-xs font-medium">Descripción de la acción *</label>
-                    <Textarea
-                      placeholder="Describa la acción a realizar..."
-                      value={newAction.descripcion || ''}
-                      onChange={e => setNewAction(prev => ({ ...prev, descripcion: e.target.value }))}
-                      className="mt-1"
-                      rows={2}
-                    />
-                  </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-5 gap-3">
-                    <div>
-                      <label className="text-xs font-medium">Responsable</label>
-                      <div className="relative mt-1">
-                        <User className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
-                        <Input
-                          placeholder="Nombre"
-                          value={newAction.responsable || ''}
-                          onChange={e => setNewAction(prev => ({ ...prev, responsable: e.target.value }))}
-                          className="pl-8"
-                        />
-                      </div>
-                    </div>
-                    <div>
-                      <label className="text-xs font-medium">Fecha compromiso</label>
-                      <div className="relative mt-1">
-                        <Calendar className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
-                        <Input
-                          type="date"
-                          value={newAction.fechaCompromiso || ''}
-                          onChange={e => setNewAction(prev => ({ ...prev, fechaCompromiso: e.target.value }))}
-                          className="pl-8"
-                        />
-                      </div>
-                    </div>
-                    <div>
-                      <label className="text-xs font-medium">Fecha límite</label>
-                      <div className="relative mt-1">
-                        <Calendar className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
-                        <Input
-                          type="date"
-                          value={newAction.fechaLimite || ''}
-                          onChange={e => setNewAction(prev => ({ ...prev, fechaLimite: e.target.value }))}
-                          className="pl-8"
-                        />
-                      </div>
-                    </div>
-                    <div>
-                      <label className="text-xs font-medium">Prioridad</label>
-                      <Select
-                        value={newAction.prioridad || 'media'}
-                        onValueChange={val => setNewAction(prev => ({ ...prev, prioridad: val as 'alta' | 'media' | 'baja' }))}
-                      >
-                        <SelectTrigger className="mt-1">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="alta">Alta</SelectItem>
-                          <SelectItem value="media">Media</SelectItem>
-                          <SelectItem value="baja">Baja</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div>
-                      <label className="text-xs font-medium">Zona</label>
-                      <Select
-                        value={newAction.zoneId || '__none__'}
-                        onValueChange={val => setNewAction(prev => ({ ...prev, zoneId: val === '__none__' ? '' : val }))}
-                      >
-                        <SelectTrigger className="mt-1">
-                          <SelectValue placeholder="Sin zona" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="__none__">Sin zona</SelectItem>
-                          {zones.map(z => (
-                            <SelectItem key={z.id} value={z.id}>{z.name}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-                  <div className="flex justify-end">
-                    <Button
-                      onClick={handleAddAction}
-                      disabled={!newAction.descripcion?.trim()}
-                      size="sm"
-                      style={{ backgroundColor: sStepData?.color }}
-                    >
-                      <Plus className="h-4 w-4 mr-1" /> Agregar Acción
-                    </Button>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+            {/* Scrollable table */}
+            <div className="flex-1 overflow-auto border rounded-lg">
+              <table className="w-full text-xs border-collapse min-w-[1200px]">
+                <thead className="sticky top-0 z-10">
+                  <tr>
+                    {/* Yellow section: Demanda */}
+                    <th colSpan={9} className={`${HEADER_COLORS.demandante} px-2 py-1.5 text-center text-xs font-bold border border-amber-500`}>
+                      DEMANDA
+                    </th>
+                    {/* Blue section: Acción */}
+                    <th colSpan={4} className={`${HEADER_COLORS.accion} px-2 py-1.5 text-center text-xs font-bold border border-sky-500`}>
+                      ACCIÓN
+                    </th>
+                    {/* Orange section: Seguimiento */}
+                    <th colSpan={5} className={`${HEADER_COLORS.seguimiento} px-2 py-1.5 text-center text-xs font-bold border border-orange-500`}>
+                      SEGUIMIENTO
+                    </th>
+                    <th className="bg-gray-400 text-white px-1 py-1.5 text-center text-xs font-bold border border-gray-500 w-8">
+                      🗑
+                    </th>
+                  </tr>
+                  <tr>
+                    {/* Yellow section headers */}
+                    <th className={`${HEADER_COLORS.demandante} px-1 py-1 text-center font-semibold border border-amber-400 whitespace-nowrap`}>Nº</th>
+                    <th className={`${HEADER_COLORS.demandante} px-1 py-1 text-center font-semibold border border-amber-400 whitespace-nowrap`}>Fecha</th>
+                    <th className={`${HEADER_COLORS.demandante} px-1 py-1 text-center font-semibold border border-amber-400 whitespace-nowrap`}>Comunicado por</th>
+                    <th className={`${HEADER_COLORS.demandante} px-1 py-1 text-center font-semibold border border-amber-400 whitespace-nowrap`}>Semana</th>
+                    <th className={`${HEADER_COLORS.demandante} px-1 py-1 text-center font-semibold border border-amber-400 whitespace-nowrap`}>Sección Demandante</th>
+                    <th className={`${HEADER_COLORS.demandante} px-1 py-1 text-center font-semibold border border-amber-400 whitespace-nowrap`}>Cliente / Zona</th>
+                    <th className={`${HEADER_COLORS.demandante} px-1 py-1 text-center font-semibold border border-amber-400 whitespace-nowrap`}>Persona Demandada</th>
+                    <th className={`${HEADER_COLORS.demandante} px-1 py-1 text-center font-semibold border border-amber-400 whitespace-nowrap`}>Sección Demandada</th>
+                    <th className={`${HEADER_COLORS.demandante} px-1 py-1 text-center font-semibold border border-amber-400 whitespace-nowrap`}>Descripción</th>
+                    {/* Blue section headers */}
+                    <th className={`${HEADER_COLORS.accion} px-1 py-1 text-center font-semibold border border-sky-400 whitespace-nowrap`}>Impacto Objetivo</th>
+                    <th className={`${HEADER_COLORS.accion} px-1 py-1 text-center font-semibold border border-sky-400 whitespace-nowrap`}>Enviado</th>
+                    <th className={`${HEADER_COLORS.accion} px-1 py-1 text-center font-semibold border border-sky-400 whitespace-nowrap`}>Acción Correctiva</th>
+                    <th className={`${HEADER_COLORS.accion} px-1 py-1 text-center font-semibold border border-sky-400 whitespace-nowrap`}>Acciones Preventivas</th>
+                    {/* Orange section headers */}
+                    <th className={`${HEADER_COLORS.seguimiento} px-1 py-1 text-center font-semibold border border-orange-400 whitespace-nowrap`}>Semana Prevista</th>
+                    <th className={`${HEADER_COLORS.seguimiento} px-1 py-1 text-center font-semibold border border-orange-400 whitespace-nowrap`}>Persona Responsable</th>
+                    <th className={`${HEADER_COLORS.seguimiento} px-1 py-1 text-center font-semibold border border-orange-400 whitespace-nowrap`}>%</th>
+                    <th className={`${HEADER_COLORS.seguimiento} px-1 py-1 text-center font-semibold border border-orange-400 whitespace-nowrap`}>Estado</th>
+                    <th className={`${HEADER_COLORS.seguimiento} px-1 py-1 text-center font-semibold border border-orange-400 whitespace-nowrap`}>Semana Real</th>
+                    <th className="bg-gray-300 text-gray-700 px-1 py-1 border border-gray-400 w-8"></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {actions.length === 0 ? (
+                    <tr>
+                      <td colSpan={19} className="text-center py-12 text-muted-foreground">
+                        <ListChecks className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                        <p className="text-sm">No hay entradas en el Plan de Acción</p>
+                        <p className="text-xs mt-1">Haga clic en &quot;Nueva Entrada&quot; para agregar acciones</p>
+                      </td>
+                    </tr>
+                  ) : (
+                    actions.map((action) => {
+                      const isExpanded = expandedRow === action.id;
+                      const estadoBadge = getEstadoBadge(action.estado);
 
-            {/* Actions list */}
-            {actions.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">
-                <ListChecks className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                <p className="text-sm">No hay acciones definidas</p>
-                <p className="text-xs mt-1">Agregue al menos {ACTION_PLAN_MIN_ITEMS} acciones para completar este paso</p>
-              </div>
-            ) : (
-              <div className="space-y-2">
-                {actions.map((action, idx) => {
-                  const isOverdue = action.estado !== 'completada' && action.fechaLimite && action.fechaLimite < today;
-                  return (
-                  <Card
-                    key={action.id}
-                    className={`overflow-hidden ${action.estado === 'completada' ? 'opacity-60' : ''} ${isOverdue ? 'border-red-300 bg-red-50/30' : ''}`}
-                  >
-                    <CardContent className="p-3">
-                      <div className="flex items-start gap-3">
-                        <div className="flex flex-col items-center gap-1 mt-0.5">
-                          <span className="text-xs font-mono text-muted-foreground">#{idx + 1}</span>
-                          <Badge className={PRIORIDAD_COLORS[action.prioridad]}>
-                            {action.prioridad}
-                          </Badge>
-                          {isOverdue && <AlertTriangle className="h-3.5 w-3.5 text-red-500" />}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className={`text-sm font-medium ${action.estado === 'completada' ? 'line-through text-muted-foreground' : ''}`}>
-                            {action.descripcion}
-                          </p>
-                          <div className="flex items-center gap-3 mt-1.5 flex-wrap">
-                            {action.responsable && (
-                              <span className="text-xs text-muted-foreground flex items-center gap-1">
-                                <User className="h-3 w-3" /> {action.responsable}
-                              </span>
-                            )}
-                            {action.zoneName && (
-                              <span className="text-xs text-purple-600 flex items-center gap-1">
-                                <MapPin className="h-3 w-3" /> {action.zoneName}
-                              </span>
-                            )}
-                            {action.fechaCompromiso && (
-                              <span className="text-xs text-blue-600 flex items-center gap-1">
-                                <Calendar className="h-3 w-3" /> Compromiso: {action.fechaCompromiso}
-                              </span>
-                            )}
-                            {action.fechaLimite && (
-                              <span className={`text-xs flex items-center gap-1 ${isOverdue ? 'text-red-600 font-bold' : 'text-muted-foreground'}`}>
-                                <Calendar className="h-3 w-3" /> Límite: {action.fechaLimite}
-                              </span>
-                            )}
-                            {action.fechaReal && action.estado === 'completada' && (
-                              <span className="text-xs text-green-600 flex items-center gap-1">
-                                <CheckCircle className="h-3 w-3" /> Real: {action.fechaReal}
-                              </span>
-                            )}
-                          </div>
-                          {/* Verificado por field - shown for completed actions */}
-                          {action.estado === 'completada' && (
-                            <div className="mt-2 flex items-center gap-2">
-                              <label className="text-[10px] font-medium text-muted-foreground">Verificado por:</label>
-                              <Input
-                                placeholder="Nombre del verificador"
-                                value={action.verificadoPor}
-                                onChange={e => handleUpdateVerificado(action.id, e.target.value)}
-                                className="h-6 text-xs w-48"
-                              />
-                            </div>
-                          )}
-                        </div>
-                        <div className="flex items-center gap-1.5 shrink-0">
-                          <Select
-                            value={action.estado}
-                            onValueChange={val => handleUpdateEstado(action.id, val)}
-                          >
-                            <SelectTrigger className="h-7 w-28 text-xs">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="pendiente">Pendiente</SelectItem>
-                              <SelectItem value="en_curso">En curso</SelectItem>
-                              <SelectItem value="completada">Completada</SelectItem>
-                            </SelectContent>
-                          </Select>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-7 w-7 p-0 text-destructive hover:text-red-600"
-                            onClick={() => handleDeleteAction(action.id)}
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </Button>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                  );
-                })}
-              </div>
-            )}
+                      return (
+                        <tr key={action.id} className="hover:bg-muted/30 group">
+                          {/* Yellow section: Demanda */}
+                          <td className={`${SECTION_COLORS.demandante} px-1 py-1 border border-amber-200 text-center font-bold`}>
+                            {action.numeroEntrada || '-'}
+                          </td>
+                          <td className={`${SECTION_COLORS.demandante} px-1 py-1 border border-amber-200`}>
+                            <Input
+                              type="date"
+                              value={action.fechaEntrada}
+                              onChange={e => handleUpdateField(action.id, 'fechaEntrada', e.target.value)}
+                              className="h-6 text-[10px] p-0 px-1 bg-transparent border-0 focus:bg-white focus:border focus:border-amber-400"
+                            />
+                          </td>
+                          <td className={`${SECTION_COLORS.demandante} px-1 py-1 border border-amber-200`}>
+                            <Input
+                              type="text"
+                              value={action.comunicadoPor}
+                              onChange={e => handleUpdateField(action.id, 'comunicadoPor', e.target.value)}
+                              placeholder="Quién comunica"
+                              className="h-6 text-[10px] p-0 px-1 bg-transparent border-0 focus:bg-white focus:border focus:border-amber-400 w-24"
+                            />
+                          </td>
+                          <td className={`${SECTION_COLORS.demandante} px-1 py-1 border border-amber-200`}>
+                            <Select
+                              value={action.semana || '__none__'}
+                              onValueChange={val => handleUpdateField(action.id, 'semana', val === '__none__' ? '' : val)}
+                            >
+                              <SelectTrigger className="h-6 text-[10px] p-0 px-1 bg-transparent border-0 w-16">
+                                <SelectValue placeholder="Sem" />
+                              </SelectTrigger>
+                              <SelectContent className="max-h-48">
+                                <SelectItem value="__none__">—</SelectItem>
+                                {WEEK_OPTIONS.map(w => (
+                                  <SelectItem key={w} value={w}>{w}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </td>
+                          <td className={`${SECTION_COLORS.demandante} px-1 py-1 border border-amber-200`}>
+                            <Input
+                              type="text"
+                              value={action.seccionDemandante}
+                              onChange={e => handleUpdateField(action.id, 'seccionDemandante', e.target.value)}
+                              placeholder="Sección"
+                              className="h-6 text-[10px] p-0 px-1 bg-transparent border-0 focus:bg-white focus:border focus:border-amber-400 w-24"
+                            />
+                          </td>
+                          <td className={`${SECTION_COLORS.demandante} px-1 py-1 border border-amber-200`}>
+                            <Input
+                              type="text"
+                              value={action.clienteZona}
+                              onChange={e => handleUpdateField(action.id, 'clienteZona', e.target.value)}
+                              placeholder="Zona"
+                              className="h-6 text-[10px] p-0 px-1 bg-transparent border-0 focus:bg-white focus:border focus:border-amber-400 w-24"
+                            />
+                          </td>
+                          <td className={`${SECTION_COLORS.demandante} px-1 py-1 border border-amber-200`}>
+                            <Input
+                              type="text"
+                              value={action.personaDemandada}
+                              onChange={e => handleUpdateField(action.id, 'personaDemandada', e.target.value)}
+                              placeholder="Persona"
+                              className="h-6 text-[10px] p-0 px-1 bg-transparent border-0 focus:bg-white focus:border focus:border-amber-400 w-24"
+                            />
+                          </td>
+                          <td className={`${SECTION_COLORS.demandante} px-1 py-1 border border-amber-200`}>
+                            <Input
+                              type="text"
+                              value={action.seccionDemandada}
+                              onChange={e => handleUpdateField(action.id, 'seccionDemandada', e.target.value)}
+                              placeholder="Sección"
+                              className="h-6 text-[10px] p-0 px-1 bg-transparent border-0 focus:bg-white focus:border focus:border-amber-400 w-24"
+                            />
+                          </td>
+                          <td className={`${SECTION_COLORS.demandante} px-1 py-1 border border-amber-200`}>
+                            <Textarea
+                              value={action.hallazgo}
+                              onChange={e => handleUpdateField(action.id, 'hallazgo', e.target.value)}
+                              placeholder="Descripción del problema..."
+                              className="h-6 text-[10px] p-0 px-1 bg-transparent border-0 focus:bg-white focus:border focus:border-amber-400 min-w-[120px] resize-none"
+                              rows={1}
+                            />
+                          </td>
 
-            {/* Submit button */}
-            <div className="flex justify-end">
+                          {/* Blue section: Acción */}
+                          <td className={`${SECTION_COLORS.accion} px-1 py-1 border border-sky-200`}>
+                            <Input
+                              type="text"
+                              value={action.impactoObjetivo}
+                              onChange={e => handleUpdateField(action.id, 'impactoObjetivo', e.target.value)}
+                              placeholder="Impacto"
+                              className="h-6 text-[10px] p-0 px-1 bg-transparent border-0 focus:bg-white focus:border focus:border-sky-400 w-24"
+                            />
+                          </td>
+                          <td className={`${SECTION_COLORS.accion} px-1 py-1 border border-sky-200`}>
+                            <Select
+                              value={action.enviado || '__none__'}
+                              onValueChange={val => handleUpdateField(action.id, 'enviado', val === '__none__' ? '' : val)}
+                            >
+                              <SelectTrigger className="h-6 text-[10px] p-0 px-1 bg-transparent border-0 w-20">
+                                <SelectValue placeholder="—"/>
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="__none__">—</SelectItem>
+                                {ENVIADO_OPTIONS.map(opt => (
+                                  <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </td>
+                          <td className={`${SECTION_COLORS.accion} px-1 py-1 border border-sky-200`}>
+                            <Textarea
+                              value={action.accionCorrectiva}
+                              onChange={e => handleUpdateField(action.id, 'accionCorrectiva', e.target.value)}
+                              placeholder="Acción correctiva..."
+                              className="h-6 text-[10px] p-0 px-1 bg-transparent border-0 focus:bg-white focus:border focus:border-sky-400 min-w-[120px] resize-none"
+                              rows={1}
+                            />
+                          </td>
+                          <td className={`${SECTION_COLORS.accion} px-1 py-1 border border-sky-200`}>
+                            <Textarea
+                              value={action.accionesPreventivas}
+                              onChange={e => handleUpdateField(action.id, 'accionesPreventivas', e.target.value)}
+                              placeholder="Acciones preventivas..."
+                              className="h-6 text-[10px] p-0 px-1 bg-transparent border-0 focus:bg-white focus:border focus:border-sky-400 min-w-[120px] resize-none"
+                              rows={1}
+                            />
+                          </td>
+
+                          {/* Orange section: Seguimiento */}
+                          <td className={`${SECTION_COLORS.seguimiento} px-1 py-1 border border-orange-200`}>
+                            <Select
+                              value={action.semanaPrevista || '__none__'}
+                              onValueChange={val => handleUpdateField(action.id, 'semanaPrevista', val === '__none__' ? '' : val)}
+                            >
+                              <SelectTrigger className="h-6 text-[10px] p-0 px-1 bg-transparent border-0 w-16">
+                                <SelectValue placeholder="Sem" />
+                              </SelectTrigger>
+                              <SelectContent className="max-h-48">
+                                <SelectItem value="__none__">—</SelectItem>
+                                {WEEK_OPTIONS.map(w => (
+                                  <SelectItem key={w} value={w}>{w}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </td>
+                          <td className={`${SECTION_COLORS.seguimiento} px-1 py-1 border border-orange-200`}>
+                            <Input
+                              type="text"
+                              value={action.responsable}
+                              onChange={e => handleUpdateField(action.id, 'responsable', e.target.value)}
+                              placeholder="Responsable"
+                              className="h-6 text-[10px] p-0 px-1 bg-transparent border-0 focus:bg-white focus:border focus:border-orange-400 w-24"
+                            />
+                          </td>
+                          <td className={`${SECTION_COLORS.seguimiento} px-1 py-1 border border-orange-200 text-center`}>
+                            <Input
+                              type="number"
+                              min={0}
+                              max={100}
+                              value={action.porcentaje}
+                              onChange={e => handleUpdateField(action.id, 'porcentaje', parseFloat(e.target.value) || 0)}
+                              className="h-6 text-[10px] p-0 px-1 bg-transparent border-0 focus:bg-white focus:border focus:border-orange-400 w-12 text-center"
+                            />
+                          </td>
+                          <td className={`${SECTION_COLORS.seguimiento} px-1 py-1 border border-orange-200`}>
+                            <Select
+                              value={action.estado}
+                              onValueChange={val => handleUpdateField(action.id, 'estado', val)}
+                            >
+                              <SelectTrigger className="h-6 text-[10px] p-0 px-1 bg-transparent border-0 w-20">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {ESTADO_OPTIONS.map(opt => (
+                                  <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </td>
+                          <td className={`${SECTION_COLORS.seguimiento} px-1 py-1 border border-orange-200`}>
+                            <Select
+                              value={action.semanaReal || '__none__'}
+                              onValueChange={val => handleUpdateField(action.id, 'semanaReal', val === '__none__' ? '' : val)}
+                            >
+                              <SelectTrigger className="h-6 text-[10px] p-0 px-1 bg-transparent border-0 w-16">
+                                <SelectValue placeholder="Sem" />
+                              </SelectTrigger>
+                              <SelectContent className="max-h-48">
+                                <SelectItem value="__none__">—</SelectItem>
+                                {WEEK_OPTIONS.map(w => (
+                                  <SelectItem key={w} value={w}>{w}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </td>
+                          <td className="px-1 py-1 border border-gray-200 text-center">
+                            <button
+                              onClick={() => handleDeleteAction(action.id)}
+                              className="text-red-400 hover:text-red-600 transition-colors"
+                              title="Eliminar entrada"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Footer with completion button */}
+            <div className="flex items-center justify-between pt-2">
+              <div className="text-xs text-muted-foreground">
+                Mín. {ACTION_PLAN_MIN_ITEMS} entradas para completar el paso
+              </div>
               <Button
                 onClick={handleComplete}
                 disabled={!canComplete}
                 style={canComplete ? { backgroundColor: sStepData?.color } : undefined}
               >
-                Completar Plan de Acción ({totalActions} acciones, mín. {ACTION_PLAN_MIN_ITEMS})
+                Completar Plan de Acción ({totalActions}/{ACTION_PLAN_MIN_ITEMS} mín.)
               </Button>
             </div>
           </div>
