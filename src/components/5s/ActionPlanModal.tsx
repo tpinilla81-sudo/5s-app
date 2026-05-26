@@ -119,8 +119,11 @@ export default function ActionPlanModal({ open, onClose, sStep, miniStep }: Acti
   const loadActions = async () => {
     try {
       const params = new URLSearchParams();
-      params.set('sStep', String(sStep));
-      params.set('source', 'actionplan');
+      // When opened globally (miniStep=0), load ALL actions; otherwise filter by sStep
+      const isGlobal = miniStep === 0;
+      if (!isGlobal) {
+        params.set('sStep', String(sStep));
+      }
       if (currentProject?.id) params.set('projectId', currentProject.id);
       if (currentUser?.id) params.set('userId', currentUser.id);
       if (currentUser?.role) params.set('userRole', currentUser.role);
@@ -329,10 +332,12 @@ export default function ActionPlanModal({ open, onClose, sStep, miniStep }: Acti
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <ListChecks className="h-5 w-5" style={{ color: sStepData?.color }} />
-            <span>Plan de Acción — {sStepData?.name}</span>
-            <Badge variant="outline" style={{ borderColor: sStepData?.color, color: sStepData?.color }}>
-              {sStepData?.japaneseName}
-            </Badge>
+            <span>Plan de Acción{miniStep === 0 ? ' — Global' : ` — ${sStepData?.name}`}</span>
+            {sStepData && miniStep !== 0 && (
+              <Badge variant="outline" style={{ borderColor: sStepData?.color, color: sStepData?.color }}>
+                {sStepData?.japaneseName}
+              </Badge>
+            )}
           </DialogTitle>
         </DialogHeader>
 

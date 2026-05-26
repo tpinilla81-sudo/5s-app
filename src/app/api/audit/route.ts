@@ -1,6 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 
+const SESSION_COOKIE = '5s_session'
+
+async function getSessionUser(request: NextRequest) {
+  const sessionId = request.cookies.get(SESSION_COOKIE)?.value
+  if (!sessionId) return null
+  const user = await db.user.findUnique({
+    where: { id: sessionId },
+    select: { id: true, role: true, active: true },
+  })
+  return user && user.active ? user : null
+}
+
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
@@ -27,6 +39,15 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
+    // Server-side role check: only admin and auditor can submit audits
+    const sessionUser = await getSessionUser(request)
+    if (!sessionUser) {
+      return NextResponse.json({ success: false, error: 'No autenticado' }, { status: 401 })
+    }
+    if (sessionUser.role !== 'admin' && sessionUser.role !== 'auditor') {
+      return NextResponse.json({ success: false, error: 'Solo los auditores y administradores pueden realizar auditorías externas' }, { status: 403 })
+    }
+
     const body = await request.json()
     const {
       sStep,

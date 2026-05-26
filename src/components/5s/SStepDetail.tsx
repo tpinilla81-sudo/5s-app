@@ -12,7 +12,7 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import QuesitoDisplay from './QuesitoDisplay';
 
-export type ModalType = 'formacion' | 'fotos' | 'inventario' | 'actionplan' | 'autoevaluacion' | 'auditoria' | 'globalActionPlan' | 'globalInventory';
+export type ModalType = 'formacion' | 'fotos' | 'inventario' | 'actionplan' | 'autoevaluacion' | 'auditoria' | 'globalActionPlan' | 'globalInventory' | 'auditResults';
 
 interface AuditHistoryItem {
   id: string;
@@ -29,6 +29,23 @@ interface OverdueAction {
   itemDescription: string;
   responsable: string | null;
   fechaLimite: string | null;
+}
+
+interface RelatedAction {
+  id: string;
+  hallazgo: string;
+  itemDescription: string;
+  mejora: string | null;
+  responsable: string | null;
+  estado: string;
+  fechaCompromiso: string | null;
+  fechaReal: string | null;
+  fechaResolucion: string | null;
+  accionCorrectiva: string | null;
+  accionesPreventivas: string | null;
+  verificadoPor: string | null;
+  porcentaje: number | null;
+  zoneId: string | null;
 }
 
 interface SStepDetailProps {
@@ -66,6 +83,9 @@ export default function SStepDetail({ sStep, onBack, onOpenModal }: SStepDetailP
   // TASK 8: Overdue actions state
   const [overdueActions, setOverdueActions] = useState<OverdueAction[]>([]);
 
+  // Related action items for audit disfunciones
+  const [relatedActions, setRelatedActions] = useState<RelatedAction[]>([]);
+
   const loadAuditHistory = async () => {
     try {
       const params = currentProject
@@ -102,9 +122,45 @@ export default function SStepDetail({ sStep, onBack, onOpenModal }: SStepDetailP
     }
   };
 
+  const loadRelatedActions = async () => {
+    try {
+      const params = new URLSearchParams();
+      params.set('sStep', String(sStep));
+      if (currentProject?.id) params.set('projectId', currentProject.id);
+      if (currentUser?.id) params.set('userId', currentUser.id);
+      if (currentUser?.role) params.set('userRole', currentUser.role);
+      const res = await fetch(`/api/actions?${params.toString()}`);
+      const json = await res.json();
+      if (json.success && json.data) {
+        const auditActions = json.data.filter((a: any) =>
+          a.source?.startsWith('auditoria')
+        ).map((a: any) => ({
+          id: a.id,
+          hallazgo: a.hallazgo || '',
+          itemDescription: a.itemDescription || '',
+          mejora: a.mejora || null,
+          responsable: a.responsable || null,
+          estado: a.estado || 'abierta',
+          fechaCompromiso: a.fechaCompromiso || null,
+          fechaReal: a.fechaReal || null,
+          fechaResolucion: a.fechaResolucion || null,
+          accionCorrectiva: a.accionCorrectiva || null,
+          accionesPreventivas: a.accionesPreventivas || null,
+          verificadoPor: a.verificadoPor || null,
+          porcentaje: a.porcentaje || null,
+          zoneId: a.zoneId || null,
+        }));
+        setRelatedActions(auditActions);
+      }
+    } catch (error) {
+      console.error('Error loading related actions:', error);
+    }
+  };
+
   useEffect(() => {
     loadAuditHistory();
     loadOverdueActions();
+    loadRelatedActions();
   }, [sStep, currentProject]);
 
   if (!sStepData) return null;
@@ -203,8 +259,8 @@ export default function SStepDetail({ sStep, onBack, onOpenModal }: SStepDetailP
         </motion.div>
       )}
 
-      {/* TASK 6: Audit History (collapsible) */}
-      {auditHistory.length > 0 && (
+      {/* TASK 6: Audit History (collapsible) - enhanced with full action details */}
+      {(auditHistory.length > 0 || relatedActions.length > 0) && (
         <Card className="mb-4 border-2 border-blue-200 bg-blue-50/30">
           <button
             className="w-full p-3 flex items-center gap-2 hover:bg-blue-100/30 transition-colors text-left"
@@ -218,6 +274,11 @@ export default function SStepDetail({ sStep, onBack, onOpenModal }: SStepDetailP
             <ShieldCheck className="h-4 w-4 text-blue-600" />
             <span className="text-sm font-semibold text-blue-800">Historial de Auditorías</span>
             <Badge variant="outline" className="text-xs border-blue-300 text-blue-700">{auditHistory.length}</Badge>
+            {relatedActions.length > 0 && (
+              <Badge className="bg-orange-100 text-orange-700 text-[10px]">
+                {relatedActions.filter(a => a.estado === 'abierta' || a.estado === 'en_proceso').length} disfunc. abiertas
+              </Badge>
+            )}
             <div className="ml-auto flex items-center gap-1">
               {auditHistory.filter(a => a.result === 'no_apto').length > 0 && (
                 <Badge className="bg-red-100 text-red-700 text-[10px]">
@@ -232,10 +293,10 @@ export default function SStepDetail({ sStep, onBack, onOpenModal }: SStepDetailP
             </div>
           </button>
           {showAuditHistory && (
-            <CardContent className="px-4 pb-4 pt-0 space-y-2">
+            <CardContent className="px-4 pb-4 pt-0 space-y-3">
               {auditHistory.map((audit, idx) => {
                 // Parse checklist data to find NOK items
-                let nokItems: Array<{ itemId: string; hallazgo?: string }> = [];
+                let nokItems: Array<{ itemId: string; hallazgo?: string; mejora?: string }> = [];
                 try {
                   if (audit.checklistData) {
                     const parsed = typeof audit.checklistData === 'string' ? JSON.parse(audit.checklistData) : audit.checklistData;
@@ -245,10 +306,17 @@ export default function SStepDetail({ sStep, onBack, onOpenModal }: SStepDetailP
                   }
                 } catch {}
 
+                // Find related action items for this audit
+                const auditRelatedActions = relatedActions.filter(a =>
+                  a.hallazgo && nokItems.some(nok => nok.itemId && a.hallazgo.includes(nok.itemId))
+                );
+                // If no exact match, show all related actions for this sStep
+                const displayActions = auditRelatedActions.length > 0 ? auditRelatedActions : [];
+
                 return (
                   <div
                     key={audit.id}
-                    className={`p-2.5 rounded-lg border text-xs ${
+                    className={`p-3 rounded-lg border text-xs ${
                       audit.result === 'apto' ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'
                     }`}
                   >
@@ -284,9 +352,125 @@ export default function SStepDetail({ sStep, onBack, onOpenModal }: SStepDetailP
                         ))}
                       </div>
                     )}
+
+                    {/* Related action items with full details */}
+                    {displayActions.length > 0 && (
+                      <div className="mt-3 border-t border-blue-200 pt-2">
+                        <p className="font-semibold text-blue-700 mb-1.5">
+                          Plan de Acción — Seguimiento de Disfunciones:
+                        </p>
+                        <div className="space-y-1.5">
+                          {displayActions.map(action => (
+                            <div key={action.id} className="bg-white/80 border rounded p-2 space-y-1">
+                              <div className="grid grid-cols-2 gap-1.5">
+                                <div>
+                                  <span className="text-muted-foreground font-medium">Concepto:</span>
+                                  <p className="font-medium">{action.hallazgo || action.itemDescription || '—'}</p>
+                                </div>
+                                <div>
+                                  <span className="text-muted-foreground font-medium">Plan de Acción:</span>
+                                  <p className="font-medium">{action.accionCorrectiva || action.mejora || '—'}</p>
+                                </div>
+                                <div>
+                                  <span className="text-muted-foreground font-medium">Responsable:</span>
+                                  <p className="font-medium">{action.responsable || 'Sin asignar'}</p>
+                                </div>
+                                <div>
+                                  <span className="text-muted-foreground font-medium">Estado:</span>
+                                  <Badge className={
+                                    action.estado === 'abierta' ? 'bg-red-100 text-red-800' :
+                                    action.estado === 'en_proceso' ? 'bg-amber-100 text-amber-800' :
+                                    'bg-green-100 text-green-800'
+                                  }>
+                                    {action.estado === 'abierta' ? 'Abierta' :
+                                     action.estado === 'en_proceso' ? 'En Proceso' :
+                                     action.estado === 'resuelta' ? 'Resuelta' : 'Cerrada'}
+                                  </Badge>
+                                </div>
+                                <div>
+                                  <span className="text-muted-foreground font-medium">Fecha Compromiso:</span>
+                                  <p className="font-medium text-blue-600">
+                                    {action.fechaCompromiso ? new Date(action.fechaCompromiso).toLocaleDateString('es-ES') : '—'}
+                                  </p>
+                                </div>
+                                <div>
+                                  <span className="text-muted-foreground font-medium">Fecha Real Cierre:</span>
+                                  <p className="font-medium text-green-600">
+                                    {action.fechaReal || action.fechaResolucion
+                                      ? new Date(action.fechaReal || action.fechaResolucion!).toLocaleDateString('es-ES')
+                                      : '—'}
+                                  </p>
+                                </div>
+                              </div>
+                              {action.accionesPreventivas && (
+                                <div>
+                                  <span className="text-muted-foreground font-medium">Acciones Preventivas:</span>
+                                  <p>{action.accionesPreventivas}</p>
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 );
               })}
+
+              {/* Show ALL related audit actions if not matched to specific audits */}
+              {relatedActions.length > 0 && auditHistory.length === 0 && (
+                <div className="p-3 rounded-lg border bg-orange-50 border-orange-200 text-xs">
+                  <p className="font-semibold text-orange-700 mb-1.5">
+                    Disfunciones de Auditoría ({relatedActions.length}):
+                  </p>
+                  <div className="space-y-1.5">
+                    {relatedActions.map(action => (
+                      <div key={action.id} className="bg-white/80 border rounded p-2 space-y-1">
+                        <div className="grid grid-cols-2 gap-1.5">
+                          <div>
+                            <span className="text-muted-foreground font-medium">Concepto:</span>
+                            <p className="font-medium">{action.hallazgo || action.itemDescription || '—'}</p>
+                          </div>
+                          <div>
+                            <span className="text-muted-foreground font-medium">Plan de Acción:</span>
+                            <p className="font-medium">{action.accionCorrectiva || action.mejora || '—'}</p>
+                          </div>
+                          <div>
+                            <span className="text-muted-foreground font-medium">Responsable:</span>
+                            <p className="font-medium">{action.responsable || 'Sin asignar'}</p>
+                          </div>
+                          <div>
+                            <span className="text-muted-foreground font-medium">Estado:</span>
+                            <Badge className={
+                              action.estado === 'abierta' ? 'bg-red-100 text-red-800' :
+                              action.estado === 'en_proceso' ? 'bg-amber-100 text-amber-800' :
+                              'bg-green-100 text-green-800'
+                            }>
+                              {action.estado === 'abierta' ? 'Abierta' :
+                               action.estado === 'en_proceso' ? 'En Proceso' :
+                               action.estado === 'resuelta' ? 'Resuelta' : 'Cerrada'}
+                            </Badge>
+                          </div>
+                          <div>
+                            <span className="text-muted-foreground font-medium">Fecha Compromiso:</span>
+                            <p className="font-medium text-blue-600">
+                              {action.fechaCompromiso ? new Date(action.fechaCompromiso).toLocaleDateString('es-ES') : '—'}
+                            </p>
+                          </div>
+                          <div>
+                            <span className="text-muted-foreground font-medium">Fecha Real Cierre:</span>
+                            <p className="font-medium text-green-600">
+                              {action.fechaReal || action.fechaResolucion
+                                ? new Date(action.fechaReal || action.fechaResolucion!).toLocaleDateString('es-ES')
+                                : '—'}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </CardContent>
           )}
         </Card>

@@ -135,6 +135,19 @@ export default function AuditoriaModal({ open, onClose, sStep, miniStep }: Audit
       });
 
       const auditJson = await auditRes.json();
+
+      // Handle server-side role rejection
+      if (auditRes.status === 403) {
+        setIsSubmitting(false);
+        alert(auditJson.error || 'No tienes permisos para realizar auditorías externas');
+        return;
+      }
+
+      if (!auditJson.success) {
+        setIsSubmitting(false);
+        alert(auditJson.error || 'Error al guardar la auditoría');
+        return;
+      }
       if (auditJson.success) {
         // Create action items for each NOK to transmit disfunciones to the operator
         const nokResults = Object.values(results).filter(r => r.status === 'nok');
