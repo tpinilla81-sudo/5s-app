@@ -57,7 +57,7 @@ interface PhotoItem {
 }
 
 export default function FotosModal({ open, onClose, sStep, miniStep }: FotosModalProps) {
-  const { fetchProgress, currentUser, adminFreeNavigation, currentProject } = use5SStore();
+  const { fetchProgress, currentUser, adminFreeNavigation, currentProject, currentZone } = use5SStore();
   const sStepData = S_STEPS.find(s => s.id === sStep);
   const miniStepData = MINI_STEPS.find(m => m.id === miniStep);
 
@@ -229,7 +229,7 @@ export default function FotosModal({ open, onClose, sStep, miniStep }: FotosModa
       const res = await fetch(`/api/progress/step?sStep=${sStep}&miniStep=${miniStep}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ completed: true, photoUrls: urls, score: 100, projectId: currentProject?.id }),
+        body: JSON.stringify({ completed: true, photoUrls: urls, score: 100, projectId: currentProject?.id, zoneId: currentZone?.id || null }),
       });
       const json = await res.json();
       if (json.success) { setIsCompleted(true); stopStream(); await fetchProgress(); }
@@ -245,7 +245,7 @@ export default function FotosModal({ open, onClose, sStep, miniStep }: FotosModa
       const res = await fetch(`/api/progress/step?sStep=${sStep}&miniStep=${miniStep}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ completed: true, score: 100, notes: 'Completado por administrador (skip)', projectId: currentProject?.id }),
+        body: JSON.stringify({ completed: true, score: 100, notes: 'Completado por administrador (skip)', projectId: currentProject?.id, zoneId: currentZone?.id || null }),
       });
       const json = await res.json();
       if (json.success) { await fetchProgress(); onClose(); }

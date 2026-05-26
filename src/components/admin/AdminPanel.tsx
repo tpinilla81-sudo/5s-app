@@ -118,8 +118,8 @@ const PRESET_COLORS = ['#8B5CF6', '#EAB308', '#3B82F6', '#F43F5E', '#F97316', '#
 // ─── Component ───────────────────────────────────────────────────────────────
 
 export default function AdminPanel() {
-  const { setCurrentView, fetchProjects, projects, setCurrentProject, currentProject } = use5SStore()
-  const [activeTab, setActiveTab] = useState<'projects' | 'users'>('projects')
+  const { setCurrentView, fetchProjects, fetchCompanies, projects, setCurrentProject, currentProject } = use5SStore()
+  const [activeTab, setActiveTab] = useState<'projects' | 'users' | 'companies'>('projects')
 
   // ─── Projects state ──────────────────────────────────────────────────────
   const [allProjects, setAllProjects] = useState<ProjectData[]>([])
@@ -167,6 +167,19 @@ export default function AdminPanel() {
   const [newUserPassword, setNewUserPassword] = useState('')
   const [newUserRole, setNewUserRole] = useState('empleado')
 
+  // ─── Companies state ────────────────────────────────────────────────────
+  const [companies, setCompanies] = useState<Array<{ id: string; name: string; description: string | null; active: boolean; projectCount: number; memberCount: number }>>([])
+  const [isLoadingCompanies, setIsLoadingCompanies] = useState(false)
+  const [showNewCompany, setShowNewCompany] = useState(false)
+  const [newCompanyName, setNewCompanyName] = useState('')
+  const [newCompanyDesc, setNewCompanyDesc] = useState('')
+  const [editingCompany, setEditingCompany] = useState<string | null>(null)
+  const [editCompanyData, setEditCompanyData] = useState({ name: '', description: '' })
+  const [expandedCompanyId, setExpandedCompanyId] = useState<string | null>(null)
+  const [companyMembers, setCompanyMembers] = useState<Array<{ id: string; userId: string; companyId: string; role: string; user: { id: string; name: string; email: string; role: string; active: boolean } }>>([])
+  const [addGerenteUserId, setAddGerenteUserId] = useState('')
+  const [isLoadingCompanyDetail, setIsLoadingCompanyDetail] = useState(false)
+
   // ─── Data loading ────────────────────────────────────────────────────────
   const loadProjects = useCallback(async () => {
     setIsLoadingProjects(true)
@@ -194,6 +207,36 @@ export default function AdminPanel() {
     }
   }, [])
 
+  const loadCompanies = useCallback(async () => {
+    setIsLoadingCompanies(true)
+    try {
+      const res = await fetch('/api/companies')
+      const data = await res.json()
+      if (data.success) {
+        setCompanies(data.companies || [])
+      }
+    } catch (error) {
+      console.error('Error loading companies:', error)
+    } finally {
+      setIsLoadingCompanies(false)
+    }
+  }, [])
+
+  const loadCompanyDetail = useCallback(async (companyId: string) => {
+    setIsLoadingCompanyDetail(true)
+    try {
+      const res = await fetch(`/api/companies/${companyId}`)
+      const data = await res.json()
+      if (data.success) {
+        setCompanyMembers(data.company?.members || [])
+      }
+    } catch (error) {
+      console.error('Error loading company detail:', error)
+    } finally {
+      setIsLoadingCompanyDetail(false)
+    }
+  }, [])
+
   const loadProjectDetail = useCallback(async (projectId: string) => {
     setIsLoadingDetail(true)
     try {
@@ -215,13 +258,20 @@ export default function AdminPanel() {
   useEffect(() => {
     loadProjects()
     loadUsers()
-  }, [loadProjects, loadUsers])
+    loadCompanies()
+  }, [loadProjects, loadUsers, loadCompanies])
 
   useEffect(() => {
     if (selectedProjectId) {
       loadProjectDetail(selectedProjectId)
     }
   }, [selectedProjectId, loadProjectDetail])
+
+  useEffect(() => {
+    if (expandedCompanyId) {
+      loadCompanyDetail(expandedCompanyId)
+    }
+  }, [expandedCompanyId, loadCompanyDetail])
 
   // ─── Project actions ─────────────────────────────────────────────────────
   const handleCreateProject = async () => {
@@ -237,6 +287,7 @@ export default function AdminPanel() {
           name: newProjectName,
           description: newProjectDesc || undefined,
           company: newProjectCompany,
+          companyId: companies.find(c => c.name === newProjectCompany)?.id || undefined,
           zones: validZones.map(z => ({ name: z.name, color: z.color })),
         }),
       })
@@ -428,6 +479,108 @@ export default function AdminPanel() {
     }
   }
 
+  // ─── Company actions ────────────────────────────────────────────────────
+  const handleCreateCompany = async () => {
+    if (!newCompanyName.trim()) return
+    try {
+      const res = await fetch('/api/companies', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: newCompanyName, description: newCompanyDesc || undefined }),
+      })
+      if (res.ok) {
+        setShowNewCompany(false)
+        setNewCompanyName('')
+        setNewCompanyDesc('')
+        await loadCompanies()
+        await fetchCompanies()
+      } else {
+        const data = await res.json()
+        alert(data.error || 'Error al crear empresa')
+      }
+    } catch (error) {
+      console.error('Error creating company:', error)
+    }
+  }
+
+  const handleUpdateCompany = async (companyId: string) => {
+    try {
+      const res = await fetch(`/api/companies/${companyId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(editCompanyData),
+      })
+      if (res.ok) {
+        setEditingCompany(null)
+        await loadCompanies()
+        await fetchCompanies()
+      } else {
+        const data = await res.json()
+        alert(data.error || 'Error al actualizar empresa')
+      }
+    } catch (error) {
+      console.error('Error updating company:', error)
+    }
+  }
+
+  const handleDeleteCompany = async (companyId: string) => {
+    if (!confirm('¿Estás seguro de eliminar esta empresa?')) return
+    try {
+      const res = await fetch(`/api/companies/${companyId}`, { method: 'DELETE' })
+      if (res.ok) {
+        await loadCompanies()
+        await fetchCompanies()
+      } else {
+        const data = await res.json()
+        alert(data.error || 'Error al eliminar empresa')
+      }
+    } catch (error) {
+      console.error('Error deleting company:', error)
+    }
+  }
+
+  const handleAddGerente = async () => {
+    if (!expandedCompanyId || !addGerenteUserId) return
+    try {
+      const res = await fetch(`/api/companies/${expandedCompanyId}/members`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: addGerenteUserId, role: 'gerente' }),
+      })
+      if (res.ok) {
+        setAddGerenteUserId('')
+        await loadCompanyDetail(expandedCompanyId)
+        await loadCompanies()
+      } else {
+        const data = await res.json()
+        alert(data.error || 'Error al asignar gerente')
+      }
+    } catch (error) {
+      console.error('Error adding gerente:', error)
+    }
+  }
+
+  const handleRemoveCompanyMember = async (userId: string, userName: string) => {
+    if (!expandedCompanyId) return
+    if (!confirm(`¿Estás seguro de eliminar a "${userName}" de esta empresa?`)) return
+    try {
+      const res = await fetch(`/api/companies/${expandedCompanyId}/members`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ memberUserId: userId }),
+      })
+      if (res.ok) {
+        await loadCompanyDetail(expandedCompanyId)
+        await loadCompanies()
+      } else {
+        const data = await res.json()
+        alert(data.error || 'Error al eliminar miembro')
+      }
+    } catch (error) {
+      console.error('Error removing company member:', error)
+    }
+  }
+
   // ─── User actions ────────────────────────────────────────────────────────
   const handleCreateUser = async () => {
     if (!newUserName.trim() || !newUserEmail.trim() || !newUserPassword.trim()) return
@@ -579,6 +732,17 @@ export default function AdminPanel() {
             <Users className="h-4 w-4" />
             Usuarios
           </button>
+          <button
+            onClick={() => { setActiveTab('companies'); setSelectedProjectId(null) }}
+            className={`flex items-center gap-2 px-5 py-3 text-sm font-medium border-b-2 transition-colors ${
+              activeTab === 'companies'
+                ? 'border-purple-500 text-purple-600'
+                : 'border-transparent text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            <Building2 className="h-4 w-4" />
+            Empresas
+          </button>
         </div>
       </div>
 
@@ -619,7 +783,34 @@ export default function AdminPanel() {
                       </div>
                       <div className="space-y-1">
                         <Label className="text-xs">Empresa *</Label>
-                        <Input placeholder="Nombre de la empresa" value={newProjectCompany} onChange={e => setNewProjectCompany(e.target.value)} />
+                        {companies.length > 0 ? (
+                          <Select
+                            value={newProjectCompany ? (companies.find(c => c.name === newProjectCompany)?.id || '__custom__') : undefined}
+                            onValueChange={val => {
+                              if (val === '__custom__') {
+                                setNewProjectCompany('')
+                              } else {
+                                const comp = companies.find(c => c.id === val)
+                                if (comp) setNewProjectCompany(comp.name)
+                              }
+                            }}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Seleccionar o escribir empresa" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {companies.map(c => (
+                                <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                              ))}
+                              <SelectItem value="__custom__">+ Otra empresa...</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        ) : (
+                          <Input placeholder="Nombre de la empresa" value={newProjectCompany} onChange={e => setNewProjectCompany(e.target.value)} />
+                        )}
+                        {companies.length > 0 && !companies.find(c => c.name === newProjectCompany) && newProjectCompany !== '' && (
+                          <Input placeholder="Nombre de la nueva empresa" value={newProjectCompany} onChange={e => setNewProjectCompany(e.target.value)} className="mt-1" />
+                        )}
                       </div>
                     </div>
                     <div className="space-y-1">
@@ -1207,6 +1398,182 @@ export default function AdminPanel() {
                       ))}
                     </TableBody>
                   </Table>
+                </div>
+              )}
+            </motion.div>
+          )}
+
+          {/* ═══ COMPANIES TAB ═══ */}
+          {activeTab === 'companies' && (
+            <motion.div key="companies" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="space-y-4">
+              <div className="flex justify-between items-center">
+                <p className="text-sm text-muted-foreground">
+                  Gestiona las empresas y asigna gerentes
+                </p>
+                <Button
+                  onClick={() => setShowNewCompany(true)}
+                  className="bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white"
+                  size="sm"
+                >
+                  <Plus className="h-4 w-4 mr-1" /> Nueva Empresa
+                </Button>
+              </div>
+
+              {/* New company form */}
+              {showNewCompany && (
+                <Card className="border-purple-200 bg-purple-50/30">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-sm flex items-center gap-2">
+                      <Plus className="h-4 w-4 text-purple-500" />
+                      Crear Nueva Empresa
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div className="space-y-1">
+                        <Label className="text-xs">Nombre de la Empresa *</Label>
+                        <Input placeholder="Nombre" value={newCompanyName} onChange={e => setNewCompanyName(e.target.value)} />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-xs">Descripción</Label>
+                        <Input placeholder="Descripción (opcional)" value={newCompanyDesc} onChange={e => setNewCompanyDesc(e.target.value)} />
+                      </div>
+                    </div>
+                    <div className="flex gap-2 justify-end">
+                      <Button variant="outline" size="sm" onClick={() => setShowNewCompany(false)}>Cancelar</Button>
+                      <Button size="sm" onClick={handleCreateCompany} disabled={!newCompanyName.trim()} className="bg-gradient-to-r from-purple-500 to-purple-600 text-white">
+                        Crear Empresa
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Companies list */}
+              {isLoadingCompanies ? (
+                <div className="flex justify-center py-12"><Loader2 className="h-8 w-8 text-purple-500 animate-spin" /></div>
+              ) : companies.length === 0 ? (
+                <div className="text-center py-12 text-muted-foreground">
+                  <Building2 className="h-12 w-12 mx-auto mb-3 opacity-30" />
+                  <p className="text-sm">No hay empresas creadas</p>
+                  <p className="text-xs mt-1">Crea una empresa para organizar los proyectos por organización</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {companies.map(company => (
+                    <Card key={company.id} className={`transition-all ${expandedCompanyId === company.id ? 'border-purple-300 shadow-md' : 'hover:border-gray-300'}`}>
+                      <CardContent className="p-4">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3 cursor-pointer flex-1" onClick={() => setExpandedCompanyId(expandedCompanyId === company.id ? null : company.id)}>
+                            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-teal-100 to-teal-50 flex items-center justify-center">
+                              <Building2 className="h-5 w-5 text-teal-600" />
+                            </div>
+                            <div className="flex-1">
+                              {editingCompany === company.id ? (
+                                <div className="space-y-2" onClick={e => e.stopPropagation()}>
+                                  <div className="grid grid-cols-2 gap-2">
+                                    <Input value={editCompanyData.name} onChange={e => setEditCompanyData(d => ({ ...d, name: e.target.value }))} className="text-sm" />
+                                    <Input value={editCompanyData.description} onChange={e => setEditCompanyData(d => ({ ...d, description: e.target.value }))} className="text-sm" placeholder="Descripción" />
+                                  </div>
+                                  <div className="flex gap-2">
+                                    <Button size="sm" onClick={() => handleUpdateCompany(company.id)} className="bg-purple-600 text-white h-7"><Check className="h-3 w-3 mr-1" />Guardar</Button>
+                                    <Button size="sm" variant="outline" onClick={() => setEditingCompany(null)} className="h-7">Cancelar</Button>
+                                  </div>
+                                </div>
+                              ) : (
+                                <>
+                                  <h3 className="font-semibold text-sm">{company.name}</h3>
+                                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                    <span>{company.projectCount} proyectos</span>
+                                    <span>·</span>
+                                    <span>{company.memberCount} gerentes</span>
+                                    {!company.active && <Badge className="bg-red-100 text-red-700 border border-red-200 ml-1">Inactiva</Badge>}
+                                  </div>
+                                </>
+                              )}
+                            </div>
+                          </div>
+                          {editingCompany !== company.id && (
+                            <div className="flex items-center gap-1">
+                              <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-blue-500 hover:text-blue-700" onClick={() => { setEditingCompany(company.id); setEditCompanyData({ name: company.name, description: company.description || '' }) }} title="Editar empresa"><Edit3 className="h-4 w-4" /></Button>
+                              <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-red-400 hover:text-red-600" onClick={() => handleDeleteCompany(company.id)} title="Eliminar empresa"><Trash2 className="h-4 w-4" /></Button>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Expanded company detail: gerentes */}
+                        <AnimatePresence>
+                          {expandedCompanyId === company.id && (
+                            <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.2 }} className="overflow-hidden">
+                              <div className="mt-4 pt-4 border-t space-y-4">
+                                {isLoadingCompanyDetail ? (
+                                  <div className="flex justify-center py-4"><Loader2 className="h-5 w-5 text-purple-500 animate-spin" /></div>
+                                ) : (
+                                  <>
+                                    <div>
+                                      <h4 className="text-xs font-semibold text-muted-foreground uppercase mb-2 flex items-center gap-1">
+                                        <Shield className="h-3 w-3" /> Gerentes asignados
+                                      </h4>
+                                      {companyMembers.length > 0 ? (
+                                        <div className="space-y-1.5 mb-3">
+                                          {companyMembers.map((m) => (
+                                            <div key={m.id} className="flex items-center justify-between p-2 rounded-lg border bg-white text-xs">
+                                              <div className="flex items-center gap-2">
+                                                <div className="w-7 h-7 rounded-full bg-teal-100 flex items-center justify-center text-teal-700 font-bold text-xs">{m.user.name.charAt(0)}</div>
+                                                <div>
+                                                  <p className="font-medium">{m.user.name}</p>
+                                                  <p className="text-muted-foreground">{m.user.email}</p>
+                                                </div>
+                                                <Badge className={`${ROLE_COLORS[m.role] || ROLE_COLORS.gerente} border text-[9px] py-0`}>
+                                                  {ROLE_LABELS[m.role] || m.role}
+                                                </Badge>
+                                              </div>
+                                              <Button variant="ghost" size="sm" className="h-6 w-6 p-0 text-red-400 hover:text-red-600" onClick={() => handleRemoveCompanyMember(m.userId, m.user.name)}>
+                                                <X className="h-3 w-3" />
+                                              </Button>
+                                            </div>
+                                          ))}
+                                        </div>
+                                      ) : (
+                                        <p className="text-xs text-muted-foreground mb-3">No hay gerentes asignados a esta empresa</p>
+                                      )}
+
+                                      {/* Add gerente */}
+                                      <div className="flex items-center gap-2">
+                                        <Select value={addGerenteUserId || undefined} onValueChange={setAddGerenteUserId}>
+                                          <SelectTrigger className="h-8 text-xs flex-1">
+                                            <SelectValue placeholder="Seleccionar usuario para asignar..." />
+                                          </SelectTrigger>
+                                          <SelectContent>
+                                            {users
+                                              .filter(u => u.active && !companyMembers.some(m => m.userId === u.id))
+                                              .map(u => (
+                                                <SelectItem key={u.id} value={u.id}>
+                                                  <div className="flex items-center gap-2">
+                                                    <span>{u.name}</span>
+                                                    <span className="text-muted-foreground">({u.email})</span>
+                                                    <Badge className={`${ROLE_COLORS[u.role] || ''} border text-[9px] py-0`}>
+                                                      {ROLE_LABELS[u.role] || u.role}
+                                                    </Badge>
+                                                  </div>
+                                                </SelectItem>
+                                              ))}
+                                          </SelectContent>
+                                        </Select>
+                                        <Button size="sm" onClick={handleAddGerente} disabled={!addGerenteUserId} className="h-8 text-xs bg-purple-600 text-white">
+                                          <UserPlus className="h-3 w-3 mr-1" /> Asignar
+                                        </Button>
+                                      </div>
+                                    </div>
+                                  </>
+                                )}
+                              </div>
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
+                      </CardContent>
+                    </Card>
+                  ))}
                 </div>
               )}
             </motion.div>

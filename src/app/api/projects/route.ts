@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 
 // GET /api/projects - List projects with zones and member count
-// Admin sees all active projects; non-admin sees only their assigned projects
+// Admin sees all active projects; gerente sees projects from their companies; non-admin sees only their assigned projects
 export async function GET(request: NextRequest) {
   try {
     // Check if user is logged in via session cookie
@@ -22,24 +22,50 @@ export async function GET(request: NextRequest) {
     }
 
     const isAdmin = userRole === 'admin'
+    const isGerente = userRole === 'gerente'
 
-    const projects = await db.project.findMany({
-      where: {
-        active: true,
-        ...(!isAdmin && userId ? {
+    let whereCondition: any = { active: true }
+
+    if (!isAdmin && userId) {
+      if (isGerente) {
+        // Gerente: see projects from their companies + projects they're directly assigned to
+        const companyMemberships = await db.companyMember.findMany({
+          where: { userId },
+          select: { companyId: true },
+        })
+        const companyIds = companyMemberships.map((cm) => cm.companyId)
+
+        whereCondition = {
+          active: true,
+          OR: [
+            { members: { some: { userId } } },
+            { companyId: { in: companyIds.length > 0 ? companyIds : ['__none__'] } },
+          ],
+        }
+      } else {
+        // Non-admin, non-gerente: only their assigned projects
+        whereCondition = {
+          active: true,
           members: {
             some: {
               userId: userId,
             },
           },
-        } : {}),
-      },
+        }
+      }
+    }
+
+    const projects = await db.project.findMany({
+      where: whereCondition,
       include: {
         zones: {
           orderBy: { createdAt: 'asc' },
         },
         _count: {
           select: { members: true },
+        },
+        companyRel: {
+          select: { id: true, name: true },
         },
       },
       orderBy: { createdAt: 'desc' },
@@ -50,6 +76,8 @@ export async function GET(request: NextRequest) {
       name: project.name,
       description: project.description,
       company: project.company,
+      companyId: project.companyId,
+      companyName: project.companyRel?.name || project.company,
       startDate: project.startDate,
       active: project.active,
       zones: project.zones,
@@ -70,7 +98,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { name, description, company, zones } = body
+    const { name, description, company, companyId, zones } = body
 
     if (!name || !company) {
       return NextResponse.json(
@@ -91,6 +119,7 @@ export async function POST(request: NextRequest) {
         name: name.trim(),
         description: description?.trim() || null,
         company: company.trim(),
+        companyId: companyId || null,
         zones: {
           create: zones.map((zone: { name: string; description?: string; color?: string }) => ({
             name: zone.name.trim(),
@@ -104,6 +133,9 @@ export async function POST(request: NextRequest) {
         _count: {
           select: { members: true },
         },
+        companyRel: {
+          select: { id: true, name: true },
+        },
       },
     })
 
@@ -114,6 +146,8 @@ export async function POST(request: NextRequest) {
           name: project.name,
           description: project.description,
           company: project.company,
+          companyId: project.companyId,
+          companyName: project.companyRel?.name || project.company,
           startDate: project.startDate,
           active: project.active,
           zones: project.zones,

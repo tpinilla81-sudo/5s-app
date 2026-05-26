@@ -34,7 +34,7 @@ interface ExamQuestion {
 }
 
 export default function FormacionModal({ open, onClose, sStep, miniStep }: FormacionModalProps) {
-  const { fetchProgress, currentUser, adminFreeNavigation, currentProject } = use5SStore();
+  const { fetchProgress, currentUser, adminFreeNavigation, currentProject, currentZone } = use5SStore();
   const sStepData = S_STEPS.find(s => s.id === sStep);
   const isAdmin = currentUser?.role === 'admin' && adminFreeNavigation;
 
@@ -107,7 +107,7 @@ export default function FormacionModal({ open, onClose, sStep, miniStep }: Forma
       const res = await fetch('/api/exam', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sStep, answers: answersArray, projectId: currentProject?.id }),
+        body: JSON.stringify({ sStep, answers: answersArray, projectId: currentProject?.id, zoneId: currentZone?.id || null, userId: currentUser?.id }),
       });
 
       const json = await res.json();
@@ -131,7 +131,7 @@ export default function FormacionModal({ open, onClose, sStep, miniStep }: Forma
       const res = await fetch(`/api/progress/step?sStep=${sStep}&miniStep=${miniStep}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ completed: true, score: 100, notes: 'Completado por administrador (skip)', projectId: currentProject?.id }),
+        body: JSON.stringify({ completed: true, score: 100, notes: 'Completado por administrador (skip)', projectId: currentProject?.id, zoneId: currentZone?.id || null }),
       });
       const json = await res.json();
       if (json.success) {

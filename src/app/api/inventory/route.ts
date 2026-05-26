@@ -6,13 +6,43 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     const sStep = searchParams.get('sStep')
     const projectId = searchParams.get('projectId')
+    const jaulaOnly = searchParams.get('jaulaOnly')
+    const zoneId = searchParams.get('zoneId')
+
+    // TASK 3: Global jaula view - return all jaula items across all projects
+    if (jaulaOnly === 'true') {
+      const where: any = {
+        jaulaStatus: { not: '' },
+      }
+      if (sStep) where.sStep = parseInt(sStep)
+      if (projectId) where.projectId = projectId
+      if (zoneId) where.zoneId = zoneId
+
+      const items = await db.inventoryItem.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        include: {
+          project: {
+            select: { id: true, name: true, company: true },
+          },
+        },
+      })
+
+      const parsed = items.map(item => ({
+        ...item,
+        extra: item.extra ? JSON.parse(item.extra) : null,
+      }))
+
+      return NextResponse.json({ success: true, data: parsed })
+    }
 
     if (!sStep) {
       return NextResponse.json({ success: false, error: 'sStep is required' }, { status: 400 })
     }
 
     const where: any = { sStep: parseInt(sStep) }
-    if (projectId) where.projectId = projectId
+    if (projectId && projectId !== 'undefined') where.projectId = projectId
+    if (zoneId && zoneId !== 'undefined') where.zoneId = zoneId
 
     const items = await db.inventoryItem.findMany({
       where,
@@ -35,7 +65,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { sStep, projectId } = body
+    const { sStep, projectId, zoneId } = body
 
     if (!sStep) {
       return NextResponse.json({ success: false, error: 'Missing required fields' }, { status: 400 })
@@ -50,9 +80,21 @@ export async function POST(request: NextRequest) {
       5: 'parcial',
     }
 
+    // Validate projectId exists
+    const effectiveProjectId = projectId || (body.items && body.items[0]?.projectId)
+    if (!effectiveProjectId) {
+      return NextResponse.json({ success: false, error: 'projectId is required. No project selected.' }, { status: 400 })
+    }
+
+    // Verify project exists in database
+    const projectExists = await db.project.findUnique({ where: { id: effectiveProjectId } })
+    if (!projectExists) {
+      return NextResponse.json({ success: false, error: `Project with id '${effectiveProjectId}' not found` }, { status: 400 })
+    }
+
     // Support both single item and array of items
     const items = body.items || [body]
-    const created = []
+    const created: any[] = []
 
     for (const item of items) {
       if (!item.name) continue
@@ -63,11 +105,19 @@ export async function POST(request: NextRequest) {
           location: item.location || null,
           category: item.category || defaultCategories[sStep] || 'dudoso',
           quantity: item.quantity || 1,
+          quantityNeeded: item.quantityNeeded || 0,
+          quantityUnneeded: item.quantityUnneeded || 0,
           price: item.price != null ? parseFloat(String(item.price)) : null,
           action: item.action || null,
           photoUrl: item.photoUrl || null,
           extra: item.extra ? JSON.stringify(item.extra) : null,
-          projectId: projectId || item.projectId || 'default',
+          jaulaStatus: item.jaulaStatus || '',
+          jaulaFechaEntrada: item.jaulaFechaEntrada || null,
+          jaulaOrigen: item.jaulaOrigen || null,
+          jaulaFechaSalida: item.jaulaFechaSalida || null,
+          jaulaDestino: item.jaulaDestino || null,
+          projectId: effectiveProjectId,
+          zoneId: item.zoneId || zoneId || null,
         },
       })
       created.push(result)
@@ -82,8 +132,11 @@ export async function POST(request: NextRequest) {
 
 export async function PUT(request: NextRequest) {
   try {
+    // Read id from URL query params (client sends it in the URL)
+    const { searchParams } = new URL(request.url)
+    const idFromUrl = searchParams.get('id')
     const body = await request.json()
-    const { id } = body
+    const id = idFromUrl || body.id
 
     if (!id) {
       return NextResponse.json({ success: false, error: 'id is required' }, { status: 400 })
@@ -94,10 +147,18 @@ export async function PUT(request: NextRequest) {
     if (body.location !== undefined) updateData.location = body.location
     if (body.category !== undefined) updateData.category = body.category
     if (body.quantity !== undefined) updateData.quantity = body.quantity
+    if (body.quantityNeeded !== undefined) updateData.quantityNeeded = body.quantityNeeded
+    if (body.quantityUnneeded !== undefined) updateData.quantityUnneeded = body.quantityUnneeded
     if (body.price !== undefined) updateData.price = body.price != null ? parseFloat(String(body.price)) : null
     if (body.action !== undefined) updateData.action = body.action
     if (body.photoUrl !== undefined) updateData.photoUrl = body.photoUrl
     if (body.extra !== undefined) updateData.extra = body.extra ? JSON.stringify(body.extra) : null
+    if (body.jaulaStatus !== undefined) updateData.jaulaStatus = body.jaulaStatus
+    if (body.jaulaFechaEntrada !== undefined) updateData.jaulaFechaEntrada = body.jaulaFechaEntrada
+    if (body.jaulaOrigen !== undefined) updateData.jaulaOrigen = body.jaulaOrigen
+    if (body.jaulaFechaSalida !== undefined) updateData.jaulaFechaSalida = body.jaulaFechaSalida
+    if (body.jaulaDestino !== undefined) updateData.jaulaDestino = body.jaulaDestino
+    if (body.zoneId !== undefined) updateData.zoneId = body.zoneId
 
     const result = await db.inventoryItem.update({
       where: { id },

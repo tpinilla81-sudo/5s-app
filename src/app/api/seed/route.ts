@@ -383,12 +383,25 @@ export async function POST() {
     // Create demo project if no projects exist
     let projects = await db.project.findMany()
     let demoProjectId: string
+
+    // Create demo company if not exists
+    let demoCompany = await db.company.findUnique({ where: { name: 'Empresa Demo' } })
+    if (!demoCompany) {
+      demoCompany = await db.company.create({
+        data: {
+          name: 'Empresa Demo',
+          description: 'Empresa de demostración para la metodología 5S',
+        },
+      })
+    }
+
     if (projects.length === 0) {
       const demoProject = await db.project.create({
         data: {
           name: 'Proyecto Demo 5S',
           description: 'Proyecto de demostración de la metodología 5S',
           company: 'Empresa Demo',
+          companyId: demoCompany.id,
           active: true,
         },
       })
@@ -416,6 +429,15 @@ export async function POST() {
       }
     } else {
       demoProjectId = projects[0].id
+      // Ensure existing projects are linked to the demo company if they don't have one
+      for (const project of projects) {
+        if (!project.companyId) {
+          await db.project.update({
+            where: { id: project.id },
+            data: { companyId: demoCompany.id },
+          })
+        }
+      }
     }
 
     // Create role permissions
@@ -519,11 +541,15 @@ export async function POST() {
     for (const projectId of projectIds) {
       for (let s = 1; s <= 5; s++) {
         for (let m = 1; m <= 5; m++) {
-          await db.progress.upsert({
-            where: { sStep_miniStep_projectId: { sStep: s, miniStep: m, projectId } },
-            create: { sStep: s, miniStep: m, completed: false, score: null, projectId },
-            update: {},
+          // Since unique constraint was removed, use findFirst + create pattern
+          const existing = await db.progress.findFirst({
+            where: { sStep: s, miniStep: m, projectId, zoneId: null },
           })
+          if (!existing) {
+            await db.progress.create({
+              data: { sStep: s, miniStep: m, completed: false, score: null, projectId, zoneId: null },
+            })
+          }
         }
       }
     }

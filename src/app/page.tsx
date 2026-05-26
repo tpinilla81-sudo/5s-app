@@ -29,7 +29,7 @@ import {
 import AdminPanel from '@/components/admin/AdminPanel';
 import MaintenanceView from '@/components/5s/MaintenanceView';
 import GerentePanel from '@/components/auth/GerentePanel';
-import { Loader2, RefreshCw, LogOut, Settings, ChevronDown, Shield, Unlock, Lock, LayoutDashboard, Wrench, Sparkles, BarChart3, FileText } from 'lucide-react';
+import { Loader2, RefreshCw, LogOut, Settings, ChevronDown, Shield, Unlock, Lock, LayoutDashboard, Wrench, Sparkles, BarChart3, FileText, MapPin } from 'lucide-react';
 
 const MODAL_MAP: Record<string, React.ComponentType<{
   open: boolean;
@@ -66,6 +66,9 @@ export default function HomePage() {
     // Admin navigation
     adminFreeNavigation,
     setAdminFreeNavigation,
+    // Zone
+    currentZone,
+    setCurrentZone,
     // 5S completion
     is5SCompleted,
   } = use5SStore();
@@ -265,8 +268,31 @@ export default function HomePage() {
                 {currentProject && (
                   <span className="text-xs text-muted-foreground">· {currentProject.name}</span>
                 )}
+                {currentZone && (
+                  <span className="text-xs font-medium" style={{ color: currentZone.color || '#3B82F6' }}>· {currentZone.name}</span>
+                )}
               </div>
             </div>
+            {/* Zone selector */}
+            {currentProject && currentProject.zones && currentProject.zones.length > 0 && (
+              <div className="flex items-center gap-1.5">
+                <MapPin className="h-3.5 w-3.5 text-muted-foreground" />
+                <select
+                  className="text-xs border rounded-md px-2 py-1 bg-background"
+                  value={currentZone?.id || ''}
+                  onChange={(e) => {
+                    const zoneId = e.target.value;
+                    const zone = currentProject.zones.find(z => z.id === zoneId) || null;
+                    setCurrentZone(zone);
+                  }}
+                >
+                  <option value="">Sin zona</option>
+                  {currentProject.zones.map(z => (
+                    <option key={z.id} value={z.id}>{z.name}</option>
+                  ))}
+                </select>
+              </div>
+            )}
           </div>
           <div className="flex items-center gap-2">
             {isAdmin && (
@@ -332,7 +358,7 @@ export default function HomePage() {
               size="sm"
               onClick={async () => {
                 try {
-                  const res = await fetch('/api/download?file=manual');
+                  const res = await fetch('/api/manual');
                   if (!res.ok) throw new Error('Download failed');
                   const blob = await res.blob();
                   const url = window.URL.createObjectURL(blob);
@@ -344,7 +370,8 @@ export default function HomePage() {
                   document.body.removeChild(link);
                   window.URL.revokeObjectURL(url);
                 } catch (err) {
-                  alert('Error al descargar el manual. Intente de nuevo.');
+                  // Fallback: open directly in new tab
+                  window.open('/Manual_Usuario_5S.pdf', '_blank');
                 }
               }}
               className="text-purple-600 hover:text-purple-700 hover:bg-purple-50"

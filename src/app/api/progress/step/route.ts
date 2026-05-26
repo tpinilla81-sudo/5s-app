@@ -1,13 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 
-// GET /api/progress/step?sStep=1&miniStep=2&projectId=xxx
+// GET /api/progress/step?sStep=1&miniStep=2&projectId=xxx&zoneId=yyy
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
     const sStep = searchParams.get('sStep')
     const miniStep = searchParams.get('miniStep')
     const projectId = searchParams.get('projectId')
+    const zoneId = searchParams.get('zoneId')
 
     if (!sStep || !miniStep) {
       return NextResponse.json({ success: false, error: 'sStep and miniStep are required' }, { status: 400 })
@@ -15,6 +16,7 @@ export async function GET(request: NextRequest) {
 
     const where: any = { sStep: parseInt(sStep), miniStep: parseInt(miniStep) }
     if (projectId) where.projectId = projectId
+    if (zoneId) where.zoneId = zoneId
 
     const progress = await db.progress.findFirst({
       where,
@@ -38,12 +40,28 @@ export async function PUT(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { completed, score, notes, photoUrls, projectId } = body
+    const { completed, score, notes, photoUrls, projectId, zoneId } = body
 
-    const lookupProjectId = projectId || 'default'
+    const lookupProjectId = projectId
+    if (!lookupProjectId) {
+      return NextResponse.json({ success: false, error: 'projectId is required. No project selected.' }, { status: 400 })
+    }
 
-    const existing = await db.progress.findUnique({
-      where: { sStep_miniStep_projectId: { sStep: parseInt(sStep), miniStep: parseInt(miniStep), projectId: lookupProjectId } },
+    // Build the where clause for finding existing record
+    const findWhere: any = {
+      sStep: parseInt(sStep),
+      miniStep: parseInt(miniStep),
+      projectId: lookupProjectId,
+    }
+    // If zoneId is provided, use it; otherwise look for project-level (zoneId is null)
+    if (zoneId) {
+      findWhere.zoneId = zoneId
+    } else {
+      findWhere.zoneId = null
+    }
+
+    const existing = await db.progress.findFirst({
+      where: findWhere,
     })
 
     let result
@@ -68,6 +86,7 @@ export async function PUT(request: NextRequest) {
           notes,
           photoUrls,
           projectId: lookupProjectId,
+          zoneId: zoneId || null,
           passedAt: completed ? new Date() : null,
         },
       })

@@ -8,7 +8,100 @@ export async function GET(request: NextRequest) {
     const projectId = searchParams.get('projectId')
     const source = searchParams.get('source')
     const estado = searchParams.get('estado')
+    const userId = searchParams.get('userId')
+    const userRole = searchParams.get('userRole')
+    const jaulaOnly = searchParams.get('jaulaOnly')
 
+    // TASK 3: jaulaOnly query for global jaula view
+    if (jaulaOnly === 'true') {
+      const jaulaItems = await db.inventoryItem.findMany({
+        where: {
+          jaulaStatus: { not: '' },
+        },
+        orderBy: { createdAt: 'desc' },
+        include: {
+          project: {
+            select: { id: true, name: true, company: true },
+          },
+        },
+      })
+      const parsed = jaulaItems.map(item => ({
+        ...item,
+        extra: item.extra ? JSON.parse(item.extra) : null,
+      }))
+      return NextResponse.json({ success: true, data: parsed })
+    }
+
+    // TASK 4: Role-based filtering for action plans
+    if (userRole && userId) {
+      if (userRole === 'gerente') {
+        // Gerente sees ALL action plans across all projects
+        const where: any = {}
+        if (sStep !== null) where.sStep = parseInt(sStep!)
+        if (source) where.source = source
+        if (estado) where.estado = estado
+
+        const actions = await db.actionItem.findMany({
+          where,
+          orderBy: { createdAt: 'desc' },
+          include: {
+            zone: { select: { id: true, name: true } },
+            project: { select: { id: true, name: true, company: true } },
+          },
+        })
+        return NextResponse.json({ success: true, data: actions })
+      }
+
+      if (userRole === 'responsable') {
+        // Responsable sees action plans from their own projects only
+        const memberships = await db.projectMember.findMany({
+          where: { userId, role: 'responsable' },
+          select: { projectId: true },
+        })
+        const projectIds = memberships.map(m => m.projectId)
+        const where: any = { projectId: { in: projectIds } }
+        if (sStep !== null) where.sStep = parseInt(sStep!)
+        if (source) where.source = source
+        if (estado) where.estado = estado
+
+        const actions = await db.actionItem.findMany({
+          where,
+          orderBy: { createdAt: 'desc' },
+          include: {
+            zone: { select: { id: true, name: true } },
+            project: { select: { id: true, name: true, company: true } },
+          },
+        })
+        return NextResponse.json({ success: true, data: actions })
+      }
+
+      if (userRole === 'empleado') {
+        // Empleado sees action plans from their zones only
+        const memberZones = await db.memberZone.findMany({
+          where: {
+            member: { userId },
+          },
+          select: { zoneId: true },
+        })
+        const zoneIds = memberZones.map(mz => mz.zoneId)
+        const where: any = { zoneId: { in: zoneIds } }
+        if (sStep !== null) where.sStep = parseInt(sStep!)
+        if (source) where.source = source
+        if (estado) where.estado = estado
+
+        const actions = await db.actionItem.findMany({
+          where,
+          orderBy: { createdAt: 'desc' },
+          include: {
+            zone: { select: { id: true, name: true } },
+            project: { select: { id: true, name: true, company: true } },
+          },
+        })
+        return NextResponse.json({ success: true, data: actions })
+      }
+    }
+
+    // Default: standard filtering
     const where: any = {}
     if (sStep !== null) where.sStep = parseInt(sStep)
     if (projectId) where.projectId = projectId
@@ -18,6 +111,9 @@ export async function GET(request: NextRequest) {
     const actions = await db.actionItem.findMany({
       where,
       orderBy: { createdAt: 'desc' },
+      include: {
+        zone: { select: { id: true, name: true } },
+      },
     })
 
     return NextResponse.json({ success: true, data: actions })
@@ -40,13 +136,29 @@ export async function POST(request: NextRequest) {
       responsable,
       prioridad,
       estado,
+      fechaCompromiso,
       fechaLimite,
+      fechaReal,
       source,
+      auditor,
       projectId,
+      zoneId,
+      verificadoPor,
     } = body
 
     if (!hallazgo && !itemDescription) {
       return NextResponse.json({ success: false, error: 'Missing description' }, { status: 400 })
+    }
+
+    // Validate projectId
+    if (!projectId) {
+      return NextResponse.json({ success: false, error: 'projectId is required. No project selected.' }, { status: 400 })
+    }
+
+    // Verify project exists
+    const projectExists = await db.project.findUnique({ where: { id: projectId } })
+    if (!projectExists) {
+      return NextResponse.json({ success: false, error: `Project with id '${projectId}' not found` }, { status: 400 })
     }
 
     const action = await db.actionItem.create({
@@ -60,9 +172,14 @@ export async function POST(request: NextRequest) {
         responsable: responsable || null,
         prioridad: prioridad || 'media',
         estado: estado || 'abierta',
+        fechaCompromiso: fechaCompromiso ? new Date(fechaCompromiso) : null,
         fechaLimite: fechaLimite ? new Date(fechaLimite) : null,
+        fechaReal: fechaReal ? new Date(fechaReal) : null,
         source: source || 'actionplan',
-        projectId: projectId || 'default',
+        auditor: auditor || null,
+        zoneId: zoneId || null,
+        verificadoPor: verificadoPor || null,
+        projectId: projectId || '',
       },
     })
 
@@ -90,11 +207,16 @@ export async function PUT(request: NextRequest) {
     if (body.responsable !== undefined) updateData.responsable = body.responsable
     if (body.mejora !== undefined) updateData.mejora = body.mejora
     if (body.notas !== undefined) updateData.notas = body.notas
+    if (body.fechaCompromiso !== undefined) updateData.fechaCompromiso = body.fechaCompromiso ? new Date(body.fechaCompromiso) : null
     if (body.fechaLimite !== undefined) updateData.fechaLimite = body.fechaLimite ? new Date(body.fechaLimite) : null
+    if (body.fechaReal !== undefined) updateData.fechaReal = body.fechaReal ? new Date(body.fechaReal) : null
+    if (body.zoneId !== undefined) updateData.zoneId = body.zoneId || null
+    if (body.verificadoPor !== undefined) updateData.verificadoPor = body.verificadoPor || null
 
     // If resolving, set resolution date
     if (body.estado === 'resuelta' || body.estado === 'cerrada') {
       updateData.fechaResolucion = new Date()
+      updateData.fechaReal = updateData.fechaReal || new Date()
     }
 
     const action = await db.actionItem.update({

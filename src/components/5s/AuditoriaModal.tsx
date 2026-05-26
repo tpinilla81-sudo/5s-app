@@ -20,6 +20,7 @@ import {
   ChevronDown,
   ChevronRight,
   AlertCircle,
+  AlertTriangle,
   Plus,
   Trash2,
   TrendingUp,
@@ -41,10 +42,12 @@ interface AuditoriaModalProps {
 }
 
 export default function AuditoriaModal({ open, onClose, sStep, miniStep }: AuditoriaModalProps) {
-  const { fetchProgress, currentUser, adminFreeNavigation, currentProject } = use5SStore();
+  const { fetchProgress, currentUser, adminFreeNavigation, currentProject, currentZone } = use5SStore();
   const sStepData = S_STEPS.find(s => s.id === sStep);
   const sections = AUDIT_CHECKLISTS[sStep] || [];
   const isAdmin = currentUser?.role === 'admin' && adminFreeNavigation;
+  const isAuditor = currentUser?.role === 'auditor';
+  const canAudit = isAdmin || isAuditor;
 
   const [auditorName, setAuditorName] = useState('');
   const [results, setResults] = useState<Record<string, AuditItemResult>>({});
@@ -89,7 +92,7 @@ export default function AuditoriaModal({ open, onClose, sStep, miniStep }: Audit
     return { okCount, nokCount, answeredCount, checklistScore, mejorasScore, validMejorasCount, scorePercent };
   }, [results, totalItems, haMejoras, mejoras]);
 
-  const canSubmit = auditorName.trim() !== '' && scoring.answeredCount > 0 && scoring.scorePercent >= AUDIT_PASS_THRESHOLD;
+  const canSubmit = canAudit && auditorName.trim() !== '' && scoring.answeredCount > 0;
 
   const toggleSection = (sectionId: string) => {
     setExpandedSections(prev => ({ ...prev, [sectionId]: !prev[sectionId] }));
@@ -112,39 +115,70 @@ export default function AuditoriaModal({ open, onClose, sStep, miniStep }: Audit
   const handleSubmit = async () => {
     if (!canSubmit) return;
     setIsSubmitting(true);
+    const isApto = scoring.scorePercent >= AUDIT_PASS_THRESHOLD;
     try {
-      // Save audit result
+      // Save audit result (always save, even if not apto)
       const auditRes = await fetch('/api/audit', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           sStep,
           auditorName,
-          result: scoring.scorePercent >= AUDIT_PASS_THRESHOLD ? 'apto' : 'no_apto',
+          result: isApto ? 'apto' : 'no_apto',
           score: scoring.scorePercent,
           observations: observaciones || null,
           projectId: currentProject?.id,
+          zoneId: currentZone?.id || null,
+          checklistData: JSON.stringify(Object.values(results)),
+          mejorasData: haMejoras ? JSON.stringify(mejoras.filter(m => m.descripcion.trim())) : null,
         }),
       });
 
       const auditJson = await auditRes.json();
       if (auditJson.success) {
-        // Also mark the mini-step as completed
+        // Create action items for each NOK to transmit disfunciones to the operator
+        const nokResults = Object.values(results).filter(r => r.status === 'nok');
+        for (const nok of nokResults) {
+          await fetch('/api/actions', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              sStep,
+              miniStep: 5,
+              itemId: nok.itemId,
+              itemDescription: `Disfunción detectada en auditoría: ${nok.itemId}`,
+              hallazgo: nok.hallazgo || nok.itemId,
+              mejora: nok.mejora || '',
+              responsable: null,
+              prioridad: 'alta',
+              estado: 'abierta',
+              source: 'auditoria',
+              auditor: auditorName,
+              projectId: currentProject?.id,
+              zoneId: currentZone?.id || null,
+            }),
+          });
+        }
+
+        // Mark the mini-step as completed (even if no_apto, the audit was done)
         const progressRes = await fetch(`/api/progress/step?sStep=${sStep}&miniStep=${miniStep}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            completed: true,
+            completed: isApto,
             score: scoring.scorePercent,
             notes: JSON.stringify({
               type: 'auditoria_externa',
               auditor: auditorName,
+              result: isApto ? 'apto' : 'no_apto',
               results: Object.values(results),
               observaciones,
               mejorasRealizadas: haMejoras,
               mejoras: haMejoras ? mejoras.filter(m => m.descripcion.trim()) : [],
+              disfuncionesCount: nokResults.length,
             }),
             projectId: currentProject?.id,
+            zoneId: currentZone?.id || null,
           }),
         });
 
@@ -175,13 +209,14 @@ export default function AuditoriaModal({ open, onClose, sStep, miniStep }: Audit
           score: 100,
           observations: 'Completado por administrador (skip)',
           projectId: currentProject?.id,
+          zoneId: currentZone?.id || null,
         }),
       });
       // Mark progress as completed
       const res = await fetch(`/api/progress/step?sStep=${sStep}&miniStep=${miniStep}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ completed: true, score: 100, notes: 'Completado por administrador (skip)', projectId: currentProject?.id }),
+        body: JSON.stringify({ completed: true, score: 100, notes: 'Completado por administrador (skip)', projectId: currentProject?.id, zoneId: currentZone?.id || null }),
       });
       const json = await res.json();
       if (json.success) {
@@ -206,6 +241,14 @@ export default function AuditoriaModal({ open, onClose, sStep, miniStep }: Audit
           </DialogTitle>
         </DialogHeader>
 
+        {/* Permission check */}
+        {!canAudit && !isCompleted && (
+          <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-lg">
+            <AlertCircle className="h-4 w-4 text-red-600" />
+            <span className="text-sm text-red-700 font-medium">Solo los auditores pueden realizar la auditoría externa. Tu rol: {currentUser?.role || 'sin rol'}</span>
+          </div>
+        )}
+
         {isAdmin && !isCompleted && (
           <div className="flex items-center gap-2 p-2 bg-amber-50 border border-amber-200 rounded-lg">
             <span className="text-xs text-amber-700 font-medium">Modo Admin:</span>
@@ -220,10 +263,16 @@ export default function AuditoriaModal({ open, onClose, sStep, miniStep }: Audit
           </div>
         )}
 
-        {isCompleted ? (
+        {!canAudit && !isCompleted ? null : isCompleted ? (
           <div className="text-center py-8">
-            <CheckCircle className="h-16 w-16 text-green-500 mx-auto mb-3" />
-            <h3 className="text-xl font-bold mb-2">¡Auditoría Externa Completada!</h3>
+            {finalScore >= AUDIT_PASS_THRESHOLD ? (
+              <CheckCircle className="h-16 w-16 text-green-500 mx-auto mb-3" />
+            ) : (
+              <AlertTriangle className="h-16 w-16 text-red-500 mx-auto mb-3" />
+            )}
+            <h3 className="text-xl font-bold mb-2">
+              {finalScore >= AUDIT_PASS_THRESHOLD ? '¡Auditoría Externa Completada!' : 'Auditoría No Superada'}
+            </h3>
             <p className="text-lg mb-1">Puntuación Total: <strong>{finalScore}%</strong></p>
             <div className="flex justify-center gap-3 my-2">
               <Badge className="bg-blue-100 text-blue-800">Checklist: {scoring.checklistScore}%</Badge>
@@ -235,32 +284,31 @@ export default function AuditoriaModal({ open, onClose, sStep, miniStep }: Audit
             <p className="text-sm text-muted-foreground mt-2">
               Auditor: <strong>{auditorName}</strong>
             </p>
-            {haMejoras && mejoras.filter(m => m.descripcion.trim()).length > 0 && (
-              <div className="mt-4 text-left max-w-md mx-auto">
-                <div className="flex items-center gap-2 mb-2">
-                  <TrendingUp className="h-4 w-4 text-green-600" />
-                  <span className="text-sm font-semibold text-green-800">Mejoras realizadas ({mejoras.filter(m => m.descripcion.trim()).length})</span>
-                </div>
-                <div className="space-y-2">
-                  {mejoras.filter(m => m.descripcion.trim()).map((mejora, idx) => (
-                    <div key={mejora.id} className="bg-green-50 border border-green-200 rounded-lg p-2 text-sm">
-                      <p className="font-medium text-green-900">{idx + 1}. {mejora.descripcion}</p>
-                      {(mejora.responsable || mejora.fecha) && (
-                        <p className="text-xs text-green-700 mt-1">
-                          {mejora.responsable && <>Responsable: {mejora.responsable}</>}
-                          {mejora.responsable && mejora.fecha && <> · </>}
-                          {mejora.fecha && <>Fecha: {mejora.fecha}</>}
-                        </p>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
             {finalScore >= AUDIT_PASS_THRESHOLD ? (
               <Badge className="mt-3 bg-green-500">Apto — Mini-paso completado</Badge>
             ) : (
-              <Badge className="mt-3 bg-red-500">No Apto — Se requiere corrección</Badge>
+              <div className="mt-3 space-y-3">
+                <Badge className="bg-red-500">No Apto — Se requiere corrección</Badge>
+                {scoring.nokCount > 0 && (
+                  <div className="text-left max-w-md mx-auto mt-3">
+                    <p className="text-sm font-semibold text-red-800 mb-2">
+                      Se han generado {scoring.nokCount} disfunciones como plan de acción para subsanar:
+                    </p>
+                    <div className="space-y-1">
+                      {Object.values(results).filter(r => r.status === 'nok').map((nok, idx) => (
+                        <div key={nok.itemId} className="bg-red-50 border border-red-200 rounded p-2 text-xs">
+                          <span className="font-medium text-red-700">{nok.itemId}</span>
+                          {nok.hallazgo && <span className="text-red-600"> — {nok.hallazgo}</span>}
+                          {nok.mejora && <span className="text-amber-600"> → Mejora: {nok.mejora}</span>}
+                        </div>
+                      ))}
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-2">
+                      Las disfunciones han sido registradas como acciones de mejora y serán visibles por el responsable del área.
+                    </p>
+                  </div>
+                )}
+              </div>
             )}
           </div>
         ) : (

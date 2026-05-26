@@ -15,13 +15,16 @@ model User {
   email       String          @unique
   name        String
   password    String
-  role        String          @default("empleado") // "admin", "responsable", "empleado", "auditor"
+  role        String          @default("empleado") // "admin", "gerente", "responsable", "empleado", "auditor"
   avatar      String?
   active      Boolean         @default(true)
   createdAt   DateTime        @default(now())
   updatedAt   DateTime        @updatedAt
 
-  memberships ProjectMember[]
+  memberships       ProjectMember[]
+  companyMemberships CompanyMember[]
+  employeeProgress  EmployeeProgress[]
+  responsableZones  Zone[]         // Zones where this user is the responsable
 }
 
 model Project {
@@ -29,36 +32,48 @@ model Project {
   name        String
   description String?
   company     String
+  companyId   String?
   startDate   DateTime @default(now())
   active      Boolean  @default(true)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
+  companyRel         Company?        @relation(fields: [companyId], references: [id])
   zones              Zone[]
   members            ProjectMember[]
   progress           Progress[]
+  employeeProgress   EmployeeProgress[]
   inventoryItems     InventoryItem[]
   examAnswers        ExamAnswer[]
   auditResults       AuditResult[]
   checklistResponses ChecklistResponse[]
   actionItems        ActionItem[]
   auditTargets       AuditTarget[]
+
+  @@index([companyId])
 }
 
 model Zone {
-  id          String   @id @default(cuid())
-  name        String
-  description String?
-  color       String   @default("#3B82F6")
-  projectId   String
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id             String   @id @default(cuid())
+  name           String
+  description    String?
+  color          String   @default("#3B82F6")
+  projectId      String
+  responsableId  String?  // The responsable user for this zone
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
-  project     Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  memberZones MemberZone[]
+  project         Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  responsable     User?        @relation(fields: [responsableId], references: [id], onDelete: SetNull)
+  memberZones     MemberZone[]
+  actionItems     ActionItem[]
+  progress        Progress[]
+  employeeProgress EmployeeProgress[]
+  inventoryItems  InventoryItem[]
 
   @@unique([name, projectId])
   @@index([projectId])
+  @@index([responsableId])
 }
 
 model ProjectMember {
@@ -101,13 +116,38 @@ model Progress {
   photoUrls   String?   // URLs de fotos (JSON array o separadas por coma)
   passedAt    DateTime? // Fecha en que se pasó el mini-paso
   projectId   String
+  zoneId      String?   // Zone-level progress (null for project-level)
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 
   project     Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  zone        Zone?     @relation(fields: [zoneId], references: [id], onDelete: Cascade)
 
-  @@unique([sStep, miniStep, projectId])
   @@index([projectId])
+  @@index([projectId, zoneId])
+}
+
+model EmployeeProgress {
+  id          String    @id @default(cuid())
+  sStep       Int       // 1-5
+  miniStep    Int       // 1 (formación) or 4 (autoevaluación) - individual steps only
+  completed   Boolean   @default(false)
+  score       Float?
+  notes       String?
+  passedAt    DateTime?
+  projectId   String
+  zoneId      String
+  userId      String    // The employee who completed this
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  project     Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  zone        Zone         @relation(fields: [zoneId], references: [id], onDelete: Cascade)
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([sStep, miniStep, projectId, zoneId, userId])
+  @@index([projectId, zoneId])
+  @@index([projectId, zoneId, userId])
 }
 
 model Template {
@@ -137,23 +177,36 @@ model ExamAnswer {
 }
 
 model InventoryItem {
-  id          String   @id @default(cuid())
-  sStep       Int
-  name        String
-  location    String?
-  category    String   // S1: innecesario/dudoso/util, S2: muy_frecuente/frecuente/ocasional/raro, S3: polvo/grasa/mancha/etc, S4: visual/procedimiento/checklist/etc, S5: cumplido/parcial/incumplido
-  quantity    Int      @default(1)
-  price       Float?   // Precio en euros
-  action      String?  // Acción a tomar
-  photoUrl    String?
-  extra       String?  // JSON: S-specific fields (estado, frecuenciaUso, nivel, fuente, etc.)
-  projectId   String
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id              String   @id @default(cuid())
+  sStep           Int
+  name            String
+  location        String?
+  category        String   // S1: innecesario/dudoso/util, S2: muy_frecuente/frecuente/ocasional/raro, S3: polvo/grasa/mancha/etc, S4: visual/procedimiento/checklist/etc, S5: cumplido/parcial/incumplido
+  quantity        Int      @default(1)
+  quantityNeeded  Int      @default(0) // Cuántos necesarios
+  quantityUnneeded Int     @default(0) // Cuántos innecesarios
+  price           Float?   // Precio en euros
+  action          String?  // Acción a tomar
+  photoUrl        String?
+  extra           String?  // JSON: S-specific fields (estado, frecuenciaUso, nivel, fuente, etc.)
+  projectId       String
+  zoneId          String?  // Which zone this item belongs to
+  // Jaula/Excedentes fields
+  jaulaStatus     String   @default("") // "", "en_jaula", "reclamado", "transferido"
+  jaulaFechaEntrada DateTime? // Fecha entrada a la jaula
+  jaulaOrigen     String?  // Área de origen
+  jaulaFechaSalida DateTime? // Fecha salida de la jaula
+  jaulaDestino    String?  // Área de destino
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 
   project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  zone        Zone?    @relation(fields: [zoneId], references: [id], onDelete: SetNull)
 
   @@index([projectId])
+  @@index([sStep, projectId])
+  @@index([jaulaStatus])
+  @@index([zoneId])
 }
 
 model AuditResult {
@@ -205,19 +258,25 @@ model ActionItem {
   responsable     String?   // Persona responsable de resolver
   prioridad       String    @default("media") // "alta", "media", "baja"
   estado          String    @default("abierta") // "abierta", "en_proceso", "resuelta", "cerrada"
-  fechaLimite     DateTime?
-  fechaResolucion DateTime?
+  fechaCompromiso DateTime? // Fecha compromiso para resolver
+  fechaLimite     DateTime? // Fecha límite / deadline
+  fechaReal       DateTime? // Fecha real de resolución
+  fechaResolucion DateTime? // Fecha de resolución (alias)
   photoRefs       String?   // JSON array of photo references
   notas           String?   // Notas adicionales sobre la resolución
-  source          String    @default("autoevaluacion") // "autoevaluacion" or "auditoria"
+  source          String    @default("autoevaluacion") // "autoevaluacion" or "auditoria" or "actionplan"
   auditor         String?   // Nombre del auditor que detectó la deficiencia
+  zoneId          String?   // Zona asignada (opcional, referencia a Zone)
+  verificadoPor   String?   // Quién verificó que la acción fue completada
   projectId       String
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 
   project         Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  zone            Zone?     @relation(fields: [zoneId], references: [id], onDelete: SetNull)
 
   @@index([projectId])
+  @@index([zoneId])
 }
 
 model AuditTarget {
@@ -245,4 +304,31 @@ model RolePermissionConfig {
   updatedAt    DateTime @updatedAt
 
   @@unique([role, permission])
+}
+
+model Company {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String?
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  projects    Project[]
+  members     CompanyMember[]
+}
+
+model CompanyMember {
+  id        String   @id @default(cuid())
+  userId    String
+  companyId String
+  role      String   @default("gerente") // "gerente", "admin_empresa"
+  joinedAt  DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  company   Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, companyId])
+  @@index([companyId])
+  @@index([userId])
 }

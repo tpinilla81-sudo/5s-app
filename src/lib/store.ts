@@ -9,6 +9,20 @@ export interface ProgressItem {
   notes: string | null
   photoUrls: string | null
   passedAt: string | null
+  zoneId: string | null
+}
+
+export interface EmployeeProgressItem {
+  id: string
+  sStep: number
+  miniStep: number
+  completed: boolean
+  score: number | null
+  notes: string | null
+  passedAt: string | null
+  projectId: string
+  zoneId: string
+  userId: string
 }
 
 export interface User {
@@ -26,6 +40,16 @@ export interface Zone {
   description: string | null
   color: string
   projectId: string
+  responsableId: string | null
+}
+
+export interface Company {
+  id: string
+  name: string
+  description: string | null
+  active: boolean
+  projectCount?: number
+  memberCount?: number
 }
 
 export interface Project {
@@ -33,15 +57,22 @@ export interface Project {
   name: string
   description: string | null
   company: string
+  companyId: string | null
+  companyName?: string
   startDate: string
   active: boolean
   zones: Zone[]
   memberCount?: number
 }
 
+// Mini-step types: ZONE steps (2,3,5) are collaborative per zone; INDIVIDUAL steps (1,4) are per employee
+const ZONE_MINI_STEPS = [2, 3, 5]
+const INDIVIDUAL_MINI_STEPS = [1, 4]
+
 interface FiveSState {
   // Progress & Board State
   progress: ProgressItem[]
+  employeeProgress: EmployeeProgressItem[]
   currentView: 'board' | 'detail' | 'admin' | 'maintenance' | 'gerente'
   selectedSStep: number | null
   activeModal: 'formacion' | 'fotos' | 'inventario' | 'actionplan' | 'autoevaluacion' | 'auditoria' | null
@@ -49,26 +80,33 @@ interface FiveSState {
   isLoadingProgress: boolean
   adminFreeNavigation: boolean  // Admin mode: skip progressive unlocking
 
+  // Zone State
+  currentZone: Zone | null
+
   // Auth & Project State
   currentUser: User | null
   currentProject: Project | null
   authView: 'login' | 'register' | 'setup' | 'board' | 'no_projects'
   projects: Project[]
+  companies: Company[]
   isAuthLoading: boolean       // Only for initial session check
   isLoginLoading: boolean      // For login/register button loading state
   authError: string | null     // Error message from auth operations
 
   // Progress & Board Actions
   fetchProgress: () => Promise<void>
+  fetchEmployeeProgress: (projectId: string, zoneId?: string) => Promise<void>
   selectSStep: (s: number | null) => void
   setCurrentView: (view: 'board' | 'detail' | 'admin' | 'maintenance' | 'gerente') => void
   openModal: (type: 'formacion' | 'fotos' | 'inventario' | 'actionplan' | 'autoevaluacion' | 'auditoria', miniStep: number) => void
   closeModal: () => void
   seedDatabase: () => Promise<void>
   setAdminFreeNavigation: (enabled: boolean) => void
+  setCurrentZone: (zone: Zone | null) => void
 
   // Computed helpers
   getMiniStepStatus: (sStep: number, miniStep: number) => 'locked' | 'available' | 'completed'
+  isZoneMiniStepComplete: (sStep: number, miniStep: number, zoneId: string) => boolean
   isQuesitoEarned: (sStep: number) => boolean
   is5SCompleted: () => boolean
   getCompletedCount: () => { sSteps: number; miniSteps: number; total: number }
@@ -79,7 +117,8 @@ interface FiveSState {
   logout: () => Promise<void>
   checkSession: () => Promise<void>
   fetchProjects: () => Promise<void>
-  createProject: (data: { name: string; description?: string; company: string; zones: { name: string; description?: string; color?: string }[] }) => Promise<void>
+  fetchCompanies: () => Promise<void>
+  createProject: (data: { name: string; description?: string; company: string; companyId?: string; zones: { name: string; description?: string; color?: string }[] }) => Promise<void>
   setCurrentProject: (project: Project | null) => void
   setAuthView: (view: 'login' | 'register' | 'setup' | 'board') => void
   clearAuthError: () => void
@@ -88,18 +127,21 @@ interface FiveSState {
 export const use5SStore = create<FiveSState>((set, get) => ({
   // Progress & Board State
   progress: [],
+  employeeProgress: [],
   currentView: 'board',
   selectedSStep: null,
   activeModal: null,
   activeMiniStep: null,
   isLoadingProgress: true,
   adminFreeNavigation: true,  // Default: admin can navigate freely
+  currentZone: null,
 
   // Auth & Project State
   currentUser: null,
   currentProject: null,
   authView: 'login',
   projects: [],
+  companies: [],
   isAuthLoading: true,
   isLoginLoading: false,
   authError: null,
@@ -120,6 +162,19 @@ export const use5SStore = create<FiveSState>((set, get) => ({
     }
   },
 
+  fetchEmployeeProgress: async (projectId: string, zoneId?: string) => {
+    try {
+      let params = `?projectId=${projectId}`
+      if (zoneId) params += `&zoneId=${zoneId}`
+      const res = await fetch(`/api/employee-progress${params}`)
+      const data = await res.json()
+      const epData = data?.data ? data.data : (Array.isArray(data) ? data : [])
+      set({ employeeProgress: epData })
+    } catch (error) {
+      console.error('Error fetching employee progress:', error)
+    }
+  },
+
   selectSStep: (s) => {
     if (s === null) {
       set({ selectedSStep: null, currentView: 'board' })
@@ -136,6 +191,15 @@ export const use5SStore = create<FiveSState>((set, get) => ({
 
   setAdminFreeNavigation: (enabled: boolean) => set({ adminFreeNavigation: enabled }),
 
+  setCurrentZone: (zone: Zone | null) => {
+    set({ currentZone: zone })
+    // Also fetch employee progress when zone changes
+    const { currentProject } = get()
+    if (currentProject && zone) {
+      get().fetchEmployeeProgress(currentProject.id, zone.id)
+    }
+  },
+
   seedDatabase: async () => {
     try {
       await fetch('/api/seed', { method: 'POST' })
@@ -146,11 +210,66 @@ export const use5SStore = create<FiveSState>((set, get) => ({
   },
 
   getMiniStepStatus: (sStep, miniStep) => {
-    const { progress, currentUser, adminFreeNavigation } = get()
+    const { progress, currentUser, adminFreeNavigation, currentZone } = get()
     const isAdmin = currentUser?.role === 'admin'
     const skipLocks = isAdmin && adminFreeNavigation
 
-    const currentStep = progress.find(p => p.sStep === sStep && p.miniStep === miniStep)
+    // Zone-level steps (2, 3, 5): Check zone's Progress record
+    if (ZONE_MINI_STEPS.includes(miniStep) && currentZone) {
+      const zoneStep = progress.find(p =>
+        p.sStep === sStep &&
+        p.miniStep === miniStep &&
+        p.zoneId === currentZone.id
+      )
+      if (zoneStep?.completed) return 'completed'
+
+      if (miniStep === 1) return 'available'
+      if (skipLocks) return 'available'
+
+      // Check previous step for zone-level progression
+      const prevStep = progress.find(p =>
+        p.sStep === sStep &&
+        p.miniStep === miniStep - 1 &&
+        (p.zoneId === currentZone.id || p.zoneId === null)
+      )
+      if (!prevStep?.completed) return 'locked'
+      return 'available'
+    }
+
+    // Individual steps (1, 4): Check if current user's EmployeeProgress is completed
+    if (INDIVIDUAL_MINI_STEPS.includes(miniStep) && currentZone && currentUser) {
+      const { employeeProgress } = get()
+      const myProgress = employeeProgress.find(ep =>
+        ep.sStep === sStep &&
+        ep.miniStep === miniStep &&
+        ep.zoneId === currentZone.id &&
+        ep.userId === currentUser.id
+      )
+      if (myProgress?.completed) return 'completed'
+
+      // Step 1 is always available (no prerequisite)
+      if (miniStep === 1) return 'available'
+      if (skipLocks) return 'available'
+
+      // For miniStep 4, check if miniStep 3 (zone step) is completed
+      if (miniStep === 4) {
+        const prevStep = progress.find(p =>
+          p.sStep === sStep &&
+          p.miniStep === 3 &&
+          (p.zoneId === currentZone.id || p.zoneId === null)
+        )
+        if (!prevStep?.completed) return 'locked'
+      }
+
+      return 'available'
+    }
+
+    // Fallback: old project-level behavior (no zone selected)
+    const currentStep = progress.find(p =>
+      p.sStep === sStep &&
+      p.miniStep === miniStep &&
+      (p.zoneId === null || p.zoneId === currentZone?.id)
+    )
     if (currentStep?.completed) return 'completed'
 
     // Mini-step 1 is always available
@@ -160,13 +279,61 @@ export const use5SStore = create<FiveSState>((set, get) => ({
     if (skipLocks) return 'available'
 
     // Normal progressive unlocking: previous step must be completed
-    const prevStep = progress.find(p => p.sStep === sStep && p.miniStep === miniStep - 1)
+    const prevStep = progress.find(p =>
+      p.sStep === sStep &&
+      p.miniStep === miniStep - 1 &&
+      (p.zoneId === null || p.zoneId === currentZone?.id)
+    )
     if (!prevStep?.completed) return 'locked'
     return 'available'
   },
 
+  isZoneMiniStepComplete: (sStep, miniStep, zoneId) => {
+    const { progress, employeeProgress, currentProject } = get()
+    if (!currentProject) return false
+
+    if (ZONE_MINI_STEPS.includes(miniStep)) {
+      // Zone step: check if the zone's Progress record is completed
+      const zoneStep = progress.find(p =>
+        p.sStep === sStep &&
+        p.miniStep === miniStep &&
+        p.zoneId === zoneId
+      )
+      return zoneStep?.completed ?? false
+    }
+
+    if (INDIVIDUAL_MINI_STEPS.includes(miniStep)) {
+      // Individual step: check if ALL employees in the zone have completed
+      // For now, check if there are any employee progress records for this zone
+      // and if all are completed
+      const zoneEmpProgress = employeeProgress.filter(ep =>
+        ep.sStep === sStep &&
+        ep.miniStep === miniStep &&
+        ep.zoneId === zoneId
+      )
+      if (zoneEmpProgress.length === 0) return false
+      return zoneEmpProgress.every(ep => ep.completed)
+    }
+
+    return false
+  },
+
   isQuesitoEarned: (sStep) => {
-    const { progress } = get()
+    const { progress, currentZone } = get()
+
+    if (currentZone) {
+      // Zone-level: check all 5 mini-steps for this zone
+      const sProgress = progress.filter(p =>
+        p.sStep === sStep &&
+        (p.zoneId === currentZone.id || p.zoneId === null) &&
+        p.completed
+      )
+      // For zone mode, we need all 5 steps completed at zone level
+      // Individual steps (1,4) also need a zone-level Progress record when all employees are done
+      return sProgress.length >= 5
+    }
+
+    // Project-level fallback
     const sProgress = progress.filter(p => p.sStep === sStep && p.completed)
     return sProgress.length === 5
   },
@@ -179,7 +346,20 @@ export const use5SStore = create<FiveSState>((set, get) => ({
   },
 
   getCompletedCount: () => {
-    const { progress } = get()
+    const { progress, currentZone } = get()
+
+    if (currentZone) {
+      const completedMiniSteps = progress.filter(p =>
+        (p.zoneId === currentZone.id || p.zoneId === null) &&
+        p.completed
+      ).length
+      let completedSSteps = 0
+      for (let i = 1; i <= 5; i++) {
+        if (get().isQuesitoEarned(i)) completedSSteps++
+      }
+      return { sSteps: completedSSteps, miniSteps: completedMiniSteps, total: 25 }
+    }
+
     const completedMiniSteps = progress.filter(p => p.completed).length
     let completedSSteps = 0
     for (let i = 1; i <= 5; i++) {
@@ -278,8 +458,10 @@ export const use5SStore = create<FiveSState>((set, get) => ({
     set({
       currentUser: null,
       currentProject: null,
+      currentZone: null,
       authView: 'login',
       projects: [],
+      companies: [],
       isLoginLoading: false,
       authError: null,
     })
@@ -325,6 +507,18 @@ export const use5SStore = create<FiveSState>((set, get) => ({
       set({ projects: data.projects || [] })
     } catch (error) {
       console.error('Fetch projects error:', error)
+    }
+  },
+
+  fetchCompanies: async () => {
+    try {
+      const res = await fetch('/api/companies')
+      const data = await res.json()
+      if (data.success) {
+        set({ companies: data.companies || [] })
+      }
+    } catch (error) {
+      console.error('Fetch companies error:', error)
     }
   },
 

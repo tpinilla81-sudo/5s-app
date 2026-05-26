@@ -36,7 +36,7 @@ interface QuarterlyAuditModalProps {
 }
 
 export default function QuarterlyAuditModal({ open, onClose }: QuarterlyAuditModalProps) {
-  const { fetchProgress, currentUser, adminFreeNavigation, currentProject } = use5SStore();
+  const { fetchProgress, currentUser, adminFreeNavigation, currentProject, currentZone } = use5SStore();
   const sections = QUARTERLY_AUDIT_CHECKLIST;
 
   const [auditorName, setAuditorName] = useState('');
@@ -135,6 +135,7 @@ export default function QuarterlyAuditModal({ open, onClose }: QuarterlyAuditMod
           checklistData: JSON.stringify(checklistObj),
           mejorasData: haMejoras ? JSON.stringify(mejoras.filter(m => m.descripcion.trim())) : null,
           projectId: currentProject?.id,
+          zoneId: currentZone?.id || null,
         }),
       });
 

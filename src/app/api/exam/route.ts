@@ -4,13 +4,16 @@ import { db } from '@/lib/db'
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { sStep, answers, projectId } = body
+    const { sStep, answers, projectId, zoneId } = body
 
     if (!sStep || !answers) {
       return NextResponse.json({ success: false, error: 'Missing required fields' }, { status: 400 })
     }
 
-    const lookupProjectId = projectId || 'default'
+    const lookupProjectId = projectId
+    if (!lookupProjectId) {
+      return NextResponse.json({ success: false, error: 'projectId is required. No project selected.' }, { status: 400 })
+    }
 
     const template = await db.template.findFirst({
       where: { type: 'examen', sStep, active: true },
@@ -46,8 +49,15 @@ export async function POST(request: NextRequest) {
 
     // Update progress if passed
     if (passed) {
-      const existing = await db.progress.findUnique({
-        where: { sStep_miniStep_projectId: { sStep, miniStep: 1, projectId: lookupProjectId } },
+      const findWhere: any = { sStep, miniStep: 1, projectId: lookupProjectId }
+      if (zoneId) {
+        findWhere.zoneId = zoneId
+      } else {
+        findWhere.zoneId = null
+      }
+
+      const existing = await db.progress.findFirst({
+        where: findWhere,
       })
       if (existing) {
         await db.progress.update({
@@ -56,8 +66,25 @@ export async function POST(request: NextRequest) {
         })
       } else {
         await db.progress.create({
-          data: { sStep, miniStep: 1, completed: true, score, passedAt: new Date(), projectId: lookupProjectId },
+          data: { sStep, miniStep: 1, completed: true, score, passedAt: new Date(), projectId: lookupProjectId, zoneId: zoneId || null },
         })
+      }
+
+      // Also create EmployeeProgress record for individual step (formación + examen = miniStep 1)
+      if (zoneId && body.userId) {
+        const existingEP = await db.employeeProgress.findUnique({
+          where: { sStep_miniStep_projectId_zoneId_userId: { sStep, miniStep: 1, projectId: lookupProjectId, zoneId, userId: body.userId } },
+        })
+        if (existingEP) {
+          await db.employeeProgress.update({
+            where: { id: existingEP.id },
+            data: { completed: true, score, passedAt: new Date() },
+          })
+        } else {
+          await db.employeeProgress.create({
+            data: { sStep, miniStep: 1, completed: true, score, passedAt: new Date(), projectId: lookupProjectId, zoneId, userId: body.userId },
+          })
+        }
       }
     }
 

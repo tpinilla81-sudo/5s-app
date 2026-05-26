@@ -30,7 +30,7 @@ interface AutoevaluacionModalProps {
 }
 
 export default function AutoevaluacionModal({ open, onClose, sStep, miniStep }: AutoevaluacionModalProps) {
-  const { fetchProgress, currentUser, adminFreeNavigation, currentProject } = use5SStore();
+  const { fetchProgress, currentUser, adminFreeNavigation, currentProject, currentZone } = use5SStore();
   const sStepData = S_STEPS.find(s => s.id === sStep);
   const sections = AUDIT_CHECKLISTS[sStep] || [];
   const isAdmin = currentUser?.role === 'admin' && adminFreeNavigation;
@@ -102,6 +102,7 @@ export default function AutoevaluacionModal({ open, onClose, sStep, miniStep }: 
             observaciones,
           }),
           projectId: currentProject?.id,
+          zoneId: currentZone?.id || null,
         }),
       });
       const json = await res.json();
@@ -109,6 +110,27 @@ export default function AutoevaluacionModal({ open, onClose, sStep, miniStep }: 
         setIsCompleted(true);
         setFinalScore(scoring.scorePercent);
         await fetchProgress();
+
+        // Also create EmployeeProgress record for individual step
+        if (currentZone?.id && currentUser?.id) {
+          try {
+            await fetch('/api/employee-progress', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                sStep,
+                miniStep,
+                completed: true,
+                score: scoring.scorePercent,
+                projectId: currentProject?.id,
+                zoneId: currentZone.id,
+                userId: currentUser.id,
+              }),
+            });
+          } catch (epError) {
+            console.error('Error creating employee progress:', epError);
+          }
+        }
       }
     } catch (error) {
       console.error('Error submitting self-evaluation:', error);
@@ -122,7 +144,7 @@ export default function AutoevaluacionModal({ open, onClose, sStep, miniStep }: 
       const res = await fetch(`/api/progress/step?sStep=${sStep}&miniStep=${miniStep}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ completed: true, score: 100, notes: 'Completado por administrador (skip)', projectId: currentProject?.id }),
+        body: JSON.stringify({ completed: true, score: 100, notes: 'Completado por administrador (skip)', projectId: currentProject?.id, zoneId: currentZone?.id || null }),
       });
       const json = await res.json();
       if (json.success) {

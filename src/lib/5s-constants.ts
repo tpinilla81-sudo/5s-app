@@ -149,8 +149,8 @@ export const INVENTORY_CONFIGS: Record<number, InventoryConfig> = {
     ],
     extraFields: [
       { key: 'estado', label: 'Estado', type: 'select', options: ['Bueno', 'Regular', 'Malo'] },
-      { key: 'frecuenciaUso', label: 'Frecuencia uso', type: 'select', options: ['Diaria', 'Semanal', 'Mensual', 'Anual', 'Nunca'] },
-      { key: 'decision', label: 'Decisión', type: 'select', options: ['Eliminar', 'Reubicar', 'Revisar'] },
+      { key: 'frecuenciaUso', label: 'Frecuencia uso', type: 'select', options: ['Diario', 'Semanal', 'Quincenal', 'Mensual', 'Trimestral', 'Anual', 'Innecesario', 'Dudoso'] },
+      { key: 'decision', label: 'Decisión', type: 'select', options: ['Eliminar', 'Reubicar', 'Revisar', 'Jaula', 'Donar', 'Vender'] },
     ],
     templateName: 'S1_Inventario_Innecesarios_Seiri.xlsx',
   },

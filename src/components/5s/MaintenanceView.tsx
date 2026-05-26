@@ -73,7 +73,7 @@ interface ActionItemData {
 }
 
 export default function MaintenanceView() {
-  const { setCurrentView, currentProject, fetchProgress } = use5SStore();
+  const { setCurrentView, currentProject, currentZone, fetchProgress } = use5SStore();
   const [showQuarterlyAudit, setShowQuarterlyAudit] = useState(false);
   const [showWeeklyAudit, setShowWeeklyAudit] = useState(false);
   const [showMonthlyAudit, setShowMonthlyAudit] = useState(false);
@@ -160,6 +160,7 @@ export default function MaintenanceView() {
           fechaLimite: newAction.fechaLimite || null,
           source: 'mejora_continua',
           projectId: currentProject?.id,
+          zoneId: currentZone?.id || null,
         }),
       });
       setNewAction({ descripcion: '', responsable: '', prioridad: 'media', fechaLimite: '' });

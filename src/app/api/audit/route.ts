@@ -44,7 +44,15 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: 'Missing required fields' }, { status: 400 })
     }
 
-    const lookupProjectId = projectId || 'default'
+    const lookupProjectId = projectId
+    if (!lookupProjectId) {
+      return NextResponse.json({ success: false, error: 'projectId is required. No project selected.' }, { status: 400 })
+    }
+    // Verify project exists
+    const projectExists = await db.project.findUnique({ where: { id: lookupProjectId } })
+    if (!projectExists) {
+      return NextResponse.json({ success: false, error: `Project with id '${lookupProjectId}' not found` }, { status: 400 })
+    }
     const sStepValue = sStep !== undefined ? sStep : 0
     const auditTypeValue = auditType || 'quarterly'
 
@@ -65,8 +73,9 @@ export async function POST(request: NextRequest) {
     // If audit passed (apto) and sStep is 1-5, update progress for mini-step 5
     // For sStep=0 (quarterly combined audit), no progress update needed
     if (result === 'apto' && sStepValue >= 1 && sStepValue <= 5) {
-      const existing = await db.progress.findUnique({
-        where: { sStep_miniStep_projectId: { sStep: sStepValue, miniStep: 5, projectId: lookupProjectId } },
+      const zoneId = body.zoneId || null
+      const existing = await db.progress.findFirst({
+        where: { sStep: sStepValue, miniStep: 5, projectId: lookupProjectId, zoneId },
       })
       if (existing) {
         await db.progress.update({
@@ -75,7 +84,7 @@ export async function POST(request: NextRequest) {
         })
       } else {
         await db.progress.create({
-          data: { sStep: sStepValue, miniStep: 5, completed: true, score: score || 100, passedAt: new Date(), projectId: lookupProjectId },
+          data: { sStep: sStepValue, miniStep: 5, completed: true, score: score || 100, passedAt: new Date(), projectId: lookupProjectId, zoneId },
         })
       }
     }

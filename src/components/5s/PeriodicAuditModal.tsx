@@ -53,7 +53,7 @@ export default function PeriodicAuditModal({
   color,
   icon,
 }: PeriodicAuditModalProps) {
-  const { fetchProgress, currentUser, adminFreeNavigation, currentProject } = use5SStore();
+  const { fetchProgress, currentUser, adminFreeNavigation, currentProject, currentZone } = use5SStore();
 
   const [auditorName, setAuditorName] = useState('');
   const [results, setResults] = useState<Record<string, AuditItemResult>>({});
@@ -160,6 +160,7 @@ export default function PeriodicAuditModal({
           checklistData: JSON.stringify(checklistObj),
           mejorasData: haMejoras ? JSON.stringify(mejoras.filter(m => m.descripcion.trim())) : null,
           projectId: currentProject?.id,
+          zoneId: currentZone?.id || null,
         }),
       });
 

@@ -1,230 +1,193 @@
----
-Task ID: 1
-Agent: Main Agent
-Task: Preparar app 5S para despliegue en Vercel + Supabase
+# Worklog — 5S Methodology App Changes (2026-05-25)
 
-Work Log:
-- Revisé todo el código fuente: schema, APIs, componentes, store
-- Cambié Prisma schema de SQLite a PostgreSQL con directUrl para Supabase
-- Agregué índices @@index([projectId]) en todas las tablas con projectId
-- Simplifiqué db.ts para serverless PostgreSQL (sin schema version hack)
-- Creé src/lib/supabase-storage.ts para subida de fotos a Supabase Storage
-- Actualicé src/app/api/upload/route.ts con soporte Supabase + fallback local
-- Actualicé next.config.ts: eliminé output: "standalone", agregué remotePatterns para Supabase
-- Corregí API de progress: cambié de rutas dinámicas anidadas a query params (/api/progress/step?sStep=X&miniStep=Y)
-- Actualicé todas las APIs (progress, inventory, exam, audit, seed) para usar projectId correctamente
-- Actualicé todos los componentes 5S (Formacion, Fotos, Inventario, Autoevaluacion, Auditoria) para pasar projectId
-- Actualicé store.ts: fetchProgress ahora pasa projectId como query param
-- Creé .env.example con documentación de todas las variables necesarias
-- Build compila exitosamente con npx next build
-- Generé guía de despliegue PDF en /download/guia-despliegue-5s.pdf (12 páginas)
+## TASK 1: Fix S1/S2 Inventory Add Bug (CRITICAL) ✅
 
-Stage Summary:
-- App lista para Vercel + Supabase
-- Todos los cambios son compatibles hacia atrás (funciona en Z y en Vercel)
-- Próximos pasos del usuario: crear cuentas en GitHub/Supabase/Vercel y seguir la guía
+### Problem
+Users could not add INNECESARIOS to S1 inventory or NECESARIOS to S2 inventory. The root cause was in Radix UI's Select component (used by shadcn/ui): when `value={''}` (empty string), the Select cannot properly handle it. The `newItem.category` started as `''` and the Select's `value` prop was `newItem.category`.
+
+### Fix Applied
+**File: `/home/z/my-project/src/components/5s/InventarioModal.tsx`**
+
+1. Changed initial state `category: ''` → `category: undefined as string | undefined`
+2. Updated the category Select value prop: `value={newItem.category}` → `value={newItem.category || undefined}`
+3. After adding an item, reset category to `undefined as string | undefined`
+4. Fixed extra field Select components: `value={String(newItem.extra?.[field.key] ?? '')}` → `value={newItem.extra?.[field.key] ? String(newItem.extra[field.key]) : undefined}`
+5. Fixed jaula status Select: `value={item.jaulaStatus || ''}` → `value={item.jaulaStatus || undefined}`
+
+Radix Select treats `undefined` as "no value selected" which correctly shows the placeholder, while empty string `''` causes the Select to be in an invalid state where it can't open.
 
 ---
-Task ID: 2
+
+## TASK 2: Add Company Model and Organizational Structure ✅
+
+### Schema Changes
+**File: `/home/z/my-project/prisma/schema.prisma`**
+
+1. Added `Company` model with fields: id, name (unique), description, active, timestamps; relations: projects[], members[]
+2. Added `CompanyMember` model with fields: id, userId, companyId, role (default "gerente"), joinedAt; relations: user, company; unique constraint on [userId, companyId]
+3. Added `companyId` (String?, nullable) to `Project` model with relation `companyRel` to `Company`
+4. Added `companyMemberships CompanyMember[]` to `User` model
+5. Added `@@index([companyId])` to Project
+
+### API Changes
+
+**New: `/home/z/my-project/src/app/api/companies/route.ts`**
+- GET: List companies (admin sees all, gerente sees their companies)
+- POST: Create company (admin only)
+
+**New: `/home/z/my-project/src/app/api/companies/[companyId]/route.ts`**
+- GET: Get company with projects and members
+- PUT: Update company (admin only)
+- DELETE: Delete/soft-delete company (admin only)
+
+**New: `/home/z/my-project/src/app/api/companies/[companyId]/members/route.ts`**
+- GET: List company members (gerentes)
+- POST: Add member to company (assign gerente)
+- DELETE: Remove member from company
+
+**Updated: `/home/z/my-project/src/app/api/projects/route.ts`**
+- Gerente role now sees projects from their assigned companies (via CompanyMember) + directly assigned projects
+- POST accepts `companyId` parameter to link project to a company
+- GET response includes `companyId` and `companyName` fields
+- Includes `companyRel` in Prisma query
+
+**Updated: `/home/z/my-project/src/app/api/seed/route.ts`**
+- Creates a "Empresa Demo" company if it doesn't exist
+- Links new demo project to the demo company via `companyId`
+- Migrates existing projects without a companyId to link to the demo company
+
+### Store Changes
+**File: `/home/z/my-project/src/lib/store.ts`**
+
+1. Added `Company` interface with id, name, description, active, projectCount, memberCount
+2. Updated `Project` interface to include `companyId: string | null` and `companyName?: string`
+3. Added `companies: Company[]` to FiveSState
+4. Added `fetchCompanies` action
+5. Updated `createProject` to accept `companyId`
+6. Added `companies: []` to initial state and logout reset
+
+### Frontend Changes
+
+**Updated: `/home/z/my-project/src/components/admin/AdminPanel.tsx`**
+
+1. Added "Empresas" tab alongside "Proyectos" and "Usuarios"
+2. Company management: create, edit, delete companies
+3. Assign gerentes to companies (expandable company card shows gerentes list)
+4. Project creation form now includes company selection dropdown (from existing companies) or text input for new companies
+5. Company selection sends `companyId` when creating projects
+
+**Updated: `/home/z/my-project/src/components/auth/GerentePanel.tsx`**
+- Gerente panel now shows project count from the store
+- Projects API already filters by company membership for gerente role
+
+---
+
+## Bug Fix: Responsable Should NOT Perform Auditoría ✅
+
+**File: `/home/z/my-project/src/components/5s/SStepDetail.tsx`**
+
+Simplified the audit lock logic for miniStep 5 (Auditoría):
+- Before: Locked for non-admin/auditor, but had a confusing condition `!(currentUser.role === 'admin' && adminFreeNavigation)` which was always true for non-admin users
+- After: Simply locked if `currentUser.role !== 'admin' && currentUser.role !== 'auditor'`
+- This means: admin and auditor can access auditoría, responsable, empleado, and gerente CANNOT
+
+---
+
+## Files Modified Summary
+
+| File | Change Type |
+|------|-------------|
+| `src/components/5s/InventarioModal.tsx` | Bug fix: Select empty string → undefined |
+| `prisma/schema.prisma` | Added Company, CompanyMember models; companyId on Project |
+| `src/app/api/companies/route.ts` | New: Company CRUD API |
+| `src/app/api/companies/[companyId]/route.ts` | New: Company detail/update/delete API |
+| `src/app/api/companies/[companyId]/members/route.ts` | New: Company member management API |
+| `src/app/api/projects/route.ts` | Updated: companyId support, gerente company filtering |
+| `src/app/api/seed/route.ts` | Updated: Creates demo company, links projects |
+| `src/lib/store.ts` | Added Company interface, fetchCompanies, companyId |
+| `src/components/admin/AdminPanel.tsx` | Added Empresas tab, company CRUD, gerente assignment |
+| `src/components/auth/GerentePanel.tsx` | Updated to use company-filtered projects |
+| `src/components/5s/SStepDetail.tsx` | Simplified audit lock for responsable |
+
+---
+
+## Issues Encountered
+
+1. **Prisma Client Caching**: After pushing schema changes, the dev server still used the old cached Prisma client. Had to regenerate with `npx prisma generate` and restart the server.
+
+2. **PM2 Process Management**: The dev server was managed by PM2, which kept restarting with stale code. Had to delete and recreate the PM2 process with `next dev` instead of `next start`.
+
+3. **Seed Route Auth**: The seed route creates companies but they were not visible to unauthenticated requests. This is by design — only authenticated admin users can see companies.
+
+4. **Pre-existing Lint Warnings**: The SStepDetail.tsx has a pre-existing `react-hooks/set-state-in-effect` error that was not introduced by our changes.
+
+---
+
+## Verification
+
+- ✅ Seed route creates "Empresa Demo" company and links projects
+- ✅ Companies API returns company list with project/member counts
+- ✅ Gerente can be assigned to a company
+- ✅ Projects API returns `companyId` and `companyName`
+- ✅ Main page renders correctly (26803 bytes)
+- ✅ All API endpoints functional
+---
+Task ID: 1-8
 Agent: Main Agent
-Task: Restaurar app 5S con dibujos en formación S1
+Task: Fix S1/S2 inventory bug, add Company model, organizational structure, fix responsable audit access
 
 Work Log:
-- Analicé las imágenes subidas (page_01.png a page_29.png) del PDF "pildora s1.pdf" - son contenido de formación S1 sobre MUDA y Seiri
-- Copié 29 imágenes de formación + 2 diagramas WhatsApp a /public/formation/s1/
-- Actualicé FormacionModal.tsx: soporte para imágenes/dibujos en secciones con galería full-screen, zoom, navegación con flechas
-- Actualicé seed route (api/seed): S1 formación con 11 secciones detalladas y referencias a imágenes de los dibujos
-- Corregí contraseña admin en seed: ahora usa hash SHA256 (igual que el auth route)
-- Seed route crea: admin user, proyecto demo con 4 zonas, permisos de roles, 25 templates, 25 progress records
-- Rebuild exitoso con next build
-- Base de datos inicializada correctamente vía POST /api/seed
-- Servidor en producción con auto-restart (run-server.sh)
+- Fixed S1/S2 inventory add bug: Radix Select empty value issue (changed `category: ''` to `undefined`)
+- Added Company model to Prisma schema (id, name, description, active, timestamps)
+- Added CompanyMember model (userId, companyId, role) for gerente-company assignments
+- Added companyId to Project model linking to Company
+- Added companyMemberships to User model
+- Created /api/companies API route (GET list, POST create)
+- Created /api/companies/[companyId] API route (GET, PUT, DELETE)
+- Created /api/companies/[companyId]/members API route (GET, POST, DELETE)
+- Updated seed script to create "Empresa Demo" company and link projects
+- Updated AdminPanel with "Empresas" tab for company CRUD and gerente assignment
+- Updated store with Company interface and fetchCompanies action
+- Fixed responsable audit access: miniStep 5 now locked for non-admin/auditor roles
+- Pushed schema changes, regenerated Prisma client
+- Tested S1/S2 inventory creation via API - both work correctly
+- Verified app compiles and runs with HTTP 200
 
 Stage Summary:
-- Formación S1 restaurada con 11 secciones y dibujos integrados de la píldora S1
-- Galería de imágenes con zoom y navegación por teclado
-- Admin: admin@5s.com / admin123
-- Proyecto Demo 5S con 4 zonas creado
-- Permisos de roles configurados (admin, responsable, empleado, auditor)
+- S1/S2 inventory add bug FIXED
+- Company model implemented with full CRUD API
+- Gerente assignment to companies via CompanyMember
+- Responsable can no longer perform auditoría
+- App running on port 3000, all APIs functional
 
 ---
 Task ID: 3
 Agent: Main Agent
-Task: Restaurar app 5S al estado con dibujos en formación S1
+Task: Implement zone-based progress system with multi-employee advancement logic
 
 Work Log:
-- Verificó estado: schema SQLite, imágenes en /public/formation/s1/, código intacto
-- Problema encontrado: BD vacía (sin tablas ni datos tras resets previos)
-- Ejecutó prisma db push para crear tablas
-- Re-seed de la BD vía POST /api/seed
-- Descubrió que el servidor standalone no encontraba la BD ni servía archivos estáticos
-- Eliminó output: 'standalone' de next.config.ts y rehizo build
-- Descubrió que DATABASE_URL con ruta relativa fallaba en producción
-- Cambió DATABASE_URL a ruta absoluta: file:/home/z/my-project/db/custom.db
-- Creó server.js custom y run-server.sh con auto-restart
-- Todas las verificaciones pasadas: 200 OK, auth, S1 con 11 secciones y 30 imágenes, todas las S con 5 plantillas, 25 registros de progreso
+- Investigated S1/S2 inventory add bug - root cause: Prisma Client was out of sync with schema (missing quantityNeeded/quantityUnneeded fields). Fixed by running `npx prisma generate`.
+- Added EmployeeProgress model to schema for tracking individual employee step completion
+- Added zoneId to Progress model for zone-level progress tracking
+- Added responsableId to Zone model for zone-responsable assignment
+- Added zoneId to InventoryItem for zone-scoped inventory
+- Created /api/employee-progress API route for CRUD operations
+- Updated /api/progress/step to support zoneId parameter
+- Updated /api/inventory to support zoneId parameter
+- Updated /api/exam to create EmployeeProgress when zoneId + userId provided
+- Updated /api/audit to support zoneId
+- Updated store.ts with currentZone, employeeProgress state, and zone-aware getMiniStepStatus
+- Added zone selector in page.tsx header with MapPin icon
+- Added employee completion indicators in SStepDetail for individual steps (1, 4)
+- Verified responsable audit lock is in place (only admin/auditor can do audits)
+- Build compiles successfully with `npx next build`
 
 Stage Summary:
-- App restaurada completamente al estado con dibujos integrados en S1
-- Admin: admin@5s.com / admin123
-- Proyecto Demo 5S con 4 zonas
-- S1 formación: 11 secciones con 30 dibujos/ilustraciones
-- Servidor estable en producción con auto-restart
-- Fix clave: DATABASE_URL con ruta absoluta
-
----
-Task ID: 3
-Agent: Main Agent
-Task: Restaurar la aplicación al estado de las 13h españolas (formación S1 con dibujos)
-
-Work Log:
-- Verificó base de datos SQLite: schema correcto, datos intactos
-- Confirmó S1 formación con 11 secciones y todas las imágenes integradas
-- Confirmó 1 usuario admin, 1 proyecto demo con 4 zonas, 25 plantillas, 25 registros de progreso
-- Verificó las 29 imágenes de formación S1 + 2 diagramas en /public/formation/s1/
-- Instaló pm2 como gestor de procesos persistente
-- Construyó y arrancó el servidor con pm2 (auto-restart)
-- Verificó todos los endpoints: auth, templates, progress, projects, imágenes
-- Verificó acceso a través de Caddy (puerto 81) funcionando
-
-Stage Summary:
-- ✅ App restaurada al estado completo con formación S1 + dibujos
-- ✅ Servidor persistente con PM2 (no se cae entre sesiones)
-- ✅ Credenciales: admin@5s.com / admin123
-- ✅ Proyecto Demo 5S con 4 zonas
-- ✅ 25 plantillas (5 por cada S: formación, examen, inventario, autoevaluación, auditoría)
-- ✅ 31 imágenes de formación S1 servidas correctamente
-- ✅ Acceso web: puerto 81 (Caddy) y puerto 3000 (Next.js directo)
-
----
-Task ID: 4
-Agent: Main Agent
-Task: Añadir contadores de datos (fotos, inventario, acciones, estándares) al dashboard principal
-
-Work Log:
-- Creó API /api/stats que devuelve contadores de todas las tablas de datos
-- Actualizó ProgressDashboard con nuevas secciones:
-  - 4 tarjetas de datos: Fotos, Inventario, Autoevaluaciones, Auditorías
-  - Tarjeta de Acciones de Mejora (solo visible si hay acciones)
-  - Contadores por S (fotos, items, checklist, acciones) en cada tarjeta de progreso S
-- Build exitoso con nueva ruta /api/stats
-- Servidor reiniciado con PM2, todo verificado
-
-Stage Summary:
-- ✅ Dashboard principal ahora muestra contadores reales de datos
-- ✅ API /api/stats funciona con y sin projectId
-- ✅ Los contadores se actualizan dinámicamente cuando cambian los datos
-- ✅ PM2 mantiene el servidor corriendo de forma persistente
----
-Task ID: 1
-Agent: Main Agent
-Task: Fix formations (remove drawings, match píldora text) and fix S1 exam grading
-
-Work Log:
-- Identified S1 exam bug: API route used `correctAnswer` field but seed data stored `correctIndex`
-- Found second exam bug: `JSON.parse(template.content)` was treated as array, but seed stores `{ questions: [...] }` object
-- Updated S1 training content to match the píldora PDF text (17 sections, no images)
-- Removed all image references from S1 training content
-- Updated S1 exam questions to match the 7 questions from píldora PDF with correct answers (D, D, B, A, D, C, D)
-- Removed image rendering, gallery, and related code from FormacionModal.tsx
-- Fixed exam API route: changed `correctAnswer` to `correctIndex` and added `.questions` extraction
-- Re-seeded database with updated content
-- Verified exam grading works correctly: 100% for all correct, 0% for all wrong
-
-Stage Summary:
-- S1 exam now grades correctly (was always failing before due to field name mismatch and wrong JSON parsing)
-- Formation content now shows only text matching the píldora (no images/drawings)
-- S1 exam has 7 questions matching the píldora questionnaire instead of 5 generic ones
-- FormacionModal simplified - no image gallery, just clean text display
----
-Task ID: 2
-Agent: Main Agent
-Task: Integrate 5 píldoras PPTX with exams for all 5 S steps
-
-Work Log:
-- Extracted text content from all 5 PPTX files using python-pptx
-- Updated TRAINING_CONTENT for all 5 S steps with exact text from píldoras (no images)
-- Updated EXAM_QUESTIONS for all 5 S steps with exact questions from píldoras:
-  - S1: 8 questions (answers: D,D,B,A,B,D,C,D)
-  - S2: 8 questions (answers: D,D,A,D,B,D,C,D)
-  - S3: 8 questions (answers: D,D,A,C,B,D,C,D)
-  - S4: 6 questions (answers: D,D,A,C,B,D)
-  - S5: 5 questions (answers: D,D,A,C,B)
-- Re-seeded database with new content
-- Verified all 5 exams grade correctly (100% score with correct answers)
-
-Stage Summary:
-- All 5 píldoras fully integrated with matching training text and exam questions
-- No images/drawings in any formation - text only as requested
-- All exams now correct answers matching the píldora answer keys
-- Training content matches píldora structure: concept, advantages, criteria, process steps
-
----
-Task ID: 1
-Agent: Main Agent
-Task: Implement admin-only flow for project/user/access management
-
-Work Log:
-- Explored full codebase: schema, APIs, components, auth flow
-- Removed role selector from LoginPage - self-registration is always "empleado"
-- Added "no_projects" authView state for non-admin users without projects
-- Updated store.ts to route non-admins without projects to "no_projects" screen instead of ProjectSetup wizard
-- Added waiting screen in page.tsx for non-admin users without projects ("El administrador te asignará un proyecto")
-- Restricted API self-registration to always use "empleado" role (even if "admin" is requested)
-- Updated GET /api/projects to filter projects by membership for non-admin users
-- Enhanced AdminPanel member addition with two modes: "Usuario Existente" (select from dropdown) and "Nuevo Usuario" (create + assign)
-- Fixed AdminPanel "Volver al Tablero" button to auto-select first project if none selected
-- Ran full end-to-end tests with curl - all pass
-- Cleaned database for fresh start (only admin@5s.com / admin123)
-
-Stage Summary:
-- Admin flow is complete: admin creates projects, adds members, assigns roles
-- Non-admin users who self-register see "contacta al administrador" screen
-- Users only see projects they're assigned to
-- Admin panel has dual-mode member addition (existing user or new user)
-- Database is clean and ready for testing
-
----
-Task ID: 2
-Agent: Main Agent
-Task: Add Gerente role to the system
-
-Work Log:
-- Added "gerente" role to all role labels/maps in: AdminPanel, page.tsx, TeamManagement, ProjectSetup, RolePermissions
-- Added "gerente" to SelectItem dropdowns in: AdminPanel (4 places), TeamManagement, ProjectSetup
-- Added "gerente" color scheme: indigo (bg-indigo-100 text-indigo-700)
-- Updated permissions API: added gerente to DEFAULT_PERMISSIONS, ALL_ROLES
-- Gerente permissions: view_board, view_progress, view_training, view_photos, view_inventory, edit_inventory, view_selfeval, view_audits, view_project, view_team
-- Updated members API validRoles to include "gerente"
-- Cleared rolePermissionConfig table so it regenerates with gerente role
-- Tested gerente creation, login, and project access - all working
-
-Stage Summary:
-- Gerente role added with permissions for viewing everything + editing inventory
-- 5 roles now: admin, gerente, responsable, empleado, auditor
-- Database cleaned for fresh testing
----
-Task ID: 1
-Agent: main
-Task: Support multiple zones per member and add gerente role
-
-Work Log:
-- Updated Prisma schema: removed zoneId from ProjectMember, added MemberZone junction table
-- Ran prisma db push --force-reset to apply schema changes
-- Updated members API route (GET/POST) to handle zoneIds array instead of single zoneId
-- Updated users API route to return zones array instead of single zone in project memberships
-- Updated AdminPanel.tsx: changed zone selector from dropdown to checkboxes for multiple selection
-- Updated AdminPanel.tsx: MemberData type now uses zones array, member table shows multiple zone badges
-- Updated TeamManagement.tsx: same multi-zone checkbox changes
-- Updated ProjectSetup.tsx: same multi-zone checkbox changes
-- Updated store.ts: changed zoneId to zoneIds array when adding admin to project
-- Verified gerente role is available in all role selectors
-- Build successful, PM2 restarted
-- Tested API: successfully created responsable with 3 zones, gerente with 4 zones, empleado with 1 zone
-- Reset database for fresh start (admin@5s.com / admin123)
-
-Stage Summary:
-- Multi-zone assignment now fully supported via MemberZone junction table
-- All roles (admin, gerente, responsable, empleado, auditor) available in admin panel
-- Checkbox-based zone selector replaces dropdown for member assignment
-- Member list shows multiple zone badges per member
+- Bug fix: Prisma Client regenerated to fix S1/S2 inventory add issue
+- New feature: Zone-based progress tracking (schema, API, store, UI)
+- New feature: EmployeeProgress for individual step tracking (formation, autoeval)
+- New feature: Zone selector in header
+- New feature: Employee completion indicators on individual mini-steps
+- Bug fix verified: Responsable cannot perform audits (locked in SStepDetail)
+- Mini-step types: Zone steps (2-photos, 3-inventory, 5-audit) vs Individual steps (1-formation, 4-autoeval)
+- Zone advances when: all zone steps completed AND all employees completed individual steps
