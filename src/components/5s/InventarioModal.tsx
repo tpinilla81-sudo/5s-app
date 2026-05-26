@@ -642,25 +642,42 @@ export default function InventarioModal({ open, onClose, sStep, miniStep }: Inve
               </Card>
             )}
 
-            {/* 1S: Resumen elementos a enviar a la Jaula */}
-            {sStep === 1 && innecesarios.length > 0 && !showJaula && (
+            {/* 1S: Resumen elementos innecesarios con detalles */}
+            {sStep === 1 && innecesarios.length > 0 && (
               <Card className="border border-red-300">
                 <CardContent className="p-3">
-                  <h5 className="text-sm font-semibold text-red-700 mb-2">Elementos a enviar a la Jaula</h5>
-                  <div className="space-y-1">
-                    {innecesarios.map(item => (
-                      <div key={item.id} className="flex items-center justify-between text-xs bg-red-50 rounded p-1.5">
-                        <span className="font-medium">{item.name}</span>
-                        <div className="flex items-center gap-2">
-                          <span className="text-muted-foreground">{item.location}</span>
-                          {item.quantityUnneeded > 0 && <span className="text-red-600">({item.quantityUnneeded} exc.)</span>}
-                          <span className="font-medium text-red-700">{item.price ? `${(item.price * (item.quantityUnneeded || item.quantity)).toFixed(2)} €` : ''}</span>
-                          <span className="text-muted-foreground">
-                            <ArrowRight className="h-3 w-3 inline" /> {item.action || item.extra?.decision || 'Jaula'}
-                          </span>
-                        </div>
-                      </div>
-                    ))}
+                  <h5 className="text-sm font-semibold text-red-700 mb-2">Elementos Innecesarios</h5>
+                  <div className="overflow-x-auto rounded-lg border">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="text-xs">Elemento</TableHead>
+                          <TableHead className="text-xs">Ubicación</TableHead>
+                          <TableHead className="text-xs text-center">Innec.</TableHead>
+                          <TableHead className="text-xs text-right">Precio (€)</TableHead>
+                          <TableHead className="text-xs">Estado</TableHead>
+                          <TableHead className="text-xs">Frec. uso</TableHead>
+                          <TableHead className="text-xs">Decisión</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {innecesarios.map(item => (
+                          <TableRow key={item.id} className="bg-red-50/50">
+                            <TableCell className="text-xs font-medium">{item.name}</TableCell>
+                            <TableCell className="text-xs text-muted-foreground">{item.location}</TableCell>
+                            <TableCell className="text-xs text-center text-red-700">{item.quantityUnneeded || item.quantity}</TableCell>
+                            <TableCell className="text-xs text-right font-medium text-red-700">{item.price ? `${(item.price * (item.quantityUnneeded || item.quantity)).toFixed(2)} €` : '—'}</TableCell>
+                            <TableCell className="text-xs">{String(item.extra?.estado ?? '—')}</TableCell>
+                            <TableCell className="text-xs">{String(item.extra?.frecuenciaUso ?? '—')}</TableCell>
+                            <TableCell className="text-xs">
+                              <Badge className={item.extra?.decision === 'Jaula' ? 'bg-red-100 text-red-800' : item.extra?.decision === 'Eliminar' ? 'bg-red-100 text-red-800' : item.extra?.decision === 'Reubicar' ? 'bg-blue-100 text-blue-800' : item.extra?.decision === 'Vender' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}>
+                                {String(item.extra?.decision || item.action || 'Jaula')}
+                              </Badge>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
                   </div>
                 </CardContent>
               </Card>

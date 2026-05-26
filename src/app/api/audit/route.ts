@@ -93,17 +93,18 @@ export async function POST(request: NextRequest) {
     if (checklistData) {
       try {
         const parsed = typeof checklistData === 'string' ? JSON.parse(checklistData) : checklistData
-        const nokItems = Object.entries(parsed).filter(([, val]: [string, any]) => val.status === 'nok')
+        // checklistData can be an array of AuditItemResult or an object with keys
+        const items = Array.isArray(parsed) ? parsed : Object.values(parsed)
+        const nokItems = items.filter((val: any) => val.status === 'nok')
 
-        for (const [itemId, val] of nokItems) {
-          const itemResult = val as { status: string; hallazgo?: string; mejora?: string; description?: string }
+        for (const itemResult of nokItems) {
           await db.actionItem.create({
             data: {
               sStep: sStepValue,
               miniStep: auditTypeValue === 'weekly' ? -1 : auditTypeValue === 'monthly' ? -2 : 5,
-              itemId: itemId,
-              itemDescription: itemResult.description || itemId,
-              hallazgo: itemResult.hallazgo || `Anomalía detectada en auditoría ${auditTypeValue}: ${itemId}`,
+              itemId: itemResult.itemId || 'unknown',
+              itemDescription: itemResult.description || itemResult.itemId || 'Disfunción detectada en auditoría',
+              hallazgo: itemResult.hallazgo || `Anomalía detectada en auditoría ${auditTypeValue}: ${itemResult.itemId || ''}`,
               mejora: itemResult.mejora || null,
               responsable: null,
               prioridad: 'media',

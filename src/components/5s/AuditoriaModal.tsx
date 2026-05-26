@@ -264,49 +264,76 @@ export default function AuditoriaModal({ open, onClose, sStep, miniStep }: Audit
         )}
 
         {!canAudit && !isCompleted ? null : isCompleted ? (
-          <div className="text-center py-8">
-            {finalScore >= AUDIT_PASS_THRESHOLD ? (
-              <CheckCircle className="h-16 w-16 text-green-500 mx-auto mb-3" />
-            ) : (
-              <AlertTriangle className="h-16 w-16 text-red-500 mx-auto mb-3" />
-            )}
-            <h3 className="text-xl font-bold mb-2">
-              {finalScore >= AUDIT_PASS_THRESHOLD ? '¡Auditoría Externa Completada!' : 'Auditoría No Superada'}
-            </h3>
-            <p className="text-lg mb-1">Puntuación Total: <strong>{finalScore}%</strong></p>
-            <div className="flex justify-center gap-3 my-2">
-              <Badge className="bg-blue-100 text-blue-800">Checklist: {scoring.checklistScore}%</Badge>
-              <Badge className="bg-green-100 text-green-800">Mejoras: +{scoring.mejorasScore}%</Badge>
+          <div className="space-y-4">
+            <div className="text-center py-4">
+              {finalScore >= AUDIT_PASS_THRESHOLD ? (
+                <CheckCircle className="h-16 w-16 text-green-500 mx-auto mb-3" />
+              ) : (
+                <AlertTriangle className="h-16 w-16 text-red-500 mx-auto mb-3" />
+              )}
+              <h3 className="text-xl font-bold mb-2">
+                {finalScore >= AUDIT_PASS_THRESHOLD ? 'Auditoría Externa Superada' : 'Auditoría No Superada'}
+              </h3>
+              <p className="text-lg mb-1">Puntuación Total: <strong>{finalScore}%</strong></p>
+              <div className="flex justify-center gap-3 my-2">
+                <Badge className="bg-blue-100 text-blue-800">Checklist: {scoring.checklistScore}%</Badge>
+                <Badge className="bg-green-100 text-green-800">Mejoras: +{scoring.mejorasScore}%</Badge>
+              </div>
+              <p className="text-muted-foreground">
+                {scoring.okCount} OK / {scoring.nokCount} NOK de {totalItems} puntos de verificación
+              </p>
+              <p className="text-sm text-muted-foreground mt-2">
+                Auditor: <strong>{auditorName}</strong>
+              </p>
             </div>
-            <p className="text-muted-foreground">
-              {scoring.okCount} OK / {scoring.nokCount} NOK de {totalItems} puntos de verificación
-            </p>
-            <p className="text-sm text-muted-foreground mt-2">
-              Auditor: <strong>{auditorName}</strong>
-            </p>
+
             {finalScore >= AUDIT_PASS_THRESHOLD ? (
-              <Badge className="mt-3 bg-green-500">Apto — Mini-paso completado</Badge>
+              <div className="text-center">
+                <Badge className="bg-green-500 text-lg px-4 py-1">Apto — Mini-paso completado</Badge>
+                <p className="text-sm text-muted-foreground mt-2">La auditoría ha sido registrada y el paso se marca como completado.</p>
+              </div>
             ) : (
-              <div className="mt-3 space-y-3">
-                <Badge className="bg-red-500">No Apto — Se requiere corrección</Badge>
-                {scoring.nokCount > 0 && (
-                  <div className="text-left max-w-md mx-auto mt-3">
-                    <p className="text-sm font-semibold text-red-800 mb-2">
-                      Se han generado {scoring.nokCount} disfunciones como plan de acción para subsanar:
-                    </p>
-                    <div className="space-y-1">
-                      {Object.values(results).filter(r => r.status === 'nok').map((nok, idx) => (
-                        <div key={nok.itemId} className="bg-red-50 border border-red-200 rounded p-2 text-xs">
-                          <span className="font-medium text-red-700">{nok.itemId}</span>
-                          {nok.hallazgo && <span className="text-red-600"> — {nok.hallazgo}</span>}
-                          {nok.mejora && <span className="text-amber-600"> → Mejora: {nok.mejora}</span>}
-                        </div>
-                      ))}
+              <div className="space-y-3">
+                <div className="text-center">
+                  <Badge className="bg-red-500 text-lg px-4 py-1">No Apto — Se requiere corrección</Badge>
+                  <p className="text-sm text-muted-foreground mt-2">
+                    Mínimo requerido: {AUDIT_PASS_THRESHOLD}%. Debes corregir las disfunciones y realizar una nueva auditoría.
+                  </p>
+                </div>
+
+                {/* Saved confirmation */}
+                <Card className="border-green-200 bg-green-50/30">
+                  <CardContent className="p-3">
+                    <div className="flex items-center gap-2 mb-1">
+                      <CheckCircle className="h-4 w-4 text-green-600" />
+                      <span className="text-sm font-semibold text-green-800">Auditoría guardada correctamente</span>
                     </div>
-                    <p className="text-xs text-muted-foreground mt-2">
-                      Las disfunciones han sido registradas como acciones de mejora y serán visibles por el responsable del área.
+                    <p className="text-xs text-green-700">
+                      El resultado de esta auditoría ({finalScore}%) ha sido registrado. Las disfunciones detectadas se han guardado como acciones de mejora en el Plan de Acción.
                     </p>
-                  </div>
+                  </CardContent>
+                </Card>
+
+                {scoring.nokCount > 0 && (
+                  <Card className="border-red-200">
+                    <CardContent className="p-3">
+                      <p className="text-sm font-semibold text-red-800 mb-2">
+                        {scoring.nokCount} disfunciones detectadas:
+                      </p>
+                      <div className="space-y-1 max-h-40 overflow-y-auto">
+                        {Object.values(results).filter(r => r.status === 'nok').map((nok) => (
+                          <div key={nok.itemId} className="bg-red-50 border border-red-200 rounded p-2 text-xs">
+                            <span className="font-medium text-red-700">{nok.itemId}</span>
+                            {nok.hallazgo && <span className="text-red-600"> — {nok.hallazgo}</span>}
+                            {nok.mejora && <span className="text-amber-600"> → Mejora: {nok.mejora}</span>}
+                          </div>
+                        ))}
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-2">
+                        Estas disfunciones están disponibles en el Plan de Acción para su seguimiento.
+                      </p>
+                    </CardContent>
+                  </Card>
                 )}
               </div>
             )}
