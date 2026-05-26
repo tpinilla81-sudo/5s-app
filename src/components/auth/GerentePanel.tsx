@@ -93,7 +93,11 @@ interface ActionPlanItem {
 
 type TabType = 'indicadores' | 'jaula' | 'acciones';
 
-export default function GerentePanel() {
+interface GerentePanelProps {
+  embedded?: boolean;
+}
+
+export default function GerentePanel({ embedded }: GerentePanelProps = {}) {
   const { setCurrentView, currentUser, projects } = use5SStore();
   const [stats, setStats] = useState<CompanyStats | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -246,30 +250,32 @@ export default function GerentePanel() {
   ];
 
   return (
-    <div className="min-h-screen flex flex-col bg-gradient-to-b from-indigo-50/50 to-white">
-      {/* Header */}
-      <header className="border-b bg-white/80 backdrop-blur-sm sticky top-0 z-10">
-        <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Button variant="ghost" size="sm" onClick={() => setCurrentView('board')} className="gap-1.5">
-              <ArrowLeft className="h-4 w-4" />
-              Volver
-            </Button>
-            <div className="w-px h-6 bg-gray-200" />
-            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-500 to-indigo-600 flex items-center justify-center text-white font-bold text-sm">
-              G
-            </div>
-            <div>
-              <h1 className="text-lg font-bold text-gray-900">Panel de Gerencia</h1>
-              <p className="text-xs text-muted-foreground">Indicadores globales de la empresa ({projects.length} proyectos)</p>
+    <div className={`flex flex-col ${embedded ? '' : 'min-h-screen'} bg-gradient-to-b from-indigo-50/50 to-white`}>
+      {/* Header - only shown in standalone mode */}
+      {!embedded && (
+        <header className="border-b bg-white/80 backdrop-blur-sm sticky top-0 z-10">
+          <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <Button variant="ghost" size="sm" onClick={() => setCurrentView('board')} className="gap-1.5">
+                <ArrowLeft className="h-4 w-4" />
+                Volver
+              </Button>
+              <div className="w-px h-6 bg-gray-200" />
+              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-500 to-indigo-600 flex items-center justify-center text-white font-bold text-sm">
+                G
+              </div>
+              <div>
+                <h1 className="text-lg font-bold text-gray-900">Panel de Gerencia</h1>
+                <p className="text-xs text-muted-foreground">Indicadores globales de la empresa ({projects.length} proyectos)</p>
+              </div>
             </div>
           </div>
-        </div>
-      </header>
+        </header>
+      )}
 
       {/* Tabs */}
       <div className="border-b bg-white">
-        <div className="max-w-6xl mx-auto px-4">
+        <div className={embedded ? '' : 'max-w-6xl mx-auto px-4'}>
           <div className="flex gap-1">
             {tabs.map(tab => (
               <button
@@ -297,7 +303,7 @@ export default function GerentePanel() {
       </div>
 
       {/* Content */}
-      <main className="flex-1 max-w-6xl mx-auto w-full px-4 py-6">
+      <main className={`flex-1 w-full px-4 py-6 ${embedded ? '' : 'max-w-6xl mx-auto'}`}>
         {/* TAB: Indicadores */}
         {activeTab === 'indicadores' && (
           isLoading ? (

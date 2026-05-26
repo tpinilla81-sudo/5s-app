@@ -72,7 +72,11 @@ interface ActionItemData {
   createdAt: string;
 }
 
-export default function MaintenanceView() {
+interface MaintenanceViewProps {
+  embedded?: boolean;
+}
+
+export default function MaintenanceView({ embedded }: MaintenanceViewProps = {}) {
   const { setCurrentView, currentProject, currentZone, fetchProgress } = use5SStore();
   const [showQuarterlyAudit, setShowQuarterlyAudit] = useState(false);
   const [showWeeklyAudit, setShowWeeklyAudit] = useState(false);
@@ -274,38 +278,40 @@ export default function MaintenanceView() {
 
   return (
     <div className="space-y-4">
-      {/* Header */}
-      <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
-        <div className="flex items-center justify-between mb-4">
-          <Button variant="ghost" size="sm" onClick={() => setCurrentView('board')} className="gap-1.5">
-            <ArrowLeft className="h-4 w-4" />
-            Volver al Tablero 5S
-          </Button>
-        </div>
+      {/* Header - only in standalone mode */}
+      {!embedded && (
+        <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
+          <div className="flex items-center justify-between mb-4">
+            <Button variant="ghost" size="sm" onClick={() => setCurrentView('board')} className="gap-1.5">
+              <ArrowLeft className="h-4 w-4" />
+              Volver al Tablero 5S
+            </Button>
+          </div>
+        </motion.div>
+      )}
 
-        <Card className="border-green-200 bg-gradient-to-r from-green-50 to-emerald-50">
-          <CardContent className="p-6">
-            <div className="flex items-center gap-4">
-              <div className="w-16 h-16 rounded-full bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center text-white shadow-lg">
-                <Trophy className="h-8 w-8" />
-              </div>
-              <div className="flex-1">
-                <h2 className="text-xl font-bold text-green-900">Fase de Mejora Continua</h2>
-                <p className="text-sm text-green-700 mt-1">
-                  Taller de implementación completado. La zona está en <strong>mejora continua permanente</strong> con auditorías periódicas, plan de acción y contadores.
-                </p>
-              </div>
-              <div className="hidden sm:flex items-center gap-1">
-                {S_STEPS.map(s => (
-                  <div key={s.id} className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold" style={{ backgroundColor: s.color }}>
-                    S{s.id}
-                  </div>
-                ))}
-              </div>
+      <Card className="border-green-200 bg-gradient-to-r from-green-50 to-emerald-50">
+        <CardContent className="p-6">
+          <div className="flex items-center gap-4">
+            <div className="w-16 h-16 rounded-full bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center text-white shadow-lg">
+              <Trophy className="h-8 w-8" />
             </div>
-          </CardContent>
-        </Card>
-      </motion.div>
+            <div className="flex-1">
+              <h2 className="text-xl font-bold text-green-900">Fase de Mejora Continua</h2>
+              <p className="text-sm text-green-700 mt-1">
+                Taller de implementación completado. La zona está en <strong>mejora continua permanente</strong> con auditorías periódicas, plan de acción y contadores.
+              </p>
+            </div>
+            <div className="hidden sm:flex items-center gap-1">
+              {S_STEPS.map(s => (
+                <div key={s.id} className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold" style={{ backgroundColor: s.color }}>
+                  S{s.id}
+                </div>
+              ))}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Tab navigation */}
       <div className="flex gap-1 overflow-x-auto pb-1">

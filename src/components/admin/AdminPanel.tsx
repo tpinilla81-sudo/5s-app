@@ -117,7 +117,11 @@ const PRESET_COLORS = ['#8B5CF6', '#EAB308', '#3B82F6', '#F43F5E', '#F97316', '#
 
 // ─── Component ───────────────────────────────────────────────────────────────
 
-export default function AdminPanel() {
+interface AdminPanelProps {
+  embedded?: boolean;
+}
+
+export default function AdminPanel({ embedded }: AdminPanelProps = {}) {
   const { setCurrentView, fetchProjects, fetchCompanies, projects, setCurrentProject, currentProject } = use5SStore()
   const [activeTab, setActiveTab] = useState<'projects' | 'users' | 'companies'>('projects')
 
@@ -683,33 +687,34 @@ export default function AdminPanel() {
 
   // ─── Render ──────────────────────────────────────────────────────────────
   return (
-    <div className="min-h-screen flex flex-col bg-gradient-to-b from-gray-50 to-white">
-      {/* Header */}
-      <header className="border-b bg-white/80 backdrop-blur-sm sticky top-0 z-10">
-        <div className="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Button variant="ghost" size="sm" onClick={() => {
-              // If no current project but projects exist, select the first one
-              if (!currentProject && allProjects.length > 0) {
-                setCurrentProject(allProjects[0])
-              }
-              setCurrentView('board')
-            }} className="gap-1.5">
-              <ArrowLeft className="h-4 w-4" />
-              Volver al Tablero
-            </Button>
-            <div className="w-px h-6 bg-gray-200" />
-            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-purple-600 flex items-center justify-center text-white font-bold text-sm">
-              A
+    <div className={`flex flex-col ${embedded ? '' : 'min-h-screen'} bg-gradient-to-b from-gray-50 to-white`}>
+      {/* Header - only shown in standalone mode */}
+      {!embedded && (
+        <header className="border-b bg-white/80 backdrop-blur-sm sticky top-0 z-10">
+          <div className="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <Button variant="ghost" size="sm" onClick={() => {
+                if (!currentProject && allProjects.length > 0) {
+                  setCurrentProject(allProjects[0])
+                }
+                setCurrentView('board')
+              }} className="gap-1.5">
+                <ArrowLeft className="h-4 w-4" />
+                Volver al Tablero
+              </Button>
+              <div className="w-px h-6 bg-gray-200" />
+              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-purple-600 flex items-center justify-center text-white font-bold text-sm">
+                A
+              </div>
+              <h1 className="text-lg font-bold text-gray-900">Panel de Administración</h1>
             </div>
-            <h1 className="text-lg font-bold text-gray-900">Panel de Administración</h1>
           </div>
-        </div>
-      </header>
+        </header>
+      )}
 
       {/* Tabs */}
       <div className="border-b bg-white">
-        <div className="max-w-5xl mx-auto px-4 flex gap-1">
+        <div className={`flex gap-1 ${embedded ? '' : 'max-w-5xl mx-auto px-4'}`}>
           <button
             onClick={() => { setActiveTab('projects'); setSelectedProjectId(null) }}
             className={`flex items-center gap-2 px-5 py-3 text-sm font-medium border-b-2 transition-colors ${
@@ -747,7 +752,7 @@ export default function AdminPanel() {
       </div>
 
       {/* Content */}
-      <main className="flex-1 max-w-5xl mx-auto w-full px-4 py-6">
+      <main className={`flex-1 w-full px-4 py-6 ${embedded ? '' : 'max-w-5xl mx-auto'}`}>
         <AnimatePresence mode="wait">
           {/* ═══ PROJECTS TAB ═══ */}
           {activeTab === 'projects' && (

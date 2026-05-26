@@ -17,6 +17,9 @@ import LoginPage from '@/components/auth/LoginPage';
 import ProjectSetup from '@/components/auth/ProjectSetup';
 import TeamManagement from '@/components/auth/TeamManagement';
 import RolePermissions from '@/components/auth/RolePermissions';
+import AdminPanel from '@/components/admin/AdminPanel';
+import MaintenanceView from '@/components/5s/MaintenanceView';
+import GerentePanel from '@/components/auth/GerentePanel';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -26,14 +29,11 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import AdminPanel from '@/components/admin/AdminPanel';
-import MaintenanceView from '@/components/5s/MaintenanceView';
-import GerentePanel from '@/components/auth/GerentePanel';
 import {
   Loader2, RefreshCw, LogOut, Settings, ChevronDown, Shield, ShieldCheck, Unlock, Lock,
   LayoutDashboard, Wrench, Sparkles, BarChart3, FileText, MapPin, ListChecks,
   ClipboardList, GraduationCap, Camera, CheckSquare, Trophy, ChevronRight,
-  Lock as LockIcon, AlertTriangle
+  Lock as LockIcon, AlertTriangle, Building2, Zap
 } from 'lucide-react';
 
 const MODAL_MAP: Record<string, React.ComponentType<{
@@ -73,11 +73,9 @@ const MINI_STEP_ICONS: Record<string, React.ComponentType<{ className?: string }
 
 export default function HomePage() {
   const {
-    currentView,
     activeModal,
     activeMiniStep,
     selectSStep,
-    setCurrentView,
     openModal,
     closeModal,
     seedDatabase,
@@ -95,8 +93,9 @@ export default function HomePage() {
     getMiniStepStatus,
     isQuesitoEarned,
     progress,
-    fetchProgress,
     selectedSStep,
+    activeTab,
+    setActiveTab,
   } = use5SStore();
 
   const [isSeeding, setIsSeeding] = useState(false);
@@ -147,7 +146,6 @@ export default function HomePage() {
   };
 
   const handleOpenModal = (type: string, miniStep: number, sStep: number) => {
-    // Ensure selectedSStep is set for the modal
     if (sStep && !selectedSStep) {
       selectSStep(sStep);
     } else if (sStep && selectedSStep !== sStep) {
@@ -194,6 +192,20 @@ export default function HomePage() {
   const isGlobalModal = activeModal === 'globalActionPlan' || activeModal === 'globalInventory';
   const ActiveModalComponent = !isGlobalModal && activeModal ? MODAL_MAP[activeModal] : null;
 
+  // Available tabs based on role
+  const availableTabs: { key: 'board' | 'gerente' | 'admin' | 'maintenance'; label: string; icon: React.ReactNode }[] = [
+    { key: 'board', label: 'Tablero 5S', icon: <LayoutDashboard className="h-3.5 w-3.5" /> },
+  ];
+  if (canSeeGerentePanel) {
+    availableTabs.push({ key: 'gerente', label: 'Gerencia', icon: <BarChart3 className="h-3.5 w-3.5" /> });
+  }
+  if (isAdmin) {
+    availableTabs.push({ key: 'admin', label: 'Admin', icon: <Shield className="h-3.5 w-3.5" /> });
+  }
+  if (is5SCompleted()) {
+    availableTabs.push({ key: 'maintenance', label: 'Mejora Continua', icon: <Sparkles className="h-3.5 w-3.5" /> });
+  }
+
   // Loading screen
   if (isAuthLoading) {
     return (
@@ -226,15 +238,8 @@ export default function HomePage() {
     );
   }
 
-  // Show Admin Panel
-  if (currentView === 'admin' && isAdmin) return <AdminPanel />;
-  // Show Gerente Panel
-  if (currentView === 'gerente' && canSeeGerentePanel) return <GerentePanel />;
-  // Show Maintenance
-  if (currentView === 'maintenance') return <MaintenanceView />;
-
   // ============================================================
-  // SINGLE-SCREEN DASHBOARD
+  // SINGLE-SCREEN LAYOUT WITH TABS
   // ============================================================
   return (
     <div className="h-screen flex flex-col bg-gradient-to-b from-gray-50 to-white overflow-hidden">
@@ -286,18 +291,6 @@ export default function HomePage() {
                   <ShieldCheck className="h-3 w-3" /> Auditoría
                 </Button>
               </>
-            )}
-            {isAdmin && (
-              <Button variant="outline" size="sm" onClick={() => setCurrentView('admin')}
-                className="gap-1 text-[10px] h-7 border-purple-300 text-purple-600 hover:bg-purple-50">
-                <LayoutDashboard className="h-3 w-3" /> Admin
-              </Button>
-            )}
-            {canSeeGerentePanel && (
-              <Button variant="outline" size="sm" onClick={() => setCurrentView('gerente')}
-                className="gap-1 text-[10px] h-7 border-indigo-300 text-indigo-600 hover:bg-indigo-50">
-                <BarChart3 className="h-3 w-3" /> Gerencia
-              </Button>
             )}
             {isAdmin && (
               <Button variant={adminFreeNavigation ? 'default' : 'outline'} size="sm"
@@ -362,6 +355,24 @@ export default function HomePage() {
             )}
           </div>
         </div>
+
+        {/* Tab Navigation Bar */}
+        <div className="border-t bg-white flex items-center gap-0 px-4">
+          {availableTabs.map(tab => (
+            <button
+              key={tab.key}
+              onClick={() => setActiveTab(tab.key)}
+              className={`flex items-center gap-1.5 px-4 py-2 text-xs font-medium border-b-2 transition-all ${
+                activeTab === tab.key
+                  ? 'border-green-500 text-green-700 bg-green-50/50'
+                  : 'border-transparent text-muted-foreground hover:text-foreground hover:border-gray-300'
+              }`}
+            >
+              {tab.icon}
+              {tab.label}
+            </button>
+          ))}
+        </div>
       </header>
 
       {/* Main content - SINGLE SCREEN */}
@@ -372,148 +383,176 @@ export default function HomePage() {
             <p className="text-muted-foreground">{isSeeding ? 'Inicializando datos...' : 'Cargando...'}</p>
           </div>
         ) : (
-          <div className="flex-1 flex overflow-hidden">
-            {/* LEFT: Compact Board */}
-            <div className="w-[320px] shrink-0 flex flex-col items-center justify-center p-3 border-r bg-white/50 overflow-auto">
-              <Board5S onSStepClick={handleSStepClick} />
-              {/* Quesitos mini display */}
-              <div className="flex gap-2 mt-2">
-                {S_STEPS.map(s => {
-                  const earned = isQuesitoEarned(s.id);
-                  return (
-                    <div key={s.id} className="flex flex-col items-center" title={`${s.name}: ${earned ? 'Conseguido' : 'Pendiente'}`}>
-                      <div className={`w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold border-2 transition-all ${earned ? 'text-white shadow-md' : 'bg-white text-gray-400 border-gray-200'}`}
-                        style={earned ? { backgroundColor: s.color, borderColor: s.color } : undefined}>
-                        {earned ? '★' : s.id}
-                      </div>
-                      <span className="text-[8px] mt-0.5 font-medium" style={{ color: earned ? s.color : '#9ca3af' }}>
-                        S{s.id}
-                      </span>
+          <div className="flex-1 overflow-auto">
+            <AnimatePresence mode="wait">
+              {/* ═══ TAB: BOARD 5S ═══ */}
+              {activeTab === 'board' && (
+                <motion.div key="board" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="h-full flex">
+                  {/* LEFT: Compact Board */}
+                  <div className="w-[320px] shrink-0 flex flex-col items-center justify-center p-3 border-r bg-white/50 overflow-auto">
+                    <Board5S onSStepClick={handleSStepClick} />
+                    {/* Quesitos mini display */}
+                    <div className="flex gap-2 mt-2">
+                      {S_STEPS.map(s => {
+                        const earned = isQuesitoEarned(s.id);
+                        return (
+                          <div key={s.id} className="flex flex-col items-center" title={`${s.name}: ${earned ? 'Conseguido' : 'Pendiente'}`}>
+                            <div className={`w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold border-2 transition-all ${earned ? 'text-white shadow-md' : 'bg-white text-gray-400 border-gray-200'}`}
+                              style={earned ? { backgroundColor: s.color, borderColor: s.color } : undefined}>
+                              {earned ? '★' : s.id}
+                            </div>
+                            <span className="text-[8px] mt-0.5 font-medium" style={{ color: earned ? s.color : '#9ca3af' }}>
+                              S{s.id}
+                            </span>
+                          </div>
+                        );
+                      })}
                     </div>
-                  );
-                })}
-              </div>
-              {/* Mejora Continua button */}
-              {is5SCompleted() && (
-                <Button onClick={() => setCurrentView('maintenance')}
-                  className="mt-3 gap-1 bg-gradient-to-r from-green-500 to-emerald-600 text-white shadow text-xs h-7"
-                  size="sm">
-                  <Sparkles className="h-3 w-3" /> Mejora Continua
-                </Button>
-              )}
-            </div>
+                    {/* Mejora Continua button */}
+                    {is5SCompleted() && (
+                      <Button onClick={() => setActiveTab('maintenance')}
+                        className="mt-3 gap-1 bg-gradient-to-r from-green-500 to-emerald-600 text-white shadow text-xs h-7"
+                        size="sm">
+                        <Sparkles className="h-3 w-3" /> Mejora Continua
+                      </Button>
+                    )}
+                  </div>
 
-            {/* RIGHT: All 5 S steps with mini-steps */}
-            <div className="flex-1 overflow-auto p-3">
-              <div className="grid grid-cols-1 gap-2">
-                {S_STEPS.map(s => {
-                  const earned = isQuesitoEarned(s.id);
-                  const sProgress = progress.filter(p => p.sStep === s.id);
-                  const completedCount = sProgress.filter(p => p.completed).length;
+                  {/* RIGHT: All 5 S steps with mini-steps */}
+                  <div className="flex-1 overflow-auto p-3">
+                    <div className="grid grid-cols-1 gap-2">
+                      {S_STEPS.map(s => {
+                        const earned = isQuesitoEarned(s.id);
+                        const sProgress = progress.filter(p => p.sStep === s.id);
+                        const completedCount = sProgress.filter(p => p.completed).length;
 
-                  return (
-                    <div key={s.id} className="flex items-stretch gap-0 rounded-xl border bg-white shadow-sm overflow-hidden hover:shadow-md transition-shadow">
-                      {/* S Label column */}
-                      <div
-                        className="w-20 shrink-0 flex flex-col items-center justify-center py-2 cursor-pointer select-none"
-                        style={{ backgroundColor: `${s.color}15` }}
-                        onClick={() => handleSStepClick(s.id)}
-                      >
-                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-white font-black text-lg shadow ${earned ? 'ring-2 ring-yellow-400' : ''}`}
-                          style={{ backgroundColor: s.color }}>
-                          {earned ? '★' : s.id}
-                        </div>
-                        <span className="text-[10px] font-bold mt-1 leading-tight text-center" style={{ color: s.color }}>
-                          {s.name}
-                        </span>
-                        <span className="text-[8px] text-muted-foreground">{s.japaneseName}</span>
-                        <span className="text-[9px] font-medium mt-0.5" style={{ color: s.color }}>
-                          {completedCount}/5
-                        </span>
-                      </div>
-
-                      {/* Mini-steps row */}
-                      <div className="flex-1 flex items-stretch gap-0">
-                        {MINI_STEPS.map(ms => {
-                          const status = getMiniStepStatus(s.id, ms.id);
-                          const isAuditLocked = ms.id === 5 && currentUser && currentUser.role !== 'admin' && currentUser.role !== 'auditor';
-                          const effectiveStatus = isAuditLocked ? 'locked' : status;
-                          const isLocked = effectiveStatus === 'locked';
-                          const isCompleted = effectiveStatus === 'completed';
-                          const stepProgress = sProgress.find(p => p.miniStep === ms.id);
-                          const IconComp = MINI_STEP_ICONS[ms.icon] || GraduationCap;
-                          const modalType = getModalType(ms.id, s.id);
-
-                          return (
-                            <button
-                              key={ms.id}
-                              className={`
-                                flex-1 min-w-0 flex flex-col items-center justify-center py-2 px-1 border-r last:border-r-0
-                                transition-all text-center relative
-                                ${isLocked ? 'opacity-40 cursor-not-allowed bg-gray-50' : 'cursor-pointer hover:bg-gray-50'}
-                                ${isCompleted ? 'bg-green-50/50' : ''}
-                              `}
-                              onClick={() => {
-                                if (!isLocked) {
-                                  handleOpenModal(modalType, ms.id, s.id);
-                                }
-                              }}
-                              disabled={isLocked}
-                              title={`${ms.name}${ms.descriptionByS?.[s.id] ? ': ' + ms.descriptionByS[s.id] : ''}${isAuditLocked ? ' (Solo auditores)' : ''}`}
+                        return (
+                          <div key={s.id} className="flex items-stretch gap-0 rounded-xl border bg-white shadow-sm overflow-hidden hover:shadow-md transition-shadow">
+                            {/* S Label column */}
+                            <div
+                              className="w-20 shrink-0 flex flex-col items-center justify-center py-2 cursor-pointer select-none"
+                              style={{ backgroundColor: `${s.color}15` }}
+                              onClick={() => handleSStepClick(s.id)}
                             >
-                              {/* Completion indicator dot */}
-                              <div className={`
-                                w-7 h-7 rounded-full flex items-center justify-center mb-0.5
-                                ${isCompleted ? 'bg-green-500 text-white' : isLocked ? 'bg-gray-200 text-gray-400' : 'text-white'}
-                              `}
-                                style={!isCompleted && !isLocked ? { backgroundColor: s.color } : undefined}
-                              >
-                                {isCompleted ? (
-                                  <span className="text-xs font-bold">✓</span>
-                                ) : isLocked ? (
-                                  <LockIcon className="h-3 w-3" />
-                                ) : (
-                                  <IconComp className="h-3.5 w-3.5" />
-                                )}
+                              <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-white font-black text-lg shadow ${earned ? 'ring-2 ring-yellow-400' : ''}`}
+                                style={{ backgroundColor: s.color }}>
+                                {earned ? '★' : s.id}
                               </div>
-                              <span className={`text-[9px] font-medium leading-tight ${isLocked ? 'text-gray-400' : isCompleted ? 'text-green-700' : 'text-gray-700'}`}>
-                                {ms.id === 3 && s === S_STEPS[4] ? 'Plan Acc.' : ms.name.length > 12 ? ms.name.split(' ')[0] : ms.name}
+                              <span className="text-[10px] font-bold mt-1 leading-tight text-center" style={{ color: s.color }}>
+                                {s.name}
                               </span>
-                              {/* Score badge */}
-                              {isCompleted && stepProgress?.score != null && (
-                                <span className="text-[8px] font-bold text-green-600">{stepProgress.score}%</span>
-                              )}
-                              {/* Audit locked reason */}
-                              {isAuditLocked && (
-                                <span className="text-[7px] text-amber-600 font-medium">Solo audit.</span>
-                              )}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
+                              <span className="text-[8px] text-muted-foreground">{s.japaneseName}</span>
+                              <span className="text-[9px] font-medium mt-0.5" style={{ color: s.color }}>
+                                {completedCount}/5
+                              </span>
+                            </div>
 
-              {/* Progress Summary */}
-              <div className="mt-3 grid grid-cols-5 gap-2">
-                {S_STEPS.map(s => {
-                  const earned = isQuesitoEarned(s.id);
-                  const sProgress = progress.filter(p => p.sStep === s.id);
-                  const completedCount = sProgress.filter(p => p.completed).length;
-                  const pct = Math.round((completedCount / 5) * 100);
-                  return (
-                    <div key={s.id} className="text-center">
-                      <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                        <div className="h-full rounded-full transition-all duration-500" style={{ width: `${pct}%`, backgroundColor: s.color }} />
-                      </div>
-                      <span className="text-[9px] text-muted-foreground">{pct}%</span>
+                            {/* Mini-steps row */}
+                            <div className="flex-1 flex items-stretch gap-0">
+                              {MINI_STEPS.map(ms => {
+                                const status = getMiniStepStatus(s.id, ms.id);
+                                const isAuditLocked = ms.id === 5 && currentUser && currentUser.role !== 'admin' && currentUser.role !== 'auditor';
+                                const effectiveStatus = isAuditLocked ? 'locked' : status;
+                                const isLocked = effectiveStatus === 'locked';
+                                const isCompleted = effectiveStatus === 'completed';
+                                const stepProgress = sProgress.find(p => p.miniStep === ms.id);
+                                const IconComp = MINI_STEP_ICONS[ms.icon] || GraduationCap;
+                                const modalType = getModalType(ms.id, s.id);
+
+                                return (
+                                  <button
+                                    key={ms.id}
+                                    className={`
+                                      flex-1 min-w-0 flex flex-col items-center justify-center py-2 px-1 border-r last:border-r-0
+                                      transition-all text-center relative
+                                      ${isLocked ? 'opacity-40 cursor-not-allowed bg-gray-50' : 'cursor-pointer hover:bg-gray-50'}
+                                      ${isCompleted ? 'bg-green-50/50' : ''}
+                                    `}
+                                    onClick={() => {
+                                      if (!isLocked) {
+                                        handleOpenModal(modalType, ms.id, s.id);
+                                      }
+                                    }}
+                                    disabled={isLocked}
+                                    title={`${ms.name}${ms.descriptionByS?.[s.id] ? ': ' + ms.descriptionByS[s.id] : ''}${isAuditLocked ? ' (Solo auditores)' : ''}`}
+                                  >
+                                    {/* Completion indicator dot */}
+                                    <div className={`
+                                      w-7 h-7 rounded-full flex items-center justify-center mb-0.5
+                                      ${isCompleted ? 'bg-green-500 text-white' : isLocked ? 'bg-gray-200 text-gray-400' : 'text-white'}
+                                    `}
+                                      style={!isCompleted && !isLocked ? { backgroundColor: s.color } : undefined}
+                                    >
+                                      {isCompleted ? (
+                                        <span className="text-xs font-bold">✓</span>
+                                      ) : isLocked ? (
+                                        <LockIcon className="h-3 w-3" />
+                                      ) : (
+                                        <IconComp className="h-3.5 w-3.5" />
+                                      )}
+                                    </div>
+                                    <span className={`text-[9px] font-medium leading-tight ${isLocked ? 'text-gray-400' : isCompleted ? 'text-green-700' : 'text-gray-700'}`}>
+                                      {ms.id === 3 && s === S_STEPS[4] ? 'Plan Acc.' : ms.name.length > 12 ? ms.name.split(' ')[0] : ms.name}
+                                    </span>
+                                    {/* Score badge */}
+                                    {isCompleted && stepProgress?.score != null && (
+                                      <span className="text-[8px] font-bold text-green-600">{stepProgress.score}%</span>
+                                    )}
+                                    {/* Audit locked reason */}
+                                    {isAuditLocked && (
+                                      <span className="text-[7px] text-amber-600 font-medium">Solo audit.</span>
+                                    )}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
-                  );
-                })}
-              </div>
-            </div>
+
+                    {/* Progress Summary */}
+                    <div className="mt-3 grid grid-cols-5 gap-2">
+                      {S_STEPS.map(s => {
+                        const earned = isQuesitoEarned(s.id);
+                        const sProgress = progress.filter(p => p.sStep === s.id);
+                        const completedCount = sProgress.filter(p => p.completed).length;
+                        const pct = Math.round((completedCount / 5) * 100);
+                        return (
+                          <div key={s.id} className="text-center">
+                            <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                              <div className="h-full rounded-full transition-all duration-500" style={{ width: `${pct}%`, backgroundColor: s.color }} />
+                            </div>
+                            <span className="text-[9px] text-muted-foreground">{pct}%</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+
+              {/* ═══ TAB: GERENTE ═══ */}
+              {activeTab === 'gerente' && canSeeGerentePanel && (
+                <motion.div key="gerente" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="h-full overflow-auto p-4">
+                  <GerentePanel embedded />
+                </motion.div>
+              )}
+
+              {/* ═══ TAB: ADMIN ═══ */}
+              {activeTab === 'admin' && isAdmin && (
+                <motion.div key="admin" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="h-full overflow-auto p-4">
+                  <AdminPanel embedded />
+                </motion.div>
+              )}
+
+              {/* ═══ TAB: MAINTENANCE / MEJORA CONTINUA ═══ */}
+              {activeTab === 'maintenance' && is5SCompleted() && (
+                <motion.div key="maintenance" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="h-full overflow-auto p-4">
+                  <MaintenanceView embedded />
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
         )}
       </main>

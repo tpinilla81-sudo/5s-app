@@ -1,26 +1,21 @@
 ---
 Task ID: 1
-Agent: Main
-Task: Redesign 5S app to single-screen layout
+Agent: Main Agent
+Task: Rediseñar la app 5S como pantalla única con pestañas, eliminando la navegación entre vistas separadas
 
 Work Log:
-- Diagnosed server crash: standalone server works but gets killed by container environment (K8s cgroup) after ~15-20s
-- Server DOES serve requests correctly (200 OK, 8454 bytes HTML) before being killed
-- Updated daemon.js and run-prod.sh to use standalone server with auto-restart
-- Redesigned page.tsx from multi-page navigation to single-screen dashboard layout:
-  - Left panel (320px): Compact 5S pie chart board + quesito indicators
-  - Right panel (full width): All 5 S steps with their 5 mini-steps in horizontal rows
-  - No more board→detail navigation: everything visible at once
-  - Clicking any mini-step opens its modal directly
-  - Compact header with all action buttons
-- Updated store.ts: selectSStep no longer changes currentView to 'detail'
-- Added handleOpenModal with sStep parameter to ensure modals know which S they belong to
-- Updated Board5S.tsx with mx-auto for centering in compact panel
-- Build passes successfully
+- Analizado el proyecto completo: page.tsx, Board5S, AdminPanel, GerentePanel, MaintenanceView, store.ts, 5s-constants.ts
+- Identificado el problema: AdminPanel, GerentePanel y MaintenanceView eran vistas completas que reemplazaban la pantalla (currentView)
+- Modificado store.ts: añadido `activeTab` state y `setActiveTab` action
+- Rediseñado page.tsx: layout de pantalla única con barra de pestañas integrada en el header
+- Adaptado AdminPanel: prop `embedded` para ocultar header/botón volver cuando está dentro de pestaña
+- Adaptado GerentePanel: prop `embedded` para ocultar header/botón volver cuando está dentro de pestaña
+- Adaptado MaintenanceView: prop `embedded` para ocultar header/botón volver cuando está dentro de pestaña
+- Las pestañas disponibles se muestran según el rol del usuario (Admin, Gerencia, Mejora Continua)
+- Build exitoso sin errores
 
 Stage Summary:
-- Single-screen layout implemented: board on left, all S steps with mini-steps on right
-- No page navigation needed - everything visible at once
-- Modals open directly when clicking mini-step buttons
-- Server infrastructure issue (container kills processes) documented but not fixable in code
-- Pending tasks: fix responsable audit block, audit visibility for empleados, audit report, S1Exam/S1Inventory fixes
+- La app ahora es 100% pantalla única: todo accesible desde pestañas sin cambiar de vista
+- Pestañas: "Tablero 5S" (siempre), "Gerencia" (si gerente/admin), "Admin" (si admin), "Mejora Continua" (si 5S completado)
+- Los componentes mantienen compatibilidad standalone (sin `embedded`) por si se usan fuera del tab
+- El header principal es compacto con selector de zona, acciones rápidas y menú de usuario
