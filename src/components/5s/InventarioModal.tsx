@@ -464,7 +464,7 @@ export default function InventarioModal({ open, onClose, sStep, miniStep }: Inve
 
   return (
     <Dialog open={open} onOpenChange={() => onClose()}>
-      <DialogContent className="max-w-[95vw] max-h-[95vh] overflow-hidden flex flex-col">
+      <DialogContent className="max-w-[95vw] max-h-[95vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <ClipboardList className="h-5 w-5" style={{ color: sStepData?.color }} />
@@ -475,7 +475,6 @@ export default function InventarioModal({ open, onClose, sStep, miniStep }: Inve
           </DialogTitle>
         </DialogHeader>
 
-        <div className="flex-1 overflow-auto space-y-4">
         {isAdmin && !isCompleted && (
           <div className="flex items-center gap-2 p-2 bg-amber-50 border border-amber-200 rounded-lg">
             <span className="text-xs text-amber-700 font-medium">Modo Admin:</span>
@@ -1090,7 +1089,6 @@ export default function InventarioModal({ open, onClose, sStep, miniStep }: Inve
             </div>
           </div>
         )}
-        </div>
       </DialogContent>
     </Dialog>
   );

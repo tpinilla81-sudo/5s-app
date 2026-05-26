@@ -179,7 +179,7 @@ export default function PeriodicAuditModal({
 
   return (
     <Dialog open={open} onOpenChange={() => onClose()}>
-      <DialogContent className="max-w-[95vw] max-h-[95vh] overflow-hidden flex flex-col">
+      <DialogContent className="max-w-[95vw] max-h-[95vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             {icon}
@@ -190,7 +190,6 @@ export default function PeriodicAuditModal({
           </DialogTitle>
         </DialogHeader>
 
-        <div className="flex-1 overflow-auto">
         {isCompleted ? (
           <div className="text-center py-8">
             <CheckCircle className="h-16 w-16 text-green-500 mx-auto mb-3" />
@@ -418,7 +417,6 @@ export default function PeriodicAuditModal({
             </div>
           </div>
         )}
-        </div>
       </DialogContent>
     </Dialog>
   );

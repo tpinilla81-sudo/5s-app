@@ -145,7 +145,7 @@ export default function FormacionModal({ open, onClose, sStep, miniStep }: Forma
 
   return (
     <Dialog open={open} onOpenChange={() => onClose()}>
-      <DialogContent className="max-w-[95vw] max-h-[95vh] overflow-hidden flex flex-col">
+      <DialogContent className="max-w-[95vw] max-h-[95vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <GraduationCap className="h-5 w-5" style={{ color: sStepData?.color }} />
@@ -156,7 +156,6 @@ export default function FormacionModal({ open, onClose, sStep, miniStep }: Forma
           </DialogTitle>
         </DialogHeader>
 
-        <div className="flex-1 overflow-auto">
         {isAdmin && (
           <div className="flex items-center gap-2 p-2 bg-amber-50 border border-amber-200 rounded-lg">
             <span className="text-xs text-amber-700 font-medium">Modo Admin:</span>
@@ -342,7 +341,6 @@ export default function FormacionModal({ open, onClose, sStep, miniStep }: Forma
             )}
           </TabsContent>
         </Tabs>
-        </div>
       </DialogContent>
     </Dialog>
   );

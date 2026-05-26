@@ -266,7 +266,7 @@ export default function GlobalInventoryModal({ open, onClose }: GlobalInventoryM
 
   return (
     <Dialog open={open} onOpenChange={() => onClose()}>
-      <DialogContent className="max-w-[95vw] max-h-[95vh] overflow-hidden flex flex-col">
+      <DialogContent className="max-w-[95vw] max-h-[95vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <ClipboardList className="h-5 w-5 text-green-600" />

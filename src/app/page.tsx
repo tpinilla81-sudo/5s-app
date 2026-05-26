@@ -31,7 +31,7 @@ import {
 import AdminPanel from '@/components/admin/AdminPanel';
 import MaintenanceView from '@/components/5s/MaintenanceView';
 import GerentePanel from '@/components/auth/GerentePanel';
-import { Loader2, RefreshCw, LogOut, Settings, ChevronDown, Shield, Unlock, Lock, LayoutDashboard, Wrench, Sparkles, BarChart3, FileText, MapPin, ListChecks, ClipboardList } from 'lucide-react';
+import { Loader2, RefreshCw, LogOut, Settings, ChevronDown, Shield, ShieldCheck, Unlock, Lock, LayoutDashboard, Wrench, Sparkles, BarChart3, FileText, MapPin, ListChecks, ClipboardList } from 'lucide-react';
 
 const MODAL_MAP: Record<string, React.ComponentType<{
   open: boolean;
