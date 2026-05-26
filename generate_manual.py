@@ -326,7 +326,7 @@ story.append(Paragraph('Guia completa para la implementacion de la metodologia 5
     'CoverDesc', fontName=FONT_BODY, fontSize=12, leading=18,
     alignment=TA_CENTER, textColor=TEXT_MUTED, spaceAfter=8
 )))
-story.append(Paragraph('Version 2.0 - Mayo 2026', ParagraphStyle(
+story.append(Paragraph('Version 3.0 - Mayo 2026', ParagraphStyle(
     'CoverVer', fontName=FONT_SANS, fontSize=10, leading=14,
     alignment=TA_CENTER, textColor=TEXT_MUTED
 )))
@@ -414,7 +414,7 @@ mini_steps_data = [
     ['1', 'Formacion + Examen', 'El empleado completa la formacion especifica de la S y aprueba un examen con una puntuacion minima del 80%.'],
     ['2', 'Fotografias (Antes)', 'Se toman fotografias del estado actual de la zona antes de actuar, para documentar la situacion de partida.'],
     ['3', 'Inventario', 'Se realiza el inventario correspondiente a cada S: innecesarios (1S), necesarios (2S), puntos de suciedad (3S), estandares (4S), o plan de accion (5S).'],
-    ['4', 'Autoevaluacion (Interna)', 'Verificacion interna mediante el checklist de auditoria, con el mismo formato que usara el auditor externo.'],
+    ['4', 'Autoevaluacion (Interna)', 'Verificacion interna mediante el checklist de auditoria. La realizan los EMPLEADOS de la zona como ejercicio de reflexion sobre el cumplimiento de los criterios 5S.'],
     ['5', 'Auditoria Externa', 'Validacion por un auditor externo que verifica el cumplimiento de los criterios 5S mediante el mismo checklist estandarizado.'],
 ]
 story.append(make_table(
@@ -440,23 +440,24 @@ story.append(H3('Pasos individuales (requieren que TODOS los empleados los compl
 story.append(Bullet('<b>Formacion + Examen (paso 1):</b> Cada empleado debe completar la formacion y aprobar '
                      'el examen individualmente. La zona no puede avanzar al paso 2 (Fotografias) hasta que '
                      '<b>todos los empleados asignados</b> hayan aprobado el examen.'))
-story.append(Bullet('<b>Autoevaluacion (paso 4):</b> Cada empleado debe completar su propia autoevaluacion. '
-                     'Es un ejercicio de reflexion personal que no puede delegarse.'))
 story.append(Spacer6())
 story.append(H3('Pasos colectivos (se realizan una vez por zona):'))
 story.append(Bullet('<b>Fotografias (paso 2):</b> Se toman como equipo para documentar el estado de la zona. '
                      'Cualquier empleado puede subir las fotografias.'))
 story.append(Bullet('<b>Inventario (paso 3):</b> Se realiza un inventario compartido de la zona. Todos los '
                      'empleados pueden anadir items al inventario, pero el inventario es unico para la zona.'))
+story.append(Bullet('<b>Autoevaluacion (paso 4):</b> La realizan los EMPLEADOS de la zona. Cada empleado '
+                     'evalua el cumplimiento de los criterios 5S mediante el checklist estandarizado. '
+                     'Es un ejercicio de reflexion interna que prepara a la zona para la auditoria externa.'))
 story.append(Bullet('<b>Auditoria Externa (paso 5):</b> Solo puede realizarla un usuario con rol de auditor. '
                      'La auditoria evalua la zona completa, no a cada empleado individualmente.'))
 story.append(Spacer6())
 story.append(Note(
     'Regla clave: Para que una zona avance de una S a la siguiente (por ejemplo, de 1S a 2S), '
-    'todos los empleados de la zona deben haber completado los pasos individuales (formacion y '
-    'autoevaluacion), y los pasos colectivos (fotos, inventario y auditoria) deben estar completados '
-    'y aprobados. Si hay dos empleados en una zona, AMBOS deben pasar la formacion antes de poder '
-    'acceder al paso 2, y asi sucesivamente para cada S.'
+    'todos los empleados de la zona deben haber completado el paso individual (formacion), '
+    'y los pasos colectivos (fotos, inventario, autoevaluacion por los empleados y auditoria) '
+    'deben estar completados y aprobados. Si hay dos empleados en una zona, AMBOS deben pasar '
+    'la formacion antes de poder acceder al paso 2, y asi sucesivamente para cada S.'
 ))
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -500,17 +501,20 @@ story.append(Spacer6())
 story.append(Body(
     'La aplicacion define cinco roles de usuario, cada uno con permisos y responsabilidades especificas. '
     'Los roles estan disenados para reflejar la estructura organizativa y garantizar que cada persona '
-    'acceda solo a la informacion y funciones que le corresponden. El administrador del sistema es el '
-    'unico que puede crear usuarios con roles especificos; el auto-registro siempre crea cuentas de '
-    'empleado que despues deben ser asignadas a proyectos y zonas por un administrador o responsable.'
+    'acceda solo a la informacion y funciones que le corresponden. Es fundamental entender que el '
+    'Administrador es el dueno de la aplicacion: es quien primero crea la estructura organizativa '
+    '(empresas, proyectos y zonas) y despues crea los usuarios y les asigna roles para los proyectos '
+    'creados. Este orden es clave: sin empresa, proyecto y zona no se pueden asignar usuarios. El '
+    'auto-registro siempre crea cuentas de empleado que despues deben ser asignadas a proyectos y '
+    'zonas por un administrador o responsable.'
 ))
 
 roles_data = [
-    ['Administrador', 'Empresa completa', 'Gestion completa: crear usuarios, asignar roles, crear empresas, proyectos y zonas. Acceso total a todas las funciones.'],
+    ['Administrador (Dueno)', 'Empresa completa', 'Dueno de la aplicacion. PRIMERO crea la estructura (empresas, proyectos y zonas), LUEGO crea usuarios y les asigna roles para los proyectos creados. Acceso total a todas las funciones.'],
     ['Gerente', 'Empresa completa', 'Supervisa todos los proyectos de su empresa. Ve el progreso global, inventarios y planes de accion de todos los proyectos. No ejecuta pasos 5S.'],
     ['Responsable', 'Sus proyectos', 'Coordina uno o varios proyectos. Gestiona zonas, asigna empleados y hace seguimiento del progreso. No puede realizar auditorias externas.'],
     ['Auditor', 'Zonas asignadas', 'Realiza auditorias externas en las zonas que le corresponden. Evalua el cumplimiento de los criterios 5S con el checklist estandarizado.'],
-    ['Empleado', 'Sus zonas', 'Ejecuta los talleres 5S: completa formacion, sube fotos, registra inventarios, realiza autoevaluaciones y ejecuta acciones de mejora.'],
+    ['Empleado', 'Sus zonas', 'Ejecuta los talleres 5S: completa formacion, sube fotos, registra inventarios, realiza autoevaluaciones internas (paso 4) y ejecuta acciones de mejora.'],
 ]
 story.append(make_table(
     ['Rol', 'Alcance', 'Funciones principales'],
@@ -557,22 +561,190 @@ story.append(Body(
     'pasos individuales y pasos colectivos, tal como se explico en la seccion 1.3.'
 ))
 story.append(Body(
-    'Cuando un empleado accede al tablero 5S de su zona, vera su propio progreso en los pasos individuales '
-    '(formacion y autoevaluacion) y el progreso colectivo de la zona en los pasos compartidos (fotos, '
-    'inventario y auditoria). Si alguno de sus companeros de zona aun no ha completado un paso individual, '
-    'se le indicara visualmente que la zona no puede avanzar hasta que todos lo hayan completado. Esto '
-    'fomenta el trabajo en equipo y la corresponsabilidad, principios fundamentales de la metodologia 5S.'
+    'Cuando un empleado accede al tablero 5S de su zona, vera su propio progreso en el paso individual '
+    '(formacion) y el progreso colectivo de la zona en los pasos compartidos (fotos, '
+    'inventario, autoevaluacion por los empleados y auditoria). Si alguno de sus companeros de zona aun '
+    'no ha completado el paso individual de formacion, se le indicara visualmente que la zona no puede '
+    'avanzar hasta que todos lo hayan completado. La autoevaluacion (paso 4) la realizan los '
+    'empleados de la zona, lo que fomenta el trabajo en equipo y la corresponsabilidad, principios '
+    'fundamentales de la metodologia 5S.'
 ))
 
 # ═══════════════════════════════════════════════════════════════════════════
-# SECTION 3: PRIMEROS PASOS
+# SECTION 3: ESQUEMA DEL SISTEMA
 # ═══════════════════════════════════════════════════════════════════════════
 
 story.append(Spacer24())
-story.append(add_heading('<b>3. Primeros Pasos</b>', style_h1, level=0))
+story.append(add_heading('<b>3. Esquema del Sistema</b>', style_h1, level=0))
 story.append(Spacer6())
 
-story.append(add_heading('<b>3.1 Registro e inicio de sesion</b>', style_h2, level=1))
+story.append(Body(
+    'Para comprender la aplicacion en su conjunto, es fundamental tener una vision clara de como se '
+    'articulan sus diferentes capas: desde los usuarios que acceden, pasando por la interfaz de navegacion, '
+    'las ventanas emergentes, la API REST y la base de datos. El siguiente esquema muestra la arquitectura '
+    'completa del sistema en cinco capas, lo que permite identificar rapidamente quien hace que, donde se '
+    'procesa la informacion y como fluyen los datos a traves de la aplicacion. Este esquema es el punto de '
+    'partida para cualquier persona que necesite entender el funcionamiento general antes de profundizar en '
+    'cada seccion del manual.'
+))
+
+story.append(Spacer12())
+story.append(add_heading('<b>3.1 Vision general por capas</b>', style_h2, level=1))
+story.append(Spacer6())
+
+story.append(Body(
+    'El sistema se estructura en cinco capas diferenciadas, cada una con una funcion especifica. De arriba '
+    'abajo, la informacion fluye desde los usuarios hacia la base de datos, y las respuestas vuelven de forma '
+    'inversa. A continuacion se describe cada capa y sus componentes principales:'
+))
+
+# --- Layer 1: Users ---
+story.append(H3('Capa 1 - Usuarios / Roles'))
+story.append(Body(
+    'La capa superior la conforman los cinco roles de usuario que interactuan con la aplicacion. Cada rol '
+    'tiene un alcance y unas capacidades diferenciadas que determinan que funciones puede utilizar y que '
+    'datos puede acceder. El Administrador es el dueno de la aplicacion y tiene control total sobre el '
+    'sistema: es quien PRIMERO crea la estructura (empresas, proyectos y zonas) y LUEGO crea usuarios y '
+    'les asigna roles para los proyectos creados. Ademas puede navegar libremente entre pasos sin '
+    'restricciones. El Gerente supervisa a nivel de empresa, viendo estadisticas globales, inventarios y '
+    'planes de accion de todos los proyectos, pero no ejecuta pasos 5S ni realiza auditorias. El '
+    'Responsable coordina uno o varios proyectos, gestiona zonas y asigna empleados, pero tampoco puede '
+    'realizar auditorias externas. El Empleado es quien ejecuta los talleres 5S: completa formacion, sube '
+    'fotos, registra inventarios, realiza autoevaluaciones internas (paso 4) y ejecuta acciones de mejora. Finalmente, el '
+    'Auditor tiene como unica funcion realizar auditorias externas en las zonas que le han sido asignadas, '
+    'evaluando el cumplimiento de los criterios 5S con el checklist estandarizado.'
+))
+
+# --- Layer 2: App ---
+story.append(H3('Capa 2 - Aplicacion (Pantalla Unica)'))
+story.append(Body(
+    'La aplicacion funciona en una sola pantalla organizada mediante pestañas, lo que elimina la necesidad '
+    'de navegar entre paginas distintas. Las cuatro pestañas principales son: Tablero 5S (accesible para '
+    'todos los roles, contiene el diagrama circular y el grid de 5 pasos S por 5 mini-pasos), Gerencia '
+    '(visible para administrador y gerente, con estadisticas globales, inventario cruzado y plan de accion), '
+    'Admin (solo para administrador, con gestion de usuarios, empresas, proyectos, permisos y reseed de la '
+    'base de datos), y Mejora Continua (que se desbloquea tras completar las 5S, con auditorias periodicas, '
+    'seguimiento y radar chart). Adicionalmente, la barra superior siempre visible ofrece accesos rapidos '
+    'al Plan de Accion, Inventario Global, Auditorias, selector de zona, toggle de navegacion libre para '
+    'admin, gestion de equipo, permisos y descarga del manual.'
+))
+
+# --- Layer 3: Modals ---
+story.append(H3('Capa 3 - Ventanas Emergentes (Modales)'))
+story.append(Body(
+    'Al pulsar sobre cada celda del grid 5S, se abre una ventana modal especifica para ese mini-paso. '
+    'Existen seis modales principales: FormacionModal (formacion + examen, minimo 80% para aprobar), '
+    'FotosModal (captura de camara y subida de galeria, minimo 3 fotos), InventarioModal (formulario '
+    'especifico por S con CRUD de items, import/export CSV y plantillas Excel; en S1 incluye la Jaula de '
+    'Excedentes), ActionPlanModal (plan de accion con secciones DEMANDA, ACCION y SEGUIMIENTO, accesible '
+    'desde S5 o globalmente), AutoevaluacionModal (checklist interno OK/NOK/NA, minimo 70%, SOLO puede '
+    'realizarlo los EMPLEADOS de la zona como verificacion interna), y '
+    'AuditoriaModal (auditoria externa, solo para admin y auditor, minimo 75%, donde los NOKs generan '
+    'acciones automaticamente).'
+))
+
+# --- Layer 4: API ---
+story.append(H3('Capa 4 - API REST'))
+story.append(Body(
+    'Los modales se comunican con el servidor a traves de una API REST con mas de 25 endpoints organizados '
+    'en: autenticacion (login, registro, sesion), proyectos y zonas (CRUD), inventario (CRUD de items), '
+    'acciones (CRUD de items del plan de accion), auditorias (guardar y recuperar resultados), progreso '
+    '(actualizar estado de pasos), examenes (enviar respuestas), estadisticas (dashboard), plantillas '
+    '(formacion e inventario), permisos (matriz de roles), usuarios y empresas (CRUD), y endpoints '
+    'especificos para gerencia (estadisticas, acciones e inventario global).'
+))
+
+# --- Layer 5: DB ---
+story.append(H3('Capa 5 - Base de Datos (SQLite via Prisma)'))
+story.append(Body(
+    'En la capa inferior, Prisma ORM gestiona la base de datos SQLite (archivo custom.db) con 14 tablas '
+    'principales: User (usuarios con email, rol y contrasena), Company (empresas), Project (proyectos 5S), '
+    'Zone (zonas de trabajo), Progress (progreso colectivo por zona), EmployeeProgress (progreso individual '
+    'por empleado), InventoryItem (items de inventario con campos especificos por S y datos de Jaula), '
+    'AuditResult (resultados de auditorias), ChecklistResponse (respuestas detalladas de checklist), '
+    'ActionItem (acciones con campos DEMANDA/ACCION/SEGUIMIENTO), AuditTarget (puntuaciones objetivo), '
+    'Template (plantillas de formacion y examen), ExamAnswer (respuestas de examenes) y '
+    'RolePermissionConfig (matriz de permisos por rol).'
+))
+
+# --- Schema image ---
+story.append(Spacer18())
+story.append(add_heading('<b>3.2 Esquema visual del sistema</b>', style_h2, level=1))
+story.append(Spacer6())
+
+story.append(Body(
+    'A continuacion se presenta el esquema visual completo del sistema, donde se pueden identificar las '
+    'cinco capas y como se relacionan entre si. Este diagrama resume la arquitectura completa de la '
+    'aplicacion y sirve como referencia rapida para entender el flujo de informacion.'
+))
+
+# Embed the schema image
+from reportlab.platypus import Image as RLImage
+_schema_path = '/home/z/my-project/download/esquema-sistema-5s.png'
+if os.path.exists(_schema_path):
+    from PIL import Image as PILImage
+    _pil = PILImage.open(_schema_path)
+    _img_w, _img_h = _pil.size
+    _pil.close()
+    # Scale to fit page width
+    _target_w = AVAILABLE_W
+    _scale = _target_w / _img_w
+    _target_h = _img_h * _scale
+    # Cap height at ~500px to avoid spanning too many pages
+    if _target_h > 500:
+        _scale2 = 500 / _target_h
+        _target_w = _target_w * _scale2
+        _target_h = 500
+    story.append(Spacer12())
+    story.append(RLImage(_schema_path, width=_target_w, height=_target_h))
+    story.append(Paragraph('Figura 1. Esquema del Sistema 5S - Arquitectura por capas', style_caption))
+else:
+    story.append(Note(
+        'Nota: El esquema visual del sistema no esta disponible en esta generacion del manual. '
+        'Puede consultarse en la aplicacion mediante el boton de descarga del manual.'
+    ))
+
+# --- Execution flow ---
+story.append(Spacer18())
+story.append(add_heading('<b>3.3 Como se ejecuta la aplicacion</b>', style_h2, level=1))
+story.append(Spacer6())
+
+story.append(Body(
+    'El proceso de puesta en marcha de la aplicacion sigue un flujo secuencial de cinco pasos. En primer '
+    'lugar, se compila el proyecto con el comando "npm run build", que genera los archivos optimizados en '
+    'el directorio .next/standalone/. A continuacion, se inicia el servidor mediante "pm2 start npm --name '
+    '5s-app -- start" o bien "npm start", lo que arranca Next.js en modo produccion en el puerto 3000. '
+    'En tercer lugar, Prisma ORM inicializa automaticamente la conexion con la base de datos SQLite, '
+    'verificando que el archivo custom.db existe y aplicando las migraciones pendientes si las hubiera. '
+    'En cuarto lugar, los 25+ endpoints de la API REST quedan disponibles para recibir peticiones. '
+    'Finalmente, los usuarios pueden acceder a la aplicacion abriendo un navegador y navegando a '
+    'http://localhost:3000, donde seran recibidos por la pantalla de inicio de sesion.'
+))
+
+exec_flow_data = [
+    ['1', 'Compilar', 'npm run build', 'Genera los archivos optimizados de produccion en .next/standalone/'],
+    ['2', 'Iniciar servidor', 'pm2 start npm --name "5s-app" -- start', 'Arranca Next.js en modo produccion (puerto 3000)'],
+    ['3', 'Base de datos', 'Automatico (Prisma)', 'Inicializa SQLite (custom.db) y aplica migraciones'],
+    ['4', 'API REST', 'Automatico', 'Los 25+ endpoints quedan disponibles para peticiones'],
+    ['5', 'Acceso', 'http://localhost:3000', 'Los usuarios acceden via navegador a la pantalla de login'],
+]
+story.append(make_table(
+    ['Paso', 'Accion', 'Comando/Metodo', 'Resultado'],
+    exec_flow_data,
+    col_ratios=[0.05, 0.15, 0.35, 0.45]
+))
+story.append(Spacer6())
+story.append(Paragraph('Tabla 5. Pasos de ejecucion de la aplicacion', style_caption))
+
+# ═══════════════════════════════════════════════════════════════════════════
+# SECTION 4: PRIMEROS PASOS
+# ═══════════════════════════════════════════════════════════════════════════
+
+story.append(Spacer24())
+story.append(add_heading('<b>4. Primeros Pasos</b>', style_h1, level=0))
+story.append(Spacer6())
+
+story.append(add_heading('<b>4.1 Registro e inicio de sesion</b>', style_h2, level=1))
 story.append(Spacer6())
 
 story.append(Body(
@@ -594,36 +766,55 @@ story.append(Note(
 ))
 
 story.append(Spacer12())
-story.append(add_heading('<b>3.2 Configuracion inicial por el administrador</b>', style_h2, level=1))
+story.append(add_heading('<b>4.2 Configuracion inicial por el administrador</b>', style_h2, level=1))
 story.append(Spacer6())
 
 story.append(Body(
-    'El administrador del sistema es responsable de la configuracion inicial de la plataforma. '
-    'Las tareas de configuracion incluyen crear la empresa (o empresas), crear los proyectos de '
-    'implementacion 5S, definir las zonas de trabajo dentro de cada proyecto, crear los usuarios con '
-    'sus roles correspondientes, y asignar cada usuario a las zonas y proyectos que le correspondan. '
-    'A continuacion se detalla el proceso paso a paso que debe seguir el administrador para poner en '
-    'marcha la aplicacion en una organizacion:'
+    'El administrador es el dueno de la aplicacion y es responsable de la configuracion inicial de '
+    'la plataforma. Es fundamental entender el orden de la configuracion: PRIMERO se crea la estructura '
+    'organizativa (empresas, proyectos y zonas), y LUEGO se crean los usuarios y se les asignan roles '
+    'para los proyectos ya creados. Sin estructura previa no es posible asignar usuarios. Este flujo '
+    'garantiza que cada usuario tenga un contexto de trabajo asignado desde el primer momento en que '
+    'accede a la aplicacion. A continuacion se detalla el proceso paso a paso que debe seguir el '
+    'administrador para poner en marcha la aplicacion en una organizacion:'
 ))
 
+story.append(H3('Fase 1: Crear la estructura organizativa'))
+story.append(Body(
+    'Antes de crear ningun usuario, el administrador debe definir la estructura organizativa completa. '
+    'Sin empresa, proyecto y zona, no es posible asignar usuarios ni roles.'
+))
 story.append(Bullet('<b>Paso 1 - Crear la empresa:</b> Desde el panel de administracion, pulse "Nueva Empresa" '
                      'e introduzca el nombre y la descripcion de la organizacion.'))
 story.append(Bullet('<b>Paso 2 - Crear proyectos:</b> Dentro de la empresa, cree los proyectos 5S necesarios. '
                      'Cada proyecto puede representar una planta, un departamento o una linea de produccion.'))
 story.append(Bullet('<b>Paso 3 - Definir zonas:</b> En cada proyecto, cree las zonas de trabajo. Asigne un '
                      'responsable de zona y un color identificativo a cada una.'))
+story.append(Spacer12())
+story.append(H3('Fase 2: Crear usuarios y asignar roles'))
+story.append(Body(
+    'Una vez creada la estructura organizativa, el administrador procede a crear los usuarios y '
+    'asignarles roles dentro de los proyectos y zonas ya definidos. Cada usuario recibe un rol '
+    'que determina sus permisos y su alcance dentro de la aplicacion.'
+))
 story.append(Bullet('<b>Paso 4 - Crear usuarios:</b> Cree las cuentas de usuario con el rol apropiado. '
                      'Asigne los gerentes a las empresas, los responsables a los proyectos y los auditores.'))
 story.append(Bullet('<b>Paso 5 - Asignar empleados:</b> Asigne cada empleado a una o varias zonas dentro de '
                      'los proyectos correspondientes. Un empleado solo puede trabajar en las zonas a las que '
                      'ha sido asignado.'))
+story.append(Spacer12())
+story.append(Note(
+    'Importante: El flujo es siempre ESTRUCTURA PRIMERO, USUARIOS DESPUES. El administrador (dueno) '
+    'crea la empresa, los proyectos y las zonas, y despues crea los usuarios y les asigna roles para '
+    'los proyectos creados. No es posible asignar un usuario a un proyecto que aun no existe.'
+))
 
 # ═══════════════════════════════════════════════════════════════════════════
 # SECTION 4: EL TABLERO 5S
 # ═══════════════════════════════════════════════════════════════════════════
 
 story.append(Spacer24())
-story.append(add_heading('<b>4. El Tablero 5S</b>', style_h1, level=0))
+story.append(add_heading('<b>5. El Tablero 5S</b>', style_h1, level=0))
 story.append(Spacer6())
 
 story.append(Body(
@@ -636,7 +827,7 @@ story.append(Body(
 ))
 
 story.append(Spacer12())
-story.append(add_heading('<b>4.1 Elementos del tablero</b>', style_h2, level=1))
+story.append(add_heading('<b>5.1 Elementos del tablero</b>', style_h2, level=1))
 story.append(Spacer6())
 
 story.append(Bullet('<b>Sectores de color:</b> Cada S tiene un color identificativo: 1S (violeta), 2S (amarillo), '
@@ -650,7 +841,7 @@ story.append(Bullet('<b>Indicadores de progreso:</b> En la parte superior del ta
                      'puntuacion media, S completadas y acciones abiertas.'))
 
 story.append(Spacer12())
-story.append(add_heading('<b>4.2 Navegacion por los pasos</b>', style_h2, level=1))
+story.append(add_heading('<b>5.2 Navegacion por los pasos</b>', style_h2, level=1))
 story.append(Spacer6())
 
 story.append(Body(
@@ -664,7 +855,7 @@ story.append(Body(
 ))
 
 story.append(Note(
-    'Nota: En zonas con multiples empleados, los pasos individuales (formacion y autoevaluacion) se '
+    'Nota: En zonas con multiples empleados, el paso individual de formacion se '
     'muestran con el progreso de cada empleado. El paso no se considera completado para la zona hasta '
     'que todos los empleados asignados lo hayan superado.'
 ))
@@ -674,11 +865,11 @@ story.append(Note(
 # ═══════════════════════════════════════════════════════════════════════════
 
 story.append(Spacer24())
-story.append(add_heading('<b>5. Las 5S en Detalle</b>', style_h1, level=0))
+story.append(add_heading('<b>6. Las 5S en Detalle</b>', style_h1, level=0))
 story.append(Spacer6())
 
 # --- 1S ---
-story.append(add_heading('<b>5.1 1S - Seiri (Clasificar)</b>', style_h2, level=1))
+story.append(add_heading('<b>6.1 1S - Seiri (Clasificar)</b>', style_h2, level=1))
 story.append(Spacer6())
 
 story.append(Body(
@@ -707,7 +898,7 @@ story.append(Body(
 
 # --- 2S ---
 story.append(Spacer18())
-story.append(add_heading('<b>5.2 2S - Seiton (Ordenar)</b>', style_h2, level=1))
+story.append(add_heading('<b>6.2 2S - Seiton (Ordenar)</b>', style_h2, level=1))
 story.append(Spacer6())
 
 story.append(Body(
@@ -734,7 +925,7 @@ story.append(Note(
 
 # --- 3S ---
 story.append(Spacer18())
-story.append(add_heading('<b>5.3 3S - Seiso (Limpiar)</b>', style_h2, level=1))
+story.append(add_heading('<b>6.3 3S - Seiso (Limpiar)</b>', style_h2, level=1))
 story.append(Spacer6())
 
 story.append(Body(
@@ -755,7 +946,7 @@ story.append(Body(
 
 # --- 4S ---
 story.append(Spacer18())
-story.append(add_heading('<b>5.4 4S - Seiketsu (Estandarizar)</b>', style_h2, level=1))
+story.append(add_heading('<b>6.4 4S - Seiketsu (Estandarizar)</b>', style_h2, level=1))
 story.append(Spacer6())
 
 story.append(Body(
@@ -785,7 +976,7 @@ story.append(Body(
 
 # --- 5S ---
 story.append(Spacer18())
-story.append(add_heading('<b>5.5 5S - Shitsuke (Mantener)</b>', style_h2, level=1))
+story.append(add_heading('<b>6.5 5S - Shitsuke (Mantener)</b>', style_h2, level=1))
 story.append(Spacer6())
 
 story.append(Body(
@@ -818,7 +1009,7 @@ story.append(Body(
 # ═══════════════════════════════════════════════════════════════════════════
 
 story.append(Spacer24())
-story.append(add_heading('<b>6. Formacion y Examenes</b>', style_h1, level=0))
+story.append(add_heading('<b>7. Formacion y Examenes</b>', style_h1, level=0))
 story.append(Spacer6())
 
 story.append(Body(
@@ -831,7 +1022,7 @@ story.append(Body(
 ))
 
 story.append(Spacer12())
-story.append(add_heading('<b>6.1 Contenido formativo</b>', style_h2, level=1))
+story.append(add_heading('<b>7.1 Contenido formativo</b>', style_h2, level=1))
 story.append(Spacer6())
 
 story.append(Body(
@@ -843,7 +1034,7 @@ story.append(Body(
 ))
 
 story.append(Spacer12())
-story.append(add_heading('<b>6.2 El examen de evaluacion</b>', style_h2, level=1))
+story.append(add_heading('<b>7.2 El examen de evaluacion</b>', style_h2, level=1))
 story.append(Spacer6())
 
 story.append(Body(
@@ -861,7 +1052,7 @@ story.append(Body(
 # ═══════════════════════════════════════════════════════════════════════════
 
 story.append(Spacer24())
-story.append(add_heading('<b>7. Documentacion Fotografica</b>', style_h1, level=0))
+story.append(add_heading('<b>8. Documentacion Fotografica</b>', style_h1, level=0))
 story.append(Spacer6())
 
 story.append(Body(
@@ -885,7 +1076,7 @@ story.append(Body(
 # ═══════════════════════════════════════════════════════════════════════════
 
 story.append(Spacer24())
-story.append(add_heading('<b>8. Sistema de Inventarios</b>', style_h1, level=0))
+story.append(add_heading('<b>9. Sistema de Inventarios</b>', style_h1, level=0))
 story.append(Spacer6())
 
 story.append(Body(
@@ -912,7 +1103,7 @@ story.append(Spacer6())
 story.append(Paragraph('Tabla 5. Resumen de inventarios por S', style_caption))
 
 story.append(Spacer12())
-story.append(add_heading('<b>8.1 Anadir elementos al inventario</b>', style_h2, level=1))
+story.append(add_heading('<b>9.1 Anadir elementos al inventario</b>', style_h2, level=1))
 story.append(Spacer6())
 
 story.append(Body(
@@ -925,7 +1116,7 @@ story.append(Body(
 ))
 
 story.append(Spacer12())
-story.append(add_heading('<b>8.2 Plantillas de exportacion</b>', style_h2, level=1))
+story.append(add_heading('<b>9.2 Plantillas de exportacion</b>', style_h2, level=1))
 story.append(Spacer6())
 
 story.append(Body(
@@ -943,24 +1134,25 @@ story.append(Body(
 # ═══════════════════════════════════════════════════════════════════════════
 
 story.append(Spacer24())
-story.append(add_heading('<b>9. Autoevaluacion y Auditoria</b>', style_h1, level=0))
+story.append(add_heading('<b>10. Autoevaluacion y Auditoria</b>', style_h1, level=0))
 story.append(Spacer6())
 
-story.append(add_heading('<b>9.1 Autoevaluacion interna (paso 4)</b>', style_h2, level=1))
+story.append(add_heading('<b>10.1 Autoevaluacion interna (paso 4)</b>', style_h2, level=1))
 story.append(Spacer6())
 
 story.append(Body(
     'La autoevaluacion es el cuarto paso de cada S y consiste en una verificacion interna del estado de '
-    'la zona utilizando el mismo checklist que empleara el auditor externo. La autoevaluacion la realiza '
-    'cada empleado individualmente, como ejercicio de reflexion sobre el grado de cumplimiento de los '
-    'criterios 5S. El checklist esta dividido en secciones tematicas, y cada item puede valorarse como '
-    'OK (cumple), NOK (no cumple) o N/A (no aplica). Los items marcados como NOK generan automaticamente '
-    'acciones en el plan de accion, con la descripcion de la desviacion detectada (hallazgo) y, opcionalmente, '
-    'un punto a mejorar.'
+    'la zona utilizando el mismo checklist que empleara el auditor externo. La autoevaluacion la realizan '
+    'los empleados de la zona de forma completa, como ejercicio de reflexion sobre el grado de cumplimiento '
+    'de los criterios 5S. Cada empleado debe completar el checklist evaluando todos los items de su zona. '
+    'El checklist esta dividido en secciones tematicas, y cada item puede valorarse como '
+    'OK (cumple), NOK (no cumple) o N/A (no aplica). Los items marcados como NOK requieren obligatoriamente '
+    'indicar la referencia del hallazgo (desviacion detectada) y los puntos de mejora. Ademas, los NOK '
+    'generan automaticamente acciones en el plan de accion.'
 ))
 
 story.append(Spacer12())
-story.append(add_heading('<b>9.2 Auditoria externa (paso 5)</b>', style_h2, level=1))
+story.append(add_heading('<b>10.2 Auditoria externa (paso 5)</b>', style_h2, level=1))
 story.append(Spacer6())
 
 story.append(Body(
@@ -968,7 +1160,8 @@ story.append(Body(
     'con el rol de auditor. El auditor utiliza el mismo checklist que la autoevaluacion, pero su '
     'evaluacion tiene caracter oficial y es la que determina si la zona aprueba o no la S correspondiente. '
     'Los roles de responsable y empleado no pueden realizar auditorias externas; esta restriccion garantiza '
-    'la objetividad e independencia del proceso de evaluacion.'
+    'la objetividad e independencia del proceso de evaluacion. La autoevaluacion (paso 4) la realizan '
+    'los empleados, mientras que la auditoria (paso 5) es competencia exclusiva del auditor.'
 ))
 story.append(Body(
     'El resultado de la auditoria se calcula automaticamente a partir de los items del checklist. La '
@@ -980,7 +1173,7 @@ story.append(Body(
 ))
 
 story.append(Spacer12())
-story.append(add_heading('<b>9.3 Tipos de auditoria periodica</b>', style_h2, level=1))
+story.append(add_heading('<b>10.3 Tipos de auditoria periodica</b>', style_h2, level=1))
 story.append(Spacer6())
 
 audit_types = [
@@ -997,7 +1190,7 @@ story.append(Spacer6())
 story.append(Paragraph('Tabla 6. Tipos de auditorias periodicas', style_caption))
 
 story.append(Spacer12())
-story.append(add_heading('<b>9.4 Checklist de auditoria por S</b>', style_h2, level=1))
+story.append(add_heading('<b>10.4 Checklist de auditoria por S</b>', style_h2, level=1))
 story.append(Spacer6())
 
 story.append(Body(
@@ -1026,7 +1219,7 @@ story.append(Paragraph('Tabla 7. Secciones del checklist de auditoria por S', st
 # ═══════════════════════════════════════════════════════════════════════════
 
 story.append(Spacer24())
-story.append(add_heading('<b>10. Plan de Accion</b>', style_h1, level=0))
+story.append(add_heading('<b>11. Plan de Accion</b>', style_h1, level=0))
 story.append(Spacer6())
 
 story.append(Body(
@@ -1038,7 +1231,7 @@ story.append(Body(
 ))
 
 story.append(Spacer12())
-story.append(add_heading('<b>10.1 Estructura de una accion</b>', style_h2, level=1))
+story.append(add_heading('<b>11.1 Estructura de una accion</b>', style_h2, level=1))
 story.append(Spacer6())
 
 action_fields = [
@@ -1062,7 +1255,7 @@ story.append(Spacer6())
 story.append(Paragraph('Tabla 8. Campos del plan de accion', style_caption))
 
 story.append(Spacer12())
-story.append(add_heading('<b>10.2 Ciclo de vida de una accion</b>', style_h2, level=1))
+story.append(add_heading('<b>11.2 Ciclo de vida de una accion</b>', style_h2, level=1))
 story.append(Spacer6())
 
 story.append(Body(
@@ -1075,7 +1268,7 @@ story.append(Body(
 ))
 
 story.append(Spacer12())
-story.append(add_heading('<b>10.3 Visibilidad del plan de accion</b>', style_h2, level=1))
+story.append(add_heading('<b>11.3 Visibilidad del plan de accion</b>', style_h2, level=1))
 story.append(Spacer6())
 
 story.append(Body(
@@ -1098,10 +1291,10 @@ story.append(Bullet('<b>Auditor:</b> Ve las acciones derivadas de sus auditorias
 # ═══════════════════════════════════════════════════════════════════════════
 
 story.append(Spacer24())
-story.append(add_heading('<b>11. Seguimiento del Progreso</b>', style_h1, level=0))
+story.append(add_heading('<b>12. Seguimiento del Progreso</b>', style_h1, level=0))
 story.append(Spacer6())
 
-story.append(add_heading('<b>11.1 Tabla DATOS y Grafico Radar</b>', style_h2, level=1))
+story.append(add_heading('<b>12.1 Tabla DATOS y Grafico Radar</b>', style_h2, level=1))
 story.append(Spacer6())
 
 story.append(Body(
@@ -1115,7 +1308,7 @@ story.append(Body(
 ))
 
 story.append(Spacer12())
-story.append(add_heading('<b>11.2 Panel de indicadores (KPIs)</b>', style_h2, level=1))
+story.append(add_heading('<b>12.2 Panel de indicadores (KPIs)</b>', style_h2, level=1))
 story.append(Spacer6())
 
 story.append(Body(
@@ -1129,7 +1322,7 @@ story.append(Body(
 ))
 
 story.append(Spacer12())
-story.append(add_heading('<b>11.3 Panel del Gerente</b>', style_h2, level=1))
+story.append(add_heading('<b>12.3 Panel del Gerente</b>', style_h2, level=1))
 story.append(Spacer6())
 
 story.append(Body(
@@ -1148,7 +1341,7 @@ story.append(Body(
 # ═══════════════════════════════════════════════════════════════════════════
 
 story.append(Spacer24())
-story.append(add_heading('<b>12. Jaula de Excedentes</b>', style_h1, level=0))
+story.append(add_heading('<b>13. Jaula de Excedentes</b>', style_h1, level=0))
 story.append(Spacer6())
 
 story.append(Body(
@@ -1160,7 +1353,7 @@ story.append(Body(
 ))
 
 story.append(Spacer12())
-story.append(add_heading('<b>12.1 Flujo de la Jaula</b>', style_h2, level=1))
+story.append(add_heading('<b>13.1 Flujo de la Jaula</b>', style_h2, level=1))
 story.append(Spacer6())
 
 story.append(Body(
@@ -1191,7 +1384,7 @@ story.append(Paragraph('Tabla 9. Estados de la Jaula de Excedentes', style_capti
 # ═══════════════════════════════════════════════════════════════════════════
 
 story.append(Spacer24())
-story.append(add_heading('<b>13. Preguntas Frecuentes</b>', style_h1, level=0))
+story.append(add_heading('<b>14. Preguntas Frecuentes</b>', style_h1, level=0))
 story.append(Spacer6())
 
 faqs = [
@@ -1200,8 +1393,12 @@ faqs = [
      'empleado. La zona no puede avanzar al siguiente paso hasta que todos los empleados asignados hayan '
      'completado los pasos individuales que les corresponden. Esto garantiza que todo el equipo tiene '
      'los conocimientos necesarios antes de pasar a la fase practica.'),
-    ('Un responsable puede realizar auditorias externas?',
-     'No. Solo los usuarios con rol de auditor pueden realizar auditorias externas (paso 5). El responsable '
+    ('Un empleado puede realizar la autoevaluacion interna?',
+     'Si. La autoevaluacion interna (paso 4) la realizan los empleados de la zona. Es un ejercicio de reflexion '
+     'sobre el grado de cumplimiento de los criterios 5S. Cada empleado completa el checklist valorando '
+     'cada item como OK, NOK o N/A. Los items NOK requieren indicar obligatoriamente el hallazgo y los puntos de mejora.'),
+    ('Quien realiza la auditoria externa?',
+     'Solo los usuarios con rol de auditor pueden realizar auditorias externas (paso 5). El responsable '
      'coordina el proyecto y hace seguimiento del progreso, pero la evaluacion externa debe ser realizada '
      'por un auditor independiente para garantizar la objetividad del proceso.'),
     ('Se pueden mezclar los inventarios de 1S y 2S?',
@@ -1236,7 +1433,7 @@ for i, (q, a) in enumerate(faqs, 1):
 # ═══════════════════════════════════════════════════════════════════════════
 
 story.append(Spacer24())
-story.append(add_heading('<b>14. Glosario de Terminos</b>', style_h1, level=0))
+story.append(add_heading('<b>15. Glosario de Terminos</b>', style_h1, level=0))
 story.append(Spacer6())
 
 glossary = [

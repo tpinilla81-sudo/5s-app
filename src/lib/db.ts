@@ -12,10 +12,28 @@ if (!process.env.DATABASE_URL) {
   process.env.DATABASE_URL = `file:${dbPath}`
 }
 
-export const db = globalForPrisma.prisma ?? new PrismaClient({
-  log: process.env.NODE_ENV === 'development' ? ['error', 'warn'] : ['error'],
-})
+function createPrismaClient() {
+  return new PrismaClient({
+    log: ['error'],
+    datasources: {
+      db: {
+        url: process.env.DATABASE_URL,
+      },
+    },
+  })
+}
+
+// In production, reuse the global instance to avoid connection pool exhaustion with SQLite
+// In development, also reuse to avoid hot-reload creating too many connections
+const db = globalForPrisma.prisma ?? createPrismaClient()
 
 if (process.env.NODE_ENV !== 'production') {
   globalForPrisma.prisma = db
 }
+
+// Ensure we can connect on first use
+db.$connect().catch((err) => {
+  console.error('Failed to connect to database:', err)
+})
+
+export { db }

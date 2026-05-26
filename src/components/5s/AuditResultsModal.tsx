@@ -20,6 +20,7 @@ import {
 import {
   ShieldCheck, AlertTriangle, CheckCircle2, ChevronDown, ChevronRight,
   MapPin, User, Calendar, TrendingUp, Clock, Filter,
+  Maximize2, Minimize2,
 } from 'lucide-react';
 import { use5SStore } from '@/lib/store';
 import { S_STEPS } from '@/lib/5s-constants';
@@ -89,6 +90,7 @@ export default function AuditResultsModal({ open, onClose }: AuditResultsModalPr
   const [filterEstado, setFilterEstado] = useState<string>('all');
   const [expandedAudit, setExpandedAudit] = useState<string | null>(null);
   const [zones, setZones] = useState<{ id: string; name: string; color: string }[]>([]);
+  const [isFullscreen, setIsFullscreen] = useState(true);
 
   useEffect(() => {
     if (open) {
@@ -314,18 +316,25 @@ export default function AuditResultsModal({ open, onClose }: AuditResultsModalPr
 
   return (
     <Dialog open={open} onOpenChange={() => onClose()}>
-      <DialogContent className="max-w-[95vw] max-h-[95vh] overflow-y-auto">
-        <DialogHeader>
+      <DialogContent size={isFullscreen ? "fullscreen" : "xl"} className="flex flex-col overflow-hidden p-0">
+        <DialogHeader className="px-6 pt-6 pb-2 flex-shrink-0">
           <DialogTitle className="flex items-center gap-2">
             <ShieldCheck className="h-5 w-5 text-blue-600" />
             <span>Resultados de Auditoría</span>
             <Badge variant="outline" className="text-xs border-blue-300 text-blue-700">
               {audits.length} auditorías
             </Badge>
+            <button
+              onClick={() => setIsFullscreen(!isFullscreen)}
+              className="ml-auto p-1 rounded hover:bg-muted transition-colors"
+              title={isFullscreen ? "Reducir ventana" : "Pantalla completa"}
+            >
+              {isFullscreen ? <Minimize2 className="h-4 w-4 text-muted-foreground" /> : <Maximize2 className="h-4 w-4 text-muted-foreground" />}
+            </button>
           </DialogTitle>
         </DialogHeader>
 
-        <div className="flex-1 flex flex-col min-h-0 space-y-3">
+        <div className="flex-1 overflow-y-auto px-6 pb-6 min-h-0">
           {/* Tabs */}
           <div className="flex gap-1 border-b pb-1">
             {[

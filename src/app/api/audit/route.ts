@@ -77,12 +77,15 @@ export async function POST(request: NextRequest) {
     const sStepValue = sStep !== undefined ? sStep : 0
     const auditTypeValue = auditType || 'quarterly'
 
+    // Cap score at 100%
+    const cappedScore = score ? Math.min(score, 100) : null;
+
     const audit = await db.auditResult.create({
       data: {
         sStep: sStepValue,
         auditorName,
         result,
-        score: score || null,
+        score: cappedScore,
         observations: observations || null,
         auditType: auditTypeValue,
         checklistData: checklistData || null,
@@ -101,11 +104,11 @@ export async function POST(request: NextRequest) {
       if (existing) {
         await db.progress.update({
           where: { id: existing.id },
-          data: { completed: true, score: score || 100, passedAt: new Date() },
+          data: { completed: true, score: cappedScore || 100, passedAt: new Date() },
         })
       } else {
         await db.progress.create({
-          data: { sStep: sStepValue, miniStep: 5, completed: true, score: score || 100, passedAt: new Date(), projectId: lookupProjectId, zoneId },
+          data: { sStep: sStepValue, miniStep: 5, completed: true, score: cappedScore || 100, passedAt: new Date(), projectId: lookupProjectId, zoneId },
         })
       }
     }

@@ -1,87 +1,110 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 
-// Default permissions configuration - used to seed the database
-const DEFAULT_PERMISSIONS: Record<string, string[]> = {
-  admin: [
-    'view_board', 'view_progress', 'complete_steps',
-    'view_training', 'take_exam', 'manage_training',
-    'view_photos', 'upload_photos', 'delete_photos',
-    'view_inventory', 'edit_inventory', 'delete_inventory',
-    'view_selfeval', 'do_selfeval',
-    'view_audits', 'conduct_audit', 'approve_audit',
-    'view_project', 'edit_project', 'manage_zones',
-    'view_team', 'add_members', 'remove_members', 'change_roles',
-    'delete_project', 'reset_data', 'manage_templates',
-  ],
-  gerente: [
-    'view_board', 'view_progress',
-    'view_training',
-    'view_photos',
-    'view_inventory', 'edit_inventory',
-    'view_selfeval',
-    'view_audits',
-    'view_project',
-    'view_team',
-  ],
-  responsable: [
-    'view_board', 'view_progress', 'complete_steps',
-    'view_training', 'take_exam', 'manage_training',
-    'view_photos', 'upload_photos', 'delete_photos',
-    'view_inventory', 'edit_inventory', 'delete_inventory',
-    'view_selfeval', 'do_selfeval',
-    'view_audits', 'conduct_audit', 'approve_audit',
-    'view_project', 'edit_project', 'manage_zones',
-    'view_team', 'add_members', 'remove_members', 'change_roles',
-  ],
-  empleado: [
-    'view_board', 'view_progress', 'complete_steps',
-    'view_training', 'take_exam',
-    'view_photos', 'upload_photos',
-    'view_inventory', 'edit_inventory',
-    'view_selfeval', 'do_selfeval',
-    'view_audits',
-    'view_project',
-    'view_team',
-  ],
-  auditor: [
-    'view_board', 'view_progress',
-    'view_training',
-    'view_photos',
-    'view_inventory',
-    'view_selfeval',
-    'view_audits', 'conduct_audit', 'approve_audit',
-    'view_project',
-    'view_team',
-  ],
+// ═══════════════════════════════════════════════════════
+// PER-S PERMISSION DEFINITIONS
+// ═══════════════════════════════════════════════════════
+const S_STEPS = [1, 2, 3, 4, 5]
+const MINI_STEPS = [1, 2, 3, 4, 5]
+const MINI_STEP_ACTIONS: Record<number, string[]> = {
+  1: ['Ver formación', 'Completar formación'],
+  2: ['Ver fotos', 'Subir fotos'],
+  3: ['Ver inventario', 'Editar inventario'],
+  4: ['Ver autoevaluación', 'Realizar autoevaluación'],
+  5: ['Ver auditoría', 'Realizar auditoría'],
 }
 
-// All known permissions (flat list)
-const ALL_PERMISSIONS = [
-  'view_board', 'view_progress', 'complete_steps',
-  'view_training', 'take_exam', 'manage_training',
-  'view_photos', 'upload_photos', 'delete_photos',
-  'view_inventory', 'edit_inventory', 'delete_inventory',
-  'view_selfeval', 'do_selfeval',
-  'view_audits', 'conduct_audit', 'approve_audit',
-  'view_project', 'edit_project', 'manage_zones',
+// Build all per-S permission IDs
+const PER_S_PERMISSIONS: string[] = []
+for (const s of S_STEPS) {
+  for (const ms of MINI_STEPS) {
+    const actions = MINI_STEP_ACTIONS[ms]
+    actions.forEach((_, aIdx) => {
+      PER_S_PERMISSIONS.push(`s${s}_step${ms}_a${aIdx}`)
+    })
+  }
+}
+
+// General permissions (not per-S)
+const GENERAL_PERMISSIONS = [
+  'view_board', 'view_progress', 'view_project', 'edit_project', 'manage_zones',
   'view_team', 'add_members', 'remove_members', 'change_roles',
+  'manage_training', 'delete_photos', 'delete_inventory', 'approve_audit',
   'delete_project', 'reset_data', 'manage_templates',
 ]
 
+const ALL_PERMISSIONS = [...PER_S_PERMISSIONS, ...GENERAL_PERMISSIONS]
 const ALL_ROLES = ['admin', 'gerente', 'responsable', 'empleado', 'auditor']
 
-// GET /api/permissions - Get all permissions configuration
+// ═══════════════════════════════════════════════════════
+// DEFAULT PERMISSIONS
+// ═══════════════════════════════════════════════════════
+const DEFAULT_PERMISSIONS: Record<string, string[]> = {
+  admin: ALL_PERMISSIONS, // Admin has everything
+
+  gerente: [
+    'view_board', 'view_progress', 'view_project', 'view_team',
+    'edit_project', 'manage_zones',
+    // S-steps: can view all mini-steps, can edit inventory
+    ...PER_S_PERMISSIONS.filter(id => {
+      // All "view" actions (a0)
+      if (id.endsWith('_a0')) return true
+      // Edit inventory for S2 and S3
+      if (id.match(/^s[23]_step3_a1$/)) return true
+      return false
+    }),
+  ],
+
+  responsable: [
+    'view_board', 'view_progress', 'view_project', 'view_team',
+    'edit_project', 'manage_zones', 'add_members', 'remove_members', 'change_roles',
+    'manage_training', 'delete_photos', 'delete_inventory', 'approve_audit',
+    // S-steps: can view and execute steps 1-4, but NOT step 5 (conduct audit)
+    ...PER_S_PERMISSIONS.filter(id => {
+      if (id.endsWith('_a0')) return true // All view
+      if (id.match(/_step5_a1$/)) return false // Cannot conduct audits
+      return true // Can execute steps 1-4
+    }),
+  ],
+
+  empleado: [
+    'view_board', 'view_progress', 'view_project', 'view_team',
+    // S-steps: can view all, can execute steps 1-4, can only view step 5
+    ...PER_S_PERMISSIONS.filter(id => {
+      if (id.endsWith('_a0')) return true // All view
+      if (id.match(/_step5_a1$/)) return false // Cannot conduct audits
+      return true // Can execute steps 1-4
+    }),
+  ],
+
+  auditor: [
+    'view_board', 'view_progress', 'view_project', 'view_team',
+    'approve_audit',
+    // S-steps: can view all, can conduct audits (step 5 a1), but NOT execute steps 1-4
+    ...PER_S_PERMISSIONS.filter(id => {
+      if (id.endsWith('_a0')) return true // All view
+      if (id.match(/_step5_a1$/)) return true // Can conduct audits
+      return false // Cannot execute steps 1-4
+    }),
+  ],
+}
+
+// GET /api/permissions
 export async function GET() {
   try {
     let configs = await db.rolePermissionConfig.findMany()
 
-    // If no configs exist yet, seed with defaults
-    if (configs.length === 0) {
+    // If no configs exist yet, or if existing configs don't have the new per-S permissions, re-seed
+    const existingPermIds = new Set(configs.map(c => c.permission))
+    const needsReseed = configs.length === 0 || !PER_S_PERMISSIONS.some(p => existingPermIds.has(p))
+
+    if (needsReseed) {
+      // Delete all and re-seed with new structure
+      await db.rolePermissionConfig.deleteMany({})
       const createPromises: Promise<unknown>[] = []
-      for (const [role, permissions] of Object.entries(DEFAULT_PERMISSIONS)) {
+      for (const [role, perms] of Object.entries(DEFAULT_PERMISSIONS)) {
         for (const permission of ALL_PERMISSIONS) {
-          const allowed = permissions.includes(permission)
+          const allowed = perms.includes(permission)
           createPromises.push(
             db.rolePermissionConfig.create({
               data: { role, permission, allowed },
@@ -98,35 +121,26 @@ export async function GET() {
     for (const role of ALL_ROLES) {
       result[role] = {}
     }
-
     for (const config of configs) {
-      if (!result[config.role]) {
-        result[config.role] = {}
-      }
+      if (!result[config.role]) result[config.role] = {}
       result[config.role][config.permission] = config.allowed
     }
 
     return NextResponse.json({ permissions: result }, { status: 200 })
   } catch (error) {
     console.error('Get permissions error:', error)
-    return NextResponse.json(
-      { error: 'Error al obtener permisos' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'Error al obtener permisos' }, { status: 500 })
   }
 }
 
-// PUT /api/permissions - Update permissions configuration
+// PUT /api/permissions
 export async function PUT(request: NextRequest) {
   try {
     const body = await request.json()
     const { permissions } = body as { permissions: Record<string, Record<string, boolean>> }
 
     if (!permissions) {
-      return NextResponse.json(
-        { error: 'Se requiere el objeto permissions' },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: 'Se requiere el objeto permissions' }, { status: 400 })
     }
 
     const updatePromises: Promise<unknown>[] = []
@@ -165,24 +179,19 @@ export async function PUT(request: NextRequest) {
     return NextResponse.json({ permissions: result }, { status: 200 })
   } catch (error) {
     console.error('Update permissions error:', error)
-    return NextResponse.json(
-      { error: 'Error al actualizar permisos' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'Error al actualizar permisos' }, { status: 500 })
   }
 }
 
-// POST /api/permissions - Reset permissions to defaults
+// POST /api/permissions - Reset to defaults
 export async function POST() {
   try {
-    // Delete all existing
     await db.rolePermissionConfig.deleteMany({})
 
-    // Re-seed with defaults
     const createPromises: Promise<unknown>[] = []
-    for (const [role, permissions] of Object.entries(DEFAULT_PERMISSIONS)) {
+    for (const [role, perms] of Object.entries(DEFAULT_PERMISSIONS)) {
       for (const permission of ALL_PERMISSIONS) {
-        const allowed = permissions.includes(permission)
+        const allowed = perms.includes(permission)
         createPromises.push(
           db.rolePermissionConfig.create({
             data: { role, permission, allowed },
@@ -202,9 +211,6 @@ export async function POST() {
     return NextResponse.json({ permissions: result }, { status: 200 })
   } catch (error) {
     console.error('Reset permissions error:', error)
-    return NextResponse.json(
-      { error: 'Error al restaurar permisos' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'Error al restaurar permisos' }, { status: 500 })
   }
 }

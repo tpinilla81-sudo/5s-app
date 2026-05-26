@@ -1,7 +1,6 @@
 'use client'
 
 import { useState } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
 import { use5SStore } from '@/lib/store'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -255,16 +254,9 @@ export default function ProjectSetup() {
 
       {/* Main content */}
       <main className="flex-1 max-w-3xl mx-auto w-full px-4 pb-8">
-        <AnimatePresence mode="wait">
           {/* Step 1: Project Info */}
           {step === 1 && (
-            <motion.div
-              key="step1"
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-              transition={{ duration: 0.2 }}
-            >
+            <div>
               <Card className="border-0 shadow-lg shadow-green-100/50">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
@@ -306,18 +298,12 @@ export default function ProjectSetup() {
                   </div>
                 </CardContent>
               </Card>
-            </motion.div>
+            </div>
           )}
 
           {/* Step 2: Zones */}
           {step === 2 && (
-            <motion.div
-              key="step2"
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-              transition={{ duration: 0.2 }}
-            >
+            <div>
               <Card className="border-0 shadow-lg shadow-green-100/50">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
@@ -330,10 +316,8 @@ export default function ProjectSetup() {
                 </CardHeader>
                 <CardContent className="space-y-4">
                   {zones.map((zone, index) => (
-                    <motion.div
+                    <div
                       key={index}
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
                       className="p-4 rounded-lg border bg-white space-y-3"
                     >
                       <div className="flex items-center justify-between">
@@ -393,7 +377,7 @@ export default function ProjectSetup() {
                           ))}
                         </div>
                       </div>
-                    </motion.div>
+                    </div>
                   ))}
 
                   <Button
@@ -406,18 +390,12 @@ export default function ProjectSetup() {
                   </Button>
                 </CardContent>
               </Card>
-            </motion.div>
+            </div>
           )}
 
           {/* Step 3: Team Members */}
           {step === 3 && (
-            <motion.div
-              key="step3"
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-              transition={{ duration: 0.2 }}
-            >
+            <div>
               <Card className="border-0 shadow-lg shadow-green-100/50">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
@@ -592,18 +570,12 @@ export default function ProjectSetup() {
                   )}
                 </CardContent>
               </Card>
-            </motion.div>
+            </div>
           )}
 
           {/* Step 4: Confirmation */}
           {step === 4 && (
-            <motion.div
-              key="step4"
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-              transition={{ duration: 0.2 }}
-            >
+            <div>
               <Card className="border-0 shadow-lg shadow-green-100/50">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
@@ -710,10 +682,9 @@ export default function ProjectSetup() {
                   </Button>
                 </CardContent>
               </Card>
-            </motion.div>
+            </div>
           )}
-        </AnimatePresence>
-
+        
         {/* Navigation buttons */}
         <div className="flex justify-between mt-6">
           <Button

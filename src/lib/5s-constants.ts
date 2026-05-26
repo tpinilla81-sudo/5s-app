@@ -91,8 +91,8 @@ export const MINI_STEPS: MiniStep[] = [
     icon: 'ClipboardList',
     description: 'Registra los elementos correspondientes a esta S',
     descriptionByS: {
-      1: 'Inventaria los elementos innecesarios, dudosos y necesarios. Incluye precio (€) y decisión (jaula, eliminar, reubicar)',
-      2: 'Inventaria los elementos necesarios, su ubicación, frecuencia de uso y método de identificación',
+      1: 'Inventaria SOLO los elementos innecesarios. Incluye ubicación, cantidad, precio (€), estado y decisión (Jaula o Eliminar)',
+      2: 'Inventaria SOLO los elementos necesarios: ubicación, frecuencia de uso, cercanía y método de identificación',
       3: 'Inventaria los puntos de suciedad: tipo, nivel, fuente y método de limpieza',
       4: 'Inventaria los estándares implantados: tipo, estado, documentación y cumplimiento. Incluye la Biblioteca de Estándares',
       5: 'Plan de Acción: Define las acciones a realizar para mantener la disciplina y mejora continua',
@@ -144,13 +144,11 @@ export const INVENTORY_CONFIGS: Record<number, InventoryConfig> = {
     subtitle: 'SEIRI — Identifica y clasifica los elementos innecesarios',
     categories: [
       { value: 'innecesario', label: 'Innecesario', color: 'bg-red-100 text-red-800' },
-      { value: 'dudoso', label: 'Dudoso', color: 'bg-yellow-100 text-yellow-800' },
-      { value: 'util', label: 'Necesario', color: 'bg-green-100 text-green-800' },
     ],
     extraFields: [
       { key: 'estado', label: 'Estado', type: 'select', options: ['Bueno', 'Regular', 'Malo'] },
-      { key: 'frecuenciaUso', label: 'Frecuencia uso', type: 'select', options: ['Diario', 'Semanal', 'Quincenal', 'Mensual', 'Trimestral', 'Anual', 'Innecesario', 'Dudoso'] },
-      { key: 'decision', label: 'Decisión', type: 'select', options: ['Eliminar', 'Reubicar', 'Revisar', 'Jaula', 'Donar', 'Vender'] },
+      { key: 'frecuenciaUso', label: 'Frecuencia uso', type: 'select', options: ['Diario', 'Semanal', 'Quincenal', 'Mensual', 'Trimestral', 'Anual', 'Nunca'] },
+      { key: 'decision', label: 'Decisión', type: 'select', options: ['Jaula', 'Eliminar'] },
     ],
     templateName: 'S1_Inventario_Innecesarios_Seiri.xlsx',
   },
@@ -349,6 +347,30 @@ export const AUDIT_CHECKLISTS: Record<number, AuditSection[]> = {
         { id: '2.4.6', description: 'Otros (Indicar cuál)', hasOther: true },
       ],
     },
+    {
+      id: '2.5', title: 'LAYOUT',
+      items: [
+        { id: '2.5.1', description: 'Existe un layout actualizado de la zona que refleja la disposición real de equipos, máquinas y elementos' },
+        { id: '2.5.2', description: 'El layout está visible y accesible para todo el personal de la zona' },
+        { id: '2.5.3', description: 'Las ubicaciones en el layout están codificadas y referenciadas (nomenclatura de posiciones)' },
+        { id: '2.5.4', description: 'El layout se actualiza tras cada cambio de disposición de la zona' },
+        { id: '2.5.5', description: 'El flujo de materiales y personas está definido en el layout (entradas, salidas, recorridos)' },
+        { id: '2.5.6', description: 'Otros (Indicar cuál)', hasOther: true },
+      ],
+    },
+    {
+      id: '2.6', title: 'CÓDIGO DE COLORES / MARCADO DE SUELO',
+      items: [
+        { id: '2.6.1', description: 'Existe un código de colores definido y documentado para el marcado del suelo de la zona' },
+        { id: '2.6.2', description: 'El código de colores es conocido por todo el personal (está expuesto o en la biblioteca de estándares)' },
+        { id: '2.6.3', description: 'Las líneas de suelo están pintadas o pegadas en buen estado, sin desgaste ni roturas' },
+        { id: '2.6.4', description: 'Los pasillos de circulación están delimitados con el color correspondiente según el código' },
+        { id: '2.6.5', description: 'Las zonas de almacenamiento y ubicación de materiales están delimitadas con el color correspondiente' },
+        { id: '2.6.6', description: 'Las zonas de peligro/restricción están marcadas con el color de aviso correspondiente' },
+        { id: '2.6.7', description: 'Las áreas de evacuación y seguridad están señalizadas en suelo según normativa' },
+        { id: '2.6.8', description: 'Otros (Indicar cuál)', hasOther: true },
+      ],
+    },
   ],
 
   3: [
@@ -514,13 +536,20 @@ export interface AuditResult {
   fecha?: string;                  // Fecha de la auditoría
 }
 
-/** Total items per S for scoring */
+/** Calculate total items per S from the actual checklist data */
+export function getAuditTotalItems(sStep: number): number {
+  const sections = AUDIT_CHECKLISTS[sStep];
+  if (!sections) return 0;
+  return sections.reduce((sum, section) => sum + section.items.length, 0);
+}
+
+/** Total items per S for scoring (computed from actual checklist data) */
 export const AUDIT_TOTAL_ITEMS: Record<number, number> = {
-  1: 26,
-  2: 26,
-  3: 26,
-  4: 26,
-  5: 12,
+  1: getAuditTotalItems(1),
+  2: getAuditTotalItems(2),
+  3: getAuditTotalItems(3),
+  4: getAuditTotalItems(4),
+  5: getAuditTotalItems(5),
 };
 
 /** Combined quarterly audit (all 5 S together) — sStep=0 */

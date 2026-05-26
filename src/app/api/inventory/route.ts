@@ -47,6 +47,9 @@ export async function GET(request: NextRequest) {
     const items = await db.inventoryItem.findMany({
       where,
       orderBy: { createdAt: 'desc' },
+      include: {
+        zone: { select: { id: true, name: true } },
+      },
     })
 
     // Parse extra JSON field for each item
@@ -116,6 +119,8 @@ export async function POST(request: NextRequest) {
           jaulaOrigen: item.jaulaOrigen || null,
           jaulaFechaSalida: item.jaulaFechaSalida || null,
           jaulaDestino: item.jaulaDestino || null,
+          zonaOrigen: item.zonaOrigen || null,
+          zonaDestino: item.zonaDestino || null,
           projectId: effectiveProjectId,
           zoneId: item.zoneId || zoneId || null,
         },
@@ -159,6 +164,8 @@ export async function PUT(request: NextRequest) {
     if (body.jaulaFechaSalida !== undefined) updateData.jaulaFechaSalida = body.jaulaFechaSalida
     if (body.jaulaDestino !== undefined) updateData.jaulaDestino = body.jaulaDestino
     if (body.zoneId !== undefined) updateData.zoneId = body.zoneId
+    if (body.zonaOrigen !== undefined) updateData.zonaOrigen = body.zonaOrigen
+    if (body.zonaDestino !== undefined) updateData.zonaDestino = body.zonaDestino
 
     const result = await db.inventoryItem.update({
       where: { id },

@@ -18,7 +18,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { ListChecks, Plus, Trash2, ChevronDown, ChevronRight, AlertTriangle } from 'lucide-react';
+import { ListChecks, Plus, Trash2, ChevronDown, ChevronRight, AlertTriangle, Maximize2, Minimize2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { use5SStore } from '@/lib/store';
 import { S_STEPS, ACTION_PLAN_MIN_ITEMS } from '@/lib/5s-constants';
@@ -97,11 +97,15 @@ export default function ActionPlanModal({ open, onClose, sStep, miniStep }: Acti
   const { fetchProgress, currentUser, adminFreeNavigation, currentProject, currentZone } = use5SStore();
   const sStepData = S_STEPS.find(s => s.id === sStep);
   const isAdmin = currentUser?.role === 'admin' && adminFreeNavigation;
+  const isResponsable = currentUser?.role === 'responsable';
+  const isAuditor = currentUser?.role === 'auditor';
+  const isReadOnly = isResponsable || isAuditor || (currentUser?.role === 'admin' && !adminFreeNavigation); // View-only when responsable, auditor, or admin with lock closed
 
   const [actions, setActions] = useState<ActionItemData[]>([]);
   const [isCompleted, setIsCompleted] = useState(false);
   const [zones, setZones] = useState<ZoneData[]>([]);
   const [expandedRow, setExpandedRow] = useState<string | null>(null);
+  const [isFullscreen, setIsFullscreen] = useState(true);
 
   const loadZones = async () => {
     if (!currentProject) return;
@@ -328,8 +332,8 @@ export default function ActionPlanModal({ open, onClose, sStep, miniStep }: Acti
 
   return (
     <Dialog open={open} onOpenChange={() => onClose()}>
-      <DialogContent className="max-w-[95vw] max-h-[95vh] overflow-y-auto">
-        <DialogHeader>
+      <DialogContent size={isFullscreen ? "fullscreen" : "xl"} className="flex flex-col overflow-hidden p-0">
+        <DialogHeader className="px-6 pt-6 pb-2 flex-shrink-0">
           <DialogTitle className="flex items-center gap-2">
             <ListChecks className="h-5 w-5" style={{ color: sStepData?.color }} />
             <span>Plan de Acción{miniStep === 0 ? ' — Global' : ` — ${sStepData?.name}`}</span>
@@ -338,11 +342,18 @@ export default function ActionPlanModal({ open, onClose, sStep, miniStep }: Acti
                 {sStepData?.japaneseName}
               </Badge>
             )}
+            <button
+              onClick={() => setIsFullscreen(!isFullscreen)}
+              className="ml-auto p-1 rounded hover:bg-muted transition-colors"
+              title={isFullscreen ? "Reducir ventana" : "Pantalla completa"}
+            >
+              {isFullscreen ? <Minimize2 className="h-4 w-4 text-muted-foreground" /> : <Maximize2 className="h-4 w-4 text-muted-foreground" />}
+            </button>
           </DialogTitle>
         </DialogHeader>
 
         {isAdmin && !isCompleted && (
-          <div className="flex items-center gap-2 p-2 bg-amber-50 border border-amber-200 rounded-lg">
+          <div className="mx-6 flex items-center gap-2 p-2 bg-amber-50 border border-amber-200 rounded-lg flex-shrink-0">
             <span className="text-xs text-amber-700 font-medium">Modo Admin:</span>
             <Button
               variant="outline"
@@ -355,6 +366,13 @@ export default function ActionPlanModal({ open, onClose, sStep, miniStep }: Acti
           </div>
         )}
 
+        {isReadOnly && (
+          <div className="flex items-center gap-2 p-2 mx-6 flex-shrink-0 bg-blue-50 border border-blue-200 rounded-lg">
+            <span className="text-xs text-blue-700 font-medium">Solo lectura: {currentUser?.role === 'admin' ? 'Activa el candado para poder realizar pasos.' : currentUser?.role === 'auditor' ? 'El auditor puede ver el plan de acción pero no modificarlo.' : 'El responsable puede ver el progreso pero no realizar pasos.'}</span>
+          </div>
+        )}
+
+        <div className="flex-1 overflow-y-auto px-6 pb-6 min-h-0">
         {isCompleted ? (
           <div className="text-center py-8">
             <div className="text-4xl mb-3">✅</div>
@@ -664,7 +682,7 @@ export default function ActionPlanModal({ open, onClose, sStep, miniStep }: Acti
               </div>
               <Button
                 onClick={handleComplete}
-                disabled={!canComplete}
+                disabled={!canComplete || isReadOnly}
                 style={canComplete ? { backgroundColor: sStepData?.color } : undefined}
               >
                 Completar Plan de Acción ({totalActions}/{ACTION_PLAN_MIN_ITEMS} mín.)
@@ -672,6 +690,7 @@ export default function ActionPlanModal({ open, onClose, sStep, miniStep }: Acti
             </div>
           </div>
         )}
+        </div>
       </DialogContent>
     </Dialog>
   );

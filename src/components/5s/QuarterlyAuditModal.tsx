@@ -20,6 +20,8 @@ import {
   Plus,
   Trash2,
   TrendingUp,
+  Maximize2,
+  Minimize2,
 } from 'lucide-react';
 import { use5SStore } from '@/lib/store';
 import {
@@ -39,6 +41,7 @@ export default function QuarterlyAuditModal({ open, onClose }: QuarterlyAuditMod
   const { fetchProgress, currentUser, adminFreeNavigation, currentProject, currentZone } = use5SStore();
   const sections = QUARTERLY_AUDIT_CHECKLIST;
 
+  const [isFullscreen, setIsFullscreen] = useState(true);
   const [auditorName, setAuditorName] = useState('');
   const [results, setResults] = useState<Record<string, AuditItemResult>>({});
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({});
@@ -165,16 +168,25 @@ export default function QuarterlyAuditModal({ open, onClose }: QuarterlyAuditMod
 
   return (
     <Dialog open={open} onOpenChange={() => onClose()}>
-      <DialogContent className="max-w-[95vw] max-h-[95vh] overflow-y-auto">
-        <DialogHeader>
+      <DialogContent size={isFullscreen ? "fullscreen" : "xl"} className="flex flex-col overflow-hidden p-0">
+        <DialogHeader className="px-6 pt-6 pb-2 flex-shrink-0">
           <DialogTitle className="flex items-center gap-2">
             <ShieldCheck className="h-5 w-5 text-orange-500" />
             <span>Auditoría Trimestral 5S</span>
             <Badge className="bg-orange-100 text-orange-700 border border-orange-200">
               Completa
             </Badge>
+            <button
+              onClick={() => setIsFullscreen(!isFullscreen)}
+              className="ml-auto p-1 rounded hover:bg-muted transition-colors"
+              title={isFullscreen ? "Reducir ventana" : "Pantalla completa"}
+            >
+              {isFullscreen ? <Minimize2 className="h-4 w-4 text-muted-foreground" /> : <Maximize2 className="h-4 w-4 text-muted-foreground" />}
+            </button>
           </DialogTitle>
         </DialogHeader>
+
+        <div className="flex-1 overflow-y-auto px-6 pb-6 min-h-0">
 
         {isCompleted ? (
           <div className="text-center py-8">
@@ -430,6 +442,7 @@ export default function QuarterlyAuditModal({ open, onClose }: QuarterlyAuditMod
             </div>
           </div>
         )}
+        </div>
       </DialogContent>
     </Dialog>
   );

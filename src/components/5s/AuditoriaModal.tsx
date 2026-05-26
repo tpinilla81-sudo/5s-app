@@ -24,6 +24,8 @@ import {
   Plus,
   Trash2,
   TrendingUp,
+  Maximize2,
+  Minimize2,
 } from 'lucide-react';
 import { use5SStore } from '@/lib/store';
 import {
@@ -32,7 +34,8 @@ import {
   AUDIT_TOTAL_ITEMS,
   AUDIT_PASS_THRESHOLD,
 } from '@/lib/5s-constants';
-import type { AuditItemResult } from '@/lib/5s-constants';
+import { AUDIT_PASS_THRESHOLD as AUDIT_PASS_FALLBACK } from '@/lib/5s-constants';
+import type { AuditSection, AuditItemResult } from '@/lib/5s-constants';
 
 interface AuditoriaModalProps {
   open: boolean;
@@ -41,14 +44,28 @@ interface AuditoriaModalProps {
   miniStep: number;
 }
 
+// Convert template content to AuditSection format
+function templateToAuditSections(content: any): AuditSection[] {
+  if (!content || !content.sections) return []
+  return content.sections.map((section: any, sIdx: number) => ({
+    id: section.id || `sec-${sIdx}`,
+    title: section.title || `Sección ${sIdx + 1}`,
+    items: (section.items || []).map((item: any, iIdx: number) => ({
+      id: item.id || `item-${sIdx}-${iIdx}`,
+      description: item.description || '',
+      hasOther: item.hasOther || false,
+    })),
+  }))
+}
+
 export default function AuditoriaModal({ open, onClose, sStep, miniStep }: AuditoriaModalProps) {
   const { fetchProgress, currentUser, adminFreeNavigation, currentProject, currentZone } = use5SStore();
   const sStepData = S_STEPS.find(s => s.id === sStep);
-  const sections = AUDIT_CHECKLISTS[sStep] || [];
   const isAdmin = currentUser?.role === 'admin' && adminFreeNavigation;
   const isAuditor = currentUser?.role === 'auditor';
   const canAudit = isAdmin || isAuditor;
 
+  const [sections, setSections] = useState<AuditSection[]>([]);
   const [auditorName, setAuditorName] = useState('');
   const [results, setResults] = useState<Record<string, AuditItemResult>>({});
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({});
@@ -56,10 +73,66 @@ export default function AuditoriaModal({ open, onClose, sStep, miniStep }: Audit
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isCompleted, setIsCompleted] = useState(false);
   const [finalScore, setFinalScore] = useState(0);
+  const [notaMinima, setNotaMinima] = useState(75);
+  const [isLoadingTemplate, setIsLoadingTemplate] = useState(true);
 
   // Mejoras realizadas
+  const [isFullscreen, setIsFullscreen] = useState(true);
   const [haMejoras, setHaMejoras] = useState<boolean | null>(null);
   const [mejoras, setMejoras] = useState<Array<{ id: string; descripcion: string; responsable: string; fecha: string }>>([]);
+
+  // Load template from API
+  useEffect(() => {
+    if (open) {
+      const loadTemplate = async () => {
+        setIsLoadingTemplate(true)
+        try {
+          const res = await fetch(`/api/templates?type=auditoria&sStep=${sStep}`)
+          const json = await res.json()
+          if (json.success && json.data && json.data.length > 0) {
+            const tpl = json.data[0]
+            const parsed = typeof tpl.content === 'string' ? JSON.parse(tpl.content) : tpl.content
+            const templateSections = templateToAuditSections(parsed)
+            if (templateSections.length > 0) {
+              setSections(templateSections)
+            } else {
+              setSections(AUDIT_CHECKLISTS[sStep] || [])
+            }
+            if (tpl.notaMinima != null) setNotaMinima(tpl.notaMinima)
+          } else {
+            setSections(AUDIT_CHECKLISTS[sStep] || [])
+          }
+        } catch (e) {
+          console.error('Error loading auditoria template:', e)
+          setSections(AUDIT_CHECKLISTS[sStep] || [])
+        } finally {
+          setIsLoadingTemplate(false)
+        }
+      }
+      loadTemplate()
+    }
+  }, [open, sStep])
+
+  // Fetch dynamic threshold
+  useEffect(() => {
+    if (open && currentProject?.id) {
+      const fetchThreshold = async () => {
+        try {
+          const params = new URLSearchParams({ projectId: currentProject.id });
+          if (currentZone?.id) params.set('zoneId', currentZone.id);
+          const res = await fetch(`/api/audit-targets?${params}`);
+          const json = await res.json();
+          if (json.success && json.data) {
+            const zoneTarget = json.data.find((t: any) => t.sStep === sStep && t.miniStep === 5 && t.zoneId === currentZone?.id);
+            const projectTarget = json.data.find((t: any) => t.sStep === sStep && t.miniStep === 5 && t.zoneId === null);
+            const target = zoneTarget || projectTarget;
+            if (target?.notaMinima) setNotaMinima(target.notaMinima);
+          }
+        } catch (e) { console.error('Error fetching threshold:', e); }
+      };
+      fetchThreshold();
+    }
+  }, [open, sStep, currentProject?.id, currentZone?.id]);
 
   useEffect(() => {
     if (open && sections.length > 0) {
@@ -76,7 +149,7 @@ export default function AuditoriaModal({ open, onClose, sStep, miniStep }: Audit
     }
   }, [open, sStep]);
 
-  const totalItems = AUDIT_TOTAL_ITEMS[sStep] || 26;
+  const totalItems = sections.reduce((sum, s) => sum + s.items.length, 0) || AUDIT_TOTAL_ITEMS[sStep] || 26;
 
   const scoring = useMemo(() => {
     const allResults = Object.values(results);
@@ -88,11 +161,16 @@ export default function AuditoriaModal({ open, onClose, sStep, miniStep }: Audit
     // Each mejora with description adds 5%, max 2 mejoras = +10%
     const validMejorasCount = haMejoras ? mejoras.filter(m => m.descripcion.trim()).length : 0;
     const mejorasScore = Math.min(validMejorasCount, 2) * 5;
-    const scorePercent = Math.min(checklistScore + mejorasScore, 100);
+    const scorePercent = Math.min(checklistScore + mejorasScore, 100); // HARD CAP: never exceeds 100%
     return { okCount, nokCount, answeredCount, checklistScore, mejorasScore, validMejorasCount, scorePercent };
   }, [results, totalItems, haMejoras, mejoras]);
 
   const canSubmit = canAudit && auditorName.trim() !== '' && scoring.answeredCount > 0;
+
+  // Check that all NOK items have hallazgo and mejora filled
+  const nokItems = Object.values(results).filter(r => r.status === 'nok');
+  const allNokCompleted = nokItems.length === 0 || nokItems.every(r => (r.hallazgo || '').trim() !== '' && (r.mejora || '').trim() !== '');
+  const canSubmitFinal = canSubmit && allNokCompleted;
 
   const toggleSection = (sectionId: string) => {
     setExpandedSections(prev => ({ ...prev, [sectionId]: !prev[sectionId] }));
@@ -115,7 +193,7 @@ export default function AuditoriaModal({ open, onClose, sStep, miniStep }: Audit
   const handleSubmit = async () => {
     if (!canSubmit) return;
     setIsSubmitting(true);
-    const isApto = scoring.scorePercent >= AUDIT_PASS_THRESHOLD;
+    const isApto = scoring.scorePercent >= notaMinima;
     try {
       // Save audit result (always save, even if not apto)
       const auditRes = await fetch('/api/audit', {
@@ -125,7 +203,7 @@ export default function AuditoriaModal({ open, onClose, sStep, miniStep }: Audit
           sStep,
           auditorName,
           result: isApto ? 'apto' : 'no_apto',
-          score: scoring.scorePercent,
+          score: Math.min(scoring.scorePercent, 100),
           observations: observaciones || null,
           projectId: currentProject?.id,
           zoneId: currentZone?.id || null,
@@ -179,7 +257,7 @@ export default function AuditoriaModal({ open, onClose, sStep, miniStep }: Audit
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             completed: isApto,
-            score: scoring.scorePercent,
+            score: Math.min(scoring.scorePercent, 100),
             notes: JSON.stringify({
               type: 'auditoria_externa',
               auditor: auditorName,
@@ -243,27 +321,26 @@ export default function AuditoriaModal({ open, onClose, sStep, miniStep }: Audit
 
   return (
     <Dialog open={open} onOpenChange={() => onClose()}>
-      <DialogContent className="max-w-[95vw] max-h-[95vh] overflow-y-auto">
-        <DialogHeader>
+      <DialogContent size={isFullscreen ? "fullscreen" : "xl"} className="flex flex-col overflow-hidden p-0">
+        <DialogHeader className="px-6 pt-6 pb-2 flex-shrink-0">
           <DialogTitle className="flex items-center gap-2">
             <ShieldCheck className="h-5 w-5" style={{ color: sStepData?.color }} />
             <span>Auditoría Externa</span>
             <Badge variant="outline" style={{ borderColor: sStepData?.color, color: sStepData?.color }}>
               {sStepData?.japaneseName} — {sStepData?.spanishName}
             </Badge>
+            <button
+              onClick={() => setIsFullscreen(!isFullscreen)}
+              className="ml-auto p-1 rounded hover:bg-muted transition-colors"
+              title={isFullscreen ? "Reducir ventana" : "Pantalla completa"}
+            >
+              {isFullscreen ? <Minimize2 className="h-4 w-4 text-muted-foreground" /> : <Maximize2 className="h-4 w-4 text-muted-foreground" />}
+            </button>
           </DialogTitle>
         </DialogHeader>
 
-        {/* Permission check */}
-        {!canAudit && !isCompleted && (
-          <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-lg">
-            <AlertCircle className="h-4 w-4 text-red-600" />
-            <span className="text-sm text-red-700 font-medium">Solo los auditores pueden realizar la auditoría externa. Tu rol: {currentUser?.role || 'sin rol'}</span>
-          </div>
-        )}
-
         {isAdmin && !isCompleted && (
-          <div className="flex items-center gap-2 p-2 bg-amber-50 border border-amber-200 rounded-lg">
+          <div className="flex items-center gap-2 p-2 mx-6 flex-shrink-0 bg-amber-50 border border-amber-200 rounded-lg">
             <span className="text-xs text-amber-700 font-medium">Modo Admin:</span>
             <Button
               variant="outline"
@@ -276,16 +353,25 @@ export default function AuditoriaModal({ open, onClose, sStep, miniStep }: Audit
           </div>
         )}
 
+        <div className="flex-1 overflow-y-auto px-6 pb-6 min-h-0">
+        {/* Permission check */}
+        {!canAudit && !isCompleted && (
+          <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-lg">
+            <AlertCircle className="h-4 w-4 text-red-600" />
+            <span className="text-sm text-red-700 font-medium">Solo los auditores pueden realizar la auditoría externa. Tu rol: {currentUser?.role || 'sin rol'}</span>
+          </div>
+        )}
+
         {!canAudit && !isCompleted ? null : isCompleted ? (
           <div className="space-y-4">
             <div className="text-center py-4">
-              {finalScore >= AUDIT_PASS_THRESHOLD ? (
+              {finalScore >= notaMinima ? (
                 <CheckCircle className="h-16 w-16 text-green-500 mx-auto mb-3" />
               ) : (
                 <AlertTriangle className="h-16 w-16 text-red-500 mx-auto mb-3" />
               )}
               <h3 className="text-xl font-bold mb-2">
-                {finalScore >= AUDIT_PASS_THRESHOLD ? 'Auditoría Externa Superada' : 'Auditoría No Superada'}
+                {finalScore >= notaMinima ? 'Auditoría Externa Superada' : 'Auditoría No Superada'}
               </h3>
               <p className="text-lg mb-1">Puntuación Total: <strong>{finalScore}%</strong></p>
               <div className="flex justify-center gap-3 my-2">
@@ -300,7 +386,7 @@ export default function AuditoriaModal({ open, onClose, sStep, miniStep }: Audit
               </p>
             </div>
 
-            {finalScore >= AUDIT_PASS_THRESHOLD ? (
+            {finalScore >= notaMinima ? (
               <div className="text-center">
                 <Badge className="bg-green-500 text-lg px-4 py-1">Apto — Mini-paso completado</Badge>
                 <p className="text-sm text-muted-foreground mt-2">La auditoría ha sido registrada y el paso se marca como completado.</p>
@@ -310,7 +396,7 @@ export default function AuditoriaModal({ open, onClose, sStep, miniStep }: Audit
                 <div className="text-center">
                   <Badge className="bg-red-500 text-lg px-4 py-1">No Apto — Se requiere corrección</Badge>
                   <p className="text-sm text-muted-foreground mt-2">
-                    Mínimo requerido: {AUDIT_PASS_THRESHOLD}%. Debes corregir las disfunciones y realizar una nueva auditoría.
+                    Mínimo requerido: {notaMinima}%. Debes corregir las disfunciones y realizar una nueva auditoría.
                   </p>
                 </div>
 
@@ -359,7 +445,7 @@ export default function AuditoriaModal({ open, onClose, sStep, miniStep }: Audit
                 Auditoría Externa — {sStepData?.japaneseName}
               </p>
               <p className="text-sm text-muted-foreground mt-1">
-                El auditor evalúa cada punto (máx. 90%). Cada mejora realizada suma +5% (máx. 2 mejoras = +10%). Para aprobar se necesita ≥{AUDIT_PASS_THRESHOLD}%.
+                El auditor evalúa cada punto (máx. 90%). Cada mejora realizada suma +5% (máx. 2 mejoras = +10%). Para aprobar se necesita ≥{notaMinima}%.
                 Los NOKs generan hallazgos y puntos de mejora como plan de acción.
               </p>
             </div>
@@ -387,7 +473,7 @@ export default function AuditoriaModal({ open, onClose, sStep, miniStep }: Audit
                     {scoring.okCount} OK / {scoring.nokCount} NOK de {totalItems} puntos
                   </p>
                 </div>
-                <Badge variant={scoring.scorePercent >= AUDIT_PASS_THRESHOLD ? 'default' : 'secondary'} className="text-base px-3 py-1">
+                <Badge variant={scoring.scorePercent >= notaMinima ? 'default' : 'secondary'} className="text-base px-3 py-1">
                   {scoring.scorePercent}%
                 </Badge>
               </div>
@@ -397,7 +483,7 @@ export default function AuditoriaModal({ open, onClose, sStep, miniStep }: Audit
                 <Badge className="bg-green-100 text-green-800">OK: {scoring.okCount}</Badge>
                 <Badge className="bg-red-100 text-red-800">NOK: {scoring.nokCount}</Badge>
               </div>
-              <p className="text-[10px] text-muted-foreground">Mínimo para aprobar: {AUDIT_PASS_THRESHOLD}%</p>
+              <p className="text-[10px] text-muted-foreground">Mínimo para aprobar: {notaMinima}%</p>
             </div>
 
             {/* Checklist sections - same checklist as autoevaluación */}
@@ -478,27 +564,34 @@ export default function AuditoriaModal({ open, onClose, sStep, miniStep }: Audit
                               />
                             )}
 
+                            {/* NOK details: hallazgo + mejora — OBLIGATORIOS */}
                             {isNok && (
                               <div className="space-y-2 pl-6 border-l-2 border-red-200">
                                 <div>
-                                  <label className="text-xs font-medium text-red-700">Referencia del hallazgo (desviación)</label>
+                                  <label className="text-xs font-medium text-red-700">Referencia del hallazgo (desviación) *</label>
                                   <Textarea
-                                    placeholder="Describa la desviación encontrada..."
+                                    placeholder="Obligatorio: describa la desviación encontrada..."
                                     value={result?.hallazgo || ''}
                                     onChange={e => setItemField(item.id, 'hallazgo', e.target.value)}
-                                    className="text-sm mt-1"
+                                    className={`text-sm mt-1 ${!(result?.hallazgo || '').trim() ? 'border-red-400 focus:border-red-500' : ''}`}
                                     rows={2}
                                   />
+                                  {!(result?.hallazgo || '').trim() && (
+                                    <p className="text-[10px] text-red-500 mt-0.5">Campo obligatorio</p>
+                                  )}
                                 </div>
                                 <div>
-                                  <label className="text-xs font-medium text-amber-700">Punto a Mejorar (sugerencia)</label>
+                                  <label className="text-xs font-medium text-amber-700">Punto a Mejorar (sugerencia) *</label>
                                   <Textarea
-                                    placeholder="Sugerencia de mejora..."
+                                    placeholder="Obligatorio: sugiera una mejora..."
                                     value={result?.mejora || ''}
                                     onChange={e => setItemField(item.id, 'mejora', e.target.value)}
-                                    className="text-sm mt-1"
+                                    className={`text-sm mt-1 ${!(result?.mejora || '').trim() ? 'border-amber-400 focus:border-amber-500' : ''}`}
                                     rows={2}
                                   />
+                                  {!(result?.mejora || '').trim() && (
+                                    <p className="text-[10px] text-amber-500 mt-0.5">Campo obligatorio</p>
+                                  )}
                                 </div>
                                 <div>
                                   <Button variant="outline" size="sm" className="text-xs">
@@ -641,18 +734,29 @@ export default function AuditoriaModal({ open, onClose, sStep, miniStep }: Audit
               </CardContent>
             </Card>
 
+            {/* NOK incomplete warning */}
+            {nokItems.length > 0 && !allNokCompleted && (
+              <div className="p-3 bg-red-50 border border-red-200 rounded-lg flex items-center gap-2">
+                <AlertCircle className="h-4 w-4 text-red-600 shrink-0" />
+                <p className="text-xs text-red-700">
+                  Debes completar los campos <strong>"Referencia del hallazgo"</strong> y <strong>"Punto a Mejorar"</strong> en todos los items NOK ({nokItems.filter(r => !(r.hallazgo || '').trim() || !(r.mejora || '').trim()).length} pendientes)
+                </p>
+              </div>
+            )}
+
             {/* Submit button */}
             <div className="flex justify-end">
               <Button
                 onClick={handleSubmit}
-                disabled={!canSubmit || isSubmitting}
-                style={canSubmit ? { backgroundColor: sStepData?.color } : undefined}
+                disabled={!canSubmitFinal || isSubmitting}
+                style={canSubmitFinal ? { backgroundColor: sStepData?.color } : undefined}
               >
                 {isSubmitting ? 'Enviando...' : `Registrar Auditoría Externa (${scoring.scorePercent}%)`}
               </Button>
             </div>
           </div>
         )}
+        </div>
       </DialogContent>
     </Dialog>
   );

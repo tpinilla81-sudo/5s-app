@@ -1,17 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 
+// GET /api/templates?type=xxx&sStep=1&includeInactive=true
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
     const type = searchParams.get('type')
     const sStep = searchParams.get('sStep')
+    const includeInactive = searchParams.get('includeInactive') === 'true'
 
-    const where: Record<string, unknown> = { active: true }
+    const where: Record<string, unknown> = {}
+    if (!includeInactive) where.active = true
     if (type) where.type = type
     if (sStep) where.sStep = parseInt(sStep)
 
-    const templates = await db.template.findMany({ where })
+    const templates = await db.template.findMany({ where, orderBy: [{ sStep: 'asc' }, { createdAt: 'desc' }] })
     return NextResponse.json({ success: true, data: templates })
   } catch (error) {
     console.error('Error fetching templates:', error)
@@ -19,22 +22,76 @@ export async function GET(request: NextRequest) {
   }
 }
 
+// POST /api/templates - Create template
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { type, sStep, title, description, content } = body
+    const { type, sStep, title, description, content, notaMinima, projectId } = body
 
-    if (!type || !sStep || !title || !content) {
-      return NextResponse.json({ success: false, error: 'Missing required fields' }, { status: 400 })
+    if (!type || sStep == null || !title || !content) {
+      return NextResponse.json({ success: false, error: 'Faltan campos obligatorios: type, sStep, title, content' }, { status: 400 })
     }
 
-    const template = await db.template.create({
-      data: { type, sStep, title, description, content: typeof content === 'string' ? content : JSON.stringify(content) },
-    })
+    // If projectId is provided, this template is project-specific
+    const data: Record<string, unknown> = {
+      type,
+      sStep: Number(sStep),
+      title,
+      description: description || null,
+      content: typeof content === 'string' ? content : JSON.stringify(content),
+      notaMinima: notaMinima != null ? Number(notaMinima) : null,
+    }
+
+    const template = await db.template.create({ data })
 
     return NextResponse.json({ success: true, data: template })
   } catch (error) {
     console.error('Error creating template:', error)
     return NextResponse.json({ success: false, error: 'Error creating template' }, { status: 500 })
+  }
+}
+
+// PUT /api/templates - Update template
+export async function PUT(request: NextRequest) {
+  try {
+    const body = await request.json()
+    const { id, type, sStep, title, description, content, active, notaMinima } = body
+
+    if (!id) {
+      return NextResponse.json({ success: false, error: 'Se requiere el id de la plantilla' }, { status: 400 })
+    }
+
+    const data: Record<string, unknown> = {}
+    if (type !== undefined) data.type = type
+    if (sStep !== undefined) data.sStep = Number(sStep)
+    if (title !== undefined) data.title = title
+    if (description !== undefined) data.description = description
+    if (content !== undefined) data.content = typeof content === 'string' ? content : JSON.stringify(content)
+    if (active !== undefined) data.active = Boolean(active)
+    if (notaMinima !== undefined) data.notaMinima = notaMinima != null ? Number(notaMinima) : null
+
+    const template = await db.template.update({ where: { id }, data })
+    return NextResponse.json({ success: true, data: template })
+  } catch (error) {
+    console.error('Error updating template:', error)
+    return NextResponse.json({ success: false, error: 'Error updating template' }, { status: 500 })
+  }
+}
+
+// DELETE /api/templates?id=xxx
+export async function DELETE(request: NextRequest) {
+  try {
+    const { searchParams } = new URL(request.url)
+    const id = searchParams.get('id')
+
+    if (!id) {
+      return NextResponse.json({ success: false, error: 'Se requiere el id' }, { status: 400 })
+    }
+
+    await db.template.delete({ where: { id } })
+    return NextResponse.json({ success: true })
+  } catch (error) {
+    console.error('Error deleting template:', error)
+    return NextResponse.json({ success: false, error: 'Error deleting template' }, { status: 500 })
   }
 }

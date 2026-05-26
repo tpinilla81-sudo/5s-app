@@ -49,8 +49,14 @@ import {
   AlertTriangle,
   Eye,
   EyeOff,
+  CheckSquare,
+  ShieldCheck,
+  Save,
+  BookOpen,
 } from 'lucide-react'
 import { Checkbox } from '@/components/ui/checkbox'
+import { S_STEPS } from '@/lib/5s-constants'
+import TemplateManager from './TemplateManager'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -123,7 +129,7 @@ interface AdminPanelProps {
 
 export default function AdminPanel({ embedded }: AdminPanelProps = {}) {
   const { setCurrentView, fetchProjects, fetchCompanies, projects, setCurrentProject, currentProject } = use5SStore()
-  const [activeTab, setActiveTab] = useState<'projects' | 'users' | 'companies'>('projects')
+  const [activeTab, setActiveTab] = useState<'projects' | 'users' | 'companies' | 'plantillas'>('projects')
 
   // ─── Projects state ──────────────────────────────────────────────────────
   const [allProjects, setAllProjects] = useState<ProjectData[]>([])
@@ -135,6 +141,7 @@ export default function AdminPanel({ embedded }: AdminPanelProps = {}) {
   const [showNewProject, setShowNewProject] = useState(false)
   const [newProjectName, setNewProjectName] = useState('')
   const [newProjectCompany, setNewProjectCompany] = useState('')
+  const [isNewCompanyCustom, setIsNewCompanyCustom] = useState(false)
   const [newProjectDesc, setNewProjectDesc] = useState('')
   const [newProjectZones, setNewProjectZones] = useState<Array<{ name: string; color: string }>>([
     { name: '', color: PRESET_COLORS[0] },
@@ -183,6 +190,15 @@ export default function AdminPanel({ embedded }: AdminPanelProps = {}) {
   const [companyMembers, setCompanyMembers] = useState<Array<{ id: string; userId: string; companyId: string; role: string; user: { id: string; name: string; email: string; role: string; active: boolean } }>>([])
   const [addGerenteUserId, setAddGerenteUserId] = useState('')
   const [isLoadingCompanyDetail, setIsLoadingCompanyDetail] = useState(false)
+
+  // ─── 5S Steps state ────────────────────────────────────────────────────
+  const [progress5S, setProgress5S] = useState<Array<{ id: string; sStep: number; miniStep: number; completed: boolean; score: number | null; notes: string | null; zoneId: string | null; zoneName?: string }>>([])
+  const [isLoading5S, setIsLoading5S] = useState(false)
+  const [editingScore, setEditingScore] = useState<string | null>(null) // progress record id
+  const [editScoreValue, setEditScoreValue] = useState('')
+  const [editNotesValue, setEditNotesValue] = useState('')
+  const [selected5SProjectId, setSelected5SProjectId] = useState<string | null>(null)
+  const [selected5SZoneId, setSelected5SZoneId] = useState<string | null>(null)
 
   // ─── Data loading ────────────────────────────────────────────────────────
   const loadProjects = useCallback(async () => {
@@ -259,11 +275,45 @@ export default function AdminPanel({ embedded }: AdminPanelProps = {}) {
     }
   }, [])
 
+  const load5SProgress = useCallback(async () => {
+    setIsLoading5S(true)
+    try {
+      const params = new URLSearchParams()
+      if (selected5SProjectId) params.set('projectId', selected5SProjectId)
+      const res = await fetch(`/api/progress?${params.toString()}`)
+      const data = await res.json()
+      const progressData = data?.data ? data.data : (Array.isArray(data) ? data : [])
+      // Enrich with zone names
+      if (selected5SProjectId) {
+        const zonesRes = await fetch(`/api/projects/${selected5SProjectId}/zones`)
+        const zonesData = await zonesRes.json()
+        const zones = zonesData.zones || []
+        const enriched = progressData.map((p: any) => ({
+          ...p,
+          zoneName: zones.find((z: any) => z.id === p.zoneId)?.name || (p.zoneId ? 'Zona sin nombre' : 'Sin zona'),
+        }))
+        setProgress5S(enriched)
+      } else {
+        setProgress5S(progressData)
+      }
+    } catch (error) {
+      console.error('Error loading 5S progress:', error)
+    } finally {
+      setIsLoading5S(false)
+    }
+  }, [selected5SProjectId])
+
   useEffect(() => {
     loadProjects()
     loadUsers()
     loadCompanies()
   }, [loadProjects, loadUsers, loadCompanies])
+
+  useEffect(() => {
+    if (activeTab === '5s-steps') {
+      load5SProgress()
+    }
+  }, [activeTab, load5SProgress])
 
   useEffect(() => {
     if (selectedProjectId) {
@@ -309,6 +359,7 @@ export default function AdminPanel({ embedded }: AdminPanelProps = {}) {
         setShowNewProject(false)
         setNewProjectName('')
         setNewProjectCompany('')
+        setIsNewCompanyCustom(false)
         setNewProjectDesc('')
         setNewProjectZones([{ name: '', color: PRESET_COLORS[0] }])
         await loadProjects()
@@ -748,6 +799,18 @@ export default function AdminPanel({ embedded }: AdminPanelProps = {}) {
             <Building2 className="h-4 w-4" />
             Empresas
           </button>
+
+          <button
+            onClick={() => { setActiveTab('plantillas'); setSelectedProjectId(null) }}
+            className={`flex items-center gap-2 px-5 py-3 text-sm font-medium border-b-2 transition-colors ${
+              activeTab === 'plantillas'
+                ? 'border-green-500 text-green-600'
+                : 'border-transparent text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            <BookOpen className="h-4 w-4" />
+            Plantillas
+          </button>
         </div>
       </div>
 
@@ -788,33 +851,40 @@ export default function AdminPanel({ embedded }: AdminPanelProps = {}) {
                       </div>
                       <div className="space-y-1">
                         <Label className="text-xs">Empresa *</Label>
-                        {companies.length > 0 ? (
-                          <Select
-                            value={newProjectCompany ? (companies.find(c => c.name === newProjectCompany)?.id || '__custom__') : undefined}
-                            onValueChange={val => {
-                              if (val === '__custom__') {
-                                setNewProjectCompany('')
-                              } else {
-                                const comp = companies.find(c => c.id === val)
-                                if (comp) setNewProjectCompany(comp.name)
-                              }
-                            }}
-                          >
-                            <SelectTrigger>
-                              <SelectValue placeholder="Seleccionar o escribir empresa" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {companies.map(c => (
-                                <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-                              ))}
-                              <SelectItem value="__custom__">+ Otra empresa...</SelectItem>
-                            </SelectContent>
-                          </Select>
+                        {companies.length > 0 && !isNewCompanyCustom ? (
+                          <div className="space-y-1">
+                            <Select
+                              value={newProjectCompany ? (companies.find(c => c.name === newProjectCompany)?.id || '') : undefined}
+                              onValueChange={val => {
+                                if (val === '__custom__') {
+                                  setNewProjectCompany('')
+                                  setIsNewCompanyCustom(true)
+                                } else {
+                                  const comp = companies.find(c => c.id === val)
+                                  if (comp) setNewProjectCompany(comp.name)
+                                }
+                              }}
+                            >
+                              <SelectTrigger>
+                                <SelectValue placeholder="Seleccionar empresa" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {companies.map(c => (
+                                  <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                                ))}
+                                <SelectItem value="__custom__">+ Otra empresa...</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
                         ) : (
-                          <Input placeholder="Nombre de la empresa" value={newProjectCompany} onChange={e => setNewProjectCompany(e.target.value)} />
-                        )}
-                        {companies.length > 0 && !companies.find(c => c.name === newProjectCompany) && newProjectCompany !== '' && (
-                          <Input placeholder="Nombre de la nueva empresa" value={newProjectCompany} onChange={e => setNewProjectCompany(e.target.value)} className="mt-1" />
+                          <div className="space-y-1">
+                            <Input placeholder="Nombre de la nueva empresa" value={newProjectCompany} onChange={e => setNewProjectCompany(e.target.value)} />
+                            {companies.length > 0 && (
+                              <Button variant="ghost" size="sm" onClick={() => { setIsNewCompanyCustom(false); setNewProjectCompany('') }} className="h-6 text-xs text-purple-600 p-0">
+                                ← Seleccionar empresa existente
+                              </Button>
+                            )}
+                          </div>
                         )}
                       </div>
                     </div>
@@ -1581,6 +1651,340 @@ export default function AdminPanel({ embedded }: AdminPanelProps = {}) {
                   ))}
                 </div>
               )}
+            </motion.div>
+          )}
+
+          {/* ═══ 5S Y PASOS TAB ═══ */}
+          {/* 5S y Pasos tab removed - scores now shown on the board above steps 4/5 dots */}
+          {false && (
+            <motion.div key="5s-steps" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="space-y-4">
+              <div className="flex justify-between items-center">
+                <div>
+                  <p className="text-sm text-muted-foreground">
+                    Gestiona las puntuaciones de Autoevaluación (Paso 4) y Auditoría (Paso 5) de cada S
+                  </p>
+                </div>
+              </div>
+
+              {/* Project & Zone selectors */}
+              <div className="flex gap-3 items-end">
+                <div className="space-y-1 flex-1">
+                  <Label className="text-xs">Proyecto</Label>
+                  <Select
+                    value={selected5SProjectId || ''}
+                    onValueChange={val => {
+                      setSelected5SProjectId(val || null)
+                      setSelected5SZoneId(null)
+                    }}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Seleccionar proyecto" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {allProjects.map(p => (
+                        <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1 flex-1">
+                  <Label className="text-xs">Zona (opcional)</Label>
+                  <Select
+                    value={selected5SZoneId || '__all__'}
+                    onValueChange={val => setSelected5SZoneId(val === '__all__' ? null : val)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Todas las zonas" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="__all__">Todas las zonas</SelectItem>
+                      {allProjects.find(p => p.id === selected5SProjectId)?.zones.map(z => (
+                        <SelectItem key={z.id} value={z.id}>{z.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              {!selected5SProjectId ? (
+                <div className="text-center py-12 text-muted-foreground">
+                  <CheckSquare className="h-12 w-12 mx-auto mb-3 opacity-30" />
+                  <p className="text-sm">Selecciona un proyecto para ver las puntuaciones</p>
+                </div>
+              ) : isLoading5S ? (
+                <div className="flex justify-center py-12"><Loader2 className="h-8 w-8 text-purple-500 animate-spin" /></div>
+              ) : (
+                <div className="space-y-4">
+                  {/* S Steps table */}
+                  {['S1 Seiri', 'S2 Seiton', 'S3 Seiso', 'S4 Seiketsu', 'S5 Shitsuke'].map((sLabel, sIdx) => {
+                    const sStep = sIdx + 1
+                    const sColors = ['#8B5CF6', '#EAB308', '#3B82F6', '#F43F5E', '#F97316']
+                    const color = sColors[sIdx]
+
+                    // Filter progress for this S and selected zone
+                    const sProgress = progress5S.filter(p =>
+                      p.sStep === sStep &&
+                      (!selected5SZoneId || p.zoneId === selected5SZoneId)
+                    )
+
+                    const step4Records = sProgress.filter(p => p.miniStep === 4)
+                    const step5Records = sProgress.filter(p => p.miniStep === 5)
+
+                    return (
+                      <Card key={sStep} className="overflow-hidden">
+                        <div
+                          className="flex items-center gap-3 px-4 py-3"
+                          style={{ backgroundColor: `${color}10`, borderLeft: `4px solid ${color}` }}
+                        >
+                          <div
+                            className="w-8 h-8 rounded-lg flex items-center justify-center text-white text-sm font-bold"
+                            style={{ backgroundColor: color }}
+                          >
+                            S{sStep}
+                          </div>
+                          <div>
+                            <h3 className="font-semibold text-sm" style={{ color }}>{sLabel}</h3>
+                            <p className="text-xs text-muted-foreground">
+                              {step4Records.length} autoevaluación(es) · {step5Records.length} auditoría(s)
+                            </p>
+                          </div>
+                        </div>
+                        <CardContent className="p-0">
+                          <Table>
+                            <TableHeader>
+                              <TableRow>
+                                <TableHead className="text-xs">Zona</TableHead>
+                                <TableHead className="text-xs">Paso</TableHead>
+                                <TableHead className="text-xs">Estado</TableHead>
+                                <TableHead className="text-xs">Puntuación</TableHead>
+                                <TableHead className="text-xs">Notas</TableHead>
+                                <TableHead className="text-xs w-20">Acciones</TableHead>
+                              </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                              {/* Step 4 rows */}
+                              {step4Records.length === 0 && step5Records.length === 0 && (
+                                <TableRow>
+                                  <TableCell colSpan={6} className="text-center text-xs text-muted-foreground py-4">
+                                    Sin registros para esta S
+                                  </TableCell>
+                                </TableRow>
+                              )}
+                              {step4Records.map(record => (
+                                <TableRow key={record.id}>
+                                  <TableCell className="text-xs">{record.zoneName || 'Sin zona'}</TableCell>
+                                  <TableCell className="text-xs">
+                                    <div className="flex items-center gap-1">
+                                      <CheckSquare className="h-3 w-3" style={{ color }} />
+                                      <span>4 - Autoevaluación</span>
+                                    </div>
+                                  </TableCell>
+                                  <TableCell>
+                                    <Badge className={record.completed ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}>
+                                      {record.completed ? 'Completado' : 'Pendiente'}
+                                    </Badge>
+                                  </TableCell>
+                                  <TableCell>
+                                    {editingScore === record.id ? (
+                                      <div className="flex items-center gap-1">
+                                        <Input
+                                          type="number"
+                                          min={0}
+                                          max={100}
+                                          value={editScoreValue}
+                                          onChange={e => setEditScoreValue(e.target.value)}
+                                          className="w-16 h-7 text-xs"
+                                        />
+                                        <Button
+                                          size="sm"
+                                          variant="ghost"
+                                          className="h-7 w-7 p-0 text-green-600"
+                                          onClick={async () => {
+                                            const newScore = parseInt(editScoreValue)
+                                            if (isNaN(newScore) || newScore < 0 || newScore > 100) return
+                                            try {
+                                              const res = await fetch(`/api/progress/step?sStep=${sStep}&miniStep=4`, {
+                                                method: 'PUT',
+                                                headers: { 'Content-Type': 'application/json' },
+                                                body: JSON.stringify({
+                                                  score: newScore,
+                                                  completed: newScore >= 70,
+                                                  notes: editNotesValue,
+                                                  projectId: selected5SProjectId,
+                                                  zoneId: record.zoneId,
+                                                }),
+                                              })
+                                              if (res.ok) {
+                                                setEditingScore(null)
+                                                await load5SProgress()
+                                              }
+                                            } catch (error) {
+                                              console.error('Error updating score:', error)
+                                            }
+                                          }}
+                                        >
+                                          <Save className="h-3 w-3" />
+                                        </Button>
+                                        <Button
+                                          size="sm"
+                                          variant="ghost"
+                                          className="h-7 w-7 p-0 text-red-400"
+                                          onClick={() => setEditingScore(null)}
+                                        >
+                                          <X className="h-3 w-3" />
+                                        </Button>
+                                      </div>
+                                    ) : (
+                                      <span className="font-bold text-sm">
+                                        {record.score !== null ? `${record.score}%` : '—'}
+                                      </span>
+                                    )}
+                                  </TableCell>
+                                  <TableCell className="text-xs text-muted-foreground">
+                                    {editingScore === record.id ? (
+                                      <Input
+                                        value={editNotesValue}
+                                        onChange={e => setEditNotesValue(e.target.value)}
+                                        placeholder="Notas..."
+                                        className="h-7 text-xs w-32"
+                                      />
+                                    ) : (
+                                      <span title={record.notes || ''}>
+                                        {record.notes ? (record.notes.length > 30 ? record.notes.slice(0, 30) + '…' : record.notes) : '—'}
+                                      </span>
+                                    )}
+                                  </TableCell>
+                                  <TableCell>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      className="h-7 w-7 p-0"
+                                      onClick={() => {
+                                        setEditingScore(record.id)
+                                        setEditScoreValue(record.score !== null ? String(record.score) : '')
+                                        setEditNotesValue(record.notes || '')
+                                      }}
+                                    >
+                                      <Edit3 className="h-3 w-3 text-blue-500" />
+                                    </Button>
+                                  </TableCell>
+                                </TableRow>
+                              ))}
+                              {/* Step 5 rows */}
+                              {step5Records.map(record => (
+                                <TableRow key={record.id}>
+                                  <TableCell className="text-xs">{record.zoneName || 'Sin zona'}</TableCell>
+                                  <TableCell className="text-xs">
+                                    <div className="flex items-center gap-1">
+                                      <ShieldCheck className="h-3 w-3" style={{ color }} />
+                                      <span>5 - Auditoría</span>
+                                    </div>
+                                  </TableCell>
+                                  <TableCell>
+                                    <Badge className={record.completed ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}>
+                                      {record.completed ? 'Apto' : 'No Apto'}
+                                    </Badge>
+                                  </TableCell>
+                                  <TableCell>
+                                    {editingScore === record.id ? (
+                                      <div className="flex items-center gap-1">
+                                        <Input
+                                          type="number"
+                                          min={0}
+                                          max={100}
+                                          value={editScoreValue}
+                                          onChange={e => setEditScoreValue(e.target.value)}
+                                          className="w-16 h-7 text-xs"
+                                        />
+                                        <Button
+                                          size="sm"
+                                          variant="ghost"
+                                          className="h-7 w-7 p-0 text-green-600"
+                                          onClick={async () => {
+                                            const newScore = parseInt(editScoreValue)
+                                            if (isNaN(newScore) || newScore < 0 || newScore > 100) return
+                                            try {
+                                              const res = await fetch(`/api/progress/step?sStep=${sStep}&miniStep=5`, {
+                                                method: 'PUT',
+                                                headers: { 'Content-Type': 'application/json' },
+                                                body: JSON.stringify({
+                                                  score: newScore,
+                                                  completed: newScore >= 75,
+                                                  notes: editNotesValue,
+                                                  projectId: selected5SProjectId,
+                                                  zoneId: record.zoneId,
+                                                }),
+                                              })
+                                              if (res.ok) {
+                                                setEditingScore(null)
+                                                await load5SProgress()
+                                              }
+                                            } catch (error) {
+                                              console.error('Error updating score:', error)
+                                            }
+                                          }}
+                                        >
+                                          <Save className="h-3 w-3" />
+                                        </Button>
+                                        <Button
+                                          size="sm"
+                                          variant="ghost"
+                                          className="h-7 w-7 p-0 text-red-400"
+                                          onClick={() => setEditingScore(null)}
+                                        >
+                                          <X className="h-3 w-3" />
+                                        </Button>
+                                      </div>
+                                    ) : (
+                                      <span className="font-bold text-sm">
+                                        {record.score !== null ? `${record.score}%` : '—'}
+                                      </span>
+                                    )}
+                                  </TableCell>
+                                  <TableCell className="text-xs text-muted-foreground">
+                                    {editingScore === record.id ? (
+                                      <Input
+                                        value={editNotesValue}
+                                        onChange={e => setEditNotesValue(e.target.value)}
+                                        placeholder="Notas..."
+                                        className="h-7 text-xs w-32"
+                                      />
+                                    ) : (
+                                      <span title={record.notes || ''}>
+                                        {record.notes ? (record.notes.length > 30 ? record.notes.slice(0, 30) + '…' : record.notes) : '—'}
+                                      </span>
+                                    )}
+                                  </TableCell>
+                                  <TableCell>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      className="h-7 w-7 p-0"
+                                      onClick={() => {
+                                        setEditingScore(record.id)
+                                        setEditScoreValue(record.score !== null ? String(record.score) : '')
+                                        setEditNotesValue(record.notes || '')
+                                      }}
+                                    >
+                                      <Edit3 className="h-3 w-3 text-blue-500" />
+                                    </Button>
+                                  </TableCell>
+                                </TableRow>
+                              ))}
+                            </TableBody>
+                          </Table>
+                        </CardContent>
+                      </Card>
+                    )
+                  })}
+                </div>
+              )}
+            </motion.div>
+          )}
+          {/* ═══ PLANTILLAS TAB ═══ */}
+          {activeTab === 'plantillas' && (
+            <motion.div key="plantillas" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+              <TemplateManager />
             </motion.div>
           )}
         </AnimatePresence>

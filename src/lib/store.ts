@@ -65,9 +65,20 @@ export interface Project {
   memberCount?: number
 }
 
-// Mini-step types: ZONE steps (2,3,5) are collaborative per zone; INDIVIDUAL steps (1,4) are per employee
-const ZONE_MINI_STEPS = [2, 3, 5]
-const INDIVIDUAL_MINI_STEPS = [1, 4]
+// Mini-step types: ZONE steps (2,3,4,5) are collaborative per zone; INDIVIDUAL step (1) is per employee
+// Step 4 (Autoevaluación) is done by EMPLOYEES for S1/S2/S3/S5, and by RESPONSABLE for S4
+const ZONE_MINI_STEPS = [2, 3, 4, 5]
+const INDIVIDUAL_MINI_STEPS = [1]
+
+// User's assigned zones (filtered by MemberZone for empleados)
+export interface UserZoneAssignment {
+  id: string
+  name: string
+  description: string | null
+  color: string
+  projectId: string
+  responsableId: string | null
+}
 
 interface FiveSState {
   // Progress & Board State
@@ -76,13 +87,14 @@ interface FiveSState {
   currentView: 'board' | 'detail' | 'admin' | 'maintenance' | 'gerente'
   activeTab: 'board' | 'gerente' | 'admin' | 'maintenance'
   selectedSStep: number | null
-  activeModal: 'formacion' | 'fotos' | 'inventario' | 'actionplan' | 'autoevaluacion' | 'auditoria' | 'globalActionPlan' | 'globalInventory' | 'auditResults' | null
+  activeModal: 'formacion' | 'fotos' | 'inventario' | 'actionplan' | 'autoevaluacion' | 'auditoria' | 'globalActionPlan' | 'globalInventory' | 'auditResults' | 'standardsLibrary' | 'photoLibrary' | null
   activeMiniStep: number | null
   isLoadingProgress: boolean
   adminFreeNavigation: boolean  // Admin mode: skip progressive unlocking
 
   // Zone State
   currentZone: Zone | null
+  userZones: UserZoneAssignment[]  // Zones assigned to the current user
 
   // Auth & Project State
   currentUser: User | null
@@ -100,11 +112,13 @@ interface FiveSState {
   selectSStep: (s: number | null) => void
   setCurrentView: (view: 'board' | 'detail' | 'admin' | 'maintenance' | 'gerente') => void
   setActiveTab: (tab: 'board' | 'gerente' | 'admin' | 'maintenance') => void
-  openModal: (type: 'formacion' | 'fotos' | 'inventario' | 'actionplan' | 'autoevaluacion' | 'auditoria' | 'globalActionPlan' | 'globalInventory' | 'auditResults', miniStep: number) => void
+  openModal: (type: 'formacion' | 'fotos' | 'inventario' | 'actionplan' | 'autoevaluacion' | 'auditoria' | 'globalActionPlan' | 'globalInventory' | 'auditResults' | 'standardsLibrary' | 'photoLibrary', miniStep: number) => void
   closeModal: () => void
   seedDatabase: () => Promise<void>
   setAdminFreeNavigation: (enabled: boolean) => void
   setCurrentZone: (zone: Zone | null) => void
+  fetchUserZones: () => Promise<void>
+  getAvailableZones: () => Zone[]  // Zones the user can see/work in
 
   // Computed helpers
   getMiniStepStatus: (sStep: number, miniStep: number) => 'locked' | 'available' | 'completed'
@@ -138,6 +152,7 @@ export const use5SStore = create<FiveSState>((set, get) => ({
   isLoadingProgress: true,
   adminFreeNavigation: true,  // Default: admin can navigate freely
   currentZone: null,
+  userZones: [],
 
   // Auth & Project State
   currentUser: null,
@@ -205,6 +220,48 @@ export const use5SStore = create<FiveSState>((set, get) => ({
     }
   },
 
+  fetchUserZones: async () => {
+    try {
+      const res = await fetch('/api/auth/zones')
+      const data = await res.json()
+      const zones: UserZoneAssignment[] = data.zones || []
+      set({ userZones: zones })
+
+      // Auto-select zone if user has exactly one assigned zone
+      const { currentUser, currentZone, currentProject } = get()
+      if (zones.length === 1 && !currentZone) {
+        const z = zones[0]
+        // Find matching zone in current project
+        const projectZone = currentProject?.zones.find(pz => pz.id === z.id) || {
+          id: z.id, name: z.name, description: z.description, color: z.color, projectId: z.projectId, responsableId: z.responsableId
+        }
+        set({ currentZone: projectZone as Zone })
+        if (currentProject) {
+          get().fetchEmployeeProgress(currentProject.id, z.id)
+        }
+      }
+
+      return zones
+    } catch (error) {
+      console.error('Error fetching user zones:', error)
+      return []
+    }
+  },
+
+  getAvailableZones: () => {
+    const { currentUser, currentProject, userZones } = get()
+    if (!currentProject) return []
+
+    // Admin and responsable can see all project zones
+    if (currentUser?.role === 'admin' || currentUser?.role === 'responsable') {
+      return currentProject.zones
+    }
+
+    // Other roles: only zones from userZones that belong to this project
+    const userZoneIds = userZones.map(uz => uz.id)
+    return currentProject.zones.filter(z => userZoneIds.includes(z.id))
+  },
+
   seedDatabase: async () => {
     try {
       await fetch('/api/seed', { method: 'POST' })
@@ -215,11 +272,142 @@ export const use5SStore = create<FiveSState>((set, get) => ({
   },
 
   getMiniStepStatus: (sStep, miniStep) => {
-    const { progress, currentUser, adminFreeNavigation, currentZone } = get()
+    const { progress, currentUser, adminFreeNavigation, currentZone, employeeProgress } = get()
     const isAdmin = currentUser?.role === 'admin'
+    const isResponsable = currentUser?.role === 'responsable'
+    const isAuditor = currentUser?.role === 'auditor'
+    const isEmpleado = currentUser?.role === 'empleado'
+    const isGerente = currentUser?.role === 'gerente'
     const skipLocks = isAdmin && adminFreeNavigation
 
-    // Zone-level steps (2, 3, 5): Check zone's Progress record
+    // Helper: check if steps 1-4 are all completed for this S-step in the current zone
+    const areSteps1to4Completed = (): boolean => {
+      if (!currentZone) return false
+      for (let ms = 1; ms <= 4; ms++) {
+        // All steps (including step 1) check the zone-level Progress record
+        // Step 1 is only marked completed at zone level when ALL employees have passed
+        const zoneStep = progress.find(p =>
+          p.sStep === sStep &&
+          p.miniStep === ms &&
+          (p.zoneId === currentZone.id || p.zoneId === null) &&
+          p.completed
+        )
+        if (!zoneStep) return false
+      }
+      return true
+    }
+
+    // ── Role-based step access rules ──
+    // ADMIN (lock closed): View-only, same as responsable — all steps visible but no execution
+    // ADMIN (lock open / adminFreeNavigation): Can access everything
+    // GERENTE: Read-only, all steps visible
+    // RESPONSABLE: Read-only, can only VIEW progress (no step execution)
+    // AUDITOR: ONLY Step 5, and ONLY when steps 1-4 are completed by employees
+    // EMPLEADO: Steps 1-4 (progressive within same S), Step 5 locked. Cross-S dependency: S(n) requires S(n-1) quesito.
+
+    // ── ADMIN with lock closed: View-only (same as responsable) ──
+    if (isAdmin && !adminFreeNavigation) {
+      // Admin without free navigation is view-only — all steps visible but cannot execute
+      if (currentZone) {
+        const zoneStep = progress.find(p =>
+          p.sStep === sStep &&
+          p.miniStep === miniStep &&
+          (p.zoneId === currentZone.id || p.zoneId === null)
+        )
+        if (zoneStep?.completed) return 'completed'
+      }
+      // Admin (lock closed) sees all steps as available (for viewing only)
+      return 'available'
+    }
+
+    // ── RESPONSABLE: View-only — all steps visible but cannot execute ──
+    if (isResponsable && !isAdmin) {
+      // Responsable can VIEW all steps (show as 'available' for reading)
+      // But the modals should be read-only for them (handled in each modal component)
+      if (currentZone) {
+        const zoneStep = progress.find(p =>
+          p.sStep === sStep &&
+          p.miniStep === miniStep &&
+          (p.zoneId === currentZone.id || p.zoneId === null)
+        )
+        if (zoneStep?.completed) return 'completed'
+      }
+      // Responsable sees all steps as available (for viewing only)
+      return 'available'
+    }
+
+    // ── AUDITOR: Can VIEW steps 1-4 (read-only), only DO step 5 ──
+    if (isAuditor && !isAdmin) {
+      // Cross-S dependency for auditor: can only access S if previous S's quesito is earned
+      if (sStep > 1) {
+        const prevSEarned = get().isQuesitoEarned(sStep - 1)
+        if (!prevSEarned) return 'locked'
+      }
+
+      if (miniStep !== 5) {
+        // Auditor can VIEW steps 1-4 (read-only) but cannot execute
+        if (currentZone) {
+          const zoneStep = progress.find(p =>
+            p.sStep === sStep &&
+            p.miniStep === miniStep &&
+            (p.zoneId === currentZone.id || p.zoneId === null)
+          )
+          if (zoneStep?.completed) return 'completed'
+        }
+        return 'available' // Visible but read-only (modals enforce no-edit)
+      }
+      // Step 5: only available when steps 1-4 are completed in the zone
+      if (currentZone) {
+        const zoneStep5 = progress.find(p =>
+          p.sStep === sStep &&
+          p.miniStep === 5 &&
+          p.zoneId === currentZone.id
+        )
+        if (zoneStep5?.completed) return 'completed'
+        if (areSteps1to4Completed()) return 'available'
+        return 'locked'
+      }
+      // No zone selected - fallback
+      return 'locked'
+    }
+
+    // ── GERENTE: Read-only, all visible ──
+    if (isGerente) {
+      if (currentZone) {
+        const zoneStep = progress.find(p =>
+          p.sStep === sStep &&
+          p.miniStep === miniStep &&
+          (p.zoneId === currentZone.id || p.zoneId === null)
+        )
+        if (zoneStep?.completed) return 'completed'
+      }
+      return 'available'
+    }
+
+    // ── Cross-S dependency: S(n) requires S(n-1) quesito earned ──
+    // Only S1 Step 1 is available at the start. Each subsequent S unlocks when the previous S's quesito is earned.
+    if (sStep > 1 && !skipLocks) {
+      const prevSEarned = get().isQuesitoEarned(sStep - 1)
+      if (!prevSEarned) return 'locked'
+    }
+
+    // ── Step 5 for non-auditor/non-admin: always locked ──
+    if (miniStep === 5) {
+      if (currentZone) {
+        const zoneStep5 = progress.find(p =>
+          p.sStep === sStep &&
+          p.miniStep === 5 &&
+          p.zoneId === currentZone.id
+        )
+        if (zoneStep5?.completed) return 'completed'
+      }
+      // Only admin (skip mode) can access step 5
+      if (skipLocks) return 'available'
+      // All other roles: locked (auditor's job)
+      return 'locked'
+    }
+
+    // Zone-level steps (2, 3, 4): Check zone's Progress record
     if (ZONE_MINI_STEPS.includes(miniStep) && currentZone) {
       const zoneStep = progress.find(p =>
         p.sStep === sStep &&
@@ -228,10 +416,47 @@ export const use5SStore = create<FiveSState>((set, get) => ({
       )
       if (zoneStep?.completed) return 'completed'
 
+      // Step 4 (Autoevaluación): available to employees after Step 3 completed at zone level
+      if (miniStep === 4) {
+        const step3 = progress.find(p =>
+          p.sStep === sStep &&
+          p.miniStep === 3 &&
+          (p.zoneId === currentZone.id || p.zoneId === null) &&
+          p.completed
+        )
+        if (step3) return 'available'
+        // Employee needs Step 3 completed first
+        return 'locked'
+      }
+
+      if (miniStep === 2 && !skipLocks) {
+        // Step 2 (Fotos) for EMPLEADO: requires that THIS EMPLOYEE has completed Step 1 (Formación+Examen)
+        const myStep1 = employeeProgress.find(ep =>
+          ep.sStep === sStep &&
+          ep.miniStep === 1 &&
+          ep.zoneId === currentZone.id &&
+          ep.userId === currentUser?.id
+        )
+        if (!myStep1?.completed) return 'locked'
+        return 'available'
+      }
+
+      if (miniStep === 3 && !skipLocks) {
+        // Step 3 (Inventario) for EMPLEADO: requires that Step 2 is completed at zone level (any employee)
+        const step2 = progress.find(p =>
+          p.sStep === sStep &&
+          p.miniStep === 2 &&
+          (p.zoneId === currentZone.id || p.zoneId === null) &&
+          p.completed
+        )
+        if (step2) return 'available'
+        return 'locked'
+      }
+
       if (miniStep === 1) return 'available'
       if (skipLocks) return 'available'
 
-      // Check previous step for zone-level progression
+      // Check previous step for zone-level progression (empleado flow)
       const prevStep = progress.find(p =>
         p.sStep === sStep &&
         p.miniStep === miniStep - 1 &&
@@ -241,9 +466,8 @@ export const use5SStore = create<FiveSState>((set, get) => ({
       return 'available'
     }
 
-    // Individual steps (1, 4): Check if current user's EmployeeProgress is completed
+    // Individual step (1 only): Check if current user's EmployeeProgress is completed
     if (INDIVIDUAL_MINI_STEPS.includes(miniStep) && currentZone && currentUser) {
-      const { employeeProgress } = get()
       const myProgress = employeeProgress.find(ep =>
         ep.sStep === sStep &&
         ep.miniStep === miniStep &&
@@ -253,19 +477,6 @@ export const use5SStore = create<FiveSState>((set, get) => ({
       if (myProgress?.completed) return 'completed'
 
       // Step 1 is always available (no prerequisite)
-      if (miniStep === 1) return 'available'
-      if (skipLocks) return 'available'
-
-      // For miniStep 4, check if miniStep 3 (zone step) is completed
-      if (miniStep === 4) {
-        const prevStep = progress.find(p =>
-          p.sStep === sStep &&
-          p.miniStep === 3 &&
-          (p.zoneId === currentZone.id || p.zoneId === null)
-        )
-        if (!prevStep?.completed) return 'locked'
-      }
-
       return 'available'
     }
 
@@ -308,16 +519,15 @@ export const use5SStore = create<FiveSState>((set, get) => ({
     }
 
     if (INDIVIDUAL_MINI_STEPS.includes(miniStep)) {
-      // Individual step: check if ALL employees in the zone have completed
-      // For now, check if there are any employee progress records for this zone
-      // and if all are completed
-      const zoneEmpProgress = employeeProgress.filter(ep =>
-        ep.sStep === sStep &&
-        ep.miniStep === miniStep &&
-        ep.zoneId === zoneId
+      // Individual step (1 only): ALL employees in the zone must have completed
+      // The zone-level Progress record for step 1 is only marked completed when ALL employees pass
+      const zoneStep = progress.find(p =>
+        p.sStep === sStep &&
+        p.miniStep === miniStep &&
+        (p.zoneId === zoneId || p.zoneId === null) &&
+        p.completed
       )
-      if (zoneEmpProgress.length === 0) return false
-      return zoneEmpProgress.every(ep => ep.completed)
+      return !!zoneStep
     }
 
     return false
@@ -325,22 +535,23 @@ export const use5SStore = create<FiveSState>((set, get) => ({
 
   isQuesitoEarned: (sStep) => {
     const { progress, currentZone } = get()
+    const zoneId = currentZone?.id || null
 
-    if (currentZone) {
-      // Zone-level: check all 5 mini-steps for this zone
-      const sProgress = progress.filter(p =>
+    // Check ALL 5 mini-steps are completed — each one individually
+    // The zone-level Progress records are the source of truth:
+    // - Step 1: completed only when ALL employees in zone have passed
+    // - Steps 2-4: completed when zone-level Progress record is marked completed
+    // - Step 5: completed when auditor has passed
+    for (let miniStep = 1; miniStep <= 5; miniStep++) {
+      const zoneStep = progress.find(p =>
         p.sStep === sStep &&
-        (p.zoneId === currentZone.id || p.zoneId === null) &&
+        p.miniStep === miniStep &&
+        (p.zoneId === zoneId || p.zoneId === null) &&
         p.completed
       )
-      // For zone mode, we need all 5 steps completed at zone level
-      // Individual steps (1,4) also need a zone-level Progress record when all employees are done
-      return sProgress.length >= 5
+      if (!zoneStep) return false
     }
-
-    // Project-level fallback
-    const sProgress = progress.filter(p => p.sStep === sStep && p.completed)
-    return sProgress.length === 5
+    return true
   },
 
   is5SCompleted: () => {
@@ -398,6 +609,8 @@ export const use5SStore = create<FiveSState>((set, get) => ({
 
       if (projects.length > 0) {
         set({ currentProject: projects[0], authView: 'board' })
+        // Fetch user's assigned zones after login
+        await get().fetchUserZones()
       } else {
         // Only admin can create projects via setup wizard
         // Non-admin users see a waiting screen
@@ -464,6 +677,7 @@ export const use5SStore = create<FiveSState>((set, get) => ({
       currentUser: null,
       currentProject: null,
       currentZone: null,
+      userZones: [],
       authView: 'login',
       projects: [],
       companies: [],
@@ -485,6 +699,8 @@ export const use5SStore = create<FiveSState>((set, get) => ({
 
         if (projects.length > 0) {
           set({ currentProject: projects[0], authView: 'board' })
+          // Fetch user's assigned zones after session restore
+          await get().fetchUserZones()
         } else {
           // Only admin can create projects via setup wizard
           const { currentUser } = get()

@@ -166,8 +166,28 @@ export default function SStepDetail({ sStep, onBack, onOpenModal }: SStepDetailP
   if (!sStepData) return null;
 
   const sProgress = progress.filter(p => p.sStep === sStep);
-  const completedCount = sProgress.filter(p => p.completed).length;
-  const progressPercent = (completedCount / 5) * 100;
+  // Count unique mini-steps completed + employee formation count
+  const zoneId = currentZone?.id;
+  const employeesCompletedStep1 = zoneId
+    ? employeeProgress.filter(ep =>
+        ep.sStep === sStep && ep.miniStep === 1 && ep.zoneId === zoneId && ep.completed
+      ).length
+    : sProgress.filter(p => p.miniStep === 1 && p.completed).length;
+  const totalEmployeesInZone = zoneId
+    ? employeeProgress.filter(ep =>
+        ep.sStep === sStep && ep.miniStep === 1 && ep.zoneId === zoneId
+      ).length
+    : Math.max(1, employeesCompletedStep1);
+  let steps2to5Completed = 0;
+  for (let ms = 2; ms <= 5; ms++) {
+    const zoneStep = sProgress.find(p =>
+      p.miniStep === ms && (p.zoneId === zoneId || p.zoneId === null) && p.completed
+    );
+    if (zoneStep) steps2to5Completed++;
+  }
+  const totalSteps = Math.max(1, totalEmployeesInZone || 1) + 4;
+  const completedCount = employeesCompletedStep1 + steps2to5Completed;
+  const progressPercent = Math.min((completedCount / totalSteps) * 100, 100);
 
   return (
     <motion.div
@@ -236,7 +256,7 @@ export default function SStepDetail({ sStep, onBack, onOpenModal }: SStepDetailP
       <div className="mb-6 px-1">
         <div className="flex justify-between items-center mb-2">
           <span className="text-sm font-medium">Progreso</span>
-          <span className="text-sm text-muted-foreground">{completedCount}/5 completados</span>
+          <span className="text-sm text-muted-foreground">{completedCount}/{totalSteps} completados</span>
         </div>
         <Progress value={progressPercent} className="h-3" />
       </div>
@@ -489,16 +509,11 @@ export default function SStepDetail({ sStep, onBack, onOpenModal }: SStepDetailP
             const status = getMiniStepStatus(sStep, miniStep.id);
             const miniStepProgress = sProgress.find(p => p.miniStep === miniStep.id);
 
-            // TASK 1: Audit mini-step (5) is locked for non-admin/auditor roles
-            // Responsable should NOT perform auditoría - only admin and auditor roles can
-            const isAuditLocked = miniStep.id === 5
-              && currentUser
-              && currentUser.role !== 'admin'
-              && currentUser.role !== 'auditor';
-            const effectiveStatus = isAuditLocked ? 'locked' : status;
+            // Store now handles all role-based locking in getMiniStepStatus
+            const effectiveStatus = status;
 
-            // Employee progress info for individual steps (1, 4) when zone is selected
-            const isIndividualStep = miniStep.id === 1 || miniStep.id === 4;
+            // Employee progress info for individual steps (1 only) when zone is selected
+            const isIndividualStep = miniStep.id === 1;
             const zoneEmpProgress = currentZone && isIndividualStep
               ? employeeProgress.filter(ep =>
                   ep.sStep === sStep &&
@@ -522,7 +537,19 @@ export default function SStepDetail({ sStep, onBack, onOpenModal }: SStepDetailP
                   status={effectiveStatus}
                   score={miniStepProgress?.score ?? null}
                   color={sStepData.color}
-                  lockedReason={isAuditLocked ? 'Solo auditores' : undefined}
+                  lockedReason={
+                    // Responsable: view-only for all steps
+                    currentUser?.role === 'responsable'
+                      ? 'Solo lectura'
+                      : // Auditor: steps 1-4 are view-only (can see but not execute)
+                      currentUser?.role === 'auditor' && miniStep.id !== 5
+                        ? 'Solo lectura'
+                        : currentUser?.role === 'auditor' && miniStep.id === 5 && effectiveStatus === 'locked'
+                          ? 'Espera a que se completen los pasos 1-4'
+                          : miniStep.id === 5 && currentUser?.role !== 'admin' && currentUser?.role !== 'auditor'
+                            ? 'Solo auditores'
+                            : undefined
+                  }
                   notes={miniStepProgress?.notes ?? null}
                   onClick={() => {
                     if (effectiveStatus !== 'locked') {

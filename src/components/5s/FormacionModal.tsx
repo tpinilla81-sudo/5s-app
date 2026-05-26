@@ -11,7 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { GraduationCap, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
+import { GraduationCap, CheckCircle, XCircle, AlertCircle, Maximize2, Minimize2 } from 'lucide-react';
 import { use5SStore } from '@/lib/store';
 import { S_STEPS } from '@/lib/5s-constants';
 
@@ -37,7 +37,11 @@ export default function FormacionModal({ open, onClose, sStep, miniStep }: Forma
   const { fetchProgress, currentUser, adminFreeNavigation, currentProject, currentZone } = use5SStore();
   const sStepData = S_STEPS.find(s => s.id === sStep);
   const isAdmin = currentUser?.role === 'admin' && adminFreeNavigation;
+  const isResponsable = currentUser?.role === 'responsable';
+  const isAuditor = currentUser?.role === 'auditor';
+  const isReadOnly = isResponsable || isAuditor || (currentUser?.role === 'admin' && !adminFreeNavigation); // View-only when responsable, auditor, or admin with lock closed
 
+  const [isFullscreen, setIsFullscreen] = useState(true);
   const [formationContent, setFormationContent] = useState<FormationSection[]>([]);
   const [examQuestions, setExamQuestions] = useState<ExamQuestion[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -54,6 +58,8 @@ export default function FormacionModal({ open, onClose, sStep, miniStep }: Forma
     results: { questionIdx: number; answerIdx: number; correct: boolean }[];
   } | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const [examNotaMinima, setExamNotaMinima] = useState(80);
 
   useEffect(() => {
     if (open) {
@@ -82,6 +88,10 @@ export default function FormacionModal({ open, onClose, sStep, miniStep }: Forma
       if (examJson.success && examJson.data.length > 0) {
         const content = JSON.parse(examJson.data[0].content);
         setExamQuestions(content.questions || []);
+        // Use nota mínima from template if available
+        if (examJson.data[0].notaMinima != null) {
+          setExamNotaMinima(examJson.data[0].notaMinima);
+        }
       }
     } catch (error) {
       console.error('Error loading template:', error);
@@ -115,6 +125,11 @@ export default function FormacionModal({ open, onClose, sStep, miniStep }: Forma
         setExamResult(json.data);
         if (json.data.passed) {
           await fetchProgress();
+          // Also refresh employee progress so step 2 unlocks immediately
+          const { currentProject, currentZone, fetchEmployeeProgress } = use5SStore.getState();
+          if (currentProject && currentZone) {
+            await fetchEmployeeProgress(currentProject.id, currentZone.id);
+          }
         }
       }
     } catch (error) {
@@ -145,19 +160,26 @@ export default function FormacionModal({ open, onClose, sStep, miniStep }: Forma
 
   return (
     <Dialog open={open} onOpenChange={() => onClose()}>
-      <DialogContent className="max-w-[95vw] max-h-[95vh] overflow-y-auto">
-        <DialogHeader>
+      <DialogContent size={isFullscreen ? "fullscreen" : "xl"} className="flex flex-col overflow-hidden p-0">
+        <DialogHeader className="px-6 pt-6 pb-2 flex-shrink-0">
           <DialogTitle className="flex items-center gap-2">
             <GraduationCap className="h-5 w-5" style={{ color: sStepData?.color }} />
             <span>Formación + Examen</span>
             <Badge variant="outline" style={{ borderColor: sStepData?.color, color: sStepData?.color }}>
               {sStepData?.name}
             </Badge>
+            <button
+              onClick={() => setIsFullscreen(!isFullscreen)}
+              className="ml-auto p-1 rounded hover:bg-muted transition-colors"
+              title={isFullscreen ? "Reducir ventana" : "Pantalla completa"}
+            >
+              {isFullscreen ? <Minimize2 className="h-4 w-4 text-muted-foreground" /> : <Maximize2 className="h-4 w-4 text-muted-foreground" />}
+            </button>
           </DialogTitle>
         </DialogHeader>
 
         {isAdmin && (
-          <div className="flex items-center gap-2 p-2 bg-amber-50 border border-amber-200 rounded-lg">
+          <div className="flex items-center gap-2 p-2 mx-6 flex-shrink-0 bg-amber-50 border border-amber-200 rounded-lg">
             <span className="text-xs text-amber-700 font-medium">Modo Admin:</span>
             <Button
               variant="outline"
@@ -170,6 +192,13 @@ export default function FormacionModal({ open, onClose, sStep, miniStep }: Forma
           </div>
         )}
 
+        {isReadOnly && (
+          <div className="flex items-center gap-2 p-2 mx-6 flex-shrink-0 bg-blue-50 border border-blue-200 rounded-lg">
+            <span className="text-xs text-blue-700 font-medium">Solo lectura: {currentUser?.role === 'admin' ? 'Activa el candado para poder realizar pasos.' : currentUser?.role === 'auditor' ? 'El auditor puede ver el progreso pero no realizar formación ni exámenes.' : 'El responsable puede ver el progreso pero no realizar pasos.'}</span>
+          </div>
+        )}
+
+        <div className="flex-1 overflow-y-auto px-6 pb-6 min-h-0">
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="formacion">Formación</TabsTrigger>
@@ -207,7 +236,7 @@ export default function FormacionModal({ open, onClose, sStep, miniStep }: Forma
                   </Card>
                 ))}
                 <div className="flex justify-end">
-                  <Button onClick={() => setActiveTab('examen')} style={{ backgroundColor: sStepData?.color }}>
+                  <Button onClick={() => setActiveTab('examen')} style={{ backgroundColor: sStepData?.color }} disabled={isReadOnly}>
                     Ir al Examen
                   </Button>
                 </div>
@@ -235,7 +264,7 @@ export default function FormacionModal({ open, onClose, sStep, miniStep }: Forma
                       {examResult.correctCount} de {examResult.totalQuestions} respuestas correctas
                     </p>
                     <p className="text-xs text-muted-foreground mt-1">
-                      Mínimo requerido: 80%
+                      Mínimo requerido: {examNotaMinima}%
                     </p>
                   </CardContent>
                 </Card>
@@ -285,12 +314,13 @@ export default function FormacionModal({ open, onClose, sStep, miniStep }: Forma
                     {examQuestions.length} preguntas de opción múltiple
                   </p>
                   <p className="text-sm text-muted-foreground">
-                    Debe obtener al menos 80% para aprobar
+                    Debe obtener al menos {examNotaMinima}% para aprobar
                   </p>
                 </div>
                 <Button
                   onClick={() => setExamStarted(true)}
                   style={{ backgroundColor: sStepData?.color }}
+                  disabled={isReadOnly}
                 >
                   Comenzar Examen
                 </Button>
@@ -331,7 +361,7 @@ export default function FormacionModal({ open, onClose, sStep, miniStep }: Forma
                   </span>
                   <Button
                     onClick={handleSubmitExam}
-                    disabled={!allAnswered || isSubmitting}
+                    disabled={!allAnswered || isSubmitting || isReadOnly}
                     style={{ backgroundColor: sStepData?.color }}
                   >
                     {isSubmitting ? 'Enviando...' : 'Enviar Examen'}
@@ -341,6 +371,7 @@ export default function FormacionModal({ open, onClose, sStep, miniStep }: Forma
             )}
           </TabsContent>
         </Tabs>
+        </div>
       </DialogContent>
     </Dialog>
   );

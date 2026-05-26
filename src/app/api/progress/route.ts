@@ -1,5 +1,14 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest } from 'next/server'
 import { db } from '@/lib/db'
+
+// Helper: serialize Prisma results (convert BigInt/Date to safe JSON)
+function safeJsonify(data: any): any {
+  return JSON.parse(JSON.stringify(data, (_, v) =>
+    typeof v === 'bigint' ? Number(v) :
+    v instanceof Date ? v.toISOString() :
+    v
+  ))
+}
 
 export async function GET(request: NextRequest) {
   try {
@@ -14,11 +23,44 @@ export async function GET(request: NextRequest) {
     const progress = await db.progress.findMany({
       where,
       orderBy: [{ sStep: 'asc' }, { miniStep: 'asc' }],
+      // Exclude photoUrls from list endpoint — photos are loaded on demand
+      // This prevents 600KB+ responses that cause client timeouts
+      select: {
+        id: true,
+        sStep: true,
+        miniStep: true,
+        completed: true,
+        score: true,
+        notes: true,
+        passedAt: true,
+        projectId: true,
+        zoneId: true,
+        createdAt: true,
+        updatedAt: true,
+        // photoUrls excluded — too large for list view
+      },
     })
-    return NextResponse.json({ success: true, data: progress })
+
+    const safeData = safeJsonify(progress)
+    const body = JSON.stringify({ success: true, data: safeData })
+    
+    return new Response(body, {
+      status: 200,
+      headers: { 
+        'Content-Type': 'application/json',
+        'Content-Length': String(Buffer.byteLength(body)),
+      },
+    })
   } catch (error) {
     console.error('Error fetching progress:', error)
-    return NextResponse.json({ success: false, error: 'Error fetching progress' }, { status: 500 })
+    const body = JSON.stringify({ success: false, error: 'Error fetching progress' })
+    return new Response(body, {
+      status: 500,
+      headers: { 
+        'Content-Type': 'application/json',
+        'Content-Length': String(Buffer.byteLength(body)),
+      },
+    })
   }
 }
 
@@ -28,16 +70,16 @@ export async function POST(request: NextRequest) {
     const { sStep, miniStep, completed, score, notes, photoUrls, projectId, zoneId } = body
 
     if (!sStep || !miniStep) {
-      return NextResponse.json({ success: false, error: 'sStep and miniStep are required' }, { status: 400 })
+      const body = JSON.stringify({ success: false, error: 'sStep and miniStep are required' })
+      return new Response(body, { status: 400, headers: { 'Content-Type': 'application/json', 'Content-Length': String(Buffer.byteLength(body)) } })
     }
 
-    // Use projectId in the lookup
     const lookupProjectId = projectId
     if (!lookupProjectId) {
-      return NextResponse.json({ success: false, error: 'projectId is required. No project selected.' }, { status: 400 })
+      const body = JSON.stringify({ success: false, error: 'projectId is required. No project selected.' })
+      return new Response(body, { status: 400, headers: { 'Content-Type': 'application/json', 'Content-Length': String(Buffer.byteLength(body)) } })
     }
 
-    // Build where clause - include zoneId if provided
     const findWhere: any = {
       sStep,
       miniStep,
@@ -81,9 +123,18 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    return NextResponse.json({ success: true, data: result })
+    const safeData = safeJsonify(result)
+    const resBody = JSON.stringify({ success: true, data: safeData })
+    return new Response(resBody, {
+      status: 200,
+      headers: { 'Content-Type': 'application/json', 'Content-Length': String(Buffer.byteLength(resBody)) },
+    })
   } catch (error) {
     console.error('Error updating progress:', error)
-    return NextResponse.json({ success: false, error: 'Error updating progress' }, { status: 500 })
+    const body = JSON.stringify({ success: false, error: 'Error updating progress' })
+    return new Response(body, {
+      status: 500,
+      headers: { 'Content-Type': 'application/json', 'Content-Length': String(Buffer.byteLength(body)) },
+    })
   }
 }

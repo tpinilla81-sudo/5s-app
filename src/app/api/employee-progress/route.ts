@@ -37,9 +37,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: 'sStep, miniStep, projectId, zoneId, and userId are required' }, { status: 400 })
     }
 
-    // Validate: only miniStep 1 (formación) and 4 (autoevaluación) are individual steps
-    if (miniStep !== 1 && miniStep !== 4) {
-      return NextResponse.json({ success: false, error: 'EmployeeProgress is only for individual steps (miniStep 1 or 4)' }, { status: 400 })
+    // Validate: only miniStep 1 (formación) is an individual step
+    // Step 4 (autoevaluación) is now done by the responsable only, not per-employee
+    if (miniStep !== 1) {
+      return NextResponse.json({ success: false, error: 'EmployeeProgress is only for individual steps (miniStep 1 only)' }, { status: 400 })
     }
 
     const existing = await db.employeeProgress.findUnique({

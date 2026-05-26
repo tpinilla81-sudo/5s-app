@@ -11,20 +11,20 @@ datasource db {
 }
 
 model User {
-  id          String          @id @default(cuid())
-  email       String          @unique
-  name        String
-  password    String
-  role        String          @default("empleado") // "admin", "gerente", "responsable", "empleado", "auditor"
-  avatar      String?
-  active      Boolean         @default(true)
-  createdAt   DateTime        @default(now())
-  updatedAt   DateTime        @updatedAt
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String
+  password  String
+  role      String   @default("empleado") // "admin", "gerente", "responsable", "empleado", "auditor"
+  avatar    String?
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  memberships       ProjectMember[]
+  memberships        ProjectMember[]
   companyMemberships CompanyMember[]
-  employeeProgress  EmployeeProgress[]
-  responsableZones  Zone[]         // Zones where this user is the responsable
+  employeeProgress   EmployeeProgress[]
+  responsableZones   Zone[] // Zones where this user is the responsable
 }
 
 model Project {
@@ -38,7 +38,7 @@ model Project {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  companyRel         Company?        @relation(fields: [companyId], references: [id])
+  companyRel         Company?            @relation(fields: [companyId], references: [id])
   zones              Zone[]
   members            ProjectMember[]
   progress           Progress[]
@@ -49,27 +49,32 @@ model Project {
   checklistResponses ChecklistResponse[]
   actionItems        ActionItem[]
   auditTargets       AuditTarget[]
+  standards          Standard[]
+  photos             PhotoLibrary[]
 
   @@index([companyId])
 }
 
 model Zone {
-  id             String   @id @default(cuid())
-  name           String
-  description    String?
-  color          String   @default("#3B82F6")
-  projectId      String
-  responsableId  String?  // The responsable user for this zone
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  id            String   @id @default(cuid())
+  name          String
+  description   String?
+  color         String   @default("#3B82F6")
+  projectId     String
+  responsableId String? // The responsable user for this zone
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
-  project         Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  responsable     User?        @relation(fields: [responsableId], references: [id], onDelete: SetNull)
-  memberZones     MemberZone[]
-  actionItems     ActionItem[]
-  progress        Progress[]
+  project          Project            @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  responsable      User?              @relation(fields: [responsableId], references: [id], onDelete: SetNull)
+  memberZones      MemberZone[]
+  actionItems      ActionItem[]
+  progress         Progress[]
   employeeProgress EmployeeProgress[]
-  inventoryItems  InventoryItem[]
+  inventoryItems   InventoryItem[]
+  auditTargets     AuditTarget[]
+  standards        Standard[]
+  photos           PhotoLibrary[]
 
   @@unique([name, projectId])
   @@index([projectId])
@@ -83,9 +88,9 @@ model ProjectMember {
   role      String // "admin", "gerente", "responsable", "empleado", "auditor"
   joinedAt  DateTime @default(now())
 
-  user      User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-  project   Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  zones     MemberZone[]
+  user    User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  project Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  zones   MemberZone[]
 
   @@unique([userId, projectId])
   @@index([projectId])
@@ -98,8 +103,8 @@ model MemberZone {
   zoneId     String
   assignedAt DateTime @default(now())
 
-  member     ProjectMember @relation(fields: [memberId], references: [id], onDelete: Cascade)
-  zone       Zone          @relation(fields: [zoneId], references: [id], onDelete: Cascade)
+  member ProjectMember @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  zone   Zone          @relation(fields: [zoneId], references: [id], onDelete: Cascade)
 
   @@unique([memberId, zoneId])
   @@index([memberId])
@@ -107,43 +112,43 @@ model MemberZone {
 }
 
 model Progress {
-  id          String    @id @default(cuid())
-  sStep       Int       // 1-5 (Revisar, Ordenar, Limpiar, Estandarizar, Mantener)
-  miniStep    Int       // 1-5 (Formación, Fotos, Inventario, Autoevaluación, Auditoría)
-  completed   Boolean   @default(false)
-  score       Float?    // Puntuación obtenida (0-100)
-  notes       String?   // Notas adicionales
-  photoUrls   String?   // URLs de fotos (JSON array o separadas por coma)
-  passedAt    DateTime? // Fecha en que se pasó el mini-paso
-  projectId   String
-  zoneId      String?   // Zone-level progress (null for project-level)
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  id        String    @id @default(cuid())
+  sStep     Int // 1-5 (Revisar, Ordenar, Limpiar, Estandarizar, Mantener)
+  miniStep  Int // 1-5 (Formación, Fotos, Inventario, Autoevaluación, Auditoría)
+  completed Boolean   @default(false)
+  score     Float? // Puntuación obtenida (0-100)
+  notes     String? // Notas adicionales
+  photoUrls String? // URLs de fotos (JSON array o separadas por coma)
+  passedAt  DateTime? // Fecha en que se pasó el mini-paso
+  projectId String
+  zoneId    String? // Zone-level progress (null for project-level)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
 
-  project     Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  zone        Zone?     @relation(fields: [zoneId], references: [id], onDelete: Cascade)
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  zone    Zone?   @relation(fields: [zoneId], references: [id], onDelete: Cascade)
 
   @@index([projectId])
   @@index([projectId, zoneId])
 }
 
 model EmployeeProgress {
-  id          String    @id @default(cuid())
-  sStep       Int       // 1-5
-  miniStep    Int       // 1 (formación) or 4 (autoevaluación) - individual steps only
-  completed   Boolean   @default(false)
-  score       Float?
-  notes       String?
-  passedAt    DateTime?
-  projectId   String
-  zoneId      String
-  userId      String    // The employee who completed this
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  id        String    @id @default(cuid())
+  sStep     Int // 1-5
+  miniStep  Int // 1 (formación) or 4 (autoevaluación) - individual steps only
+  completed Boolean   @default(false)
+  score     Float?
+  notes     String?
+  passedAt  DateTime?
+  projectId String
+  zoneId    String
+  userId    String // The employee who completed this
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
 
-  project     Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  zone        Zone         @relation(fields: [zoneId], references: [id], onDelete: Cascade)
-  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  zone    Zone    @relation(fields: [zoneId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([sStep, miniStep, projectId, zoneId, userId])
   @@index([projectId, zoneId])
@@ -152,11 +157,12 @@ model EmployeeProgress {
 
 model Template {
   id          String   @id @default(cuid())
-  type        String   // "formacion", "examen", "inventario", "autoevaluacion", "auditoria"
-  sStep       Int      // 1-5
+  type        String // "formacion", "examen", "inventario", "autoevaluacion", "auditoria"
+  sStep       Int // 1-5
   title       String
   description String?
-  content     String   // JSON con el contenido de la plantilla
+  content     String // JSON con el contenido de la plantilla
+  notaMinima  Float? // Nota mínima para pasar (pasa/no pasa)
   active      Boolean  @default(true)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -171,37 +177,39 @@ model ExamAnswer {
   projectId   String
   createdAt   DateTime @default(now())
 
-  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
   @@index([projectId])
 }
 
 model InventoryItem {
-  id              String   @id @default(cuid())
-  sStep           Int
-  name            String
-  location        String?
-  category        String   // S1: innecesario/dudoso/util, S2: muy_frecuente/frecuente/ocasional/raro, S3: polvo/grasa/mancha/etc, S4: visual/procedimiento/checklist/etc, S5: cumplido/parcial/incumplido
-  quantity        Int      @default(1)
-  quantityNeeded  Int      @default(0) // Cuántos necesarios
-  quantityUnneeded Int     @default(0) // Cuántos innecesarios
-  price           Float?   // Precio en euros
-  action          String?  // Acción a tomar
-  photoUrl        String?
-  extra           String?  // JSON: S-specific fields (estado, frecuenciaUso, nivel, fuente, etc.)
-  projectId       String
-  zoneId          String?  // Which zone this item belongs to
+  id                String    @id @default(cuid())
+  sStep             Int
+  name              String
+  location          String?
+  category          String // S1: innecesario/dudoso/util, S2: muy_frecuente/frecuente/ocasional/raro, S3: polvo/grasa/mancha/etc, S4: visual/procedimiento/checklist/etc, S5: cumplido/parcial/incumplido
+  quantity          Int       @default(1)
+  quantityNeeded    Int       @default(0) // Cuántos necesarios
+  quantityUnneeded  Int       @default(0) // Cuántos innecesarios
+  price             Float? // Precio en euros
+  action            String? // Acción a tomar
+  photoUrl          String?
+  extra             String? // JSON: S-specific fields (estado, frecuenciaUso, nivel, fuente, etc.)
+  projectId         String
+  zoneId            String? // Which zone this item belongs to
   // Jaula/Excedentes fields
-  jaulaStatus     String   @default("") // "", "en_jaula", "reclamado", "transferido"
+  jaulaStatus       String    @default("") // "", "en_jaula", "reclamado", "transferido"
   jaulaFechaEntrada DateTime? // Fecha entrada a la jaula
-  jaulaOrigen     String?  // Área de origen
-  jaulaFechaSalida DateTime? // Fecha salida de la jaula
-  jaulaDestino    String?  // Área de destino
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  jaulaOrigen       String? // Área de origen
+  jaulaFechaSalida  DateTime? // Fecha salida de la jaula
+  jaulaDestino      String? // Área de destino
+  zonaOrigen        String? // Zone where the material was found
+  zonaDestino       String? // Zone where the material is now (can be same as origen)
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
 
-  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  zone        Zone?    @relation(fields: [zoneId], references: [id], onDelete: SetNull)
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  zone    Zone?   @relation(fields: [zoneId], references: [id], onDelete: SetNull)
 
   @@index([projectId])
   @@index([sStep, projectId])
@@ -210,20 +218,20 @@ model InventoryItem {
 }
 
 model AuditResult {
-  id           String   @id @default(cuid())
-  sStep        Int      // 0=combined quarterly, 1-5=individual S, -1=weekly, -2=monthly
-  auditorName  String
-  result       String   // "apto", "no_apto"
-  score        Float?
-  observations String?
-  auditType    String   @default("quarterly") // "weekly", "monthly", "quarterly"
+  id            String   @id @default(cuid())
+  sStep         Int // 0=combined quarterly, 1-5=individual S, -1=weekly, -2=monthly
+  auditorName   String
+  result        String // "apto", "no_apto"
+  score         Float?
+  observations  String?
+  auditType     String   @default("quarterly") // "weekly", "monthly", "quarterly"
   checklistData String? // JSON: full checklist results for this audit
-  mejorasData  String?  // JSON: improvements data
-  auditDate    DateTime @default(now())
-  projectId    String
-  createdAt    DateTime @default(now())
+  mejorasData   String? // JSON: improvements data
+  auditDate     DateTime @default(now())
+  projectId     String
+  createdAt     DateTime @default(now())
 
-  project      Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
   @@index([projectId])
   @@index([auditType])
@@ -231,94 +239,96 @@ model AuditResult {
 
 model ChecklistResponse {
   id            String   @id @default(cuid())
-  sStep         Int      // 1-5
-  miniStep      Int      // 4 (autoevaluacion) or 5 (auditoria)
-  results       String   // JSON: { itemId: { status, hallazgo, mejora, otherText, photoRefs } }
+  sStep         Int // 1-5
+  miniStep      Int // 4 (autoevaluacion) or 5 (auditoria)
+  results       String // JSON: { itemId: { status, hallazgo, mejora, otherText, photoRefs } }
   completed     Boolean  @default(false)
-  score         Float    // 0-100
+  score         Float // 0-100
   observaciones String?
-  auditor       String?  // Nombre del auditor (solo para paso 5)
+  auditor       String? // Nombre del auditor (solo para paso 5)
   projectId     String
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
-  project       Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
   @@index([projectId])
 }
 
 model ActionItem {
   id              String    @id @default(cuid())
-  sStep           Int       // 1-5
-  miniStep        Int       // 4 (autoevaluacion) or 5 (auditoria)
-  itemId          String    // e.g. "1.2.3"
-  itemDescription String    // Checklist item description
-  hallazgo        String    // Descripción de la desviación detectada
-  mejora          String?   // Sugerencia de mejora / plan de acción
-  responsable     String?   // Persona responsable de resolver
+  sStep           Int // 1-5
+  miniStep        Int // 4 (autoevaluacion) or 5 (auditoria)
+  itemId          String // e.g. "1.2.3"
+  itemDescription String // Checklist item description
+  hallazgo        String // Descripción de la desviación detectada
+  mejora          String? // Sugerencia de mejora / plan de acción
+  responsable     String? // Persona responsable de resolver
   prioridad       String    @default("media") // "alta", "media", "baja"
   estado          String    @default("abierta") // "abierta", "en_proceso", "resuelta", "cerrada"
   fechaCompromiso DateTime? // Fecha compromiso para resolver
   fechaLimite     DateTime? // Fecha límite / deadline
   fechaReal       DateTime? // Fecha real de resolución
   fechaResolucion DateTime? // Fecha de resolución (alias)
-  photoRefs       String?   // JSON array of photo references
-  notas           String?   // Notas adicionales sobre la resolución
+  photoRefs       String? // JSON array of photo references
+  notas           String? // Notas adicionales sobre la resolución
   source          String    @default("autoevaluacion") // "autoevaluacion" or "auditoria" or "actionplan"
-  auditor         String?   // Nombre del auditor que detectó la deficiencia
-  zoneId          String?   // Zona asignada (opcional, referencia a Zone)
-  verificadoPor   String?   // Quién verificó que la acción fue completada
+  auditor         String? // Nombre del auditor que detectó la deficiencia
+  zoneId          String? // Zona asignada (opcional, referencia a Zone)
+  verificadoPor   String? // Quién verificó que la acción fue completada
   projectId       String
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 
   // Plan de Acción table fields (matching the standard 5S action plan format)
-  numeroEntrada     Int?      // Nº de entrada (auto-increment per project)
-  fechaEntrada      DateTime? // Fecha de la entrada
-  comunicadoPor     String?   // Quién comunicó el problema
-  semana            String?   // Semana en que se detectó
-  seccionDemandante String?   // Sección que demanda la acción
-  clienteZona       String?   // Cliente o zona afectada
-  personaDemandada  String?   // Persona a la que se demanda
-  seccionDemandada  String?   // Sección a la que se demanda
-  impactoObjetivo   String?   // Impacto objetivo esperado
-  enviado           String?   // Estado de envío (Sí/No/Pendiente)
-  accionCorrectiva  String?   // Acción correctiva a tomar
+  numeroEntrada       Int? // Nº de entrada (auto-increment per project)
+  fechaEntrada        DateTime? // Fecha de la entrada
+  comunicadoPor       String? // Quién comunicó el problema
+  semana              String? // Semana en que se detectó
+  seccionDemandante   String? // Sección que demanda la acción
+  clienteZona         String? // Cliente o zona afectada
+  personaDemandada    String? // Persona a la que se demanda
+  seccionDemandada    String? // Sección a la que se demanda
+  impactoObjetivo     String? // Impacto objetivo esperado
+  enviado             String? // Estado de envío (Sí/No/Pendiente)
+  accionCorrectiva    String? // Acción correctiva a tomar
   accionesPreventivas String? // Acciones preventivas
-  semanaPrevista    String?   // Semana prevista para resolución
-  porcentaje        Float?    @default(0) // Porcentaje de completado
-  semanaReal        String?   // Semana real de resolución
+  semanaPrevista      String? // Semana prevista para resolución
+  porcentaje          Float?    @default(0) // Porcentaje de completado
+  semanaReal          String? // Semana real de resolución
 
-  project         Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  zone            Zone?     @relation(fields: [zoneId], references: [id], onDelete: SetNull)
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  zone    Zone?   @relation(fields: [zoneId], references: [id], onDelete: SetNull)
 
   @@index([projectId])
   @@index([zoneId])
 }
 
 model AuditTarget {
-  id           String   @id @default(cuid())
-  projectId    String
-  sStep        Int      // 1-5 (which S step)
-  objetivo     Float    @default(80)  // Target score
-  min          Float    @default(50)  // Minimum acceptable score
-  max          Float    @default(100) // Maximum score
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id         String   @id @default(cuid())
+  projectId  String
+  sStep      Int // 1-5 (which S step)
+  miniStep   Int      @default(4) // 4=Autoevaluación, 5=Auditoría
+  zoneId     String? // null = applies to all zones (project-level default)
+  notaMinima Float    @default(70) // Minimum passing score (0-100)
+  objetivo   Float    @default(80) // Target score
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 
-  project      Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  zone    Zone?   @relation(fields: [zoneId], references: [id], onDelete: Cascade)
 
-  @@unique([projectId, sStep])
+  @@unique([projectId, sStep, miniStep, zoneId])
   @@index([projectId])
 }
 
 model RolePermissionConfig {
-  id           String   @id @default(cuid())
-  role         String   // "admin", "responsable", "empleado", "auditor"
-  permission   String   // e.g. "view_board", "complete_steps", etc.
-  allowed      Boolean  @default(false)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id         String   @id @default(cuid())
+  role       String // "admin", "responsable", "empleado", "auditor"
+  permission String // e.g. "view_board", "complete_steps", etc.
+  allowed    Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 
   @@unique([role, permission])
 }
@@ -331,8 +341,8 @@ model Company {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  projects    Project[]
-  members     CompanyMember[]
+  projects Project[]
+  members  CompanyMember[]
 }
 
 model CompanyMember {
@@ -342,10 +352,74 @@ model CompanyMember {
   role      String   @default("gerente") // "gerente", "admin_empresa"
   joinedAt  DateTime @default(now())
 
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  company   Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
 
   @@unique([userId, companyId])
   @@index([companyId])
   @@index([userId])
+}
+
+model Standard {
+  id          String   @id @default(cuid())
+  sStep       Int // 1-5 (which S step this standard belongs to)
+  title       String // Name/title of the standard
+  description String? // Description or details
+  category    String  @default("general") // "layout", "marcado_suelo", "visual", "procedimiento", "general"
+  content     String? // JSON: additional structured data (fields, values, etc.)
+  photoUrl    String? // Reference photo for the standard
+  status      String  @default("activo") // "activo", "en_revision", "obsoleto"
+  version     Int      @default(1) // Version number
+  projectId   String
+  zoneId      String? // null = project-wide standard
+  createdBy   String? // User ID who created it
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  zone    Zone?   @relation(fields: [zoneId], references: [id], onDelete: SetNull)
+
+  @@index([projectId])
+  @@index([sStep, projectId])
+  @@index([category])
+}
+
+model PhotoLibrary {
+  id          String   @id @default(cuid())
+  sStep       Int // 1-5 (which S step)
+  miniStep    Int      @default(2) // 2=Fotos (before/after), can also be 4=Autoeval, 5=Audit
+  title       String // Photo title/description
+  description String? // Additional notes
+  photoUrl    String // URL of the uploaded photo
+  photoType   String  @default("antes") // "antes" (before), "despues" (after), "referencia", "hallazgo", "mejora"
+  category    String  @default("general") // Category for grouping
+  tags        String? // JSON array of tags
+  projectId   String
+  zoneId      String? // Zone the photo belongs to
+  uploadedBy  String? // User ID who uploaded
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  zone    Zone?   @relation(fields: [zoneId], references: [id], onDelete: SetNull)
+
+  @@index([projectId])
+  @@index([sStep, projectId])
+  @@index([photoType])
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String // Target user
+  type      String // "audit_ready", "step_completed", etc.
+  title     String
+  message   String
+  sStep     Int? // Related S-step
+  zoneId    String? // Related zone
+  projectId String // Related project
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([userId, read])
+  @@index([projectId])
 }

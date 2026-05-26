@@ -34,6 +34,8 @@ import {
   ListTodo,
   ArrowRight,
   Trash2,
+  Maximize2,
+  Minimize2,
 } from 'lucide-react';
 import { S_STEPS, AUDIT_CHECKLISTS } from '@/lib/5s-constants';
 import { use5SStore } from '@/lib/store';
@@ -79,6 +81,7 @@ const PRIORIDAD_LABELS: Record<string, { label: string; color: string }> = {
 
 export default function ActionPlanTracker({ open, onClose }: ActionPlanTrackerProps) {
   const { currentProject } = use5SStore();
+  const [isFullscreen, setIsFullscreen] = useState(true);
   const [actions, setActions] = useState<ActionItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [filterSStep, setFilterSStep] = useState<string>('all');
@@ -211,14 +214,22 @@ export default function ActionPlanTracker({ open, onClose }: ActionPlanTrackerPr
 
   return (
     <Dialog open={open} onOpenChange={() => onClose()}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
+      <DialogContent size={isFullscreen ? "fullscreen" : "xl"} className="flex flex-col overflow-hidden p-0">
+        <DialogHeader className="px-6 pt-6 pb-2 flex-shrink-0">
           <DialogTitle className="flex items-center gap-2">
             <ListTodo className="h-5 w-5 text-green-600" />
             <span>Plan de Acción 5S — Deficiencias y Resolución</span>
+            <button
+              onClick={() => setIsFullscreen(!isFullscreen)}
+              className="ml-auto p-1 rounded hover:bg-muted transition-colors"
+              title={isFullscreen ? "Reducir ventana" : "Pantalla completa"}
+            >
+              {isFullscreen ? <Minimize2 className="h-4 w-4 text-muted-foreground" /> : <Maximize2 className="h-4 w-4 text-muted-foreground" />}
+            </button>
           </DialogTitle>
         </DialogHeader>
 
+        <div className="flex-1 overflow-y-auto px-6 pb-6 min-h-0">
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="list" className="text-xs">
@@ -610,6 +621,7 @@ export default function ActionPlanTracker({ open, onClose }: ActionPlanTrackerPr
             )}
           </TabsContent>
         </Tabs>
+        </div>
       </DialogContent>
     </Dialog>
   );

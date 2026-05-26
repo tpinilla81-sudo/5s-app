@@ -21,6 +21,8 @@ import {
   Trash2,
   TrendingUp,
   Sparkles,
+  Maximize2,
+  Minimize2,
 } from 'lucide-react';
 import { use5SStore } from '@/lib/store';
 import {
@@ -55,6 +57,7 @@ export default function PeriodicAuditModal({
 }: PeriodicAuditModalProps) {
   const { fetchProgress, currentUser, adminFreeNavigation, currentProject, currentZone } = use5SStore();
 
+  const [isFullscreen, setIsFullscreen] = useState(true);
   const [auditorName, setAuditorName] = useState('');
   const [results, setResults] = useState<Record<string, AuditItemResult>>({});
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({});
@@ -179,16 +182,25 @@ export default function PeriodicAuditModal({
 
   return (
     <Dialog open={open} onOpenChange={() => onClose()}>
-      <DialogContent className="max-w-[95vw] max-h-[95vh] overflow-y-auto">
-        <DialogHeader>
+      <DialogContent size={isFullscreen ? "fullscreen" : "xl"} className="flex flex-col overflow-hidden p-0">
+        <DialogHeader className="px-6 pt-6 pb-2 flex-shrink-0">
           <DialogTitle className="flex items-center gap-2">
             {icon}
             <span>{title}</span>
             <Badge className="border" style={{ borderColor: color, color, backgroundColor: `${color}10` }}>
               {auditType === 'weekly' ? 'Semanal' : 'Mensual'}
             </Badge>
+            <button
+              onClick={() => setIsFullscreen(!isFullscreen)}
+              className="ml-auto p-1 rounded hover:bg-muted transition-colors"
+              title={isFullscreen ? "Reducir ventana" : "Pantalla completa"}
+            >
+              {isFullscreen ? <Minimize2 className="h-4 w-4 text-muted-foreground" /> : <Maximize2 className="h-4 w-4 text-muted-foreground" />}
+            </button>
           </DialogTitle>
         </DialogHeader>
+
+        <div className="flex-1 overflow-y-auto px-6 pb-6 min-h-0">
 
         {isCompleted ? (
           <div className="text-center py-8">
@@ -417,6 +429,7 @@ export default function PeriodicAuditModal({
             </div>
           </div>
         )}
+        </div>
       </DialogContent>
     </Dialog>
   );

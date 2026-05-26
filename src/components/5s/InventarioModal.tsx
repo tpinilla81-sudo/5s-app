@@ -26,7 +26,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { ClipboardList, Plus, CheckCircle, Download, Upload, FileSpreadsheet, BookOpen, Package, ArrowRight, AlertTriangle, FileUp } from 'lucide-react';
+import { ClipboardList, Plus, CheckCircle, Download, Upload, FileSpreadsheet, BookOpen, Package, ArrowRight, AlertTriangle, FileUp, Maximize2, Minimize2, File } from 'lucide-react';
 import { toast } from 'sonner';
 import { use5SStore } from '@/lib/store';
 import { S_STEPS, INVENTORY_CONFIGS, INVENTORY_CLASSIFY_THRESHOLD } from '@/lib/5s-constants';
@@ -48,6 +48,8 @@ interface InventoryItemData {
   jaulaOrigen?: string | null;
   jaulaFechaSalida?: string | null;
   jaulaDestino?: string | null;
+  zonaOrigen?: string | null;
+  zonaDestino?: string | null;
 }
 
 interface InventarioModalProps {
@@ -62,6 +64,9 @@ export default function InventarioModal({ open, onClose, sStep, miniStep }: Inve
   const sStepData = S_STEPS.find(s => s.id === sStep);
   const config: InventoryConfig = INVENTORY_CONFIGS[sStep] || INVENTORY_CONFIGS[1];
   const isAdmin = currentUser?.role === 'admin' && adminFreeNavigation;
+  const isResponsable = currentUser?.role === 'responsable';
+  const isAuditor = currentUser?.role === 'auditor';
+  const isReadOnly = isResponsable || isAuditor || (currentUser?.role === 'admin' && !adminFreeNavigation); // View-only when responsable, auditor, or admin with lock closed
 
   const [items, setItems] = useState<InventoryItemData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -69,6 +74,7 @@ export default function InventarioModal({ open, onClose, sStep, miniStep }: Inve
   const [showJaula, setShowJaula] = useState(false);
   const [csvPreview, setCsvPreview] = useState<InventoryItemData[] | null>(null);
   const [isImporting, setIsImporting] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(true);
 
   const [newItem, setNewItem] = useState<Partial<InventoryItemData> & { extra?: Record<string, string | number> }>({
     name: '',
@@ -100,10 +106,12 @@ export default function InventarioModal({ open, onClose, sStep, miniStep }: Inve
           id: item.id,
           name: item.name,
           location: item.location || '',
-          category: item.category,
+          // S1: Force all items to be 'innecesario' (fix old DB entries with 'dudoso'/'necesario')
+          category: sStep === 1 ? 'innecesario' : item.category,
           quantity: item.quantity || 1,
-          quantityNeeded: item.quantityNeeded || 0,
-          quantityUnneeded: item.quantityUnneeded || 0,
+          // S1: Force quantities (all items are innecesario)
+          quantityNeeded: sStep === 1 ? 0 : (item.quantityNeeded || 0),
+          quantityUnneeded: sStep === 1 ? (item.quantityUnneeded || item.quantity || 1) : (item.quantityUnneeded || 0),
           price: item.price ?? null,
           action: item.action || '',
           extra: typeof item.extra === 'string' ? JSON.parse(item.extra) : (item.extra || {}),
@@ -112,6 +120,8 @@ export default function InventarioModal({ open, onClose, sStep, miniStep }: Inve
           jaulaOrigen: item.jaulaOrigen || null,
           jaulaFechaSalida: item.jaulaFechaSalida || null,
           jaulaDestino: item.jaulaDestino || null,
+          zonaOrigen: item.zonaOrigen || null,
+          zonaDestino: item.zonaDestino || null,
         })));
       } else {
         console.error('Error loading inventory:', json.error);
@@ -124,8 +134,14 @@ export default function InventarioModal({ open, onClose, sStep, miniStep }: Inve
   };
 
   const handleAddItem = async () => {
-    if (!newItem.name || !newItem.category) {
+    // S1: category is always 'innecesario', no need to check category
+    const category = sStep === 1 ? 'innecesario' : newItem.category;
+    if (!newItem.name || (!category && sStep !== 1)) {
       toast.error('Completa el nombre y la categoría del elemento');
+      return;
+    }
+    if (!newItem.name) {
+      toast.error('Completa el nombre del elemento');
       return;
     }
 
@@ -137,7 +153,13 @@ export default function InventarioModal({ open, onClose, sStep, miniStep }: Inve
     // Auto-calculate quantityUnneeded if not set
     const qty = newItem.quantity || 1;
     const qtyNeeded = newItem.quantityNeeded || 0;
-    const qtyUnneeded = newItem.quantityUnneeded || (sStep === 1 ? qty - qtyNeeded : 0);
+    const qtyUnneeded = newItem.quantityUnneeded || (sStep === 1 ? qty : 0);
+
+    // S1: auto-set decision to extra field
+    const extra = { ...(newItem.extra || {}) };
+    if (sStep === 1 && !extra.decision) {
+      extra.decision = 'Jaula';
+    }
 
     try {
       const res = await fetch('/api/inventory', {
@@ -149,17 +171,19 @@ export default function InventarioModal({ open, onClose, sStep, miniStep }: Inve
           zoneId: currentZone?.id || null,
           name: newItem.name,
           location: newItem.location,
-          category: newItem.category,
+          category: category || 'innecesario',
           quantity: qty,
           quantityNeeded: qtyNeeded,
           quantityUnneeded: qtyUnneeded,
           price: newItem.price || null,
-          action: newItem.action,
-          extra: newItem.extra || {},
-          // Auto-set jaula status for S1 innecesario items
-          jaulaStatus: sStep === 1 && newItem.category === 'innecesario' ? 'en_jaula' : '',
-          jaulaFechaEntrada: sStep === 1 && newItem.category === 'innecesario' ? new Date().toISOString() : null,
-          jaulaOrigen: sStep === 1 && newItem.category === 'innecesario' ? currentProject.name || '' : null,
+          action: newItem.action || (sStep === 1 ? (extra.decision || 'Jaula') : ''),
+          extra,
+          // Auto-set jaula status for S1 (all items are innecesario)
+          jaulaStatus: sStep === 1 ? 'en_jaula' : '',
+          jaulaFechaEntrada: sStep === 1 ? new Date().toISOString() : null,
+          jaulaOrigen: sStep === 1 ? currentZone?.name || currentProject.name || '' : null,
+          zonaOrigen: currentZone?.name || null,
+          zonaDestino: currentZone?.name || null,
         }),
       });
 
@@ -226,57 +250,190 @@ export default function InventarioModal({ open, onClose, sStep, miniStep }: Inve
     }
   };
 
-  // TASK 7: CSV Import
-  const handleCsvFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Unified file import: supports both .csv and .xlsx files
+  const handleFileImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    const reader = new FileReader();
-    reader.onload = (evt) => {
-      try {
-        const text = evt.target?.result as string;
-        const lines = text.split('\n').filter(l => l.trim());
-        if (lines.length < 2) return;
+    try {
+      const fileName = file.name.toLowerCase();
+      let dataRows: string[][] = [];
+      let headerRow: string[] = [];
 
-        // Parse header
-        const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
+      if (fileName.endsWith('.xlsx') || fileName.endsWith('.xls')) {
+        // Parse Excel file using xlsx library
+        const XLSX = await import('xlsx');
+        const arrayBuffer = await file.arrayBuffer();
+        const workbook = XLSX.read(arrayBuffer, { type: 'array' });
+        const sheetName = workbook.SheetNames[0]; // Use first sheet
+        const sheet = workbook.Sheets[sheetName];
+        const rawData: string[][] = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
+        
+        if (rawData.length < 2) {
+          toast.error('El archivo está vacío o no tiene datos');
+          e.target.value = '';
+          return;
+        }
 
-        const parsedItems: InventoryItemData[] = [];
-        for (let i = 1; i < lines.length; i++) {
-          const values = lines[i].split(',').map(v => v.trim());
-          if (values.length < 2 || !values[0]) continue;
-
-          const item: InventoryItemData = {
-            name: values[headers.indexOf('nombre')] || values[0] || '',
-            location: values[headers.indexOf('ubicación')] || values[headers.indexOf('ubicacion')] || values[1] || '',
-            category: values[headers.indexOf('categoría')] || values[headers.indexOf('categoria')] || config.categories[0]?.value || '',
-            quantity: parseInt(values[headers.indexOf('total exist.')] || values[headers.indexOf('total')] || values[2] || '1') || 1,
-            quantityNeeded: parseInt(values[headers.indexOf('necesarios')] || values[headers.indexOf('nec.')] || '0') || 0,
-            quantityUnneeded: parseInt(values[headers.indexOf('innecesarios')] || values[headers.indexOf('innec.')] || '0') || 0,
-            price: parseFloat(values[headers.indexOf('precio')] || values[3] || '0') || null,
-            action: values[headers.indexOf('acción')] || values[headers.indexOf('accion')] || '',
-            extra: {},
-          };
-
-          // Parse extra fields from CSV
-          config.extraFields.forEach((field, fIdx) => {
-            const val = values[headers.indexOf(field.label.toLowerCase())] || values[7 + fIdx] || '';
-            if (val) {
-              item.extra![field.key] = val;
-            }
+        // Find the header row: look for a row that contains 'Nº' or 'Elemento' or 'Nombre'
+        let headerIdx = 0;
+        for (let i = 0; i < Math.min(10, rawData.length); i++) {
+          const rowStr = rawData[i].map(c => String(c).toLowerCase()).join('|');
+          if (rowStr.includes('elemento') || rowStr.includes('nombre') || rowStr.includes('nº') || rowStr.includes('punto')) {
+            headerIdx = i;
+            break;
+          }
+        }
+        headerRow = rawData[headerIdx].map((h: any) => String(h).trim().toLowerCase());
+        dataRows = rawData.slice(headerIdx + 1).filter(row => {
+          // Count non-empty, non-numeric-only cells
+          const meaningfulCells = row.filter(cell => {
+            const v = String(cell).trim();
+            return v !== '' && v !== '0';
           });
-
-          parsedItems.push(item);
+          // A row with data must have at least 2 meaningful cells (name + something)
+          // This filters out empty numbered rows and footer rows
+          if (meaningfulCells.length < 2) return false;
+          // Skip footer rows like "TOTAL ELEMENTOS", "Notas:", etc.
+          const firstMeaningful = meaningfulCells[0].toLowerCase();
+          if (firstMeaningful.includes('total') || firstMeaningful.includes('notas') || firstMeaningful.includes('clasificación')) return false;
+          return true;
+        });
+      } else if (fileName.endsWith('.csv')) {
+        // Parse CSV file
+        const text = await file.text();
+        const lines = text.split('\n').filter(l => l.trim());
+        if (lines.length < 2) {
+          toast.error('El archivo CSV está vacío o no tiene datos');
+          e.target.value = '';
+          return;
         }
-
-        if (parsedItems.length > 0) {
-          setCsvPreview(parsedItems);
-        }
-      } catch (error) {
-        console.error('Error parsing CSV:', error);
+        headerRow = lines[0].split(',').map(h => h.trim().toLowerCase().replace(/^\uFEFF/, '')); // Remove BOM
+        dataRows = lines.slice(1).filter(l => l.trim()).map(l => l.split(',').map(v => v.trim()));
+      } else {
+        toast.error('Formato no soportado. Usa .xlsx o .csv');
+        e.target.value = '';
+        return;
       }
-    };
-    reader.readAsText(file);
+
+      // Flexible column mapping: map various header names to standard fields
+      const findCol = (headers: string[], ...names: string[]): number => {
+        for (const name of names) {
+          const idx = headers.findIndex(h => h.includes(name));
+          if (idx >= 0) return idx;
+        }
+        return -1;
+      };
+
+      const colMap = {
+        name: findCol(headerRow, 'elemento', 'nombre', 'punto', 'estándar', 'práctica', 'estandar', 'practica'),
+        location: findCol(headerRow, 'ubicación', 'ubicacion', 'ámbito', 'ambito', 'proceso'),
+        category: findCol(headerRow, 'categoría', 'categoria', 'clasificación', 'clasificacion', 'tipo'),
+        quantity: findCol(headerRow, 'cantidad', 'total exist', 'total'),
+        quantityNeeded: findCol(headerRow, 'necesarios', 'nec.'),
+        quantityUnneeded: findCol(headerRow, 'innecesarios', 'innec.'),
+        price: findCol(headerRow, 'precio'),
+        action: findCol(headerRow, 'acción', 'accion', 'decisión', 'decision', 'método', 'metodo'),
+        estado: findCol(headerRow, 'estado'),
+        frecuenciaUso: findCol(headerRow, 'frecuencia'),
+        nivel: findCol(headerRow, 'nivel'),
+        fuente: findCol(headerRow, 'fuente'),
+        cercania: findCol(headerRow, 'cercanía', 'cercania'),
+        documentado: findCol(headerRow, 'documentado'),
+        cumplimiento: findCol(headerRow, 'cumplimiento'),
+        ubicacionAsignada: findCol(headerRow, 'ubicación asignada', 'asignada'),
+        metodoIdentificacion: findCol(headerRow, 'método identificación', 'identificación', 'identificacion'),
+        frecuenciaLimpieza: findCol(headerRow, 'frecuencia limpieza'),
+        metodoLimpieza: findCol(headerRow, 'método limpieza'),
+        responsable: findCol(headerRow, 'responsable'),
+        observaciones: findCol(headerRow, 'observacione'),
+      };
+
+      const parsedItems: InventoryItemData[] = [];
+      for (const values of dataRows) {
+        const strValues = values.map(v => String(v).trim());
+        // Skip rows that are just a number (empty data rows from template)
+        if (strValues.length < 2) continue;
+        const nonEmptyCount = strValues.filter(v => v !== '' && v !== '0').length;
+        if (nonEmptyCount < 1) continue;
+
+        const getVal = (idx: number, fallback?: string) => idx >= 0 && idx < strValues.length ? strValues[idx] : (fallback || '');
+
+        const item: InventoryItemData = {
+          name: getVal(colMap.name, strValues[1] || strValues[0] || ''),
+          location: getVal(colMap.location, strValues[2] || ''),
+          category: sStep === 1 ? 'innecesario' : (getVal(colMap.category) || config.categories[0]?.value || ''),
+          quantity: parseInt(getVal(colMap.quantity, strValues[4] || '1')) || 1,
+          quantityNeeded: parseInt(getVal(colMap.quantityNeeded, '0')) || 0,
+          quantityUnneeded: parseInt(getVal(colMap.quantityUnneeded, '0')) || 0,
+          price: parseFloat(getVal(colMap.price, '0')) || null,
+          action: getVal(colMap.action, '') || getVal(colMap.observaciones, ''),
+          extra: {},
+        };
+
+        // S1: Force all items to be 'innecesario' and set default decision
+        if (sStep === 1) {
+          item.category = 'innecesario';
+          item.quantityUnneeded = item.quantity;
+          item.quantityNeeded = 0;
+          if (colMap.estado >= 0) item.extra!['estado'] = getVal(colMap.estado);
+          if (colMap.frecuenciaUso >= 0) item.extra!['frecuenciaUso'] = getVal(colMap.frecuenciaUso);
+          // Map classification/decision columns
+          const decisionVal = getVal(colMap.category) || getVal(colMap.action, '');
+          if (decisionVal) {
+            const lower = decisionVal.toLowerCase();
+            if (lower.includes('jaula') || lower.includes('red') || lower.includes('etiqueta')) {
+              item.extra!['decision'] = 'Jaula';
+            } else if (lower.includes('elimin')) {
+              item.extra!['decision'] = 'Eliminar';
+            } else {
+              item.extra!['decision'] = 'Jaula'; // Default for S1
+            }
+          }
+          if (!item.extra!['decision']) item.extra!['decision'] = 'Jaula';
+        } else if (sStep === 2) {
+          if (colMap.ubicacionAsignada >= 0) item.extra!['ubicacionAsignada'] = getVal(colMap.ubicacionAsignada);
+          if (colMap.metodoIdentificacion >= 0) item.extra!['metodoIdentificacion'] = getVal(colMap.metodoIdentificacion);
+          if (colMap.cercania >= 0) item.extra!['cercania'] = getVal(colMap.cercania);
+          if (colMap.frecuenciaUso >= 0) item.extra!['frecuenciaUso'] = getVal(colMap.frecuenciaUso);
+        } else if (sStep === 3) {
+          if (colMap.nivel >= 0) item.extra!['nivel'] = getVal(colMap.nivel);
+          if (colMap.fuente >= 0) item.extra!['fuente'] = getVal(colMap.fuente);
+          if (colMap.metodoLimpieza >= 0) item.extra!['metodoLimpieza'] = getVal(colMap.metodoLimpieza);
+          if (colMap.frecuenciaLimpieza >= 0) item.extra!['frecuenciaLimpieza'] = getVal(colMap.frecuenciaLimpieza);
+        } else if (sStep === 4) {
+          if (colMap.estado >= 0) item.extra!['estadoEstandar'] = getVal(colMap.estado);
+          if (colMap.documentado >= 0) item.extra!['documentado'] = getVal(colMap.documentado);
+          if (colMap.cumplimiento >= 0) item.extra!['cumplimiento'] = getVal(colMap.cumplimiento);
+        } else if (sStep === 5) {
+          if (colMap.frecuenciaUso >= 0) item.extra!['frecuencia'] = getVal(colMap.frecuenciaUso);
+          if (colMap.nivel >= 0) item.extra!['practica'] = getVal(colMap.nivel);
+        }
+
+        // Also check config.extraFields for any remaining fields
+        config.extraFields.forEach((field) => {
+          if (item.extra![field.key]) return; // Already mapped above
+          const val = getVal(findCol(headerRow, field.label.toLowerCase()), '');
+          if (val) {
+            item.extra![field.key] = val;
+          }
+        });
+
+        // Skip items with no name
+        if (!item.name) continue;
+        parsedItems.push(item);
+      }
+
+      if (parsedItems.length > 0) {
+        setCsvPreview(parsedItems);
+        toast.info(`${parsedItems.length} elementos encontrados. Revisa y confirma la importación.`);
+      } else {
+        toast.error('No se encontraron elementos válidos en el archivo. Asegúrate de rellenar las filas con datos.');
+      }
+    } catch (error) {
+      console.error('Error parsing file:', error);
+      toast.error('Error al procesar el archivo. Verifica el formato.');
+    }
     // Reset file input
     e.target.value = '';
   };
@@ -299,16 +456,18 @@ export default function InventarioModal({ open, onClose, sStep, miniStep }: Inve
             zoneId: currentZone?.id || null,
             name: item.name,
             location: item.location,
-            category: item.category || config.categories[0]?.value || '',
+            category: sStep === 1 ? 'innecesario' : (item.category || config.categories[0]?.value || ''),
             quantity: item.quantity || 1,
-            quantityNeeded: item.quantityNeeded || 0,
-            quantityUnneeded: item.quantityUnneeded || 0,
+            quantityNeeded: sStep === 1 ? 0 : (item.quantityNeeded || 0),
+            quantityUnneeded: sStep === 1 ? (item.quantityUnneeded || item.quantity || 1) : (item.quantityUnneeded || 0),
             price: item.price || null,
             action: item.action || '',
             extra: item.extra || {},
-            jaulaStatus: sStep === 1 && item.category === 'innecesario' ? 'en_jaula' : '',
-            jaulaFechaEntrada: sStep === 1 && item.category === 'innecesario' ? new Date().toISOString() : null,
-            jaulaOrigen: sStep === 1 && item.category === 'innecesario' ? currentProject!.name || '' : null,
+            jaulaStatus: sStep === 1 ? 'en_jaula' : '',
+            jaulaFechaEntrada: sStep === 1 ? new Date().toISOString() : null,
+            jaulaOrigen: sStep === 1 ? currentZone?.name || currentProject!.name || '' : null,
+            zonaOrigen: currentZone?.name || null,
+            zonaDestino: currentZone?.name || null,
           }))
         ),
       });
@@ -371,8 +530,6 @@ export default function InventarioModal({ open, onClose, sStep, miniStep }: Inve
 
   // S1 specific counts
   const innecesarios = items.filter(i => i.category === 'innecesario');
-  const dudosos = items.filter(i => i.category === 'dudoso');
-  const necesarios = items.filter(i => i.category === 'util');
   const jaulaItems = items.filter(i => i.jaulaStatus === 'en_jaula');
   const totalJaulaValue = jaulaItems.reduce((sum, i) => sum + (i.price || 0) * i.quantity, 0);
 
@@ -464,19 +621,26 @@ export default function InventarioModal({ open, onClose, sStep, miniStep }: Inve
 
   return (
     <Dialog open={open} onOpenChange={() => onClose()}>
-      <DialogContent className="max-w-[95vw] max-h-[95vh] overflow-y-auto">
-        <DialogHeader>
+      <DialogContent size={isFullscreen ? "fullscreen" : "xl"} className="flex flex-col overflow-hidden p-0">
+        <DialogHeader className="px-6 pt-6 pb-2 flex-shrink-0">
           <DialogTitle className="flex items-center gap-2">
             <ClipboardList className="h-5 w-5" style={{ color: sStepData?.color }} />
             <span>{config.title}</span>
             <Badge variant="outline" style={{ borderColor: sStepData?.color, color: sStepData?.color }}>
               {sStepData?.japaneseName}
             </Badge>
+            <button
+              onClick={() => setIsFullscreen(!isFullscreen)}
+              className="ml-auto p-1 rounded hover:bg-muted transition-colors"
+              title={isFullscreen ? "Reducir ventana" : "Pantalla completa"}
+            >
+              {isFullscreen ? <Minimize2 className="h-4 w-4 text-muted-foreground" /> : <Maximize2 className="h-4 w-4 text-muted-foreground" />}
+            </button>
           </DialogTitle>
         </DialogHeader>
 
         {isAdmin && !isCompleted && (
-          <div className="flex items-center gap-2 p-2 bg-amber-50 border border-amber-200 rounded-lg">
+          <div className="mx-6 flex items-center gap-2 p-2 bg-amber-50 border border-amber-200 rounded-lg flex-shrink-0">
             <span className="text-xs text-amber-700 font-medium">Modo Admin:</span>
             <Button
               variant="outline"
@@ -489,6 +653,13 @@ export default function InventarioModal({ open, onClose, sStep, miniStep }: Inve
           </div>
         )}
 
+        {isReadOnly && (
+          <div className="flex items-center gap-2 p-2 mx-6 flex-shrink-0 bg-blue-50 border border-blue-200 rounded-lg">
+            <span className="text-xs text-blue-700 font-medium">Solo lectura: {currentUser?.role === 'admin' ? 'Activa el candado para poder realizar pasos.' : currentUser?.role === 'auditor' ? 'El auditor puede ver el inventario pero no modificarlo.' : 'El responsable puede ver el progreso pero no realizar pasos.'}</span>
+          </div>
+        )}
+
+        <div className="flex-1 overflow-y-auto px-6 pb-6 min-h-0">
         {isCompleted ? (
           <div className="text-center py-8">
             <CheckCircle className="h-16 w-16 text-green-500 mx-auto mb-3" />
@@ -499,8 +670,6 @@ export default function InventarioModal({ open, onClose, sStep, miniStep }: Inve
             {sStep === 1 && (
               <div className="mt-4 flex justify-center gap-4">
                 <span className="text-sm text-red-600">Innecesarios: {innecesarios.length}</span>
-                <span className="text-sm text-yellow-600">Dudosos: {dudosos.length}</span>
-                <span className="text-sm text-green-600">Necesarios: {necesarios.length}</span>
               </div>
             )}
           </div>
@@ -519,35 +688,17 @@ export default function InventarioModal({ open, onClose, sStep, miniStep }: Inve
                 <CardContent className="p-4">
                   <div className="flex items-center gap-2 mb-2">
                     <Package className="h-5 w-5 text-red-600" />
-                    <h4 className="font-semibold text-red-800">Sistema de Jaulas y Tarjetas</h4>
+                    <h4 className="font-semibold text-red-800">Sistema de Jaulas — Etiqueta ROJA</h4>
                   </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
-                    <div className="bg-white rounded-lg border p-3">
-                      <div className="flex items-center gap-1 mb-1">
-                        <div className="w-3 h-3 rounded bg-red-500"></div>
-                        <span className="font-medium">Etiqueta ROJA</span>
-                      </div>
-                      <p className="text-muted-foreground">Enviar a la JAULA. Elemento claramente innecesario.</p>
+                  <div className="bg-white rounded-lg border p-3 text-xs mb-3">
+                    <div className="flex items-center gap-1 mb-1">
+                      <div className="w-3 h-3 rounded bg-red-500"></div>
+                      <span className="font-medium">Etiqueta ROJA — Innecesario</span>
                     </div>
-                    <div className="bg-white rounded-lg border p-3">
-                      <div className="flex items-center gap-1 mb-1">
-                        <div className="w-3 h-3 rounded bg-orange-500"></div>
-                        <span className="font-medium">Etiqueta NARANJA</span>
-                      </div>
-                      <p className="text-muted-foreground">Cuestionar si se envía a la JAULA. Requiere revisión.</p>
-                    </div>
-                    <div className="bg-white rounded-lg border p-3">
-                      <div className="flex items-center gap-1 mb-1">
-                        <div className="w-3 h-3 rounded bg-green-500"></div>
-                        <span className="font-medium">Sin etiqueta</span>
-                      </div>
-                      <p className="text-muted-foreground">Elemento necesario. Mantener en su ubicación.</p>
-                    </div>
+                    <p className="text-muted-foreground">Todos los elementos de este inventario son INNECESARIOS. Se envían a la JAULA o se ELIMINAN directamente.</p>
                   </div>
                   <div className="mt-3 flex flex-wrap gap-4 text-xs">
                     <span className="text-red-700 font-medium">Innecesarios: {innecesarios.length}</span>
-                    <span className="text-yellow-700 font-medium">Dudosos: {dudosos.length}</span>
-                    <span className="text-green-700 font-medium">Necesarios: {necesarios.length}</span>
                     {jaulaItems.length > 0 && (
                       <span className="text-red-800 font-bold">
                         En Jaula: {jaulaItems.length} ({totalJaulaValue.toFixed(2)} €)
@@ -586,10 +737,10 @@ export default function InventarioModal({ open, onClose, sStep, miniStep }: Inve
                           <TableHead className="text-xs">Cant.</TableHead>
                           <TableHead className="text-xs">Precio</TableHead>
                           <TableHead className="text-xs">F. Entrada</TableHead>
-                          <TableHead className="text-xs">Origen</TableHead>
+                          <TableHead className="text-xs">Z. Origen</TableHead>
                           <TableHead className="text-xs">Estado</TableHead>
                           <TableHead className="text-xs">F. Salida</TableHead>
-                          <TableHead className="text-xs">Destino</TableHead>
+                          <TableHead className="text-xs">Z. Destino</TableHead>
                           <TableHead className="text-xs w-10"></TableHead>
                         </TableRow>
                       </TableHeader>
@@ -600,10 +751,33 @@ export default function InventarioModal({ open, onClose, sStep, miniStep }: Inve
                             <TableCell className="text-xs text-center">{item.quantityUnneeded || item.quantity}</TableCell>
                             <TableCell className="text-xs text-right">{item.price ? `${(item.price * (item.quantityUnneeded || item.quantity)).toFixed(2)} €` : '—'}</TableCell>
                             <TableCell className="text-xs">{item.jaulaFechaEntrada ? new Date(item.jaulaFechaEntrada).toLocaleDateString('es-ES') : '—'}</TableCell>
-                            <TableCell className="text-xs">{item.jaulaOrigen || '—'}</TableCell>
+                            <TableCell className="text-xs">{item.zonaOrigen || item.jaulaOrigen || '—'}</TableCell>
                             <TableCell>{getJaulaStatusBadge(item.jaulaStatus || '')}</TableCell>
                             <TableCell className="text-xs">{item.jaulaFechaSalida ? new Date(item.jaulaFechaSalida).toLocaleDateString('es-ES') : '—'}</TableCell>
-                            <TableCell className="text-xs">{item.jaulaDestino || '—'}</TableCell>
+                            <TableCell className="text-xs">
+                              {!isReadOnly && item.id ? (
+                                <Select
+                                  value={item.zonaDestino || item.jaulaDestino || undefined}
+                                  onValueChange={val => {
+                                    const targetZone = currentProject?.zones?.find(z => z.name === val);
+                                    const updates: any = { zonaDestino: val, jaulaDestino: val };
+                                    if (targetZone) updates.zoneId = targetZone.id;
+                                    if (item.id) handleUpdateJaula(item.id, updates);
+                                  }}
+                                >
+                                  <SelectTrigger className="h-5 w-20 text-[9px]">
+                                    <SelectValue placeholder="—"/>
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {currentProject?.zones?.map(z => (
+                                      <SelectItem key={z.id} value={z.name}>{z.name}</SelectItem>
+                                    )) || []}
+                                  </SelectContent>
+                                </Select>
+                              ) : (
+                                <span className="text-muted-foreground">{item.zonaDestino || item.jaulaDestino || '—'}</span>
+                              )}
+                            </TableCell>
                             <TableCell>
                               <Select
                                 value={item.jaulaStatus || undefined}
@@ -658,6 +832,8 @@ export default function InventarioModal({ open, onClose, sStep, miniStep }: Inve
                           <TableHead className="text-xs">Estado</TableHead>
                           <TableHead className="text-xs">Frec. uso</TableHead>
                           <TableHead className="text-xs">Decisión</TableHead>
+                          <TableHead className="text-xs">Z. Origen</TableHead>
+                          <TableHead className="text-xs">Z. Destino</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -673,6 +849,31 @@ export default function InventarioModal({ open, onClose, sStep, miniStep }: Inve
                               <Badge className={item.extra?.decision === 'Jaula' ? 'bg-red-100 text-red-800' : item.extra?.decision === 'Eliminar' ? 'bg-red-100 text-red-800' : item.extra?.decision === 'Reubicar' ? 'bg-blue-100 text-blue-800' : item.extra?.decision === 'Vender' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}>
                                 {String(item.extra?.decision || item.action || 'Jaula')}
                               </Badge>
+                            </TableCell>
+                            <TableCell className="text-xs text-muted-foreground">{item.zonaOrigen || '—'}</TableCell>
+                            <TableCell className="text-xs">
+                              {!isReadOnly && item.id ? (
+                                <Select
+                                  value={item.zonaDestino || undefined}
+                                  onValueChange={val => {
+                                    const targetZone = currentProject?.zones?.find(z => z.name === val);
+                                    const updates: any = { zonaDestino: val };
+                                    if (targetZone) updates.zoneId = targetZone.id;
+                                    handleUpdateJaula(item.id!, updates);
+                                  }}
+                                >
+                                  <SelectTrigger className="h-5 w-20 text-[9px]">
+                                    <SelectValue placeholder="—"/>
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {currentProject?.zones?.map(z => (
+                                      <SelectItem key={z.id} value={z.name}>{z.name}</SelectItem>
+                                    )) || []}
+                                  </SelectContent>
+                                </Select>
+                              ) : (
+                                <span className="text-muted-foreground">{item.zonaDestino || '—'}</span>
+                              )}
                             </TableCell>
                           </TableRow>
                         ))}
@@ -704,14 +905,14 @@ export default function InventarioModal({ open, onClose, sStep, miniStep }: Inve
               <Button variant="outline" size="sm" onClick={handleExport} disabled={items.length === 0}>
                 <Download className="h-4 w-4 mr-1" /> Exportar CSV
               </Button>
-              {/* TASK 7: CSV Import button */}
+              {/* Unified file import: accepts .xlsx and .csv */}
               <label className="inline-flex items-center justify-center rounded-md border border-input bg-background px-3 py-1.5 text-xs font-medium ring-offset-background hover:bg-accent hover:text-accent-foreground cursor-pointer">
-                <FileUp className="h-4 w-4 mr-1" /> Importar CSV
+                <FileUp className="h-4 w-4 mr-1" /> Importar Archivo
                 <input
                   type="file"
-                  accept=".csv"
+                  accept=".csv,.xlsx,.xls"
                   className="hidden"
-                  onChange={handleCsvFileSelect}
+                  onChange={handleFileImport}
                 />
               </label>
               <a
@@ -730,7 +931,7 @@ export default function InventarioModal({ open, onClose, sStep, miniStep }: Inve
                   <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center gap-2">
                       <FileUp className="h-5 w-5 text-blue-600" />
-                      <h4 className="font-semibold text-blue-800">Vista Previa de Importación CSV</h4>
+                      <h4 className="font-semibold text-blue-800">Vista Previa de Importación</h4>
                       <Badge className="bg-blue-200 text-blue-900">{csvPreview.length} elementos</Badge>
                     </div>
                     <div className="flex items-center gap-2">
@@ -784,9 +985,9 @@ export default function InventarioModal({ open, onClose, sStep, miniStep }: Inve
             <Card>
               <CardContent className="p-4">
                 <div className="space-y-3">
-                  {/* Row 1: Name, Location, Category, Quantity, Price */}
-                  <div className="grid grid-cols-1 sm:grid-cols-6 gap-3 items-end">
-                    <div className="sm:col-span-2">
+                  {/* Row 1: Name, Location, (Category for non-S1), Quantity, Price */}
+                  <div className={`grid grid-cols-1 gap-3 items-end ${sStep === 1 ? 'sm:grid-cols-5' : 'sm:grid-cols-6'}`}>
+                    <div className={sStep === 1 ? 'sm:col-span-2' : 'sm:col-span-2'}>
                       <label className="text-xs font-medium">Elemento *</label>
                       <Input
                         placeholder="Nombre del elemento"
@@ -802,26 +1003,29 @@ export default function InventarioModal({ open, onClose, sStep, miniStep }: Inve
                         onChange={e => setNewItem(prev => ({ ...prev, location: e.target.value }))}
                       />
                     </div>
+                    {/* S1: No category dropdown — everything is 'innecesario' automatically */}
+                    {sStep !== 1 && (
+                      <div>
+                        <label className="text-xs font-medium">Categoría *</label>
+                        <Select
+                          value={newItem.category || undefined}
+                          onValueChange={val => setNewItem(prev => ({ ...prev, category: val }))}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Categoría" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {config.categories.map(cat => (
+                              <SelectItem key={cat.value} value={cat.value}>
+                                {cat.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
                     <div>
-                      <label className="text-xs font-medium">Categoría *</label>
-                      <Select
-                        value={newItem.category || undefined}
-                        onValueChange={val => setNewItem(prev => ({ ...prev, category: val }))}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Categoría" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {config.categories.map(cat => (
-                            <SelectItem key={cat.value} value={cat.value}>
-                              {cat.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div>
-                      <label className="text-xs font-medium">Total exist.</label>
+                      <label className="text-xs font-medium">{sStep === 1 ? 'Cantidad' : 'Total exist.'}</label>
                       <Input
                         type="number"
                         min="1"
@@ -842,37 +1046,7 @@ export default function InventarioModal({ open, onClose, sStep, miniStep }: Inve
                     </div>
                   </div>
 
-                  {/* S1 specific: Necesarios / Innecesarios columns */}
-                  {sStep === 1 && (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-end">
-                      <div>
-                        <label className="text-xs font-medium text-green-700">Necesarios</label>
-                        <Input
-                          type="number"
-                          min="0"
-                          value={newItem.quantityNeeded || 0}
-                          onChange={e => {
-                            const needed = parseInt(e.target.value) || 0;
-                            const total = newItem.quantity || 1;
-                            setNewItem(prev => ({
-                              ...prev,
-                              quantityNeeded: needed,
-                              quantityUnneeded: Math.max(0, total - needed),
-                            }));
-                          }}
-                        />
-                      </div>
-                      <div>
-                        <label className="text-xs font-medium text-red-700">Innecesarios</label>
-                        <Input
-                          type="number"
-                          min="0"
-                          value={newItem.quantityUnneeded || 0}
-                          onChange={e => setNewItem(prev => ({ ...prev, quantityUnneeded: parseInt(e.target.value) || 0 }))}
-                        />
-                      </div>
-                    </div>
-                  )}
+                  {/* S1: No Necesarios/Innecesarios fields needed — all items are innecesario by default */}
 
                   {/* Row 2: Extra fields specific to this S */}
                   {config.extraFields.length > 0 && (
@@ -936,7 +1110,7 @@ export default function InventarioModal({ open, onClose, sStep, miniStep }: Inve
                   <div className="flex justify-end">
                     <Button
                       onClick={handleAddItem}
-                      disabled={!newItem.name || !newItem.category}
+                      disabled={!newItem.name || (sStep !== 1 && !newItem.category)}
                       size="sm"
                       style={{ backgroundColor: sStepData?.color }}
                     >
@@ -1024,48 +1198,118 @@ export default function InventarioModal({ open, onClose, sStep, miniStep }: Inve
                     <TableRow>
                       <TableHead>Elemento</TableHead>
                       <TableHead>Ubicación</TableHead>
-                      <TableHead>Categoría</TableHead>
-                      <TableHead className="text-center">Total</TableHead>
-                      {sStep === 1 && (
-                        <>
-                          <TableHead className="text-center text-green-700">Nec.</TableHead>
-                          <TableHead className="text-center text-red-700">Innec.</TableHead>
-                        </>
-                      )}
+                      {sStep !== 1 && <TableHead>Categoría</TableHead>}
+                      <TableHead className="text-center">{sStep === 1 ? 'Cantidad' : 'Total'}</TableHead>
                       <TableHead className="text-right">Precio (€)</TableHead>
-                      {config.extraFields.slice(0, 2).map(f => (
-                        <TableHead key={f.key}>{f.label}</TableHead>
-                      ))}
+                      {sStep === 1 ? (
+                        <>
+                          <TableHead>Estado</TableHead>
+                          <TableHead>Decisión</TableHead>
+                        </>
+                      ) : (
+                        config.extraFields.slice(0, 2).map(f => (
+                          <TableHead key={f.key}>{f.label}</TableHead>
+                        ))
+                      )}
+                      <TableHead>Z. Origen</TableHead>
+                      <TableHead>Z. Destino</TableHead>
                       <TableHead className="w-10"></TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {items.map(item => (
                       <TableRow key={item.id} className={item.jaulaStatus === 'en_jaula' ? 'bg-red-50/50' : ''}>
-                        <TableCell className="text-sm font-medium">{item.name}</TableCell>
-                        <TableCell className="text-sm text-muted-foreground">{item.location}</TableCell>
-                        <TableCell>{getCategoryBadge(item.category)}</TableCell>
-                        <TableCell className="text-center text-sm">{item.quantity}</TableCell>
-                        {sStep === 1 && (
+                        <TableCell className="text-sm font-medium">
+                          {!isReadOnly && item.id ? (
+                            <Input
+                              value={item.name}
+                              className="h-6 text-xs border-0 p-1 focus:border focus:border-gray-300 bg-transparent hover:bg-gray-50"
+                              onChange={e => {
+                                setItems(prev => prev.map(it => it.id === item.id ? { ...it, name: e.target.value } : it));
+                              }}
+                              onBlur={e => {
+                                if (item.id) {
+                                  handleUpdateJaula(item.id, { name: e.target.value } as any);
+                                }
+                              }}
+                            />
+                          ) : (
+                            <span>{item.name}</span>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-sm text-muted-foreground">
+                          {!isReadOnly && item.id ? (
+                            <Input
+                              value={item.location || ''}
+                              className="h-6 text-xs border-0 p-1 focus:border focus:border-gray-300 bg-transparent hover:bg-gray-50"
+                              onChange={e => {
+                                setItems(prev => prev.map(it => it.id === item.id ? { ...it, location: e.target.value } : it));
+                              }}
+                              onBlur={e => {
+                                if (item.id) {
+                                  handleUpdateJaula(item.id, { location: e.target.value } as any);
+                                }
+                              }}
+                            />
+                          ) : (
+                            <span>{item.location}</span>
+                          )}
+                        </TableCell>
+                        {sStep !== 1 && <TableCell>{getCategoryBadge(item.category)}</TableCell>}
+                        <TableCell className="text-center text-sm">{sStep === 1 ? (item.quantityUnneeded || item.quantity) : item.quantity}</TableCell>
+                        <TableCell className="text-right text-sm">{item.price != null ? `${item.price.toFixed(2)} €` : '—'}</TableCell>
+                        {sStep === 1 ? (
                           <>
-                            <TableCell className="text-center text-sm text-green-700">{item.quantityNeeded || '—'}</TableCell>
-                            <TableCell className="text-center text-sm text-red-700">
-                              {item.quantityUnneeded || (item.category === 'innecesario' ? item.quantity : '—')}
+                            <TableCell className="text-sm text-muted-foreground">{String(item.extra?.estado ?? '—')}</TableCell>
+                            <TableCell className="text-sm">
+                              <Badge className={item.extra?.decision === 'Jaula' ? 'bg-red-100 text-red-800' : item.extra?.decision === 'Eliminar' ? 'bg-red-100 text-red-800' : item.extra?.decision === 'Reubicar' ? 'bg-blue-100 text-blue-800' : item.extra?.decision === 'Vender' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}>
+                                {String(item.extra?.decision || item.action || 'Jaula')}
+                              </Badge>
                             </TableCell>
                           </>
+                        ) : (
+                          config.extraFields.slice(0, 2).map(f => (
+                            <TableCell key={f.key} className="text-sm text-muted-foreground">
+                              {getExtraValue(item, f.key)}
+                            </TableCell>
+                          ))
                         )}
-                        <TableCell className="text-right text-sm">{item.price != null ? `${item.price.toFixed(2)} €` : '—'}</TableCell>
-                        {config.extraFields.slice(0, 2).map(f => (
-                          <TableCell key={f.key} className="text-sm text-muted-foreground">
-                            {getExtraValue(item, f.key)}
-                          </TableCell>
-                        ))}
+                        <TableCell className="text-xs text-muted-foreground">{item.zonaOrigen || '—'}</TableCell>
+                        <TableCell className="text-xs">
+                          {!isReadOnly && item.id ? (
+                            <Select
+                              value={item.zonaDestino || undefined}
+                              onValueChange={val => {
+                                // Find the zone object to get the zoneId
+                                const targetZone = currentProject?.zones?.find(z => z.name === val);
+                                const updates: any = { zonaDestino: val };
+                                // Also move the item to the new zone (update zoneId)
+                                if (targetZone) {
+                                  updates.zoneId = targetZone.id;
+                                }
+                                handleUpdateJaula(item.id!, updates);
+                              }}
+                            >
+                              <SelectTrigger className="h-6 w-24 text-[10px]">
+                                <SelectValue placeholder="—"/>
+                              </SelectTrigger>
+                              <SelectContent>
+                                {currentProject?.zones?.map(z => (
+                                  <SelectItem key={z.id} value={z.name}>{z.name}</SelectItem>
+                                )) || []}
+                              </SelectContent>
+                            </Select>
+                          ) : (
+                            <span className="text-muted-foreground">{item.zonaDestino || '—'}</span>
+                          )}
+                        </TableCell>
                         <TableCell>
                           <Button
                             variant="ghost"
                             size="sm"
                             className="h-7 text-destructive"
                             onClick={() => item.id && handleDeleteItem(item.id)}
+                            disabled={isReadOnly}
                           >
                             ×
                           </Button>
@@ -1081,7 +1325,7 @@ export default function InventarioModal({ open, onClose, sStep, miniStep }: Inve
             <div className="flex justify-end">
               <Button
                 onClick={handleComplete}
-                disabled={!canComplete || items.length === 0}
+                disabled={!canComplete || items.length === 0 || isReadOnly}
                 style={canComplete ? { backgroundColor: sStepData?.color } : undefined}
               >
                 Completar Inventario ({classifyPercent}% clasificado)
@@ -1089,6 +1333,7 @@ export default function InventarioModal({ open, onClose, sStep, miniStep }: Inve
             </div>
           </div>
         )}
+        </div>
       </DialogContent>
     </Dialog>
   );

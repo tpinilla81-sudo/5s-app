@@ -9,7 +9,7 @@ interface Board5SProps {
 }
 
 export default function Board5S({ onSStepClick }: Board5SProps) {
-  const { getMiniStepStatus, isQuesitoEarned } = use5SStore();
+  const { getMiniStepStatus, isQuesitoEarned, progress, currentZone } = use5SStore();
 
   const cx = 300;
   const cy = 300;
@@ -65,7 +65,7 @@ export default function Board5S({ onSStepClick }: Board5SProps) {
         initial={{ scale: 0.7, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
-        className="w-full max-w-[560px] aspect-square mx-auto"
+        className="w-full max-w-[560px] max-h-full aspect-square mx-auto"
       >
         <svg viewBox="0 0 600 600" className="w-full h-full" xmlns="http://www.w3.org/2000/svg">
           <defs>
@@ -104,20 +104,64 @@ export default function Board5S({ onSStepClick }: Board5SProps) {
           {/* Pie slices */}
           {S_STEPS.map((s, i) => {
             const earned = isQuesitoEarned(s.id);
+            const zoneId = currentZone?.id;
+
+            // Simple 5-step progress: count how many of 5 mini-steps are completed at zone level
+            let completedMiniSteps = 0;
+            for (let ms = 1; ms <= 5; ms++) {
+              const zoneStep = progress.find(p =>
+                p.sStep === s.id &&
+                p.miniStep === ms &&
+                zoneId &&
+                (p.zoneId === zoneId || p.zoneId === null) &&
+                p.completed
+              );
+              if (zoneStep) completedMiniSteps++;
+            }
+            const pct = Math.min(Math.round((completedMiniSteps / 5) * 100), 100);
+            const allCompleted = earned; // 5/5 mini-steps completed
             return (
               <g key={`slice-${i}`}>
+                {/* Green glow ring for completed S-steps */}
+                {allCompleted && (
+                  <path
+                    d={getPath(i, outerR + 6, outerR - 2)}
+                    fill="#22c55e"
+                    opacity="0.35"
+                    style={{ pointerEvents: 'none' }}
+                  />
+                )}
+                {/* Green outer arc for completed S-steps */}
+                {allCompleted && (
+                  <path
+                    d={getPath(i, outerR + 3, outerR)}
+                    fill="#16a34a"
+                    opacity="0.9"
+                    style={{ pointerEvents: 'none' }}
+                  />
+                )}
                 {/* Slice background (hover target) */}
                 <path
                   d={getPath(i, outerR, innerR)}
                   fill={`url(#sg${i})`}
-                  stroke="white"
-                  strokeWidth="2.5"
+                  stroke={allCompleted ? '#16a34a' : 'white'}
+                  strokeWidth={allCompleted ? '3' : '2.5'}
                   filter="url(#shadow1)"
                   style={{ cursor: 'pointer', transition: 'opacity 0.2s' }}
                   onClick={() => onSStepClick(s.id)}
                   onMouseEnter={(e) => { (e.currentTarget as SVGPathElement).style.opacity = '0.85'; }}
                   onMouseLeave={(e) => { (e.currentTarget as SVGPathElement).style.opacity = '1'; }}
                 />
+
+                {/* Green overlay for completed slices */}
+                {allCompleted && (
+                  <path
+                    d={getPath(i, outerR, innerR)}
+                    fill="#22c55e"
+                    opacity="0.2"
+                    style={{ pointerEvents: 'none' }}
+                  />
+                )}
 
                 {/* Inner highlight line */}
                 <path
@@ -152,6 +196,19 @@ export default function Board5S({ onSStepClick }: Board5SProps) {
                 >
                   {s.japaneseName}
                 </text>
+                {/* Completed counter under japanese name */}
+                <text
+                  x={getLabelPos(i).x}
+                  y={getLabelPos(i).y + 22}
+                  textAnchor="middle"
+                  dominantBaseline="middle"
+                  fill={allCompleted ? '#86efac' : 'rgba(255,255,255,0.5)'}
+                  fontSize="9"
+                  fontWeight="bold"
+                  style={{ pointerEvents: 'none', fontFamily: 'system-ui' }}
+                >
+                  {allCompleted ? 'COMPLETADO' : `${completedMiniSteps}/5`}
+                </text>
 
                 {/* Mini-step dots */}
                 {MINI_STEPS.map((m, j) => {
@@ -162,7 +219,7 @@ export default function Board5S({ onSStepClick }: Board5SProps) {
                   return (
                     <g key={`dot-${i}-${j}`}>
                       {/* Pulse ring for available steps */}
-                      {isAvailable && (
+                      {isAvailable && !isCompleted && (
                         <circle
                           cx={pos.x}
                           cy={pos.y}
@@ -171,13 +228,23 @@ export default function Board5S({ onSStepClick }: Board5SProps) {
                           opacity="0.15"
                         />
                       )}
+                      {/* Green glow for completed dots */}
+                      {isCompleted && (
+                        <circle
+                          cx={pos.x}
+                          cy={pos.y}
+                          r="15"
+                          fill="#22c55e"
+                          opacity="0.2"
+                        />
+                      )}
                       <circle
                         cx={pos.x}
                         cy={pos.y}
-                        r={isCompleted || isAvailable ? 11 : 10}
+                        r={isCompleted ? 12 : isAvailable ? 11 : 10}
                         fill={isCompleted ? '#22c55e' : isAvailable ? 'white' : 'rgba(255,255,255,0.25)'}
-                        stroke={isAvailable ? s.color : 'rgba(255,255,255,0.6)'}
-                        strokeWidth={isAvailable ? '2.5' : '1.5'}
+                        stroke={isCompleted ? '#16a34a' : isAvailable ? s.color : 'rgba(255,255,255,0.6)'}
+                        strokeWidth={isCompleted ? '2.5' : isAvailable ? '2.5' : '1.5'}
                         style={{ pointerEvents: 'none' }}
                       />
                       <text
@@ -186,7 +253,7 @@ export default function Board5S({ onSStepClick }: Board5SProps) {
                         textAnchor="middle"
                         dominantBaseline="middle"
                         fill={isCompleted ? 'white' : isAvailable ? s.color : 'rgba(255,255,255,0.4)'}
-                        fontSize={isCompleted ? '11' : '10'}
+                        fontSize={isCompleted ? '12' : '10'}
                         fontWeight="bold"
                         style={{ pointerEvents: 'none', fontFamily: 'system-ui' }}
                       >
@@ -196,16 +263,23 @@ export default function Board5S({ onSStepClick }: Board5SProps) {
                   );
                 })}
 
-                {/* Earned quesito star indicator */}
+                {/* Earned quesito star indicator — now with green ring */}
                 {earned && (
                   <g style={{ pointerEvents: 'none' }}>
                     <circle
                       cx={cx + (outerR - 22) * Math.cos(((i + 0.5) * sliceAngle - 90) * (Math.PI / 180))}
                       cy={cy + (outerR - 22) * Math.sin(((i + 0.5) * sliceAngle - 90) * (Math.PI / 180))}
+                      r="18"
+                      fill="#22c55e"
+                      opacity="0.3"
+                    />
+                    <circle
+                      cx={cx + (outerR - 22) * Math.cos(((i + 0.5) * sliceAngle - 90) * (Math.PI / 180))}
+                      cy={cy + (outerR - 22) * Math.sin(((i + 0.5) * sliceAngle - 90) * (Math.PI / 180))}
                       r="16"
                       fill="#fbbf24"
-                      stroke="#f59e0b"
-                      strokeWidth="2"
+                      stroke="#16a34a"
+                      strokeWidth="3"
                       filter="url(#glow)"
                     />
                     <text

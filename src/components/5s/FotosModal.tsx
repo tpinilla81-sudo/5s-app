@@ -22,6 +22,8 @@ import {
   Zap,
   GalleryHorizontalEnd,
   Loader2,
+  Maximize2,
+  Minimize2,
 } from 'lucide-react';
 import { use5SStore } from '@/lib/store';
 import { S_STEPS, MIN_PHOTOS, MINI_STEPS } from '@/lib/5s-constants';
@@ -67,7 +69,11 @@ export default function FotosModal({ open, onClose, sStep, miniStep }: FotosModa
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   const isAdmin = currentUser?.role === 'admin' && adminFreeNavigation;
+  const isResponsable = currentUser?.role === 'responsable';
+  const isAuditor = currentUser?.role === 'auditor';
+  const isReadOnly = isResponsable || isAuditor || (currentUser?.role === 'admin' && !adminFreeNavigation); // View-only when responsable, auditor, or admin with lock closed
 
+  const [isFullscreen, setIsFullscreen] = useState(true);
   const [photos, setPhotos] = useState<PhotoItem[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isCompleted, setIsCompleted] = useState(false);
@@ -256,19 +262,26 @@ export default function FotosModal({ open, onClose, sStep, miniStep }: FotosModa
 
   return (
     <Dialog open={open} onOpenChange={() => { stopStream(); onClose(); }}>
-      <DialogContent className="max-w-[95vw] max-h-[95vh] overflow-y-auto">
-        <DialogHeader>
+      <DialogContent size={isFullscreen ? "fullscreen" : "xl"} className="flex flex-col overflow-hidden p-0">
+        <DialogHeader className="px-6 pt-6 pb-2 flex-shrink-0">
           <DialogTitle className="flex items-center gap-2">
             <Camera className="h-5 w-5" style={{ color: sStepData?.color }} />
             <span>Fotografías (Antes)</span>
             <Badge variant="outline" style={{ borderColor: sStepData?.color, color: sStepData?.color }}>
               {sStepData?.name}
             </Badge>
+            <button
+              onClick={() => setIsFullscreen(!isFullscreen)}
+              className="ml-auto p-1 rounded hover:bg-muted transition-colors"
+              title={isFullscreen ? "Reducir ventana" : "Pantalla completa"}
+            >
+              {isFullscreen ? <Minimize2 className="h-4 w-4 text-muted-foreground" /> : <Maximize2 className="h-4 w-4 text-muted-foreground" />}
+            </button>
           </DialogTitle>
         </DialogHeader>
 
         {isAdmin && !isCompleted && (
-          <div className="flex items-center gap-2 p-2 bg-amber-50 border border-amber-200 rounded-lg">
+          <div className="flex items-center gap-2 p-2 mx-6 flex-shrink-0 bg-amber-50 border border-amber-200 rounded-lg">
             <span className="text-xs text-amber-700 font-medium">Modo Admin:</span>
             <Button variant="outline" size="sm" className="text-xs border-amber-300 text-amber-700 hover:bg-amber-100" onClick={handleAdminSkip}>
               Completar paso sin subir fotos
@@ -276,6 +289,13 @@ export default function FotosModal({ open, onClose, sStep, miniStep }: FotosModa
           </div>
         )}
 
+        {isReadOnly && (
+          <div className="flex items-center gap-2 p-2 mx-6 flex-shrink-0 bg-blue-50 border border-blue-200 rounded-lg">
+            <span className="text-xs text-blue-700 font-medium">Solo lectura: {currentUser?.role === 'admin' ? 'Activa el candado para poder realizar pasos.' : currentUser?.role === 'auditor' ? 'El auditor puede ver el progreso pero no subir fotos.' : 'El responsable puede ver el progreso pero no realizar pasos.'}</span>
+          </div>
+        )}
+
+        <div className="flex-1 overflow-y-auto px-6 pb-6 min-h-0">
         {isCompleted ? (
           <div className="text-center py-8">
             <CheckCircle className="h-16 w-16 text-green-500 mx-auto mb-3" />
@@ -423,12 +443,13 @@ export default function FotosModal({ open, onClose, sStep, miniStep }: FotosModa
             </div>
 
             <div className="flex justify-end">
-              <Button onClick={handleSubmit} disabled={!canSubmit || isSubmitting} style={canSubmit ? { backgroundColor: sStepData?.color } : undefined} className="gap-2">
+              <Button onClick={handleSubmit} disabled={!canSubmit || isSubmitting || isReadOnly} style={canSubmit && !isReadOnly ? { backgroundColor: sStepData?.color } : undefined} className="gap-2">
                 {isSubmitting ? <><Loader2 className="h-4 w-4 animate-spin" />Guardando...</> : <><CheckCircle className="h-4 w-4" />Guardar Fotos ANTES ({photos.length} foto{photos.length !== 1 ? 's' : ''})</>}
               </Button>
             </div>
           </div>
         )}
+        </div>
       </DialogContent>
     </Dialog>
   );
