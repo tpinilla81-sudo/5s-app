@@ -11,6 +11,7 @@ import FormacionModal from '@/components/5s/FormacionModal';
 import FotosModal from '@/components/5s/FotosModal';
 import InventarioModal from '@/components/5s/InventarioModal';
 import ActionPlanModal from '@/components/5s/ActionPlanModal';
+import GlobalInventoryModal from '@/components/5s/GlobalInventoryModal';
 import AutoevaluacionModal from '@/components/5s/AutoevaluacionModal';
 import AuditoriaModal from '@/components/5s/AuditoriaModal';
 import LoginPage from '@/components/auth/LoginPage';
@@ -29,7 +30,7 @@ import {
 import AdminPanel from '@/components/admin/AdminPanel';
 import MaintenanceView from '@/components/5s/MaintenanceView';
 import GerentePanel from '@/components/auth/GerentePanel';
-import { Loader2, RefreshCw, LogOut, Settings, ChevronDown, Shield, Unlock, Lock, LayoutDashboard, Wrench, Sparkles, BarChart3, FileText, MapPin } from 'lucide-react';
+import { Loader2, RefreshCw, LogOut, Settings, ChevronDown, Shield, Unlock, Lock, LayoutDashboard, Wrench, Sparkles, BarChart3, FileText, MapPin, ListChecks, ClipboardList } from 'lucide-react';
 
 const MODAL_MAP: Record<string, React.ComponentType<{
   open: boolean;
@@ -131,7 +132,7 @@ export default function HomePage() {
     setCurrentView('board');
   };
 
-  const handleOpenModal = (type: 'formacion' | 'fotos' | 'inventario' | 'actionplan' | 'autoevaluacion' | 'auditoria', miniStep: number) => {
+  const handleOpenModal = (type: 'formacion' | 'fotos' | 'inventario' | 'actionplan' | 'autoevaluacion' | 'auditoria' | 'globalActionPlan' | 'globalInventory', miniStep: number) => {
     openModal(type, miniStep);
   };
 
@@ -173,7 +174,8 @@ export default function HomePage() {
   const isGerente = currentUser?.role === 'gerente';
   const canSeeGerentePanel = isAdmin || isGerente;
 
-  const ActiveModalComponent = activeModal ? MODAL_MAP[activeModal] : null;
+  const isGlobalModal = activeModal === 'globalActionPlan' || activeModal === 'globalInventory';
+  const ActiveModalComponent = !isGlobalModal && activeModal ? MODAL_MAP[activeModal] : null;
 
   // ONLY show loading screen during initial session check
   if (isAuthLoading) {
@@ -295,6 +297,29 @@ export default function HomePage() {
             )}
           </div>
           <div className="flex items-center gap-2">
+            {/* Global Action Plan & Inventory buttons — visible to Gerente, Responsable, Empleado */}
+            {currentUser && currentProject && (
+              <>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => openModal('globalActionPlan', 0)}
+                  className="gap-1.5 text-xs border-orange-300 text-orange-600 hover:bg-orange-50 hover:text-orange-700"
+                >
+                  <ListChecks className="h-3.5 w-3.5" />
+                  <span className="hidden sm:inline">Plan de Acción</span>
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => openModal('globalInventory', 0)}
+                  className="gap-1.5 text-xs border-green-300 text-green-600 hover:bg-green-50 hover:text-green-700"
+                >
+                  <ClipboardList className="h-3.5 w-3.5" />
+                  <span className="hidden sm:inline">Inventario</span>
+                </Button>
+              </>
+            )}
             {isAdmin && (
               <Button
                 variant="outline"
@@ -558,6 +583,24 @@ export default function HomePage() {
           onClose={closeModal}
           sStep={selectedSStep}
           miniStep={activeMiniStep}
+        />
+      )}
+
+      {/* Global Action Plan Modal */}
+      {activeModal === 'globalActionPlan' && currentProject && (
+        <ActionPlanModal
+          open={true}
+          onClose={closeModal}
+          sStep={selectedSStep || 1}
+          miniStep={0}
+        />
+      )}
+
+      {/* Global Inventory Modal */}
+      {activeModal === 'globalInventory' && (
+        <GlobalInventoryModal
+          open={true}
+          onClose={closeModal}
         />
       )}
 
