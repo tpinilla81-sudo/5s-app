@@ -9,8 +9,8 @@ const log = (msg) => {
 
 function startServer() {
   log('Starting 5S server...');
-  const child = spawn('npx', ['next', 'start', '-H', '0.0.0.0', '-p', '3000'], {
-    cwd: '/home/z/my-project',
+  const child = spawn('node', ['server.js'], {
+    cwd: '/home/z/my-project/.next/standalone',
     env: {
       ...process.env,
       DATABASE_URL: 'file:/home/z/my-project/db/custom.db',

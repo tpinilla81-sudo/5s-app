@@ -3,10 +3,8 @@
 import { useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { use5SStore } from '@/lib/store';
-import { S_STEPS } from '@/lib/5s-constants';
+import { S_STEPS, MINI_STEPS } from '@/lib/5s-constants';
 import Board5S from '@/components/5s/Board5S';
-import SStepDetail from '@/components/5s/SStepDetail';
-import ProgressDashboard from '@/components/5s/ProgressDashboard';
 import FormacionModal from '@/components/5s/FormacionModal';
 import FotosModal from '@/components/5s/FotosModal';
 import InventarioModal from '@/components/5s/InventarioModal';
@@ -31,7 +29,12 @@ import {
 import AdminPanel from '@/components/admin/AdminPanel';
 import MaintenanceView from '@/components/5s/MaintenanceView';
 import GerentePanel from '@/components/auth/GerentePanel';
-import { Loader2, RefreshCw, LogOut, Settings, ChevronDown, Shield, ShieldCheck, Unlock, Lock, LayoutDashboard, Wrench, Sparkles, BarChart3, FileText, MapPin, ListChecks, ClipboardList } from 'lucide-react';
+import {
+  Loader2, RefreshCw, LogOut, Settings, ChevronDown, Shield, ShieldCheck, Unlock, Lock,
+  LayoutDashboard, Wrench, Sparkles, BarChart3, FileText, MapPin, ListChecks,
+  ClipboardList, GraduationCap, Camera, CheckSquare, Trophy, ChevronRight,
+  Lock as LockIcon, AlertTriangle
+} from 'lucide-react';
 
 const MODAL_MAP: Record<string, React.ComponentType<{
   open: boolean;
@@ -47,10 +50,30 @@ const MODAL_MAP: Record<string, React.ComponentType<{
   auditoria: AuditoriaModal,
 };
 
+function getModalType(miniStepId: number, sStep: number): string {
+  if (miniStepId === 3) {
+    return sStep === 5 ? 'actionplan' : 'inventario';
+  }
+  const map: Record<number, string> = {
+    1: 'formacion',
+    2: 'fotos',
+    4: 'autoevaluacion',
+    5: 'auditoria',
+  };
+  return map[miniStepId] || 'formacion';
+}
+
+const MINI_STEP_ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
+  GraduationCap,
+  Camera,
+  ClipboardList,
+  CheckSquare,
+  ShieldCheck,
+};
+
 export default function HomePage() {
   const {
     currentView,
-    selectedSStep,
     activeModal,
     activeMiniStep,
     selectSStep,
@@ -58,21 +81,22 @@ export default function HomePage() {
     openModal,
     closeModal,
     seedDatabase,
-    // Auth & project state
     currentUser,
     currentProject,
     authView,
     isAuthLoading,
     checkSession,
     logout,
-    // Admin navigation
     adminFreeNavigation,
     setAdminFreeNavigation,
-    // Zone
     currentZone,
     setCurrentZone,
-    // 5S completion
     is5SCompleted,
+    getMiniStepStatus,
+    isQuesitoEarned,
+    progress,
+    fetchProgress,
+    selectedSStep,
   } = use5SStore();
 
   const [isSeeding, setIsSeeding] = useState(false);
@@ -80,25 +104,20 @@ export default function HomePage() {
   const [showTeamManagement, setShowTeamManagement] = useState(false);
   const [showRolePermissions, setShowRolePermissions] = useState(false);
 
-  // Check session on mount - only once
   useEffect(() => {
     checkSession();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Initialize board data when auth view is board - with retry
   useEffect(() => {
     if (authView === 'board' && !isInitialized) {
       const init = async (retries = 3) => {
         try {
           const res = await fetch('/api/progress');
           if (!res.ok && retries > 0) {
-            // Server might be restarting, wait and retry
             await new Promise(r => setTimeout(r, 2000));
             return init(retries - 1);
           }
           const json = await res.json();
-
           if (json.success && json.data && json.data.length > 0) {
             use5SStore.setState({ progress: json.data, isLoadingProgress: false });
             setIsInitialized(true);
@@ -110,7 +129,6 @@ export default function HomePage() {
           }
         } catch {
           if (retries > 0) {
-            // Server might be restarting, wait and retry
             await new Promise(r => setTimeout(r, 2000));
             return init(retries - 1);
           }
@@ -128,13 +146,14 @@ export default function HomePage() {
     selectSStep(sStep);
   };
 
-  const handleBack = () => {
-    selectSStep(null);
-    setCurrentView('board');
-  };
-
-  const handleOpenModal = (type: 'formacion' | 'fotos' | 'inventario' | 'actionplan' | 'autoevaluacion' | 'auditoria' | 'globalActionPlan' | 'globalInventory' | 'auditResults', miniStep: number) => {
-    openModal(type, miniStep);
+  const handleOpenModal = (type: string, miniStep: number, sStep: number) => {
+    // Ensure selectedSStep is set for the modal
+    if (sStep && !selectedSStep) {
+      selectSStep(sStep);
+    } else if (sStep && selectedSStep !== sStep) {
+      selectSStep(sStep);
+    }
+    openModal(type as any, miniStep);
   };
 
   const handleReseed = async () => {
@@ -150,11 +169,8 @@ export default function HomePage() {
 
   const getRoleLabel = (role: string) => {
     const map: Record<string, string> = {
-      admin: 'Administrador',
-      gerente: 'Gerente',
-      responsable: 'Responsable',
-      empleado: 'Empleado',
-      auditor: 'Auditor',
+      admin: 'Administrador', gerente: 'Gerente', responsable: 'Responsable',
+      empleado: 'Empleado', auditor: 'Auditor',
     };
     return map[role] || role;
   };
@@ -178,16 +194,12 @@ export default function HomePage() {
   const isGlobalModal = activeModal === 'globalActionPlan' || activeModal === 'globalInventory';
   const ActiveModalComponent = !isGlobalModal && activeModal ? MODAL_MAP[activeModal] : null;
 
-  // ONLY show loading screen during initial session check
+  // Loading screen
   if (isAuthLoading) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-green-50 via-white to-emerald-50 gap-4">
-        <motion.div
-          initial={{ scale: 0 }}
-          animate={{ scale: 1 }}
-          transition={{ type: 'spring', stiffness: 200 }}
-          className="w-16 h-16 rounded-full bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center text-white font-bold text-xl shadow-lg"
-        >
+        <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: 'spring', stiffness: 200 }}
+          className="w-16 h-16 rounded-full bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center text-white font-bold text-xl shadow-lg">
           5S
         </motion.div>
         <Loader2 className="h-6 w-6 text-green-500 animate-spin" />
@@ -196,264 +208,154 @@ export default function HomePage() {
     );
   }
 
-  // Show Login page
-  if (authView === 'login' || authView === 'register') {
-    return <LoginPage />;
-  }
-
-  // Show Project Setup (admin only)
-  if (authView === 'setup') {
-    return <ProjectSetup />;
-  }
-
-  // Show waiting screen for non-admin users without projects
+  if (authView === 'login' || authView === 'register') return <LoginPage />;
+  if (authView === 'setup') return <ProjectSetup />;
   if (authView === 'no_projects') {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-green-50 via-white to-emerald-50 p-4">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-          className="w-full max-w-md text-center"
-        >
-          <div className="w-20 h-20 rounded-full bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center text-white font-bold text-2xl shadow-lg shadow-green-200 mx-auto mb-6">
-            5S
-          </div>
+        <div className="w-full max-w-md text-center">
+          <div className="w-20 h-20 rounded-full bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center text-white font-bold text-2xl shadow-lg shadow-green-200 mx-auto mb-6">5S</div>
           <h1 className="text-2xl font-bold text-gray-900 mb-3">Bienvenido, {currentUser?.name || 'Usuario'}</h1>
-          <p className="text-muted-foreground mb-6">
-            Tu cuenta ha sido creada correctamente. Aún no tienes ningún proyecto asignado.
-          </p>
+          <p className="text-muted-foreground mb-6">Tu cuenta ha sido creada correctamente. Aún no tienes ningún proyecto asignado.</p>
           <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-6">
-            <p className="text-sm text-amber-800">
-              El administrador del sistema te asignará un proyecto y un rol. Una vez asignado, podrás acceder a la plataforma.
-            </p>
+            <p className="text-sm text-amber-800">El administrador del sistema te asignará un proyecto y un rol. Una vez asignado, podrás acceder a la plataforma.</p>
           </div>
-          <p className="text-xs text-muted-foreground mb-4">
-            Si crees que esto es un error, contacta con tu administrador.
-          </p>
-          <Button
-            variant="outline"
-            onClick={handleLogout}
-            className="gap-2"
-          >
-            <LogOut className="h-4 w-4" />
-            Cerrar Sesión
-          </Button>
-        </motion.div>
+          <Button variant="outline" onClick={handleLogout} className="gap-2"><LogOut className="h-4 w-4" /> Cerrar Sesión</Button>
+        </div>
       </div>
     );
   }
 
   // Show Admin Panel
-  if (currentView === 'admin' && isAdmin) {
-    return <AdminPanel />;
-  }
-
+  if (currentView === 'admin' && isAdmin) return <AdminPanel />;
   // Show Gerente Panel
-  if (currentView === 'gerente' && canSeeGerentePanel) {
-    return <GerentePanel />;
-  }
+  if (currentView === 'gerente' && canSeeGerentePanel) return <GerentePanel />;
+  // Show Maintenance
+  if (currentView === 'maintenance') return <MaintenanceView />;
 
-  // Show Board (authView === 'board')
+  // ============================================================
+  // SINGLE-SCREEN DASHBOARD
+  // ============================================================
   return (
-    <div className="min-h-screen flex flex-col bg-gradient-to-b from-gray-50 to-white">
-      {/* Header */}
-      <header className="border-b bg-white/80 backdrop-blur-sm sticky top-0 z-10">
-        <div className="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center text-white font-bold text-lg shadow-md">
-              5S
-            </div>
+    <div className="h-screen flex flex-col bg-gradient-to-b from-gray-50 to-white overflow-hidden">
+      {/* Compact Header */}
+      <header className="border-b bg-white/90 backdrop-blur-sm shrink-0 z-20">
+        <div className="px-4 py-2 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center text-white font-bold text-sm shadow-md">5S</div>
             <div>
-              <h1 className="text-lg font-bold text-gray-900">Metodología 5S</h1>
-              <div className="flex items-center gap-2">
-                <p className="text-xs text-muted-foreground">Implementación</p>
-                {currentProject && (
-                  <span className="text-xs text-muted-foreground">· {currentProject.name}</span>
-                )}
-                {currentZone && (
-                  <span className="text-xs font-medium" style={{ color: currentZone.color || '#3B82F6' }}>· {currentZone.name}</span>
-                )}
+              <h1 className="text-sm font-bold text-gray-900 leading-tight">Metodología 5S</h1>
+              <div className="flex items-center gap-1">
+                <span className="text-[10px] text-muted-foreground">Implementación</span>
+                {currentProject && <span className="text-[10px] text-muted-foreground">· {currentProject.name}</span>}
+                {currentZone && <span className="text-[10px] font-medium" style={{ color: currentZone.color || '#3B82F6' }}>· {currentZone.name}</span>}
               </div>
             </div>
             {/* Zone selector */}
             {currentProject && currentProject.zones && currentProject.zones.length > 0 && (
-              <div className="flex items-center gap-1.5">
-                <MapPin className="h-3.5 w-3.5 text-muted-foreground" />
+              <div className="flex items-center gap-1 ml-2">
+                <MapPin className="h-3 w-3 text-muted-foreground" />
                 <select
-                  className="text-xs border rounded-md px-2 py-1 bg-background"
+                  className="text-[10px] border rounded px-1 py-0.5 bg-background"
                   value={currentZone?.id || ''}
                   onChange={(e) => {
-                    const zoneId = e.target.value;
-                    const zone = currentProject.zones.find(z => z.id === zoneId) || null;
+                    const zone = currentProject.zones.find(z => z.id === e.target.value) || null;
                     setCurrentZone(zone);
                   }}
                 >
                   <option value="">Sin zona</option>
-                  {currentProject.zones.map(z => (
-                    <option key={z.id} value={z.id}>{z.name}</option>
-                  ))}
+                  {currentProject.zones.map(z => <option key={z.id} value={z.id}>{z.name}</option>)}
                 </select>
               </div>
             )}
           </div>
-          <div className="flex items-center gap-2">
-            {/* Global Action Plan, Inventory & Audit Results buttons — visible to Gerente, Responsable, Empleado */}
+          <div className="flex items-center gap-1.5">
+            {/* Quick action buttons */}
             {currentUser && currentProject && (
               <>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => openModal('globalActionPlan', 0)}
-                  className="gap-1.5 text-xs border-orange-300 text-orange-600 hover:bg-orange-50 hover:text-orange-700"
-                >
-                  <ListChecks className="h-3.5 w-3.5" />
-                  <span className="hidden sm:inline">Plan de Acción</span>
+                <Button variant="outline" size="sm" onClick={() => openModal('globalActionPlan', 0)}
+                  className="gap-1 text-[10px] h-7 border-orange-300 text-orange-600 hover:bg-orange-50">
+                  <ListChecks className="h-3 w-3" /> Plan
                 </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => openModal('globalInventory', 0)}
-                  className="gap-1.5 text-xs border-green-300 text-green-600 hover:bg-green-50 hover:text-green-700"
-                >
-                  <ClipboardList className="h-3.5 w-3.5" />
-                  <span className="hidden sm:inline">Inventario</span>
+                <Button variant="outline" size="sm" onClick={() => openModal('globalInventory', 0)}
+                  className="gap-1 text-[10px] h-7 border-green-300 text-green-600 hover:bg-green-50">
+                  <ClipboardList className="h-3 w-3" /> Inventario
                 </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => openModal('auditResults', 0)}
-                  className="gap-1.5 text-xs border-blue-300 text-blue-600 hover:bg-blue-50 hover:text-blue-700"
-                >
-                  <ShieldCheck className="h-3.5 w-3.5" />
-                  <span className="hidden sm:inline">Auditoría</span>
+                <Button variant="outline" size="sm" onClick={() => openModal('auditResults', 0)}
+                  className="gap-1 text-[10px] h-7 border-blue-300 text-blue-600 hover:bg-blue-50">
+                  <ShieldCheck className="h-3 w-3" /> Auditoría
                 </Button>
               </>
             )}
             {isAdmin && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setCurrentView('admin')}
-                className="gap-1.5 text-xs border-purple-300 text-purple-600 hover:bg-purple-50 hover:text-purple-700"
-              >
-                <LayoutDashboard className="h-3.5 w-3.5" />
-                <span className="hidden sm:inline">Admin</span>
+              <Button variant="outline" size="sm" onClick={() => setCurrentView('admin')}
+                className="gap-1 text-[10px] h-7 border-purple-300 text-purple-600 hover:bg-purple-50">
+                <LayoutDashboard className="h-3 w-3" /> Admin
               </Button>
             )}
             {canSeeGerentePanel && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setCurrentView('gerente')}
-                className="gap-1.5 text-xs border-indigo-300 text-indigo-600 hover:bg-indigo-50 hover:text-indigo-700"
-              >
-                <BarChart3 className="h-3.5 w-3.5" />
-                <span className="hidden sm:inline">Gerencia</span>
+              <Button variant="outline" size="sm" onClick={() => setCurrentView('gerente')}
+                className="gap-1 text-[10px] h-7 border-indigo-300 text-indigo-600 hover:bg-indigo-50">
+                <BarChart3 className="h-3 w-3" /> Gerencia
               </Button>
             )}
             {isAdmin && (
-              <Button
-                variant={adminFreeNavigation ? 'default' : 'outline'}
-                size="sm"
+              <Button variant={adminFreeNavigation ? 'default' : 'outline'} size="sm"
                 onClick={() => setAdminFreeNavigation(!adminFreeNavigation)}
-                className={`gap-1.5 text-xs ${
-                  adminFreeNavigation
-                    ? 'bg-amber-500 hover:bg-amber-600 text-white border-amber-500'
-                    : 'text-amber-600 border-amber-300 hover:bg-amber-50'
-                }`}
-                title={adminFreeNavigation ? 'Navegación libre activada: puedes acceder a todos los pasos sin completar los previos' : 'Navegación secuencial: debes completar los pasos en orden'}
-              >
-                {adminFreeNavigation ? <Unlock className="h-3.5 w-3.5" /> : <Lock className="h-3.5 w-3.5" />}
-                <span className="hidden sm:inline">{adminFreeNavigation ? 'Libre' : 'Secuencial'}</span>
+                className={`gap-1 text-[10px] h-7 ${adminFreeNavigation ? 'bg-amber-500 hover:bg-amber-600 text-white border-amber-500' : 'text-amber-600 border-amber-300 hover:bg-amber-50'}`}
+                title={adminFreeNavigation ? 'Navegación libre activada' : 'Navegación secuencial'}>
+                {adminFreeNavigation ? <Unlock className="h-3 w-3" /> : <Lock className="h-3 w-3" />}
               </Button>
             )}
             {canManageTeam && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setShowTeamManagement(true)}
-                className="text-green-600 hover:text-green-700 hover:bg-green-50"
-              >
-                <Settings className="h-4 w-4 mr-1" />
-                <span className="hidden sm:inline">Gestión</span>
+              <Button variant="ghost" size="sm" onClick={() => setShowTeamManagement(true)} className="text-green-600 hover:text-green-700 h-7 px-1.5">
+                <Settings className="h-3.5 w-3.5" />
               </Button>
             )}
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setShowRolePermissions(true)}
-              className="text-green-600 hover:text-green-700 hover:bg-green-50"
-            >
-              <Shield className="h-4 w-4 mr-1" />
-              <span className="hidden sm:inline">Permisos</span>
+            <Button variant="ghost" size="sm" onClick={() => setShowRolePermissions(true)} className="text-green-600 hover:text-green-700 h-7 px-1.5">
+              <Shield className="h-3.5 w-3.5" />
             </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={async () => {
-                try {
-                  const res = await fetch('/api/manual');
-                  if (!res.ok) throw new Error('Download failed');
-                  const blob = await res.blob();
-                  const url = window.URL.createObjectURL(blob);
-                  const link = document.createElement('a');
-                  link.href = url;
-                  link.download = 'Manual_Usuario_5S.pdf';
-                  document.body.appendChild(link);
-                  link.click();
-                  document.body.removeChild(link);
-                  window.URL.revokeObjectURL(url);
-                } catch (err) {
-                  // Fallback: open directly in new tab
-                  window.open('/Manual_Usuario_5S.pdf', '_blank');
-                }
-              }}
-              className="text-purple-600 hover:text-purple-700 hover:bg-purple-50"
-            >
-              <FileText className="h-4 w-4 mr-1" />
-              <span className="hidden sm:inline">Manual</span>
+            <Button variant="ghost" size="sm" onClick={async () => {
+              try {
+                const res = await fetch('/api/manual');
+                if (!res.ok) throw new Error('Download failed');
+                const blob = await res.blob();
+                const url = window.URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url; link.download = 'Manual_Usuario_5S.pdf';
+                document.body.appendChild(link); link.click();
+                document.body.removeChild(link);
+                window.URL.revokeObjectURL(url);
+              } catch { window.open('/Manual_Usuario_5S.pdf', '_blank'); }
+            }} className="text-purple-600 hover:text-purple-700 h-7 px-1.5">
+              <FileText className="h-3.5 w-3.5" />
             </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleReseed}
-              disabled={isSeeding}
-              className="text-muted-foreground"
-            >
-              <RefreshCw className={`h-4 w-4 mr-1 ${isSeeding ? 'animate-spin' : ''}`} />
-              <span className="hidden sm:inline">Reiniciar</span>
+            <Button variant="ghost" size="sm" onClick={handleReseed} disabled={isSeeding} className="text-muted-foreground h-7 px-1.5">
+              <RefreshCw className={`h-3.5 w-3.5 ${isSeeding ? 'animate-spin' : ''}`} />
             </Button>
-
             {/* User menu */}
             {currentUser && (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="sm" className="gap-2 h-8">
-                    <div className="w-6 h-6 rounded-full bg-green-100 flex items-center justify-center text-green-700 text-xs font-bold">
+                  <Button variant="outline" size="sm" className="gap-1 h-7 px-2">
+                    <div className="w-5 h-5 rounded-full bg-green-100 flex items-center justify-center text-green-700 text-[9px] font-bold">
                       {currentUser.name.charAt(0).toUpperCase()}
                     </div>
-                    <span className="hidden sm:inline text-xs font-medium max-w-[100px] truncate">
-                      {currentUser.name}
-                    </span>
-                    <ChevronDown className="h-3 w-3 text-muted-foreground" />
+                    <span className="text-[10px] font-medium max-w-[60px] truncate hidden sm:inline">{currentUser.name}</span>
+                    <ChevronDown className="h-2.5 w-2.5 text-muted-foreground" />
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuContent align="end" className="w-48">
                   <div className="px-2 py-1.5">
-                    <p className="text-sm font-medium">{currentUser.name}</p>
-                    <p className="text-xs text-muted-foreground">{currentUser.email}</p>
-                    <Badge className={`${getRoleBadgeColor(currentUser.role)} border mt-1`}>
+                    <p className="text-xs font-medium">{currentUser.name}</p>
+                    <p className="text-[10px] text-muted-foreground">{currentUser.email}</p>
+                    <Badge className={`${getRoleBadgeColor(currentUser.role)} border mt-1 text-[10px]`}>
                       {getRoleLabel(currentUser.role)}
                     </Badge>
                   </div>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem
-                    onClick={handleLogout}
-                    className="text-red-600 cursor-pointer"
-                  >
-                    <LogOut className="h-4 w-4 mr-2" />
-                    Cerrar Sesión
+                  <DropdownMenuItem onClick={handleLogout} className="text-red-600 cursor-pointer text-xs">
+                    <LogOut className="h-3 w-3 mr-1" /> Cerrar Sesión
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -462,129 +364,159 @@ export default function HomePage() {
         </div>
       </header>
 
-      {/* Main content */}
-      <main className="flex-1 max-w-4xl mx-auto w-full px-4 py-6">
+      {/* Main content - SINGLE SCREEN */}
+      <main className="flex-1 overflow-hidden flex flex-col">
         {!isInitialized || isSeeding ? (
-          <div className="flex flex-col items-center justify-center py-20 gap-4">
+          <div className="flex-1 flex items-center justify-center gap-4">
             <Loader2 className="h-10 w-10 text-green-500 animate-spin" />
-            <p className="text-muted-foreground">
-              {isSeeding ? 'Inicializando datos...' : 'Cargando...'}
-            </p>
+            <p className="text-muted-foreground">{isSeeding ? 'Inicializando datos...' : 'Cargando...'}</p>
           </div>
         ) : (
-          <>
-            <AnimatePresence mode="wait">
-              {currentView === 'board' && (
-                <motion.div
-                  key="board"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  transition={{ duration: 0.3 }}
-                >
-                  {/* Board */}
-                  <div className="mb-6">
-                    <Board5S onSStepClick={handleSStepClick} />
-                  </div>
-
-                  {/* Mejora Continua button if 5S completed */}
-                  {is5SCompleted() && (
-                    <div className="flex justify-center mb-6">
-                      <Button
-                        onClick={() => setCurrentView('maintenance')}
-                        className="gap-2 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white shadow-lg"
-                        size="lg"
-                      >
-                        <Sparkles className="h-5 w-5" />
-                        Fase 6: Mejora Continua
-                      </Button>
+          <div className="flex-1 flex overflow-hidden">
+            {/* LEFT: Compact Board */}
+            <div className="w-[320px] shrink-0 flex flex-col items-center justify-center p-3 border-r bg-white/50 overflow-auto">
+              <Board5S onSStepClick={handleSStepClick} />
+              {/* Quesitos mini display */}
+              <div className="flex gap-2 mt-2">
+                {S_STEPS.map(s => {
+                  const earned = isQuesitoEarned(s.id);
+                  return (
+                    <div key={s.id} className="flex flex-col items-center" title={`${s.name}: ${earned ? 'Conseguido' : 'Pendiente'}`}>
+                      <div className={`w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold border-2 transition-all ${earned ? 'text-white shadow-md' : 'bg-white text-gray-400 border-gray-200'}`}
+                        style={earned ? { backgroundColor: s.color, borderColor: s.color } : undefined}>
+                        {earned ? '★' : s.id}
+                      </div>
+                      <span className="text-[8px] mt-0.5 font-medium" style={{ color: earned ? s.color : '#9ca3af' }}>
+                        S{s.id}
+                      </span>
                     </div>
-                  )}
+                  );
+                })}
+              </div>
+              {/* Mejora Continua button */}
+              {is5SCompleted() && (
+                <Button onClick={() => setCurrentView('maintenance')}
+                  className="mt-3 gap-1 bg-gradient-to-r from-green-500 to-emerald-600 text-white shadow text-xs h-7"
+                  size="sm">
+                  <Sparkles className="h-3 w-3" /> Mejora Continua
+                </Button>
+              )}
+            </div>
 
-                  {/* Instructions */}
-                  <div className="text-center mb-6">
-                    <p className="text-sm text-muted-foreground">
-                      Haga clic en una sección del tablero para ver los mini-pasos de cada S
-                    </p>
-                  </div>
+            {/* RIGHT: All 5 S steps with mini-steps */}
+            <div className="flex-1 overflow-auto p-3">
+              <div className="grid grid-cols-1 gap-2">
+                {S_STEPS.map(s => {
+                  const earned = isQuesitoEarned(s.id);
+                  const sProgress = progress.filter(p => p.sStep === s.id);
+                  const completedCount = sProgress.filter(p => p.completed).length;
 
-                  {/* Color legend */}
-                  <div className="flex flex-wrap justify-center gap-3 mb-8">
-                    {S_STEPS.map(s => (
-                      <button
-                        key={s.id}
-                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border hover:shadow-sm transition-shadow text-sm"
-                        style={{ borderColor: s.color + '40' }}
+                  return (
+                    <div key={s.id} className="flex items-stretch gap-0 rounded-xl border bg-white shadow-sm overflow-hidden hover:shadow-md transition-shadow">
+                      {/* S Label column */}
+                      <div
+                        className="w-20 shrink-0 flex flex-col items-center justify-center py-2 cursor-pointer select-none"
+                        style={{ backgroundColor: `${s.color}15` }}
                         onClick={() => handleSStepClick(s.id)}
                       >
-                        <div
-                          className="w-3 h-3 rounded-full"
-                          style={{ backgroundColor: s.color }}
-                        />
-                        <span className="font-medium" style={{ color: s.color }}>
+                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-white font-black text-lg shadow ${earned ? 'ring-2 ring-yellow-400' : ''}`}
+                          style={{ backgroundColor: s.color }}>
+                          {earned ? '★' : s.id}
+                        </div>
+                        <span className="text-[10px] font-bold mt-1 leading-tight text-center" style={{ color: s.color }}>
                           {s.name}
                         </span>
-                      </button>
-                    ))}
-                  </div>
+                        <span className="text-[8px] text-muted-foreground">{s.japaneseName}</span>
+                        <span className="text-[9px] font-medium mt-0.5" style={{ color: s.color }}>
+                          {completedCount}/5
+                        </span>
+                      </div>
 
-                  {/* Progress Dashboard */}
-                  <ProgressDashboard />
-                </motion.div>
-              )}
+                      {/* Mini-steps row */}
+                      <div className="flex-1 flex items-stretch gap-0">
+                        {MINI_STEPS.map(ms => {
+                          const status = getMiniStepStatus(s.id, ms.id);
+                          const isAuditLocked = ms.id === 5 && currentUser && currentUser.role !== 'admin' && currentUser.role !== 'auditor';
+                          const effectiveStatus = isAuditLocked ? 'locked' : status;
+                          const isLocked = effectiveStatus === 'locked';
+                          const isCompleted = effectiveStatus === 'completed';
+                          const stepProgress = sProgress.find(p => p.miniStep === ms.id);
+                          const IconComp = MINI_STEP_ICONS[ms.icon] || GraduationCap;
+                          const modalType = getModalType(ms.id, s.id);
 
-              {currentView === 'detail' && selectedSStep && (
-                <motion.div
-                  key="detail"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  transition={{ duration: 0.3 }}
-                >
-                  <SStepDetail
-                    sStep={selectedSStep}
-                    onBack={handleBack}
-                    onOpenModal={handleOpenModal}
-                  />
-                </motion.div>
-              )}
+                          return (
+                            <button
+                              key={ms.id}
+                              className={`
+                                flex-1 min-w-0 flex flex-col items-center justify-center py-2 px-1 border-r last:border-r-0
+                                transition-all text-center relative
+                                ${isLocked ? 'opacity-40 cursor-not-allowed bg-gray-50' : 'cursor-pointer hover:bg-gray-50'}
+                                ${isCompleted ? 'bg-green-50/50' : ''}
+                              `}
+                              onClick={() => {
+                                if (!isLocked) {
+                                  handleOpenModal(modalType, ms.id, s.id);
+                                }
+                              }}
+                              disabled={isLocked}
+                              title={`${ms.name}${ms.descriptionByS?.[s.id] ? ': ' + ms.descriptionByS[s.id] : ''}${isAuditLocked ? ' (Solo auditores)' : ''}`}
+                            >
+                              {/* Completion indicator dot */}
+                              <div className={`
+                                w-7 h-7 rounded-full flex items-center justify-center mb-0.5
+                                ${isCompleted ? 'bg-green-500 text-white' : isLocked ? 'bg-gray-200 text-gray-400' : 'text-white'}
+                              `}
+                                style={!isCompleted && !isLocked ? { backgroundColor: s.color } : undefined}
+                              >
+                                {isCompleted ? (
+                                  <span className="text-xs font-bold">✓</span>
+                                ) : isLocked ? (
+                                  <LockIcon className="h-3 w-3" />
+                                ) : (
+                                  <IconComp className="h-3.5 w-3.5" />
+                                )}
+                              </div>
+                              <span className={`text-[9px] font-medium leading-tight ${isLocked ? 'text-gray-400' : isCompleted ? 'text-green-700' : 'text-gray-700'}`}>
+                                {ms.id === 3 && s === S_STEPS[4] ? 'Plan Acc.' : ms.name.length > 12 ? ms.name.split(' ')[0] : ms.name}
+                              </span>
+                              {/* Score badge */}
+                              {isCompleted && stepProgress?.score != null && (
+                                <span className="text-[8px] font-bold text-green-600">{stepProgress.score}%</span>
+                              )}
+                              {/* Audit locked reason */}
+                              {isAuditLocked && (
+                                <span className="text-[7px] text-amber-600 font-medium">Solo audit.</span>
+                              )}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
 
-              {currentView === 'maintenance' && (
-                <motion.div
-                  key="maintenance"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  transition={{ duration: 0.3 }}
-                >
-                  <MaintenanceView />
-                </motion.div>
-              )}
-
-              {currentView === 'gerente' && (
-                <motion.div
-                  key="gerente"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  transition={{ duration: 0.3 }}
-                >
-                  <GerentePanel />
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </>
+              {/* Progress Summary */}
+              <div className="mt-3 grid grid-cols-5 gap-2">
+                {S_STEPS.map(s => {
+                  const earned = isQuesitoEarned(s.id);
+                  const sProgress = progress.filter(p => p.sStep === s.id);
+                  const completedCount = sProgress.filter(p => p.completed).length;
+                  const pct = Math.round((completedCount / 5) * 100);
+                  return (
+                    <div key={s.id} className="text-center">
+                      <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                        <div className="h-full rounded-full transition-all duration-500" style={{ width: `${pct}%`, backgroundColor: s.color }} />
+                      </div>
+                      <span className="text-[9px] text-muted-foreground">{pct}%</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
         )}
       </main>
-
-      {/* Footer */}
-      <footer className="border-t bg-white mt-auto">
-        <div className="max-w-4xl mx-auto px-4 py-4 text-center">
-          <p className="text-xs text-muted-foreground">
-            Metodología 5S — Implementación
-          </p>
-        </div>
-      </footer>
 
       {/* Modals */}
       {ActiveModalComponent && selectedSStep && activeMiniStep && (
@@ -598,41 +530,24 @@ export default function HomePage() {
 
       {/* Global Action Plan Modal */}
       {activeModal === 'globalActionPlan' && currentProject && (
-        <ActionPlanModal
-          open={true}
-          onClose={closeModal}
-          sStep={selectedSStep || 1}
-          miniStep={0}
-        />
+        <ActionPlanModal open={true} onClose={closeModal} sStep={selectedSStep || 1} miniStep={0} />
       )}
 
       {/* Global Inventory Modal */}
       {activeModal === 'globalInventory' && (
-        <GlobalInventoryModal
-          open={true}
-          onClose={closeModal}
-        />
+        <GlobalInventoryModal open={true} onClose={closeModal} />
       )}
 
       {/* Audit Results Modal */}
       {activeModal === 'auditResults' && (
-        <AuditResultsModal
-          open={true}
-          onClose={closeModal}
-        />
+        <AuditResultsModal open={true} onClose={closeModal} />
       )}
 
       {/* Team Management Modal */}
-      <TeamManagement
-        open={showTeamManagement}
-        onClose={() => setShowTeamManagement(false)}
-      />
+      <TeamManagement open={showTeamManagement} onClose={() => setShowTeamManagement(false)} />
 
       {/* Role Permissions Modal */}
-      <RolePermissions
-        open={showRolePermissions}
-        onClose={() => setShowRolePermissions(false)}
-      />
+      <RolePermissions open={showRolePermissions} onClose={() => setShowRolePermissions(false)} />
     </div>
   );
 }

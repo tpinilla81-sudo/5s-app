@@ -65,7 +65,7 @@ export default function Board5S({ onSStepClick }: Board5SProps) {
         initial={{ scale: 0.7, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
-        className="w-full max-w-[560px] aspect-square"
+        className="w-full max-w-[560px] aspect-square mx-auto"
       >
         <svg viewBox="0 0 600 600" className="w-full h-full" xmlns="http://www.w3.org/2000/svg">
           <defs>

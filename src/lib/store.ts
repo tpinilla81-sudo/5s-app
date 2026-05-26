@@ -177,9 +177,9 @@ export const use5SStore = create<FiveSState>((set, get) => ({
 
   selectSStep: (s) => {
     if (s === null) {
-      set({ selectedSStep: null, currentView: 'board' })
+      set({ selectedSStep: null })
     } else {
-      set({ selectedSStep: s, currentView: 'detail' })
+      set({ selectedSStep: s })
     }
   },
 

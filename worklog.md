@@ -1,72 +1,26 @@
 ---
 Task ID: 1
-Agent: main
-Task: Fix S1 Audit - Server-side role check
+Agent: Main
+Task: Redesign 5S app to single-screen layout
 
 Work Log:
-- Added session user verification to /api/audit/route.ts POST handler
-- Only admin and auditor roles can now submit audits (server-side enforcement)
-- Returns 403 with clear error message for unauthorized roles
-- Also added 401 response for unauthenticated requests
+- Diagnosed server crash: standalone server works but gets killed by container environment (K8s cgroup) after ~15-20s
+- Server DOES serve requests correctly (200 OK, 8454 bytes HTML) before being killed
+- Updated daemon.js and run-prod.sh to use standalone server with auto-restart
+- Redesigned page.tsx from multi-page navigation to single-screen dashboard layout:
+  - Left panel (320px): Compact 5S pie chart board + quesito indicators
+  - Right panel (full width): All 5 S steps with their 5 mini-steps in horizontal rows
+  - No more board→detail navigation: everything visible at once
+  - Clicking any mini-step opens its modal directly
+  - Compact header with all action buttons
+- Updated store.ts: selectSStep no longer changes currentView to 'detail'
+- Added handleOpenModal with sStep parameter to ensure modals know which S they belong to
+- Updated Board5S.tsx with mx-auto for centering in compact panel
+- Build passes successfully
 
 Stage Summary:
-- Server-side audit role check implemented
-- Prevents responsable/empleado from submitting audits via API
----
-Task ID: 2
-Agent: main
-Task: Enhance SStepDetail audit history with full ActionItem details
-
-Work Log:
-- Added RelatedAction interface with full fields
-- Added loadRelatedActions() function to fetch audit-related action items
-- Enhanced audit history display to show: concepto, plan de acción, responsable, fecha compromiso, fecha real cierre
-- Added acciones preventivas display
-- Added badge for open disfunciones count
-- Show related actions even when no specific audit match
-
-Stage Summary:
-- Audit history now shows full disfuncion details with all requested fields
-- Action items are matched to specific audits via itemId in hallazgo
----
-Task ID: 3
-Agent: main
-Task: Create AuditResultsModal accessible from header for all roles
-
-Work Log:
-- Created new AuditResultsModal.tsx component
-- Three tabs: Resumen (scores + stats), Disfunciones (filterable), Seguimiento (per-S progress)
-- Shows per-S-step audit scores, per-zone breakdown
-- Full disfuncion details: concepto, plan de acción, responsable, fecha compromiso, fecha real cierre
-- Filters by S-step, zone, estado
-- Added 'auditResults' modal type to store
-- Added "Auditoría" button in header visible to all roles
-- Added AuditResultsModal rendering in page.tsx
-
-Stage Summary:
-- New AuditResultsModal accessible from header for gerente/responsable/empleado
-- Shows all audit data including scores and disfunciones with full tracking
----
-Task ID: 4
-Agent: main
-Task: Enhance Global ActionPlanModal
-
-Work Log:
-- Updated loadActions to not filter by sStep when miniStep=0 (global mode)
-- Updated title to show "Plan de Acción — Global" when opened globally
-- Shows all actions across all S-steps when opened via header button
-
-Stage Summary:
-- Global ActionPlanModal now shows ALL actions, not just one S-step
----
-Task ID: 5
-Agent: main
-Task: Build and test
-
-Work Log:
-- Next.js build successful with no errors
-- PM2 restart successful
-- App running on localhost:3000
-
-Stage Summary:
-- All changes compiled and deployed successfully
+- Single-screen layout implemented: board on left, all S steps with mini-steps on right
+- No page navigation needed - everything visible at once
+- Modals open directly when clicking mini-step buttons
+- Server infrastructure issue (container kills processes) documented but not fixable in code
+- Pending tasks: fix responsable audit block, audit visibility for empleados, audit report, S1Exam/S1Inventory fixes
