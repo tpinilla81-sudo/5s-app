@@ -191,3 +191,42 @@ Stage Summary:
 - Bug fix verified: Responsable cannot perform audits (locked in SStepDetail)
 - Mini-step types: Zone steps (2-photos, 3-inventory, 5-audit) vs Individual steps (1-formation, 4-autoeval)
 - Zone advances when: all zone steps completed AND all employees completed individual steps
+---
+Task ID: 1
+Agent: Main
+Task: Update the 5S methodology user manual PDF with all new features
+
+Work Log:
+- Read existing codebase: schema.prisma, 5s-constants.ts, Board5S.tsx, LoginPage.tsx, ActionPlanTracker.tsx
+- Invoked PDF skill and read report brief for proper ReportLab workflow
+- Generated color palette via palette.generate command
+- Created comprehensive generate_manual.py script with 20-page manual covering:
+  - Introduction to 5S methodology
+  - Workflow per S (5 mini-steps)
+  - Multi-employee zone progression logic (individual vs collective steps)
+  - Organizational hierarchy (Empresa → Proyecto → Zona → Empleado)
+  - Roles and permissions (admin, gerente, responsable, auditor, empleado)
+  - Role-to-hierarchy assignments
+  - Getting started (registration, initial setup)
+  - 5S Board navigation
+  - Detailed description of each S (1S through 5S)
+  - Separate 1S/2S inventories (innecesarios vs necesarios)
+  - Jaula de Excedentes
+  - Training and exams
+  - Photo documentation
+  - Inventory system per S with categories and fields
+  - Self-evaluation and external audits
+  - Audit types (weekly, monthly, quarterly)
+  - Action plan with lifecycle and visibility rules
+  - Progress tracking (DATOS table, Radar chart, KPIs)
+  - Gerente panel
+  - FAQ section (7 questions)
+  - Glossary of terms
+- Fixed font compatibility issues (Tinos/NotoSansSC variable fonts → Carlito/LiberationSerif/NotoSerifSC)
+- Generated 20-page PDF successfully
+- Copied to /home/z/my-project/public/Manual_Usuario_5S.pdf
+
+Stage Summary:
+- Output: /home/z/my-project/download/Manual_Usuario_5S.pdf (120KB, 20 pages)
+- Also copied to: /home/z/my-project/public/Manual_Usuario_5S.pdf (accessible via /api/manual)
+- Script: /home/z/my-project/generate_manual.py
