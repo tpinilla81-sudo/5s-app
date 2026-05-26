@@ -256,7 +256,7 @@ export default function FotosModal({ open, onClose, sStep, miniStep }: FotosModa
 
   return (
     <Dialog open={open} onOpenChange={() => { stopStream(); onClose(); }}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-[95vw] max-h-[95vh] overflow-hidden flex flex-col">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Camera className="h-5 w-5" style={{ color: sStepData?.color }} />
@@ -267,6 +267,7 @@ export default function FotosModal({ open, onClose, sStep, miniStep }: FotosModa
           </DialogTitle>
         </DialogHeader>
 
+        <div className="flex-1 overflow-auto p-2">
         {isAdmin && !isCompleted && (
           <div className="flex items-center gap-2 p-2 bg-amber-50 border border-amber-200 rounded-lg">
             <span className="text-xs text-amber-700 font-medium">Modo Admin:</span>
@@ -429,6 +430,7 @@ export default function FotosModal({ open, onClose, sStep, miniStep }: FotosModa
             </div>
           </div>
         )}
+        </div>
       </DialogContent>
     </Dialog>
   );

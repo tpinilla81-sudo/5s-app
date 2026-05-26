@@ -243,7 +243,7 @@ export default function AuditoriaModal({ open, onClose, sStep, miniStep }: Audit
 
   return (
     <Dialog open={open} onOpenChange={() => onClose()}>
-      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-[95vw] max-h-[95vh] overflow-hidden flex flex-col">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <ShieldCheck className="h-5 w-5" style={{ color: sStepData?.color }} />
@@ -254,6 +254,7 @@ export default function AuditoriaModal({ open, onClose, sStep, miniStep }: Audit
           </DialogTitle>
         </DialogHeader>
 
+        <div className="flex-1 overflow-auto space-y-4">
         {/* Permission check */}
         {!canAudit && !isCompleted && (
           <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-lg">
@@ -653,6 +654,7 @@ export default function AuditoriaModal({ open, onClose, sStep, miniStep }: Audit
             </div>
           </div>
         )}
+        </div>
       </DialogContent>
     </Dialog>
   );
