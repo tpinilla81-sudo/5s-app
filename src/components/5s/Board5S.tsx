@@ -207,7 +207,7 @@ export default function Board5S({ onSStepClick }: Board5SProps) {
                 {MINI_STEPS.map((m, j) => {
                   const pos = getDotPos(i, j);
                   const status = getMiniStepStatus(s.id, m.id);
-                  const isCompleted = status === 'completed';
+                  const isCompleted = status === 'completed' || status === 'completed_viewonly';
                   const isAvailable = status === 'available';
                   return (
                     <g key={`dot-${i}-${j}`}>

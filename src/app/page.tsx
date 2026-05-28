@@ -663,9 +663,9 @@ export default function HomePage() {
                               {MINI_STEPS.map(ms => {
                                 const status = getMiniStepStatus(s.id, ms.id);
                                 const effectiveStatus = status;
-                                // 'completed_viewonly': step is done but user only has a0 (view) — show ✓ but can't click
+                                // 'completed_viewonly': step is done but user only has a0 (view) — show ✓ and can view (read-only)
                                 const isCompleted = effectiveStatus === 'completed' || effectiveStatus === 'completed_viewonly';
-                                const canOpenModal = effectiveStatus === 'completed' || effectiveStatus === 'available';
+                                const canOpenModal = effectiveStatus === 'completed' || effectiveStatus === 'completed_viewonly' || effectiveStatus === 'available';
                                 const modalType = getModalType(ms.id, s.id);
                                 // Lock reasons based on permissions and progression
                                 const canPerformThisStep = canPerformPerm(s.id, ms.id);
@@ -820,7 +820,7 @@ export default function HomePage() {
                                           ${effectiveStatus === 'completed'
                                             ? 'bg-green-500 text-white shadow-sm shadow-green-200 ring-2 ring-green-300'
                                             : effectiveStatus === 'completed_viewonly'
-                                              ? 'bg-green-400/70 text-white/80 shadow-sm shadow-green-100 cursor-not-allowed'
+                                              ? 'bg-green-500 text-white shadow-sm shadow-green-200 ring-2 ring-green-300 cursor-default'
                                             : effectiveStatus === 'available'
                                               ? 'text-white hover:scale-110 hover:shadow-md cursor-pointer'
                                               : 'bg-gray-100 text-gray-300 cursor-not-allowed'}

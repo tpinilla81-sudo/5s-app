@@ -74,6 +74,8 @@ export default function AuditoriaModal({ open, onClose, sStep, miniStep }: Audit
   const [finalScore, setFinalScore] = useState(0);
   const [notaMinima, setNotaMinima] = useState(75);
   const [isLoadingTemplate, setIsLoadingTemplate] = useState(true);
+  const [fechaAuditoria, setFechaAuditoria] = useState('');
+  const [horaAuditoria, setHoraAuditoria] = useState('');
 
   // Mejoras realizadas
   const [isFullscreen, setIsFullscreen] = useState(true);
@@ -139,12 +141,16 @@ export default function AuditoriaModal({ open, onClose, sStep, miniStep }: Audit
       sections.forEach(s => { expanded[s.id] = true; });
       setExpandedSections(expanded);
       setResults({});
-      setAuditorName('');
+      setAuditorName(currentUser?.name || '');
       setObservaciones('');
       setIsCompleted(false);
       setFinalScore(0);
       setHaMejoras(null);
       setMejoras([]);
+      // Auto-fill date and time of the audit
+      const now = new Date();
+      setFechaAuditoria(now.toISOString().slice(0, 10));
+      setHoraAuditoria(now.toTimeString().slice(0, 5));
     }
   }, [open, sStep]);
 
@@ -204,6 +210,8 @@ export default function AuditoriaModal({ open, onClose, sStep, miniStep }: Audit
           result: isApto ? 'apto' : 'no_apto',
           score: Math.min(scoring.scorePercent, 100),
           observations: observaciones || null,
+          fechaAuditoria,
+          horaAuditoria,
           projectId: currentProject?.id,
           zoneId: currentZone?.id || null,
           checklistData: JSON.stringify(Object.values(results)),
@@ -261,6 +269,8 @@ export default function AuditoriaModal({ open, onClose, sStep, miniStep }: Audit
               type: 'auditoria_externa',
               auditor: auditorName,
               result: isApto ? 'apto' : 'no_apto',
+              fecha: fechaAuditoria,
+              hora: horaAuditoria,
               results: Object.values(results),
               observaciones,
               mejorasRealizadas: haMejoras,
@@ -449,17 +459,41 @@ export default function AuditoriaModal({ open, onClose, sStep, miniStep }: Audit
               </p>
             </div>
 
-            {/* Auditor name */}
+            {/* Auditor name + date/time */}
             <Card>
-              <CardContent className="p-4">
-                <Label htmlFor="auditorName" className="text-sm font-medium">Nombre del Auditor Externo *</Label>
-                <Input
-                  id="auditorName"
-                  placeholder="Ingrese el nombre del auditor externo"
-                  value={auditorName}
-                  onChange={e => setAuditorName(e.target.value)}
-                  className="mt-1"
-                />
+              <CardContent className="p-4 space-y-3">
+                <div>
+                  <Label htmlFor="auditorName" className="text-sm font-medium">Nombre del Auditor Externo *</Label>
+                  <Input
+                    id="auditorName"
+                    placeholder="Ingrese el nombre del auditor externo"
+                    value={auditorName}
+                    onChange={e => setAuditorName(e.target.value)}
+                    className="mt-1"
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <Label htmlFor="fechaAuditoria" className="text-sm font-medium">Fecha de auditoría</Label>
+                    <Input
+                      id="fechaAuditoria"
+                      type="date"
+                      value={fechaAuditoria}
+                      onChange={e => setFechaAuditoria(e.target.value)}
+                      className="mt-1"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="horaAuditoria" className="text-sm font-medium">Hora de auditoría</Label>
+                    <Input
+                      id="horaAuditoria"
+                      type="time"
+                      value={horaAuditoria}
+                      onChange={e => setHoraAuditoria(e.target.value)}
+                      className="mt-1"
+                    />
+                  </div>
+                </div>
               </CardContent>
             </Card>
 

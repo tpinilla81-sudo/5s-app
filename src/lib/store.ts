@@ -430,6 +430,26 @@ export const use5SStore = create<FiveSState>((set, get) => ({
     // Combined: step is "done" if either zone-level completed OR user completed individually
     const isStepDoneForUser = (): boolean => isStepCompleted() || hasUserCompletedIndividualStep()
 
+    // Check if step is completed by ANYONE (zone or any employee)
+    // This is crucial: ALL users must see completed steps in green,
+    // even if they don't have permission to enter them (e.g., auditors viewing steps 1-4)
+    const isStepCompletedByAnyone = (): boolean => {
+      if (isStepCompleted()) return true
+      if (!currentZone) {
+        return employeeProgress.some(ep =>
+          ep.sStep === sStep &&
+          ep.miniStep === miniStep &&
+          ep.completed
+        )
+      }
+      return employeeProgress.some(ep =>
+        ep.sStep === sStep &&
+        ep.miniStep === miniStep &&
+        ep.zoneId === currentZone.id &&
+        ep.completed
+      )
+    }
+
     // Helper: check if steps 1-4 are all completed for this S-step
     // Uses BOTH zone-level progress AND any employee progress,
     // so auditors can access step 5 when employees have completed 1-4
@@ -526,6 +546,14 @@ export const use5SStore = create<FiveSState>((set, get) => ({
         return 'locked'
       }
       // Chain is incoherent: treat as NOT completed — fall through
+    }
+
+    // ── Step completed by ANYONE (zone or employee) → show as green for ALL users ──
+    // Even users without permission must see completed steps in green
+    if (isStepCompletedByAnyone()) {
+      if (canPerformStep || canSkipSteps) return 'completed'
+      // Everyone else sees it as completed_viewonly (green, read-only)
+      return 'completed_viewonly'
     }
 
     // ── Admin with lock open: skip all checks ──
