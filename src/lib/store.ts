@@ -274,7 +274,6 @@ export const use5SStore = create<FiveSState>((set, get) => ({
     // Direct permission check (avoid circular get().hasPermission during store init)
     const checkPerm = (perm: string): boolean => {
       if (!currentUser) return false
-      if (currentUser.role === 'admin') return true
       const rolePerms = permissions[currentUser.role]
       return rolePerms?.[perm] === true
     }
@@ -327,8 +326,7 @@ export const use5SStore = create<FiveSState>((set, get) => ({
   hasPermission: (permission: string): boolean => {
     const { currentUser, permissions } = get()
     if (!currentUser) return false
-    // Admin always has all permissions
-    if (currentUser.role === 'admin') return true
+    // Permission-driven: check rolePermissionConfig from DB (NO admin bypass)
     const rolePerms = permissions[currentUser.role]
     if (!rolePerms) return false
     return rolePerms[permission] === true
@@ -358,8 +356,9 @@ export const use5SStore = create<FiveSState>((set, get) => ({
 
     const canViewStep = get().canView(sStep, miniStep)
     const canPerformStep = get().canPerform(sStep, miniStep)
-    const isAdmin = currentUser.role === 'admin'
-    const skipLocks = isAdmin && adminFreeNavigation
+    // Permission-driven: skip_steps from DB replaces hardcoded isAdmin check
+    const canSkipSteps = get().hasPermission('skip_steps')
+    const skipLocks = canSkipSteps && adminFreeNavigation
 
     // Check if already completed at zone level (or project level if no zone)
     const isStepCompleted = (): boolean => {

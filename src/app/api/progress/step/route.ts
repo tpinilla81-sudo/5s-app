@@ -3,7 +3,6 @@ import { db } from '@/lib/db'
 
 // Helper: check if user has a specific permission via rolePermissionConfig
 async function hasPermission(role: string, permission: string): Promise<boolean> {
-  if (role === 'admin') return true // Admin always has all permissions
   const config = await db.rolePermissionConfig.findUnique({
     where: { role_permission: { role, permission } }
   })
@@ -159,8 +158,14 @@ export async function DELETE(request: NextRequest) {
     const sessionData = await sessionRes.json()
     const user = sessionData.user
 
-    if (!user || user.role !== 'admin') {
-      return NextResponse.json({ success: false, error: 'Solo el administrador puede restablecer pasos' }, { status: 403 })
+    if (!user) {
+      return NextResponse.json({ success: false, error: 'No autenticado' }, { status: 401 })
+    }
+
+    // Permission-driven: check reset_data or skip_steps permission (NO role bypass)
+    const canReset = await hasPermission(user.role, 'reset_data') || await hasPermission(user.role, 'skip_steps')
+    if (!canReset) {
+      return NextResponse.json({ success: false, error: 'No tienes permiso para restablecer pasos' }, { status: 403 })
     }
 
     const sStepNum = parseInt(sStep)

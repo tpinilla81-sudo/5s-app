@@ -34,12 +34,13 @@ interface ExamQuestion {
 }
 
 export default function FormacionModal({ open, onClose, sStep, miniStep }: FormacionModalProps) {
-  const { fetchProgress, currentUser, adminFreeNavigation, currentProject, currentZone, canPerform, canView } = use5SStore();
+  const { fetchProgress, currentUser, adminFreeNavigation, currentProject, currentZone, canPerform, canView, hasPermission } = use5SStore();
   const sStepData = S_STEPS.find(s => s.id === sStep);
-  const isAdmin = currentUser?.role === 'admin' && adminFreeNavigation;
+  const canSkipSteps = hasPermission('skip_steps');
   const canPerformStep = canPerform(sStep, miniStep);
   const canViewStep = canView(sStep, miniStep);
-  const isReadOnly = (canViewStep && !canPerformStep) || (currentUser?.role === 'admin' && !adminFreeNavigation);
+  // Permission-driven: read-only if no execute perm OR if candado closed for skip_steps users
+  const isReadOnly = !canPerformStep || (canSkipSteps && !adminFreeNavigation);
 
   const [isFullscreen, setIsFullscreen] = useState(true);
   const [formationContent, setFormationContent] = useState<FormationSection[]>([]);
@@ -178,7 +179,7 @@ export default function FormacionModal({ open, onClose, sStep, miniStep }: Forma
           </DialogTitle>
         </DialogHeader>
 
-        {isAdmin && (
+        {canSkipSteps && (
           <div className="flex items-center gap-2 p-2 mx-6 flex-shrink-0 bg-amber-50 border border-amber-200 rounded-lg">
             <span className="text-xs text-amber-700 font-medium">Modo Admin:</span>
             <Button
@@ -194,7 +195,7 @@ export default function FormacionModal({ open, onClose, sStep, miniStep }: Forma
 
         {isReadOnly && (
           <div className="flex items-center gap-2 p-2 mx-6 flex-shrink-0 bg-blue-50 border border-blue-200 rounded-lg">
-            <span className="text-xs text-blue-700 font-medium">Solo lectura: {currentUser?.role === 'admin' ? 'Activa el candado para poder realizar pasos.' : 'Puedes ver pero no modificar.'}</span>
+            <span className="text-xs text-blue-700 font-medium">Solo lectura: {canSkipSteps ? 'Activa el candado para poder realizar pasos.' : 'Puedes ver pero no modificar.'}</span>
           </div>
         )}
 

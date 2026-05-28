@@ -4,8 +4,9 @@ import { db } from '@/lib/db'
 const SESSION_COOKIE = '5s_session'
 
 /**
- * Verify that the request comes from an authenticated user with gerente or admin role.
+ * Verify that the request comes from an authenticated user with view_progress permission.
  * Returns the user object or null if unauthorized.
+ * Permission-driven: no hardcoded role checks.
  */
 export async function getGerenteUser(request: NextRequest) {
   const sessionId = request.cookies.get(SESSION_COOKIE)?.value
@@ -24,7 +25,12 @@ export async function getGerenteUser(request: NextRequest) {
   })
 
   if (!user || !user.active) return null
-  if (user.role !== 'gerente' && user.role !== 'admin') return null
+
+  // Permission-driven: check view_progress permission from DB
+  const permConfig = await db.rolePermissionConfig.findUnique({
+    where: { role_permission: { role: user.role, permission: 'view_progress' } }
+  })
+  if (!permConfig?.allowed) return null
 
   return user
 }

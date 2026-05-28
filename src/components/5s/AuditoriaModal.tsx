@@ -59,9 +59,9 @@ function templateToAuditSections(content: any): AuditSection[] {
 }
 
 export default function AuditoriaModal({ open, onClose, sStep, miniStep }: AuditoriaModalProps) {
-  const { fetchProgress, currentUser, adminFreeNavigation, currentProject, currentZone, canPerform } = use5SStore();
+  const { fetchProgress, currentUser, adminFreeNavigation, currentProject, currentZone, canPerform, hasPermission } = use5SStore();
   const sStepData = S_STEPS.find(s => s.id === sStep);
-  const isAdmin = currentUser?.role === 'admin' && adminFreeNavigation;
+  const canSkipSteps = hasPermission('skip_steps');
   const canAudit = canPerform(sStep, 5);
 
   const [sections, setSections] = useState<AuditSection[]>([]);
@@ -338,7 +338,7 @@ export default function AuditoriaModal({ open, onClose, sStep, miniStep }: Audit
           </DialogTitle>
         </DialogHeader>
 
-        {isAdmin && !isCompleted && (
+        {canSkipSteps && !isCompleted && (
           <div className="flex items-center gap-2 p-2 mx-6 flex-shrink-0 bg-amber-50 border border-amber-200 rounded-lg">
             <span className="text-xs text-amber-700 font-medium">Modo Admin:</span>
             <Button

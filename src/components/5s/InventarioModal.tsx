@@ -62,13 +62,14 @@ interface InventarioModalProps {
 }
 
 export default function InventarioModal({ open, onClose, sStep, miniStep }: InventarioModalProps) {
-  const { fetchProgress, currentUser, adminFreeNavigation, currentProject, currentZone, canPerform, canView } = use5SStore();
+  const { fetchProgress, currentUser, adminFreeNavigation, currentProject, currentZone, canPerform, canView, hasPermission } = use5SStore();
   const sStepData = S_STEPS.find(s => s.id === sStep);
   const config: InventoryConfig = INVENTORY_CONFIGS[sStep] || INVENTORY_CONFIGS[1];
-  const isAdmin = currentUser?.role === 'admin' && adminFreeNavigation;
+  const canSkipSteps = hasPermission('skip_steps');
   const canPerformStep = canPerform(sStep, miniStep);
   const canViewStep = canView(sStep, miniStep);
-  const isReadOnly = (canViewStep && !canPerformStep) || (currentUser?.role === 'admin' && !adminFreeNavigation);
+  // Permission-driven: read-only if no execute perm OR if candado closed for skip_steps users
+  const isReadOnly = !canPerformStep || (canSkipSteps && !adminFreeNavigation);
 
   const [items, setItems] = useState<InventoryItemData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -703,7 +704,7 @@ export default function InventarioModal({ open, onClose, sStep, miniStep }: Inve
           </DialogTitle>
         </DialogHeader>
 
-        {isAdmin && !isCompleted && (
+        {canSkipSteps && !isCompleted && (
           <div className="mx-6 flex items-center gap-2 p-2 bg-amber-50 border border-amber-200 rounded-lg flex-shrink-0">
             <span className="text-xs text-amber-700 font-medium">Modo Admin:</span>
             <Button
@@ -719,7 +720,7 @@ export default function InventarioModal({ open, onClose, sStep, miniStep }: Inve
 
         {isReadOnly && (
           <div className="flex items-center gap-2 p-2 mx-6 flex-shrink-0 bg-blue-50 border border-blue-200 rounded-lg">
-            <span className="text-xs text-blue-700 font-medium">Solo lectura: {currentUser?.role === 'admin' ? 'Activa el candado para poder realizar pasos.' : 'Puedes ver pero no modificar.'}</span>
+            <span className="text-xs text-blue-700 font-medium">Solo lectura: {canSkipSteps ? 'Activa el candado para poder realizar pasos.' : 'Puedes ver pero no modificar.'}</span>
           </div>
         )}
 

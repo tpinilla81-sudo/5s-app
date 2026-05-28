@@ -57,15 +57,13 @@ export async function POST(request: NextRequest) {
     if (!sessionUser) {
       return NextResponse.json({ success: false, error: 'No autenticado' }, { status: 401 })
     }
-    // Permission-driven: check if user's role has s{X}_step5_a1 permission
+    // Permission-driven: check if user's role has s{X}_step5_a1 permission (NO admin bypass)
     const sStepValue = sStep !== undefined ? sStep : 0
-    if (sessionUser.role !== 'admin') {
-      const permConfig = await db.rolePermissionConfig.findUnique({
-        where: { role_permission: { role: sessionUser.role, permission: `s${sStepValue}_step5_a1` } }
-      })
-      if (!permConfig?.allowed) {
-        return NextResponse.json({ success: false, error: 'No tienes permiso para realizar auditorías en este paso' }, { status: 403 })
-      }
+    const permConfig = await db.rolePermissionConfig.findUnique({
+      where: { role_permission: { role: sessionUser.role, permission: `s${sStepValue}_step5_a1` } }
+    })
+    if (!permConfig?.allowed) {
+      return NextResponse.json({ success: false, error: 'No tienes permiso para realizar auditorías en este paso' }, { status: 403 })
     }
 
     if (auditorName === undefined || !result) {

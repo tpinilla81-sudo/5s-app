@@ -30,7 +30,7 @@ const GENERAL_PERMISSIONS = [
   'view_board', 'view_progress', 'view_project', 'edit_project', 'manage_zones',
   'view_team', 'add_members', 'remove_members', 'change_roles',
   'manage_training', 'delete_photos', 'delete_inventory', 'approve_audit',
-  'delete_project', 'reset_data', 'manage_templates',
+  'delete_project', 'reset_data', 'manage_templates', 'skip_steps',
 ]
 
 const ALL_PERMISSIONS = [...PER_S_PERMISSIONS, ...GENERAL_PERMISSIONS]
@@ -96,7 +96,9 @@ export async function GET() {
 
     // If no configs exist yet, or if existing configs don't have the new per-S permissions, re-seed
     const existingPermIds = new Set(configs.map(c => c.permission))
-    const needsReseed = configs.length === 0 || !PER_S_PERMISSIONS.some(p => existingPermIds.has(p))
+    const needsReseed = configs.length === 0
+      || !PER_S_PERMISSIONS.some(p => existingPermIds.has(p))
+      || !GENERAL_PERMISSIONS.every(p => existingPermIds.has(p))
 
     if (needsReseed) {
       // Delete all and re-seed with new structure

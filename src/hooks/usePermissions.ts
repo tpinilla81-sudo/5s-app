@@ -36,8 +36,7 @@ export function usePermissions() {
   const hasPermission = useCallback(
     (permission: string): boolean => {
       if (!currentUser) return false
-      // Admin always has all permissions
-      if (currentUser.role === 'admin') return true
+      // Permission-driven: check rolePermissionConfig from DB (NO admin bypass)
       const rolePerms = permissions[currentUser.role]
       if (!rolePerms) return false
       return rolePerms[permission] === true

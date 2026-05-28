@@ -1,7 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 
-// GET /api/auth/zones - Get the zones assigned to the current logged-in user
+// Helper: check if user has a specific permission via rolePermissionConfig
+async function hasPermission(role: string, permission: string): Promise<boolean> {
+  const config = await db.rolePermissionConfig.findUnique({
+    where: { role_permission: { role, permission } }
+  })
+  return config?.allowed === true
+}
+
+// GET /api/auth/zones - Get the zones assigned to the current logged-in user (permission-driven)
 export async function GET(request: NextRequest) {
   try {
     const sessionId = request.cookies.get('5s_session')?.value
@@ -18,15 +26,15 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ zones: [] }, { status: 200 })
     }
 
-    // Admin and responsable can see all zones in their projects
-    if (user.role === 'admin' || user.role === 'responsable') {
-      // Get all projects the user is a member of
-      const memberships = await db.projectMember.findMany({
-        where: { userId: user.id },
-        select: { projectId: true },
-      })
-      const projectIds = memberships.map(m => m.projectId)
+    // Get user's project memberships
+    const memberships = await db.projectMember.findMany({
+      where: { userId: user.id },
+      select: { projectId: true },
+    })
+    const projectIds = memberships.map(m => m.projectId)
 
+    // Permission-driven zone access: manage_zones → all zones
+    if (await hasPermission(user.role, 'manage_zones')) {
       const allZones = await db.zone.findMany({
         where: { projectId: { in: projectIds } },
         select: {
@@ -39,37 +47,55 @@ export async function GET(request: NextRequest) {
         },
         orderBy: { createdAt: 'asc' },
       })
-
       return NextResponse.json({ zones: allZones, role: user.role }, { status: 200 })
     }
 
-    // For empleado, gerente: only return their assigned zones via MemberZone
-    // For auditor: return all project zones (they need to audit all zones)
-    if (user.role === 'auditor') {
-      // Auditors see ALL zones in their projects — they need to audit all of them
-      const memberships = await db.projectMember.findMany({
-        where: { userId: user.id },
-        select: { projectId: true },
-      })
-      const projectIds = memberships.map(m => m.projectId)
-
-      const allZones = await db.zone.findMany({
-        where: { projectId: { in: projectIds } },
-        select: {
-          id: true,
-          name: true,
-          description: true,
-          color: true,
-          projectId: true,
-          responsableId: true,
+    // view_board permission: show assigned zones, or all if none assigned
+    if (await hasPermission(user.role, 'view_board')) {
+      const memberZones = await db.memberZone.findMany({
+        where: {
+          member: {
+            userId: user.id,
+          },
         },
-        orderBy: { createdAt: 'asc' },
+        include: {
+          zone: {
+            select: {
+              id: true,
+              name: true,
+              description: true,
+              color: true,
+              projectId: true,
+              responsableId: true,
+            },
+          },
+        },
+        orderBy: { assignedAt: 'asc' },
       })
 
-      return NextResponse.json({ zones: allZones, role: user.role }, { status: 200 })
+      const assignedZones = memberZones.map(mz => mz.zone)
+
+      // If user has no assigned zones, return all project zones (so they can still work)
+      if (assignedZones.length === 0 && projectIds.length > 0) {
+        const allZones = await db.zone.findMany({
+          where: { projectId: { in: projectIds } },
+          select: {
+            id: true,
+            name: true,
+            description: true,
+            color: true,
+            projectId: true,
+            responsableId: true,
+          },
+          orderBy: { createdAt: 'asc' },
+        })
+        return NextResponse.json({ zones: allZones, role: user.role }, { status: 200 })
+      }
+
+      return NextResponse.json({ zones: assignedZones, role: user.role }, { status: 200 })
     }
 
-    // Empleado, gerente: only their assigned zones via MemberZone
+    // No relevant permissions: only assigned zones via MemberZone
     const memberZones = await db.memberZone.findMany({
       where: {
         member: {
@@ -92,7 +118,6 @@ export async function GET(request: NextRequest) {
     })
 
     const zones = memberZones.map(mz => mz.zone)
-
     return NextResponse.json({ zones, role: user.role }, { status: 200 })
   } catch (error) {
     console.error('Error fetching user zones:', error)

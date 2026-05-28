@@ -210,12 +210,11 @@ export default function HomePage() {
     return map[role] || 'bg-gray-100 text-gray-700 border-gray-200';
   };
 
-  // Permission helpers — derived from store permissions map
+  // Permission helpers — derived from store permissions map (NO admin bypass)
   const permissions = use5SStore(s => s.permissions);
   const hasPermission = useMemo(() => {
     const hp = (perm: string): boolean => {
       if (!currentUser) return false;
-      if (currentUser.role === 'admin') return true;
       return permissions[currentUser.role]?.[perm] === true;
     };
     return hp;
@@ -225,6 +224,8 @@ export default function HomePage() {
   const canAuditAny = useMemo(() => currentUser ? [1,2,3,4,5].some(s => canPerformPerm(s, 5)) : false, [currentUser, canPerformPerm]);
 
   const canManageTeam = currentUser && hasPermission('add_members');
+  const canSkipSteps = hasPermission('skip_steps');
+  // Admin tab: only users who can manage the system (admin role for system config)
   const isAdmin = currentUser?.role === 'admin';
   const canSeeGerentePanel = hasPermission('view_progress') || hasPermission('edit_project');
 
@@ -502,7 +503,7 @@ export default function HomePage() {
                   {/* TOP: Hero Board - Centered and Prominent */}
                   <div className="flex-1 min-h-0 flex flex-col items-center justify-start py-2 overflow-auto">
                     {/* Zone required message for empleados without zone assigned */}
-                    {!currentZone && currentUser && currentUser.role !== 'admin' && currentUser.role !== 'responsable' && getAvailableZones().length === 0 && (
+                    {!currentZone && currentUser && !hasPermission('manage_zones') && getAvailableZones().length === 0 && (
                       <div className="text-center space-y-3 py-8">
                         <div className="w-16 h-16 rounded-full bg-amber-100 flex items-center justify-center mx-auto">
                           <MapPin className="h-8 w-8 text-amber-500" />
@@ -648,7 +649,7 @@ export default function HomePage() {
                                 // Lock reasons based on permissions
                                 const canPerformThisStep = canPerformPerm(s.id, ms.id);
                                 const canViewThisStep = canViewPerm(s.id, ms.id);
-                                const lockReason = isAdmin && !adminFreeNavigation
+                                const lockReason = canSkipSteps && !adminFreeNavigation
                                   ? 'Solo lectura (candado cerrado)'
                                   : isLocked && canViewThisStep && !canPerformThisStep
                                     ? 'Solo lectura'
@@ -693,7 +694,7 @@ export default function HomePage() {
                                         {isCompleted ? '✓' : isLocked ? <LockIcon className="h-2.5 w-2.5" /> : ms.id}
                                       </button>
                                       {/* Admin reset button: only shown when admin with lock open and step is completed */}
-                                      {isAdmin && adminFreeNavigation && isCompleted && (
+                                      {canSkipSteps && adminFreeNavigation && isCompleted && (
                                         <button
                                           className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-red-500 text-white flex items-center justify-center text-[8px] font-bold hover:bg-red-600 transition-colors z-10"
                                           onClick={async (e) => {
