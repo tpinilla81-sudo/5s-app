@@ -653,9 +653,11 @@ export default function HomePage() {
                                   ? 'Solo lectura (candado cerrado)'
                                   : isLocked && canViewThisStep && !canPerformThisStep
                                     ? 'Solo lectura'
-                                    : isLocked
-                                      ? 'Sin permiso'
-                                      : '';
+                                    : ms.id === 5 && isLocked && canPerformThisStep
+                                      ? 'Completa pasos 1-4'
+                                      : isLocked
+                                        ? 'Sin permiso'
+                                        : '';
                                 // Get score for steps 4 and 5
                                 const stepScore = (ms.id === 4 || ms.id === 5)
                                   ? progress.find(p => p.sStep === s.id && p.miniStep === ms.id && (p.zoneId === currentZone?.id || p.zoneId === null))?.score

@@ -90,3 +90,23 @@ Stage Summary:
 - If a user has a0 permission only, it shows as 'available' (modals render read-only)
 - API audit endpoint now checks permission from DB, not hardcoded role
 - Auditor with s{X}_step5_a1 permission can now audit directly without needing steps 1-4 completed first
+
+---
+Task ID: 2
+Agent: Main Agent
+Task: Fix getMiniStepStatus — step 5 requires 1-4 completed, a0-only cannot enter steps
+
+Work Log:
+- Added areSteps1to4Completed() helper back into getMiniStepStatus()
+- Step 5 with a1 permission: locked until steps 1-4 are completed (business rule)
+- a0-only (view without perform): returns 'locked' — user can see step on board but cannot click/enter it
+- a1 (perform): returns 'available' — user can click and act
+- Updated lock reason messages: "Solo lectura" (a0 only), "Completa pasos 1-4 primero" (step 5), "Sin permiso" (no permission)
+- Updated both SStepDetail.tsx and page.tsx lock reasons
+- Build succeeded with no errors
+
+Stage Summary:
+- getMiniStepStatus now correctly enforces: a0-only = locked (visible but not clickable)
+- Step 5 blocked until steps 1-4 completed for ALL users with a1 permission
+- Auditor sees steps 1-4 as locked (can view status on board, can't enter modals)
+- Auditor sees step 5 as locked until 1-4 done, then available to audit

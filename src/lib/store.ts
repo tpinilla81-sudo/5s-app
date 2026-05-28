@@ -345,11 +345,12 @@ export const use5SStore = create<FiveSState>((set, get) => ({
   },
 
   // ═══════════════════════════════════════════════════════
-  // getMiniStepStatus — 100% Permission-Driven
-  // The permission system is the SINGLE SOURCE OF TRUTH.
-  // If you have a1 (perform) → you can do it. No extra logic.
-  // If you have a0 (view) only → you can see it (read-only).
-  // No hardcoded business rules block what permissions allow.
+  // getMiniStepStatus — Permission-Driven with Business Rules
+  // Permissions are the source of truth for WHO can do WHAT.
+  // Business rules define WHEN things are accessible:
+  //   - a1 (perform) → can enter and act, BUT step 5 needs 1-4 done
+  //   - a0 (view) only → can see the step exists on the board, but CANNOT enter it
+  //   - No permission → locked (not even visible)
   // ═══════════════════════════════════════════════════════
   getMiniStepStatus: (sStep, miniStep) => {
     const { progress, currentUser, adminFreeNavigation, currentZone } = get()
@@ -374,22 +375,40 @@ export const use5SStore = create<FiveSState>((set, get) => ({
       return false
     }
 
+    // Helper: check if steps 1-4 are all completed for this S-step in the current zone
+    const areSteps1to4Completed = (): boolean => {
+      if (!currentZone) return false
+      for (let ms = 1; ms <= 4; ms++) {
+        const zoneStep = progress.find(p =>
+          p.sStep === sStep &&
+          p.miniStep === ms &&
+          (p.zoneId === currentZone.id || p.zoneId === null) &&
+          p.completed
+        )
+        if (!zoneStep) return false
+      }
+      return true
+    }
+
     // ── If already completed, always show as completed ──
     if (isStepCompleted()) return 'completed'
 
     // ── Admin with lock open: skip all checks ──
     if (skipLocks) return 'available'
 
-    // ── No permission at all = locked ──
+    // ── No permission at all = locked (not even visible on board) ──
     if (!canViewStep && !canPerformStep) return 'locked'
 
-    // ── Has perform permission (a1) → AVAILABLE — no extra conditions ──
-    // The permission system decides. If you have a1, you can act. Period.
-    if (canPerformStep) return 'available'
+    // ── Has perform permission (a1) → can enter and act ──
+    if (canPerformStep) {
+      // Step 5 (Auditoría): BUSINESS RULE — can't audit until steps 1-4 are done
+      if (miniStep === 5 && !areSteps1to4Completed()) return 'locked'
+      return 'available'
+    }
 
-    // ── Has view permission only (a0) → AVAILABLE (read-only) ──
-    // Modals handle the read-only rendering internally
-    if (canViewStep) return 'available'
+    // ── Has view permission only (a0) → can see on board but CANNOT enter ──
+    // The step is visible (not hidden) but clicking it does nothing
+    if (canViewStep) return 'locked'
 
     return 'locked'
   },
