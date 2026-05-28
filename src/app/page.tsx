@@ -652,26 +652,35 @@ export default function HomePage() {
                                 const isCompleted = effectiveStatus === 'completed' || effectiveStatus === 'completed_viewonly';
                                 const canOpenModal = effectiveStatus === 'completed' || effectiveStatus === 'available';
                                 const modalType = getModalType(ms.id, s.id);
-                                // Lock reasons based on permissions
+                                // Lock reasons based on permissions and progression
                                 const canPerformThisStep = canPerformPerm(s.id, ms.id);
                                 const canViewThisStep = canViewPerm(s.id, ms.id);
-                                // Check if previous step is completed (for progressive unlocking tooltip)
+                                // Check if previous step is completed (for intra-S progressive unlocking tooltip)
                                 const isPrevStepDone = ms.id === 1 || progress.some(p =>
                                   p.sStep === s.id && p.miniStep === ms.id - 1 && (p.zoneId === currentZone?.id || p.zoneId === null) && p.completed
                                 );
+                                // Check if previous S is completed (for inter-S progressive unlocking tooltip)
+                                const isPrevSDone = s.id === 1 || (() => {
+                                  for (let ms2 = 1; ms2 <= 5; ms2++) {
+                                    if (!progress.some(p => p.sStep === s.id - 1 && p.miniStep === ms2 && (p.zoneId === currentZone?.id || p.zoneId === null) && p.completed)) return false;
+                                  }
+                                  return true;
+                                })();
                                 const lockReason = canSkipSteps && !adminFreeNavigation
                                   ? 'Solo lectura (candado cerrado)'
                                   : effectiveStatus === 'completed_viewonly'
                                     ? 'Solo lectura (completado)'
                                     : effectiveStatus === 'locked' && canViewThisStep && !canPerformThisStep
                                       ? 'Solo lectura'
-                                      : ms.id === 5 && effectiveStatus === 'locked' && canPerformThisStep && !isPrevStepDone
-                                        ? 'Completa pasos 1-4'
-                                        : ms.id > 1 && ms.id < 5 && effectiveStatus === 'locked' && canPerformThisStep && !isPrevStepDone
-                                          ? `Completa paso ${ms.id - 1}`
-                                          : effectiveStatus === 'locked'
-                                            ? 'Sin permiso'
-                                            : '';
+                                      : effectiveStatus === 'locked' && canPerformThisStep && !isPrevSDone
+                                        ? `Completa S${s.id - 1}`
+                                        : ms.id === 5 && effectiveStatus === 'locked' && canPerformThisStep && !isPrevStepDone
+                                          ? 'Completa pasos 1-4'
+                                          : ms.id > 1 && ms.id < 5 && effectiveStatus === 'locked' && canPerformThisStep && !isPrevStepDone
+                                            ? `Completa paso ${ms.id - 1}`
+                                            : effectiveStatus === 'locked'
+                                              ? 'Sin permiso'
+                                              : '';
                                 // Get score for steps 4 and 5
                                 const stepScore = (ms.id === 4 || ms.id === 5)
                                   ? progress.find(p => p.sStep === s.id && p.miniStep === ms.id && (p.zoneId === currentZone?.id || p.zoneId === null))?.score
