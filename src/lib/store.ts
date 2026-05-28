@@ -252,8 +252,8 @@ export const use5SStore = create<FiveSState>((set, get) => ({
     const { currentUser, currentProject, userZones } = get()
     if (!currentProject) return []
 
-    // Admin and responsable can see all project zones
-    if (currentUser?.role === 'admin' || currentUser?.role === 'responsable') {
+    // Admin, responsable and auditor can see all project zones
+    if (currentUser?.role === 'admin' || currentUser?.role === 'responsable' || currentUser?.role === 'auditor') {
       return currentProject.zones
     }
 
@@ -336,16 +336,11 @@ export const use5SStore = create<FiveSState>((set, get) => ({
       return 'available'
     }
 
-    // ── AUDITOR: Can VIEW steps 1-4 (read-only), only DO step 5 ──
+    // ── AUDITOR: Can VIEW steps 1-4 (read-only, no cross-S dependency), only DO step 5 ──
     if (isAuditor && !isAdmin) {
-      // Cross-S dependency for auditor: can only access S if previous S's quesito is earned
-      if (sStep > 1) {
-        const prevSEarned = get().isQuesitoEarned(sStep - 1)
-        if (!prevSEarned) return 'locked'
-      }
-
       if (miniStep !== 5) {
-        // Auditor can VIEW steps 1-4 (read-only) but cannot execute
+        // Auditor can VIEW steps 1-4 (read-only) regardless of cross-S dependency
+        // Cross-S dependency does NOT apply to auditors viewing progress
         if (currentZone) {
           const zoneStep = progress.find(p =>
             p.sStep === sStep &&
@@ -356,7 +351,8 @@ export const use5SStore = create<FiveSState>((set, get) => ({
         }
         return 'available' // Visible but read-only (modals enforce no-edit)
       }
-      // Step 5: only available when steps 1-4 are completed in the zone
+      // Step 5 (Auditoría): available when steps 1-4 are completed in the zone
+      // Cross-S dependency does NOT apply to auditors — they can audit any S where 1-4 are done
       if (currentZone) {
         const zoneStep5 = progress.find(p =>
           p.sStep === sStep &&
