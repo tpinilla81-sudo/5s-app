@@ -431,9 +431,26 @@ export const use5SStore = create<FiveSState>((set, get) => ({
     const isStepDoneForUser = (): boolean => isStepCompleted() || hasUserCompletedIndividualStep()
 
     // Helper: check if steps 1-4 are all completed for this S-step
+    // Uses BOTH zone-level progress AND any employee progress,
+    // so auditors can access step 5 when employees have completed 1-4
     const areSteps1to4Completed = (): boolean => {
       for (let ms = 1; ms <= 4; ms++) {
-        if (!isStepCompletedAt(sStep, ms)) return false
+        const zoneCompleted = isStepCompletedAt(sStep, ms)
+        if (zoneCompleted) continue
+        // Check if ANY employee has completed this step individually
+        const anyEmpCompleted = currentZone
+          ? employeeProgress.some(ep =>
+              ep.sStep === sStep &&
+              ep.miniStep === ms &&
+              ep.zoneId === currentZone.id &&
+              ep.completed
+            )
+          : employeeProgress.some(ep =>
+              ep.sStep === sStep &&
+              ep.miniStep === ms &&
+              ep.completed
+            )
+        if (!anyEmpCompleted) return false
       }
       return true
     }
@@ -450,13 +467,29 @@ export const use5SStore = create<FiveSState>((set, get) => ({
     // Step 1: always available (if you have permission AND previous S is done)
     // Steps 2-4: need the immediately previous step completed
     // Step 5: needs ALL steps 1-4 completed
+    // IMPORTANT: Completion checks include BOTH zone-level AND any employee progress,
+    // so auditors/responsables can see steps as available when employees completed them
     const isPreviousStepCompleted = (): boolean => {
       if (miniStep === 1) return true
       if (miniStep === 5) return areSteps1to4Completed()
       // Steps 2, 3, 4: need previous step completed at zone level
       if (isStepCompletedAt(sStep, miniStep - 1)) return true
-      // For step 2: user completed step 1 individually (exam passed)
+      // For step 2: current user completed step 1 individually (exam passed)
       if (miniStep === 2 && hasUserCompletedStep1()) return true
+      // Also check: ANY employee completed previous step (for auditors/responsables)
+      const anyEmpCompletedPrev = currentZone
+        ? employeeProgress.some(ep =>
+            ep.sStep === sStep &&
+            ep.miniStep === miniStep - 1 &&
+            ep.zoneId === currentZone.id &&
+            ep.completed
+          )
+        : employeeProgress.some(ep =>
+            ep.sStep === sStep &&
+            ep.miniStep === miniStep - 1 &&
+            ep.completed
+          )
+      if (anyEmpCompletedPrev) return true
       return false
     }
 
@@ -465,11 +498,25 @@ export const use5SStore = create<FiveSState>((set, get) => ({
       const isChainCoherent = (): boolean => {
         // First check inter-S: previous S must be completed
         if (!isPreviousSCompleted()) return false
-        // Then check intra-S chain
+        // Then check intra-S chain — reuse same logic as isPreviousStepCompleted
         if (miniStep === 1) return true // Step 1 is always coherent if previous S is done
         if (miniStep === 5) return areSteps1to4Completed()
         if (isStepCompletedAt(sStep, miniStep - 1)) return true
         if (miniStep === 2 && hasUserCompletedStep1()) return true
+        // Also check any employee completed previous step
+        const anyEmpPrev = currentZone
+          ? employeeProgress.some(ep =>
+              ep.sStep === sStep &&
+              ep.miniStep === miniStep - 1 &&
+              ep.zoneId === currentZone.id &&
+              ep.completed
+            )
+          : employeeProgress.some(ep =>
+              ep.sStep === sStep &&
+              ep.miniStep === miniStep - 1 &&
+              ep.completed
+            )
+        if (anyEmpPrev) return true
         return false
       }
 

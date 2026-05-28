@@ -133,6 +133,14 @@ export default function HomePage() {
             if (currentProject && currentZone) {
               await use5SStore.getState().fetchEmployeeProgress(currentProject.id, currentZone.id);
             }
+            // Auto-generate audit_ready notifications for any pending audits
+            if (currentProject?.id) {
+              fetch('/api/notifications/auto', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ projectId: currentProject.id }),
+              }).catch(e => console.error('Auto-notification error:', e));
+            }
           } else {
             setIsSeeding(true);
             await seedDatabase();
