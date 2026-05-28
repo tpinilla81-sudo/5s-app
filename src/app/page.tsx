@@ -146,6 +146,11 @@ export default function HomePage() {
           if (json.success && json.data && json.data.length > 0) {
             use5SStore.setState({ progress: json.data, isLoadingProgress: false });
             setIsInitialized(true);
+            // Also fetch employee progress for the current zone
+            const { currentProject, currentZone } = use5SStore.getState();
+            if (currentProject && currentZone) {
+              await use5SStore.getState().fetchEmployeeProgress(currentProject.id, currentZone.id);
+            }
           } else {
             setIsSeeding(true);
             await seedDatabase();

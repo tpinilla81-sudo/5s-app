@@ -353,9 +353,11 @@ export const use5SStore = create<FiveSState>((set, get) => ({
   //   - No permission → locked (not even visible)
   //   - IMPORTANT: Previous step completion is checked at ZONE level,
   //     so an auditor can access step 5 if employees completed 1-4
+  //   - For step 1 (individual): also checks EmployeeProgress for the
+  //     current user, so the employee's own completion unlocks step 2
   // ═══════════════════════════════════════════════════════
   getMiniStepStatus: (sStep, miniStep) => {
-    const { progress, currentUser, adminFreeNavigation, currentZone } = get()
+    const { progress, employeeProgress, currentUser, adminFreeNavigation, currentZone } = get()
     if (!currentUser) return 'locked'
 
     const canViewStep = get().canView(sStep, miniStep)
@@ -364,7 +366,7 @@ export const use5SStore = create<FiveSState>((set, get) => ({
     const canSkipSteps = get().hasPermission('skip_steps')
     const skipLocks = canSkipSteps && adminFreeNavigation
 
-    // Check if a specific mini-step is completed at zone level
+    // Check if a specific mini-step is completed at zone level (Progress table)
     const isStepCompletedAt = (ms: number): boolean => {
       if (currentZone) {
         const zoneStep = progress.find(p =>
@@ -383,8 +385,41 @@ export const use5SStore = create<FiveSState>((set, get) => ({
       return !!anyStep
     }
 
+    // Check if the CURRENT USER has completed step 1 individually (EmployeeProgress)
+    // This is crucial for unlocking step 2 for an employee who passed the exam
+    // even if not ALL employees in the zone have completed it yet
+    const hasUserCompletedStep1 = (): boolean => {
+      if (!currentZone) return false
+      const userStep = employeeProgress.find(ep =>
+        ep.sStep === sStep &&
+        ep.miniStep === 1 &&
+        ep.zoneId === currentZone.id &&
+        ep.userId === currentUser.id &&
+        ep.completed
+      )
+      return !!userStep
+    }
+
     // Check if already completed at zone level (or project level if no zone)
     const isStepCompleted = (): boolean => isStepCompletedAt(miniStep)
+
+    // Check if the CURRENT USER has completed this individual step (EmployeeProgress)
+    // For step 1 (formación) and step 4 (autoevaluación), completion is tracked per employee
+    const hasUserCompletedIndividualStep = (): boolean => {
+      if (!currentZone) return false
+      if (miniStep !== 1 && miniStep !== 4) return false // Only individual steps
+      const userStep = employeeProgress.find(ep =>
+        ep.sStep === sStep &&
+        ep.miniStep === miniStep &&
+        ep.zoneId === currentZone.id &&
+        ep.userId === currentUser.id &&
+        ep.completed
+      )
+      return !!userStep
+    }
+
+    // Combined: step is "done" if either zone-level completed OR user completed individually
+    const isStepDoneForUser = (): boolean => isStepCompleted() || hasUserCompletedIndividualStep()
 
     // Helper: check if steps 1-4 are all completed for this S-step
     const areSteps1to4Completed = (): boolean => {
@@ -395,23 +430,50 @@ export const use5SStore = create<FiveSState>((set, get) => ({
     }
 
     // Helper: check if the previous step is completed (for progressive unlocking)
-    // Step 1 has no prerequisite. Steps 2-4 need the previous step done.
-    // Step 5 needs ALL steps 1-4 done (already handled separately).
+    // Step 1: always available (if you have permission)
+    // Steps 2-4: need the immediately previous step completed
+    //   Zone-level OR user's individual completion counts
+    // Step 5: needs ALL steps 1-4 completed at zone level
     const isPreviousStepCompleted = (): boolean => {
-      if (miniStep === 1) return true // Step 1 always available (if you have permission)
-      if (miniStep === 5) return areSteps1to4Completed() // Step 5 needs all 1-4
-      // Steps 2, 3, 4: need the immediately previous step completed
-      return isStepCompletedAt(miniStep - 1)
+      if (miniStep === 1) return true
+      if (miniStep === 5) return areSteps1to4Completed()
+      // Steps 2, 3, 4: need previous step completed at zone level
+      if (isStepCompletedAt(miniStep - 1)) return true
+      // Also check if user completed the previous step individually
+      // For step 2: user completed step 1 individually (exam passed)
+      if (miniStep === 2 && hasUserCompletedStep1()) return true
+      // For steps 3, 4: previous step completed at zone level is required
+      // (individual completion of step 2/3 doesn't count for unlocking 3/4,
+      //  because steps 2,3 are collaborative zone steps)
+      return false
     }
 
-    // ── If already completed, check WHO can enter vs just see ──
-    if (isStepCompleted()) {
-      // User with a1 (execute) perm OR skip_steps can open the completed step to review
-      if (canPerformStep || canSkipSteps) return 'completed'
-      // User with only a0 (view) perm: sees ✓ green but CANNOT open the modal
-      if (canViewStep) return 'completed_viewonly'
-      // No permission at all (shouldn't normally happen for completed steps)
-      return 'locked'
+    // ── If already completed (zone-level OR user's individual), VERIFY COHERENCY ──
+    // A completed step is only shown as completed if the previous step is also done
+    // (data integrity check — prevents showing ✓ on step 3 if step 2 isn't done)
+    if (isStepDoneForUser()) {
+      // For completed steps, check that the chain is coherent
+      const isChainCoherent = (): boolean => {
+        if (miniStep === 1) return true // Step 1 is always coherent
+        // Step 5: need all 1-4 completed
+        if (miniStep === 5) return areSteps1to4Completed()
+        // Steps 2-4: need previous step completed at zone level
+        if (isStepCompletedAt(miniStep - 1)) return true
+        // For step 2: user completed step 1 individually also counts as coherent
+        if (miniStep === 2 && hasUserCompletedStep1()) return true
+        return false
+      }
+
+      if (isChainCoherent()) {
+        // User with a1 (execute) perm OR skip_steps can open the completed step to review
+        if (canPerformStep || canSkipSteps) return 'completed'
+        // User with only a0 (view) perm: sees ✓ green but CANNOT open the modal
+        if (canViewStep) return 'completed_viewonly'
+        // No permission at all
+        return 'locked'
+      }
+      // Chain is incoherent: step is marked completed in DB but previous isn't
+      // Treat as NOT completed — fall through to the progressive unlock logic below
     }
 
     // ── Admin with lock open: skip all checks ──

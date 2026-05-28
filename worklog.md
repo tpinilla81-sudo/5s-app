@@ -47,3 +47,29 @@ Stage Summary:
 - Auditor with completed steps 1-4: sees ✓ green (completed_viewonly) on steps 1-4, CAN'T open them
 - Auditor with completed steps 1-4: sees step 5 as 'available', CAN open and perform audit
 - Build passes successfully
+
+---
+Task ID: 3
+Agent: Main Agent
+Task: Fix progressive unlocking and employee step 1 completion visibility
+
+Work Log:
+- Analyzed user screenshot showing S1 step 1 as locked, steps 2-4 as completed (incoherent), and S2-S5 step 1 as available
+- Found root cause 1: getMiniStepStatus() had NO progressive unlocking for steps 2-4 — any step with a1 permission was immediately 'available'
+- Found root cause 2: Zone-level progress data was incoherent (steps 2,3,4 completed but step 1 not) due to admin skip
+- Found root cause 3: Step 1 exam completion only marked zone Progress as completed when ALL employees passed — individual EmployeeProgress was ignored for display
+- Found root cause 4: employeeProgress was not fetched during page initialization
+- Added isPreviousStepCompleted() helper: step N requires step N-1 completed at zone level (step 2 also unlocks if user completed step 1 individually)
+- Added isChainCoherent() check: completed steps are only shown as ✓ if the previous step is also done (prevents visual incoherence from bad data)
+- Added hasUserCompletedIndividualStep() helper: checks EmployeeProgress for steps 1 and 4 (individual steps)
+- Added isStepDoneForUser(): combines zone-level and individual completion for display
+- Updated page.tsx: added fetchEmployeeProgress() call during initialization
+- Updated page.tsx: improved lockReason tooltips ("Completa paso X" for progressive, "Completa pasos 1-4" for step 5)
+- Fixed 3 incoherent DB records: S1 steps 2,3,4 in zone LAVADO were marked completed but step 1 wasn't
+
+Stage Summary:
+- Progressive unlocking now works: step 1 → 2 → 3 → 4 → 5 (sequential within each S)
+- Employee who passed step 1 exam sees it as ✓ (completed) even if not all zone employees passed
+- Employee who passed step 1 can proceed to step 2 even if zone step 1 isn't fully completed
+- Incoherent DB data no longer causes visual bugs (chain coherency check)
+- Build passes successfully
