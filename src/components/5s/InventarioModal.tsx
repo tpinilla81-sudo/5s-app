@@ -26,11 +26,13 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { ClipboardList, Plus, CheckCircle, Download, Upload, FileSpreadsheet, BookOpen, Package, ArrowRight, AlertTriangle, FileUp, Maximize2, Minimize2, File } from 'lucide-react';
+import { ClipboardList, Plus, CheckCircle, Download, Upload, FileSpreadsheet, BookOpen, Package, ArrowRight, AlertTriangle, FileUp, Maximize2, Minimize2, File, PenTool, Image as ImageIcon, Eye } from 'lucide-react';
 import { toast } from 'sonner';
 import { use5SStore } from '@/lib/store';
 import { S_STEPS, INVENTORY_CONFIGS, INVENTORY_CLASSIFY_THRESHOLD } from '@/lib/5s-constants';
 import type { InventoryConfig } from '@/lib/5s-constants';
+import LayoutEditor from '@/components/5s/LayoutEditor';
+import ColorCodeTable from '@/components/5s/ColorCodeTable';
 
 interface InventoryItemData {
   id?: string;
@@ -75,6 +77,10 @@ export default function InventarioModal({ open, onClose, sStep, miniStep }: Inve
   const [csvPreview, setCsvPreview] = useState<InventoryItemData[] | null>(null);
   const [isImporting, setIsImporting] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(true);
+  const [showLayoutEditor, setShowLayoutEditor] = useState(false);
+  const [showColorCodeTable, setShowColorCodeTable] = useState(false);
+  const [savedLayouts, setSavedLayouts] = useState<{ id: string; title: string; photoUrl: string | null; createdAt: string }[]>([]);
+  const [layoutUploaded, setLayoutUploaded] = useState(false);
 
   const [newItem, setNewItem] = useState<Partial<InventoryItemData> & { extra?: Record<string, string | number> }>({
     name: '',
@@ -91,8 +97,66 @@ export default function InventarioModal({ open, onClose, sStep, miniStep }: Inve
   useEffect(() => {
     if (open) {
       loadInventory();
+      if (sStep === 2) loadLayouts();
     }
   }, [open, sStep]);
+
+  const loadLayouts = async () => {
+    if (!currentProject) return
+    try {
+      const params = new URLSearchParams({ projectId: currentProject.id, category: 'layout', sStep: '2' })
+      if (currentZone?.id) params.set('zoneId', currentZone.id)
+      const res = await fetch(`/api/standards?${params}`)
+      const json = await res.json()
+      if (json.success) {
+        setSavedLayouts(json.data.map((s: any) => ({
+          id: s.id,
+          title: s.title,
+          photoUrl: s.photoUrl,
+          createdAt: s.createdAt,
+        })))
+        setLayoutUploaded(json.data.length > 0)
+      }
+    } catch (e) {
+      console.error('Error loading layouts:', e)
+    }
+  }
+
+  const handleUploadLayoutImage = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file || !currentProject) return
+    try {
+      const formData = new FormData()
+      formData.append('file', file)
+      formData.append('projectId', currentProject.id)
+      const res = await fetch('/api/upload', { method: 'POST', body: formData })
+      const json = await res.json()
+      if (json.url) {
+        // Save as a layout standard
+        await fetch('/api/standards', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            sStep: 2,
+            title: `Layout ${currentZone?.name || 'zona'} (subido)`,
+            description: 'Layout subido como imagen con marcado de suelo según estándar de colores',
+            category: 'layout',
+            photoUrl: json.url,
+            status: 'activo',
+            version: 1,
+            projectId: currentProject.id,
+            zoneId: currentZone?.id || null,
+          }),
+        })
+        toast.success('Layout subido correctamente')
+        await loadLayouts()
+      }
+    } catch (e) {
+      console.error('Upload error:', e)
+      toast.error('Error al subir la imagen del layout')
+    }
+    e.target.value = ''
+  }
 
   const loadInventory = async () => {
     setIsLoading(true);
@@ -681,6 +745,79 @@ export default function InventarioModal({ open, onClose, sStep, miniStep }: Inve
                 {config.subtitle}
               </p>
             </div>
+
+            {/* ═══ S2: LAYOUT DE LA ZONA CON MARCADO DE SUELO ═══ */}
+            {sStep === 2 && (
+              <Card className="border-2 border-blue-200 bg-blue-50/30">
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-2 mb-3">
+                    <PenTool className="h-5 w-5 text-blue-600" />
+                    <h4 className="font-semibold text-blue-800">Layout de la Zona — Marcado de Suelo</h4>
+                    <Badge className={layoutUploaded ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800'}>
+                      {layoutUploaded ? 'Layout adjuntado' : 'Pendiente'}
+                    </Badge>
+                  </div>
+                  <p className="text-xs text-muted-foreground mb-3">
+                    Dibuja o sube el layout de la zona con el marcado de suelo según el estándar de colores. 
+                    Esto es obligatorio para completar el paso 3 de S2 (Seiton).
+                  </p>
+
+                  {/* Action buttons */}
+                  {!isReadOnly && (
+                    <div className="flex items-center gap-2 mb-4">
+                      <Button size="sm" onClick={() => setShowLayoutEditor(true)}
+                        className="gap-1 bg-blue-600 hover:bg-blue-700 text-white text-xs h-8">
+                        <PenTool className="h-3 w-3" /> Dibujar Layout
+                      </Button>
+                      <Button variant="outline" size="sm" onClick={() => setShowColorCodeTable(true)}
+                        className="gap-1 text-xs h-8 border-yellow-400 text-yellow-700 hover:bg-yellow-50">
+                        <Eye className="h-3 w-3" /> Ver Estándar Colores
+                      </Button>
+                      <div className="relative">
+                        <Button variant="outline" size="sm"
+                          className="gap-1 text-xs h-8 border-green-400 text-green-700 hover:bg-green-50"
+                          onClick={() => document.getElementById('layout-upload-s2')?.click()}>
+                          <Upload className="h-3 w-3" /> Subir Imagen/Croquis
+                        </Button>
+                        <input id="layout-upload-s2" type="file" accept="image/*" className="hidden"
+                          onChange={handleUploadLayoutImage} />
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Saved layout previews */}
+                  {savedLayouts.length > 0 ? (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      {savedLayouts.map(layout => (
+                        <div key={layout.id} className="border rounded-lg overflow-hidden bg-white">
+                          {layout.photoUrl ? (
+                            <img src={layout.photoUrl} alt={layout.title}
+                              className="w-full h-32 object-cover cursor-pointer hover:opacity-80 transition-opacity"
+                              onClick={() => window.open(layout.photoUrl!, '_blank')} />
+                          ) : (
+                            <div className="w-full h-32 bg-gray-100 flex items-center justify-center text-gray-400 text-xs">
+                              Sin imagen
+                            </div>
+                          )}
+                          <div className="px-2 py-1.5 flex items-center justify-between">
+                            <span className="text-[10px] font-medium truncate">{layout.title}</span>
+                            <span className="text-[9px] text-muted-foreground">
+                              {new Date(layout.createdAt).toLocaleDateString('es-ES')}
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-6 bg-white rounded-lg border border-dashed border-blue-300">
+                      <PenTool className="h-8 w-8 text-blue-300 mx-auto mb-2" />
+                      <p className="text-xs text-muted-foreground">No hay layout adjuntado</p>
+                      <p className="text-[10px] text-muted-foreground mt-0.5">Dibuja o sube el layout de la zona</p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )}
 
             {/* 1S: Jaula info panel */}
             {sStep === 1 && (
@@ -1335,6 +1472,23 @@ export default function InventarioModal({ open, onClose, sStep, miniStep }: Inve
         )}
         </div>
       </DialogContent>
+
+      {/* Layout Editor for S2 */}
+      {sStep === 2 && (
+        <LayoutEditor
+          open={showLayoutEditor}
+          onClose={() => setShowLayoutEditor(false)}
+          onSave={() => { setShowLayoutEditor(false); loadLayouts() }}
+        />
+      )}
+
+      {/* Color Code Table for S2 */}
+      {sStep === 2 && (
+        <ColorCodeTable
+          open={showColorCodeTable}
+          onClose={() => setShowColorCodeTable(false)}
+        />
+      )}
     </Dialog>
   );
 }
