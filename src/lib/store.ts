@@ -345,31 +345,20 @@ export const use5SStore = create<FiveSState>((set, get) => ({
   },
 
   // ═══════════════════════════════════════════════════════
-  // getMiniStepStatus — Permission-driven, no hardcoded roles
+  // getMiniStepStatus — 100% Permission-Driven
+  // The permission system is the SINGLE SOURCE OF TRUTH.
+  // If you have a1 (perform) → you can do it. No extra logic.
+  // If you have a0 (view) only → you can see it (read-only).
+  // No hardcoded business rules block what permissions allow.
   // ═══════════════════════════════════════════════════════
   getMiniStepStatus: (sStep, miniStep) => {
-    const { progress, currentUser, adminFreeNavigation, currentZone, employeeProgress } = get()
+    const { progress, currentUser, adminFreeNavigation, currentZone } = get()
     if (!currentUser) return 'locked'
 
     const canViewStep = get().canView(sStep, miniStep)
     const canPerformStep = get().canPerform(sStep, miniStep)
     const isAdmin = currentUser.role === 'admin'
     const skipLocks = isAdmin && adminFreeNavigation
-
-    // Helper: check if steps 1-4 are all completed for this S-step in the current zone
-    const areSteps1to4Completed = (): boolean => {
-      if (!currentZone) return false
-      for (let ms = 1; ms <= 4; ms++) {
-        const zoneStep = progress.find(p =>
-          p.sStep === sStep &&
-          p.miniStep === ms &&
-          (p.zoneId === currentZone.id || p.zoneId === null) &&
-          p.completed
-        )
-        if (!zoneStep) return false
-      }
-      return true
-    }
 
     // Check if already completed at zone level
     const isStepCompleted = (): boolean => {
@@ -388,144 +377,21 @@ export const use5SStore = create<FiveSState>((set, get) => ({
     // ── If already completed, always show as completed ──
     if (isStepCompleted()) return 'completed'
 
-    // ── No view permission = locked ──
-    if (!canViewStep && !canPerformStep && !skipLocks) return 'locked'
-
-    // ── Admin with lock open: skip all business logic ──
+    // ── Admin with lock open: skip all checks ──
     if (skipLocks) return 'available'
 
-    // ── Step 5 (Auditoría): requires steps 1-4 completed ──
-    // This is a business rule, not a role rule — anyone with a1 for step 5 can audit
-    // but only after steps 1-4 are done
-    if (miniStep === 5) {
-      if (canPerformStep) {
-        // Has audit permission — check if steps 1-4 are done
-        if (areSteps1to4Completed()) return 'available'
-        return 'locked'
-      }
-      // Has view permission only — can view but needs 1-4 done
-      if (canViewStep) {
-        if (areSteps1to4Completed()) return 'available'
-        return 'locked'
-      }
-      return 'locked'
-    }
+    // ── No permission at all = locked ──
+    if (!canViewStep && !canPerformStep) return 'locked'
 
-    // ── Has perform permission but is view-only for this step ──
-    // (a1 = false, a0 = true) → can view but not execute (modals handle read-only)
-    // (a1 = true) → can execute
+    // ── Has perform permission (a1) → AVAILABLE — no extra conditions ──
+    // The permission system decides. If you have a1, you can act. Period.
+    if (canPerformStep) return 'available'
 
-    // ── Cross-S dependency: only for users who can PERFORM steps ──
-    // Users who can only VIEW don't need to wait for the previous S
-    if (canPerformStep && sStep > 1) {
-      const prevSEarned = get().isQuesitoEarned(sStep - 1)
-      if (!prevSEarned) {
-        // Previous S not earned yet — if user can only view, show as available (read-only)
-        // If user can perform, lock it (must follow sequence)
-        return 'locked'
-      }
-    }
+    // ── Has view permission only (a0) → AVAILABLE (read-only) ──
+    // Modals handle the read-only rendering internally
+    if (canViewStep) return 'available'
 
-    // ── View-only users (a0=true, a1=false): always available for viewing ──
-    if (canViewStep && !canPerformStep) {
-      return 'available'
-    }
-
-    // ── Perform users (a1=true): apply sequential business logic ──
-    if (canPerformStep) {
-      // Step 1 (Formación): always available
-      if (miniStep === 1) {
-        if (INDIVIDUAL_MINI_STEPS.includes(miniStep) && currentZone && currentUser) {
-          const myProgress = employeeProgress.find(ep =>
-            ep.sStep === sStep &&
-            ep.miniStep === miniStep &&
-            ep.zoneId === currentZone.id &&
-            ep.userId === currentUser.id
-          )
-          if (myProgress?.completed) return 'completed'
-        }
-        return 'available'
-      }
-
-      // Steps 2-4: check zone-level progression
-      if (ZONE_MINI_STEPS.includes(miniStep) && currentZone) {
-        const zoneStep = progress.find(p =>
-          p.sStep === sStep &&
-          p.miniStep === miniStep &&
-          p.zoneId === currentZone.id
-        )
-        if (zoneStep?.completed) return 'completed'
-
-        // Step 2 (Fotos): requires THIS user completed Step 1
-        if (miniStep === 2) {
-          const myStep1 = employeeProgress.find(ep =>
-            ep.sStep === sStep &&
-            ep.miniStep === 1 &&
-            ep.zoneId === currentZone.id &&
-            ep.userId === currentUser.id
-          )
-          if (!myStep1?.completed) return 'locked'
-          return 'available'
-        }
-
-        // Step 3 (Inventario): requires Step 2 completed at zone level
-        if (miniStep === 3) {
-          const step2 = progress.find(p =>
-            p.sStep === sStep &&
-            p.miniStep === 2 &&
-            (p.zoneId === currentZone.id || p.zoneId === null) &&
-            p.completed
-          )
-          if (step2) return 'available'
-          return 'locked'
-        }
-
-        // Step 4 (Autoevaluación): requires Step 3 completed at zone level
-        if (miniStep === 4) {
-          const step3 = progress.find(p =>
-            p.sStep === sStep &&
-            p.miniStep === 3 &&
-            (p.zoneId === currentZone.id || p.zoneId === null) &&
-            p.completed
-          )
-          if (step3) return 'available'
-          return 'locked'
-        }
-
-        return 'available'
-      }
-
-      // Individual step (1 only): Check if current user's EmployeeProgress is completed
-      if (INDIVIDUAL_MINI_STEPS.includes(miniStep) && currentZone && currentUser) {
-        const myProgress = employeeProgress.find(ep =>
-          ep.sStep === sStep &&
-          ep.miniStep === miniStep &&
-          ep.zoneId === currentZone.id &&
-          ep.userId === currentUser.id
-        )
-        if (myProgress?.completed) return 'completed'
-        return 'available'
-      }
-    }
-
-    // Fallback: old project-level behavior (no zone selected)
-    const currentStep = progress.find(p =>
-      p.sStep === sStep &&
-      p.miniStep === miniStep &&
-      (p.zoneId === null || p.zoneId === currentZone?.id)
-    )
-    if (currentStep?.completed) return 'completed'
-
-    if (miniStep === 1) return 'available'
-    if (skipLocks) return 'available'
-
-    const prevStep = progress.find(p =>
-      p.sStep === sStep &&
-      p.miniStep === miniStep - 1 &&
-      (p.zoneId === null || p.zoneId === currentZone?.id)
-    )
-    if (!prevStep?.completed) return 'locked'
-    return 'available'
+    return 'locked'
   },
 
   isZoneMiniStepComplete: (sStep, miniStep, zoneId) => {

@@ -70,3 +70,23 @@ Stage Summary:
 - Users can access the color chart from 3 places: header "Colores" button, Standards Library "Cuadro Colores" button, Layout Editor color picker
 - The color picker in LayoutEditor now shows RAL codes alongside color names
 - Original image is viewable within the ColorCodeTable component
+---
+Task ID: 1
+Agent: Main Agent
+Task: Refactor getMiniStepStatus() to be 100% permission-driven, removing all hardcoded business logic
+
+Work Log:
+- Analyzed getMiniStepStatus() and identified 3 hardcoded logic blocks blocking permission access: cross-S dependency, step 5 "requires 1-4", and step-by-step progression
+- Rewrote getMiniStepStatus() to be purely permission-driven: canPerform → available, canView → available (read-only), neither → locked
+- Updated lock reasons in SStepDetail.tsx (removed "Espera pasos 1-4" and "Solo auditores", replaced with "Sin permiso")
+- Updated lock reasons in page.tsx board mini-step dots
+- Updated /api/audit/route.ts to check s{X}_step5_a1 permission from DB instead of hardcoded role check
+- Simplified AuditoriaModal canAudit to use canPerform() directly (reactive) instead of getState() with role fallback
+- Build succeeded with no errors
+
+Stage Summary:
+- getMiniStepStatus() is now 100% permission-driven with zero hardcoded business rules
+- If a user has a1 permission for any step, it shows as 'available' — no extra conditions
+- If a user has a0 permission only, it shows as 'available' (modals render read-only)
+- API audit endpoint now checks permission from DB, not hardcoded role
+- Auditor with s{X}_step5_a1 permission can now audit directly without needing steps 1-4 completed first

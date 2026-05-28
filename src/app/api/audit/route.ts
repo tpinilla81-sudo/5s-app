@@ -39,15 +39,6 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    // Server-side role check: only admin and auditor can submit audits
-    const sessionUser = await getSessionUser(request)
-    if (!sessionUser) {
-      return NextResponse.json({ success: false, error: 'No autenticado' }, { status: 401 })
-    }
-    if (sessionUser.role !== 'admin' && sessionUser.role !== 'auditor') {
-      return NextResponse.json({ success: false, error: 'Solo los auditores y administradores pueden realizar auditorías externas' }, { status: 403 })
-    }
-
     const body = await request.json()
     const {
       sStep,
@@ -60,6 +51,22 @@ export async function POST(request: NextRequest) {
       mejorasData,
       projectId,
     } = body
+
+    // Server-side permission check: verify user has audit permission
+    const sessionUser = await getSessionUser(request)
+    if (!sessionUser) {
+      return NextResponse.json({ success: false, error: 'No autenticado' }, { status: 401 })
+    }
+    // Permission-driven: check if user's role has s{X}_step5_a1 permission
+    const sStepValue = sStep !== undefined ? sStep : 0
+    if (sessionUser.role !== 'admin') {
+      const permConfig = await db.rolePermissionConfig.findUnique({
+        where: { role_permission: { role: sessionUser.role, permission: `s${sStepValue}_step5_a1` } }
+      })
+      if (!permConfig?.allowed) {
+        return NextResponse.json({ success: false, error: 'No tienes permiso para realizar auditorías en este paso' }, { status: 403 })
+      }
+    }
 
     if (auditorName === undefined || !result) {
       return NextResponse.json({ success: false, error: 'Missing required fields' }, { status: 400 })
@@ -74,7 +81,6 @@ export async function POST(request: NextRequest) {
     if (!projectExists) {
       return NextResponse.json({ success: false, error: `Project with id '${lookupProjectId}' not found` }, { status: 400 })
     }
-    const sStepValue = sStep !== undefined ? sStep : 0
     const auditTypeValue = auditType || 'quarterly'
 
     // Cap score at 100%

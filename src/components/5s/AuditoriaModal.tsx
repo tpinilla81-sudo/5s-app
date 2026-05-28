@@ -59,10 +59,10 @@ function templateToAuditSections(content: any): AuditSection[] {
 }
 
 export default function AuditoriaModal({ open, onClose, sStep, miniStep }: AuditoriaModalProps) {
-  const { fetchProgress, currentUser, adminFreeNavigation, currentProject, currentZone } = use5SStore();
+  const { fetchProgress, currentUser, adminFreeNavigation, currentProject, currentZone, canPerform } = use5SStore();
   const sStepData = S_STEPS.find(s => s.id === sStep);
   const isAdmin = currentUser?.role === 'admin' && adminFreeNavigation;
-  const canAudit = use5SStore.getState().canPerform(sStep, 5) || (currentUser?.role === 'admin' && adminFreeNavigation);
+  const canAudit = canPerform(sStep, 5);
 
   const [sections, setSections] = useState<AuditSection[]>([]);
   const [auditorName, setAuditorName] = useState('');

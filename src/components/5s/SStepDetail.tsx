@@ -538,14 +538,12 @@ export default function SStepDetail({ sStep, onBack, onOpenModal }: SStepDetailP
                   score={miniStepProgress?.score ?? null}
                   color={sStepData.color}
                   lockedReason={
-                    // Permission-based lock reasons
-                    use5SStore.getState().canView(sStep, miniStep.id) && !use5SStore.getState().canPerform(sStep, miniStep.id)
+                    // Permission-driven lock reasons — no hardcoded business logic
+                    effectiveStatus === 'locked' && use5SStore.getState().canView(sStep, miniStep.id) && !use5SStore.getState().canPerform(sStep, miniStep.id)
                       ? 'Solo lectura'
-                      : miniStep.id === 5 && effectiveStatus === 'locked' && use5SStore.getState().canPerform(sStep, 5)
-                        ? 'Espera a que se completen los pasos 1-4'
-                        : miniStep.id === 5 && !use5SStore.getState().canPerform(sStep, 5) && currentUser?.role !== 'admin'
-                          ? 'Solo auditores'
-                          : undefined
+                      : effectiveStatus === 'locked'
+                        ? 'Sin permiso'
+                        : undefined
                   }
                   notes={miniStepProgress?.notes ?? null}
                   onClick={() => {

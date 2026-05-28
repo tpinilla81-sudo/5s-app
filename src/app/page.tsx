@@ -651,13 +651,11 @@ export default function HomePage() {
                                 const canViewThisStep = canViewPerm(s.id, ms.id);
                                 const lockReason = isAdmin && !adminFreeNavigation
                                   ? 'Solo lectura (candado cerrado)'
-                                  : canViewThisStep && !canPerformThisStep
+                                  : isLocked && canViewThisStep && !canPerformThisStep
                                     ? 'Solo lectura'
-                                    : ms.id === 5 && isLocked && !canPerformThisStep
-                                      ? 'Solo auditores'
-                                      : ms.id === 5 && isLocked && canPerformThisStep
-                                        ? 'Espera pasos 1-4'
-                                        : '';
+                                    : isLocked
+                                      ? 'Sin permiso'
+                                      : '';
                                 // Get score for steps 4 and 5
                                 const stepScore = (ms.id === 4 || ms.id === 5)
                                   ? progress.find(p => p.sStep === s.id && p.miniStep === ms.id && (p.zoneId === currentZone?.id || p.zoneId === null))?.score
