@@ -357,7 +357,7 @@ export default function AuditoriaModal({ open, onClose, sStep, miniStep }: Audit
         {!canAudit && !isCompleted && (
           <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-lg">
             <AlertCircle className="h-4 w-4 text-red-600" />
-            <span className="text-sm text-red-700 font-medium">Solo los auditores pueden realizar la auditoría externa. Tu rol: {currentUser?.role || 'sin rol'}</span>
+            <span className="text-sm text-red-700 font-medium">No tienes permiso para realizar auditorías en este paso. Tu rol: {currentUser?.role || 'sin rol'}</span>
           </div>
         )}
 

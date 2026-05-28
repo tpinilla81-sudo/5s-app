@@ -62,13 +62,13 @@ interface InventarioModalProps {
 }
 
 export default function InventarioModal({ open, onClose, sStep, miniStep }: InventarioModalProps) {
-  const { fetchProgress, currentUser, adminFreeNavigation, currentProject, currentZone } = use5SStore();
+  const { fetchProgress, currentUser, adminFreeNavigation, currentProject, currentZone, canPerform, canView } = use5SStore();
   const sStepData = S_STEPS.find(s => s.id === sStep);
   const config: InventoryConfig = INVENTORY_CONFIGS[sStep] || INVENTORY_CONFIGS[1];
   const isAdmin = currentUser?.role === 'admin' && adminFreeNavigation;
-  const canPerformStep = use5SStore.getState().canPerform(sStep, miniStep);
-  const canViewStep = use5SStore.getState().canView(sStep, miniStep);
-  const isReadOnly = canViewStep && !canPerformStep;
+  const canPerformStep = canPerform(sStep, miniStep);
+  const canViewStep = canView(sStep, miniStep);
+  const isReadOnly = (canViewStep && !canPerformStep) || (currentUser?.role === 'admin' && !adminFreeNavigation);
 
   const [items, setItems] = useState<InventoryItemData[]>([]);
   const [isLoading, setIsLoading] = useState(true);

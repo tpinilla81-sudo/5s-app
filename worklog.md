@@ -133,3 +133,29 @@ Stage Summary:
 - Completed steps (1-4) show as green checkmarks for auditor even without explicit zone
 - Step 5 unlocks when steps 1-4 are completed (business rule preserved)
 - Steps 1-4 remain locked (not clickable) for auditor since they only have a0 permission
+
+---
+Task ID: 8-14
+Agent: Main Agent
+Task: Remove all hardcoded role checks that conflict with the permission system
+
+Work Log:
+- Found 27 hardcoded access control checks across 13 files via deep audit
+- Fixed /api/progress/step/route.ts (CRITICAL): Replaced 3 hardcoded role checks with permission-based hasPermission() helper that queries rolePermissionConfig table
+  - Before: responsable always blocked, autoevaluacion only admin+empleado, auditoria only admin+auditor
+  - After: checks s{X}_step{Y}_a1 permission from DB for ANY step
+- Fixed all 6 modal components to use reactive canPerform/canView from store instead of getState()
+  - AutoevaluacionModal: removed isAdmin bypass in canPerformAutoeval
+  - ActionPlanModal: uses reactive canPerform/canView
+  - FotosModal: uses reactive canPerform/canView
+  - FormacionModal: uses reactive canPerform/canView
+  - InventarioModal: uses reactive canPerform/canView
+  - AuditoriaModal: changed error message from "Solo auditores" to "No tienes permiso"
+- All modals now handle isReadOnly consistently: (a0 only) OR (admin with lock closed)
+- Build succeeded with no errors
+
+Stage Summary:
+- Backend /api/progress/step now checks permissions from DB instead of hardcoded roles
+- All frontend modals use reactive canPerform/canView (no more getState())
+- Admin bypass removed from AutoevaluacionModal (canPerformAutoeval = canPerformStep only)
+- Remaining hardcoded checks in other API routes (companies, projects, members) not yet addressed

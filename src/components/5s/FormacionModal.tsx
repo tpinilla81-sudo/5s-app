@@ -34,12 +34,12 @@ interface ExamQuestion {
 }
 
 export default function FormacionModal({ open, onClose, sStep, miniStep }: FormacionModalProps) {
-  const { fetchProgress, currentUser, adminFreeNavigation, currentProject, currentZone } = use5SStore();
+  const { fetchProgress, currentUser, adminFreeNavigation, currentProject, currentZone, canPerform, canView } = use5SStore();
   const sStepData = S_STEPS.find(s => s.id === sStep);
   const isAdmin = currentUser?.role === 'admin' && adminFreeNavigation;
-  const canPerformStep = use5SStore.getState().canPerform(sStep, miniStep);
-  const canViewStep = use5SStore.getState().canView(sStep, miniStep);
-  const isReadOnly = canViewStep && !canPerformStep;
+  const canPerformStep = canPerform(sStep, miniStep);
+  const canViewStep = canView(sStep, miniStep);
+  const isReadOnly = (canViewStep && !canPerformStep) || (currentUser?.role === 'admin' && !adminFreeNavigation);
 
   const [isFullscreen, setIsFullscreen] = useState(true);
   const [formationContent, setFormationContent] = useState<FormationSection[]>([]);

@@ -1,6 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 
+// Helper: check if user has a specific permission via rolePermissionConfig
+async function hasPermission(role: string, permission: string): Promise<boolean> {
+  if (role === 'admin') return true // Admin always has all permissions
+  const config = await db.rolePermissionConfig.findUnique({
+    where: { role_permission: { role, permission } }
+  })
+  return config?.allowed === true
+}
+
 // Helper: perform the actual progress upsert
 async function handleProgressUpdate(
   sStep: number,
@@ -104,48 +113,22 @@ export async function PUT(request: NextRequest) {
     const body = await request.json()
     const { completed, score, notes, photoUrls, projectId, zoneId } = body
 
-    // Step 4 (Autoevaluación): 
-    // - Any employee or admin can perform it (zone-level, one employee suffices)
-    // - Responsable is view-only, cannot perform any steps
-    if (miniStepNum === 4) {
-      // Get current session user
-      const sessionRes = await fetch(new URL('/api/auth', request.url).toString(), {
-        headers: { cookie: request.headers.get('cookie') || '' },
-      })
-      const sessionData = await sessionRes.json()
-      const user = sessionData.user
+    // Permission-based access control — check via rolePermissionConfig
+    const sessionRes = await fetch(new URL('/api/auth', request.url).toString(), {
+      headers: { cookie: request.headers.get('cookie') || '' },
+    })
+    const sessionData = await sessionRes.json()
+    const user = sessionData.user
 
-      if (!user) {
-        return NextResponse.json({ success: false, error: 'No autenticado' }, { status: 401 })
-      }
-
-      // Responsable cannot perform any steps (view-only)
-      if (user.role === 'responsable') {
-        return NextResponse.json({ success: false, error: 'El responsable solo puede ver el progreso, no realizar pasos' }, { status: 403 })
-      }
-
-      // Autoevaluación: any employee or admin can do it
-      if (user.role !== 'admin' && user.role !== 'empleado') {
-        return NextResponse.json({ success: false, error: 'No tienes permisos para realizar la autoevaluación' }, { status: 403 })
-      }
+    if (!user) {
+      return NextResponse.json({ success: false, error: 'No autenticado' }, { status: 401 })
     }
 
-    // Step 5 (Auditoría): Only admin or auditor can perform it
-    // Admin can also edit scores via the "5S y Pasos" tab (score-only updates)
-    if (miniStepNum === 5) {
-      const sessionRes = await fetch(new URL('/api/auth', request.url).toString(), {
-        headers: { cookie: request.headers.get('cookie') || '' },
-      })
-      const sessionData = await sessionRes.json()
-      const user = sessionData.user
-
-      if (!user) {
-        return NextResponse.json({ success: false, error: 'No autenticado' }, { status: 401 })
-      }
-
-      if (user.role !== 'admin' && user.role !== 'auditor') {
-        return NextResponse.json({ success: false, error: 'Solo los auditores pueden realizar la auditoría externa' }, { status: 403 })
-      }
+    // Check s{X}_step{Y}_a1 permission for this specific step
+    const permId = `s${sStepNum}_step${miniStepNum}_a1`
+    const canPerform = await hasPermission(user.role, permId)
+    if (!canPerform) {
+      return NextResponse.json({ success: false, error: `No tienes permiso para realizar el paso ${miniStepNum} de S${sStepNum}` }, { status: 403 })
     }
 
     return await handleProgressUpdate(sStepNum, miniStepNum, { completed, score, notes, photoUrls, projectId, zoneId })
