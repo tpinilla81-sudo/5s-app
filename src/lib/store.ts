@@ -346,9 +346,13 @@ export const use5SStore = create<FiveSState>((set, get) => ({
   // getMiniStepStatus — Permission-Driven with Business Rules
   // Permissions are the source of truth for WHO can do WHAT.
   // Business rules define WHEN things are accessible:
-  //   - a1 (perform) → can enter and act, BUT step 5 needs 1-4 done
-  //   - a0 (view) only → can see the step exists on the board, but CANNOT enter it
+  //   - Progressive unlocking: step N requires step N-1 completed
+  //   - Step 5 (audit): requires steps 1-4 ALL completed
+  //   - a1 (perform) → can enter and act (if previous step done)
+  //   - a0 (view) only → can see the step exists, but CANNOT enter it
   //   - No permission → locked (not even visible)
+  //   - IMPORTANT: Previous step completion is checked at ZONE level,
+  //     so an auditor can access step 5 if employees completed 1-4
   // ═══════════════════════════════════════════════════════
   getMiniStepStatus: (sStep, miniStep) => {
     const { progress, currentUser, adminFreeNavigation, currentZone } = get()
@@ -360,50 +364,44 @@ export const use5SStore = create<FiveSState>((set, get) => ({
     const canSkipSteps = get().hasPermission('skip_steps')
     const skipLocks = canSkipSteps && adminFreeNavigation
 
-    // Check if already completed at zone level (or project level if no zone)
-    const isStepCompleted = (): boolean => {
+    // Check if a specific mini-step is completed at zone level
+    const isStepCompletedAt = (ms: number): boolean => {
       if (currentZone) {
         const zoneStep = progress.find(p =>
           p.sStep === sStep &&
-          p.miniStep === miniStep &&
+          p.miniStep === ms &&
           (p.zoneId === currentZone.id || p.zoneId === null) &&
           p.completed
         )
         return !!zoneStep
       }
-      // No zone selected: check if completed at any zone/project level
       const anyStep = progress.find(p =>
         p.sStep === sStep &&
-        p.miniStep === miniStep &&
+        p.miniStep === ms &&
         p.completed
       )
       return !!anyStep
     }
 
+    // Check if already completed at zone level (or project level if no zone)
+    const isStepCompleted = (): boolean => isStepCompletedAt(miniStep)
+
     // Helper: check if steps 1-4 are all completed for this S-step
     const areSteps1to4Completed = (): boolean => {
-      if (currentZone) {
-        for (let ms = 1; ms <= 4; ms++) {
-          const zoneStep = progress.find(p =>
-            p.sStep === sStep &&
-            p.miniStep === ms &&
-            (p.zoneId === currentZone.id || p.zoneId === null) &&
-            p.completed
-          )
-          if (!zoneStep) return false
-        }
-        return true
-      }
-      // No zone selected: check if completed at any zone/project level
       for (let ms = 1; ms <= 4; ms++) {
-        const anyStep = progress.find(p =>
-          p.sStep === sStep &&
-          p.miniStep === ms &&
-          p.completed
-        )
-        if (!anyStep) return false
+        if (!isStepCompletedAt(ms)) return false
       }
       return true
+    }
+
+    // Helper: check if the previous step is completed (for progressive unlocking)
+    // Step 1 has no prerequisite. Steps 2-4 need the previous step done.
+    // Step 5 needs ALL steps 1-4 done (already handled separately).
+    const isPreviousStepCompleted = (): boolean => {
+      if (miniStep === 1) return true // Step 1 always available (if you have permission)
+      if (miniStep === 5) return areSteps1to4Completed() // Step 5 needs all 1-4
+      // Steps 2, 3, 4: need the immediately previous step completed
+      return isStepCompletedAt(miniStep - 1)
     }
 
     // ── If already completed, check WHO can enter vs just see ──
@@ -424,8 +422,8 @@ export const use5SStore = create<FiveSState>((set, get) => ({
 
     // ── Has perform permission (a1) → can enter and act ──
     if (canPerformStep) {
-      // Step 5 (Auditoría): BUSINESS RULE — can't audit until steps 1-4 are done
-      if (miniStep === 5 && !areSteps1to4Completed()) return 'locked'
+      // PROGRESSIVE UNLOCKING: can't enter until previous step is completed
+      if (!isPreviousStepCompleted()) return 'locked'
       return 'available'
     }
 

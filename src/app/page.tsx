@@ -650,17 +650,23 @@ export default function HomePage() {
                                 // Lock reasons based on permissions
                                 const canPerformThisStep = canPerformPerm(s.id, ms.id);
                                 const canViewThisStep = canViewPerm(s.id, ms.id);
+                                // Check if previous step is completed (for progressive unlocking tooltip)
+                                const isPrevStepDone = ms.id === 1 || progress.some(p =>
+                                  p.sStep === s.id && p.miniStep === ms.id - 1 && (p.zoneId === currentZone?.id || p.zoneId === null) && p.completed
+                                );
                                 const lockReason = canSkipSteps && !adminFreeNavigation
                                   ? 'Solo lectura (candado cerrado)'
                                   : effectiveStatus === 'completed_viewonly'
                                     ? 'Solo lectura (completado)'
                                     : effectiveStatus === 'locked' && canViewThisStep && !canPerformThisStep
                                       ? 'Solo lectura'
-                                      : ms.id === 5 && effectiveStatus === 'locked' && canPerformThisStep
+                                      : ms.id === 5 && effectiveStatus === 'locked' && canPerformThisStep && !isPrevStepDone
                                         ? 'Completa pasos 1-4'
-                                        : effectiveStatus === 'locked'
-                                          ? 'Sin permiso'
-                                          : '';
+                                        : ms.id > 1 && ms.id < 5 && effectiveStatus === 'locked' && canPerformThisStep && !isPrevStepDone
+                                          ? `Completa paso ${ms.id - 1}`
+                                          : effectiveStatus === 'locked'
+                                            ? 'Sin permiso'
+                                            : '';
                                 // Get score for steps 4 and 5
                                 const stepScore = (ms.id === 4 || ms.id === 5)
                                   ? progress.find(p => p.sStep === s.id && p.miniStep === ms.id && (p.zoneId === currentZone?.id || p.zoneId === null))?.score
