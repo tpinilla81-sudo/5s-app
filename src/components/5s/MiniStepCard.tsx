@@ -17,7 +17,7 @@ import { Card, CardContent } from '@/components/ui/card';
 interface MiniStepCardProps {
   miniStep: MiniStep;
   sStep: number;
-  status: 'locked' | 'available' | 'completed';
+  status: 'locked' | 'available' | 'completed' | 'completed_viewonly';
   score: number | null;
   color: string;
   onClick: () => void;
@@ -79,7 +79,8 @@ export default function MiniStepCard({
 }: MiniStepCardProps) {
   const Icon = iconMap[miniStep.icon] || GraduationCap;
   const isLocked = status === 'locked';
-  const isCompleted = status === 'completed';
+  const isCompleted = status === 'completed' || status === 'completed_viewonly';
+  const isViewOnly = status === 'completed_viewonly';
 
   // TASK 5: Visual test completion indicator
   const auditBadge = parseNotesForBadge(notes, miniStep.id);
@@ -93,24 +94,26 @@ export default function MiniStepCard({
 
   return (
     <motion.div
-      whileHover={!isLocked ? { scale: 1.01 } : undefined}
-      whileTap={!isLocked ? { scale: 0.99 } : undefined}
+      whileHover={!isLocked && !isViewOnly ? { scale: 1.01 } : undefined}
+      whileTap={!isLocked && !isViewOnly ? { scale: 0.99 } : undefined}
     >
       <Card
         className={`
           relative overflow-hidden transition-all duration-200
           ${isLocked
             ? 'opacity-50 cursor-not-allowed bg-muted/50'
-            : 'cursor-pointer hover:shadow-lg'
+            : isViewOnly
+              ? 'cursor-not-allowed bg-green-50/30'
+              : 'cursor-pointer hover:shadow-lg'
           }
           ${isCompleted ? 'border-green-300 bg-green-50/50' : ''}
         `}
-        onClick={!isLocked ? onClick : undefined}
+        onClick={!isLocked && !isViewOnly ? onClick : undefined}
       >
         {/* Color accent bar */}
         <div
           className="absolute left-0 top-0 bottom-0 w-1.5"
-          style={{ backgroundColor: isLocked ? '#9ca3af' : color }}
+          style={{ backgroundColor: isLocked ? '#9ca3af' : isViewOnly ? '#6ee7b7' : color }}
         />
 
         <CardContent className="p-4 pl-5 flex items-center gap-4">
@@ -119,7 +122,9 @@ export default function MiniStepCard({
             className={`
               w-12 h-12 rounded-full flex items-center justify-center shrink-0
               ${isCompleted
-                ? 'bg-green-500 text-white'
+                ? isViewOnly
+                  ? 'bg-green-400/70 text-white/80'
+                  : 'bg-green-500 text-white'
                 : isLocked
                   ? 'bg-gray-200 text-gray-400'
                   : 'text-white'
@@ -139,7 +144,7 @@ export default function MiniStepCard({
           {/* Content */}
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2">
-              <Icon className={`h-4 w-4 ${isLocked ? 'text-gray-400' : ''}`} style={!isLocked && !isCompleted ? { color } : undefined} />
+              <Icon className={`h-4 w-4 ${isLocked ? 'text-gray-400' : isViewOnly ? 'text-green-500' : ''}`} style={!isLocked && !isCompleted ? { color } : undefined} />
               <h3 className={`font-semibold text-sm ${isLocked ? 'text-gray-400' : ''}`}>
                 {miniStep.name}
               </h3>
@@ -160,12 +165,12 @@ export default function MiniStepCard({
               {miniStep.descriptionByS?.[sStep] || miniStep.description}
             </p>
             {/* TASK 1: Show locked reason (e.g., "Solo auditores") */}
-            {isLocked && lockedReason && (
+            {(isLocked || isViewOnly) && lockedReason && (
               <p className="text-xs mt-1 font-medium text-amber-600 flex items-center gap-1">
                 <Lock className="h-3 w-3" /> {lockedReason}
               </p>
             )}
-            {isCompleted && score !== null && (
+            {isCompleted && score !== null && !isViewOnly && (
               <p className="text-xs text-green-600 font-medium mt-1">
                 Puntuación: {score}%
               </p>
@@ -176,6 +181,8 @@ export default function MiniStepCard({
           <div className="shrink-0">
             {isLocked ? (
               <Lock className="h-5 w-5 text-gray-300" />
+            ) : isViewOnly ? (
+              <Lock className="h-5 w-5 text-green-300" />
             ) : isCompleted ? (
               <div className="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center">
                 <span className="text-green-600 text-sm">✓</span>

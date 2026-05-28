@@ -28,3 +28,22 @@ Stage Summary:
 - The candado (lock open) feature now uses `skip_steps` permission instead of hardcoded admin check
 - Build passes successfully with zero errors
 - System-level operations (admin panel, user management) correctly remain role-based
+
+---
+Task ID: 2
+Agent: Main Agent
+Task: Fix auditor can access steps 2-4 (only has a0) and can't access step 5 (has a1)
+
+Work Log:
+- Identified root cause: getMiniStepStatus() returned 'completed' for ALL completed steps regardless of permissions, making them clickable even for a0-only users
+- Introduced new status 'completed_viewonly' for steps that are completed but user only has a0 (view) permission
+- Updated getMiniStepStatus() in store.ts: completed steps now check canPerformStep/canSkipSteps before returning 'completed'
+- Updated page.tsx board rendering: added canOpenModal flag (only 'completed' or 'available' allow clicking), 'completed_viewonly' shows ✓ but is not clickable
+- Updated SStepDetail.tsx: same canOpenModal logic for detail view
+- Updated MiniStepCard.tsx: handles 'completed_viewonly' status type, shows green checkmark but cursor-not-allowed and no onClick
+- Verified auditor permissions in DB: s{X}_step5_a1=true (can audit), s{X}_step{1-4}_a0=true (view only), no a1 for steps 1-4
+
+Stage Summary:
+- Auditor with completed steps 1-4: sees ✓ green (completed_viewonly) on steps 1-4, CAN'T open them
+- Auditor with completed steps 1-4: sees step 5 as 'available', CAN open and perform audit
+- Build passes successfully

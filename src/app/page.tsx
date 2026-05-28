@@ -642,22 +642,25 @@ export default function HomePage() {
                             <div className="flex items-center justify-center gap-1 py-1.5 px-1">
                               {MINI_STEPS.map(ms => {
                                 const status = getMiniStepStatus(s.id, ms.id);
-                                const effectiveStatus = status; // Store now handles all role-based locking
-                                const isLocked = effectiveStatus === 'locked';
-                                const isCompleted = effectiveStatus === 'completed';
+                                const effectiveStatus = status;
+                                // 'completed_viewonly': step is done but user only has a0 (view) — show ✓ but can't click
+                                const isCompleted = effectiveStatus === 'completed' || effectiveStatus === 'completed_viewonly';
+                                const canOpenModal = effectiveStatus === 'completed' || effectiveStatus === 'available';
                                 const modalType = getModalType(ms.id, s.id);
                                 // Lock reasons based on permissions
                                 const canPerformThisStep = canPerformPerm(s.id, ms.id);
                                 const canViewThisStep = canViewPerm(s.id, ms.id);
                                 const lockReason = canSkipSteps && !adminFreeNavigation
                                   ? 'Solo lectura (candado cerrado)'
-                                  : isLocked && canViewThisStep && !canPerformThisStep
-                                    ? 'Solo lectura'
-                                    : ms.id === 5 && isLocked && canPerformThisStep
-                                      ? 'Completa pasos 1-4'
-                                      : isLocked
-                                        ? 'Sin permiso'
-                                        : '';
+                                  : effectiveStatus === 'completed_viewonly'
+                                    ? 'Solo lectura (completado)'
+                                    : effectiveStatus === 'locked' && canViewThisStep && !canPerformThisStep
+                                      ? 'Solo lectura'
+                                      : ms.id === 5 && effectiveStatus === 'locked' && canPerformThisStep
+                                        ? 'Completa pasos 1-4'
+                                        : effectiveStatus === 'locked'
+                                          ? 'Sin permiso'
+                                          : '';
                                 // Get score for steps 4 and 5
                                 const stepScore = (ms.id === 4 || ms.id === 5)
                                   ? progress.find(p => p.sStep === s.id && p.miniStep === ms.id && (p.zoneId === currentZone?.id || p.zoneId === null))?.score
@@ -675,26 +678,28 @@ export default function HomePage() {
                                       <button
                                         className={`
                                           w-8 h-8 rounded-full flex items-center justify-center text-[10px] font-bold transition-all
-                                          ${isCompleted
+                                          ${effectiveStatus === 'completed'
                                             ? 'bg-green-500 text-white shadow-sm shadow-green-200 ring-2 ring-green-300'
-                                            : isLocked
-                                              ? 'bg-gray-100 text-gray-300 cursor-not-allowed'
-                                              : 'text-white hover:scale-110 hover:shadow-md cursor-pointer'}
+                                            : effectiveStatus === 'completed_viewonly'
+                                              ? 'bg-green-400/70 text-white/80 shadow-sm shadow-green-100 cursor-not-allowed'
+                                            : effectiveStatus === 'available'
+                                              ? 'text-white hover:scale-110 hover:shadow-md cursor-pointer'
+                                              : 'bg-gray-100 text-gray-300 cursor-not-allowed'}
                                         `}
-                                        style={!isCompleted && !isLocked ? { backgroundColor: s.color } : undefined}
+                                        style={effectiveStatus === 'available' ? { backgroundColor: s.color } : undefined}
                                         onClick={(e) => {
                                           e.stopPropagation();
-                                          if (!isLocked) {
+                                          if (canOpenModal) {
                                             handleOpenModal(modalType, ms.id, s.id);
                                           }
                                         }}
-                                        disabled={isLocked}
+                                        disabled={!canOpenModal}
                                         title={`${ms.name}${lockReason ? ` (${lockReason})` : ''}`}
                                       >
-                                        {isCompleted ? '✓' : isLocked ? <LockIcon className="h-2.5 w-2.5" /> : ms.id}
+                                        {isCompleted ? '✓' : effectiveStatus === 'locked' ? <LockIcon className="h-2.5 w-2.5" /> : ms.id}
                                       </button>
                                       {/* Admin reset button: only shown when admin with lock open and step is completed */}
-                                      {canSkipSteps && adminFreeNavigation && isCompleted && (
+                                      {canSkipSteps && adminFreeNavigation && effectiveStatus === 'completed' && (
                                         <button
                                           className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-red-500 text-white flex items-center justify-center text-[8px] font-bold hover:bg-red-600 transition-colors z-10"
                                           onClick={async (e) => {

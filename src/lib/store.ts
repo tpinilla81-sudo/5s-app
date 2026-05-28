@@ -406,8 +406,15 @@ export const use5SStore = create<FiveSState>((set, get) => ({
       return true
     }
 
-    // ── If already completed, always show as completed ──
-    if (isStepCompleted()) return 'completed'
+    // ── If already completed, check WHO can enter vs just see ──
+    if (isStepCompleted()) {
+      // User with a1 (execute) perm OR skip_steps can open the completed step to review
+      if (canPerformStep || canSkipSteps) return 'completed'
+      // User with only a0 (view) perm: sees ✓ green but CANNOT open the modal
+      if (canViewStep) return 'completed_viewonly'
+      // No permission at all (shouldn't normally happen for completed steps)
+      return 'locked'
+    }
 
     // ── Admin with lock open: skip all checks ──
     if (skipLocks) return 'available'
@@ -423,7 +430,6 @@ export const use5SStore = create<FiveSState>((set, get) => ({
     }
 
     // ── Has view permission only (a0) → can see on board but CANNOT enter ──
-    // The step is visible (not hidden) but clicking it does nothing
     if (canViewStep) return 'locked'
 
     return 'locked'

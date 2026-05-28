@@ -539,17 +539,21 @@ export default function SStepDetail({ sStep, onBack, onOpenModal }: SStepDetailP
                   color={sStepData.color}
                   lockedReason={
                     // Permission-driven lock reasons
-                    effectiveStatus === 'locked' && use5SStore.getState().canView(sStep, miniStep.id) && !use5SStore.getState().canPerform(sStep, miniStep.id)
-                      ? 'Solo lectura'
-                      : miniStep.id === 5 && effectiveStatus === 'locked' && use5SStore.getState().canPerform(sStep, 5)
-                        ? 'Completa pasos 1-4 primero'
-                        : effectiveStatus === 'locked'
-                          ? 'Sin permiso'
-                          : undefined
+                    effectiveStatus === 'completed_viewonly'
+                      ? 'Solo lectura (completado)'
+                      : effectiveStatus === 'locked' && use5SStore.getState().canView(sStep, miniStep.id) && !use5SStore.getState().canPerform(sStep, miniStep.id)
+                        ? 'Solo lectura'
+                        : miniStep.id === 5 && effectiveStatus === 'locked' && use5SStore.getState().canPerform(sStep, 5)
+                          ? 'Completa pasos 1-4 primero'
+                          : effectiveStatus === 'locked'
+                            ? 'Sin permiso'
+                            : undefined
                   }
                   notes={miniStepProgress?.notes ?? null}
                   onClick={() => {
-                    if (effectiveStatus !== 'locked') {
+                    // Only allow opening modal if status is 'completed' (has a1) or 'available'
+                    // 'completed_viewonly' and 'locked' cannot open modals
+                    if (effectiveStatus === 'completed' || effectiveStatus === 'available') {
                       onOpenModal(getModalType(miniStep.id, sStep), miniStep.id);
                     }
                   }}
