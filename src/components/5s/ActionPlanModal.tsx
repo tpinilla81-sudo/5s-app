@@ -97,9 +97,9 @@ export default function ActionPlanModal({ open, onClose, sStep, miniStep }: Acti
   const { fetchProgress, currentUser, adminFreeNavigation, currentProject, currentZone } = use5SStore();
   const sStepData = S_STEPS.find(s => s.id === sStep);
   const isAdmin = currentUser?.role === 'admin' && adminFreeNavigation;
-  const isResponsable = currentUser?.role === 'responsable';
-  const isAuditor = currentUser?.role === 'auditor';
-  const isReadOnly = isResponsable || isAuditor || (currentUser?.role === 'admin' && !adminFreeNavigation); // View-only when responsable, auditor, or admin with lock closed
+  const canPerformStep = use5SStore.getState().canPerform(sStep, miniStep);
+  const canViewStep = use5SStore.getState().canView(sStep, miniStep);
+  const isReadOnly = (canViewStep && !canPerformStep) || (currentUser?.role === 'admin' && !adminFreeNavigation);
 
   const [actions, setActions] = useState<ActionItemData[]>([]);
   const [isCompleted, setIsCompleted] = useState(false);
@@ -368,7 +368,7 @@ export default function ActionPlanModal({ open, onClose, sStep, miniStep }: Acti
 
         {isReadOnly && (
           <div className="flex items-center gap-2 p-2 mx-6 flex-shrink-0 bg-blue-50 border border-blue-200 rounded-lg">
-            <span className="text-xs text-blue-700 font-medium">Solo lectura: {currentUser?.role === 'admin' ? 'Activa el candado para poder realizar pasos.' : currentUser?.role === 'auditor' ? 'El auditor puede ver el plan de acción pero no modificarlo.' : 'El responsable puede ver el progreso pero no realizar pasos.'}</span>
+            <span className="text-xs text-blue-700 font-medium">Solo lectura: {currentUser?.role === 'admin' ? 'Activa el candado para poder realizar pasos.' : 'Puedes ver pero no modificar.'}</span>
           </div>
         )}
 

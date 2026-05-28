@@ -48,12 +48,10 @@ export default function AutoevaluacionModal({ open, onClose, sStep, miniStep }: 
   const { fetchProgress, currentUser, adminFreeNavigation, currentProject, currentZone } = use5SStore();
   const sStepData = S_STEPS.find(s => s.id === sStep);
   const isAdmin = currentUser?.role === 'admin' && adminFreeNavigation;
-  const isResponsable = currentUser?.role === 'responsable';
-  const isAuditor = currentUser?.role === 'auditor';
-  const isEmpleado = currentUser?.role === 'empleado';
-  const isAdminLocked = currentUser?.role === 'admin' && !adminFreeNavigation;
-  const isReadOnly = isResponsable || isAuditor || isAdminLocked;
-  const canPerformAutoeval = isAdmin || (isEmpleado && sStep !== 4);
+  const canPerformStep = use5SStore.getState().canPerform(sStep, miniStep);
+  const canViewStep = use5SStore.getState().canView(sStep, miniStep);
+  const isReadOnly = canViewStep && !canPerformStep;
+  const canPerformAutoeval = canPerformStep || isAdmin;
 
   const [isFullscreen, setIsFullscreen] = useState(true);
   const [sections, setSections] = useState<AuditSection[]>([]);
@@ -303,9 +301,9 @@ export default function AutoevaluacionModal({ open, onClose, sStep, miniStep }: 
           </div>
         )}
 
-        {!canPerformAutoeval && !isCompleted && (
+        {isReadOnly && !isCompleted && (
           <div className="flex items-center gap-2 p-2 mx-6 flex-shrink-0 bg-blue-50 border border-blue-200 rounded-lg">
-            <span className="text-xs text-blue-700 font-medium">Solo lectura: {currentUser?.role === 'admin' ? 'Activa el candado para poder realizar pasos.' : currentUser?.role === 'auditor' ? 'El auditor puede ver la autoevaluación pero no realizarla.' : 'El responsable puede ver el progreso pero no realizar pasos.'}</span>
+            <span className="text-xs text-blue-700 font-medium">Solo lectura: {currentUser?.role === 'admin' ? 'Activa el candado para poder realizar pasos.' : 'Puedes ver pero no modificar.'}</span>
           </div>
         )}
 

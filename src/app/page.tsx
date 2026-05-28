@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { use5SStore } from '@/lib/store';
 import { S_STEPS, MINI_STEPS } from '@/lib/5s-constants';
@@ -115,9 +115,9 @@ export default function HomePage() {
     checkSession();
   }, []);
 
-  // Fetch notifications for auditor
+  // Fetch notifications for users who can audit
   useEffect(() => {
-    if (currentUser?.role === 'auditor' && currentProject?.id) {
+    if (canAuditAny && currentProject?.id) {
       const fetchNotifs = async () => {
         try {
           const res = await fetch(`/api/notifications?userId=${currentUser.id}&projectId=${currentProject.id}&unread=true`);
@@ -131,7 +131,7 @@ export default function HomePage() {
       const interval = setInterval(fetchNotifs, 30000); // Poll every 30s
       return () => clearInterval(interval);
     }
-  }, [currentUser?.id, currentUser?.role, currentProject?.id]);
+  }, [currentUser?.id, currentProject?.id]);
 
   useEffect(() => {
     if (authView === 'board' && !isInitialized) {
@@ -210,10 +210,23 @@ export default function HomePage() {
     return map[role] || 'bg-gray-100 text-gray-700 border-gray-200';
   };
 
-  const canManageTeam = currentUser && (currentUser.role === 'admin' || currentUser.role === 'responsable');
+  // Permission helpers — derived from store permissions map
+  const permissions = use5SStore(s => s.permissions);
+  const hasPermission = useMemo(() => {
+    const hp = (perm: string): boolean => {
+      if (!currentUser) return false;
+      if (currentUser.role === 'admin') return true;
+      return permissions[currentUser.role]?.[perm] === true;
+    };
+    return hp;
+  }, [currentUser, permissions]);
+  const canPerformPerm = useMemo(() => (sStep: number, miniStep: number): boolean => hasPermission(`s${sStep}_step${miniStep}_a1`), [hasPermission]);
+  const canViewPerm = useMemo(() => (sStep: number, miniStep: number): boolean => hasPermission(`s${sStep}_step${miniStep}_a0`), [hasPermission]);
+  const canAuditAny = useMemo(() => currentUser ? [1,2,3,4,5].some(s => canPerformPerm(s, 5)) : false, [currentUser, canPerformPerm]);
+
+  const canManageTeam = currentUser && hasPermission('add_members');
   const isAdmin = currentUser?.role === 'admin';
-  const isGerente = currentUser?.role === 'gerente';
-  const canSeeGerentePanel = isAdmin || isGerente;
+  const canSeeGerentePanel = hasPermission('view_progress') || hasPermission('edit_project');
 
   const isGlobalModal = activeModal === 'globalActionPlan' || activeModal === 'globalInventory';
   const ActiveModalComponent = !isGlobalModal && activeModal ? MODAL_MAP[activeModal] : null;
@@ -286,7 +299,7 @@ export default function HomePage() {
             {(() => {
               const availableZones = getAvailableZones();
               const isSingleZone = availableZones.length === 1;
-              const isZoneRestricted = currentUser && currentUser.role !== 'admin' && currentUser.role !== 'responsable';
+              const isZoneRestricted = currentUser && !hasPermission('manage_zones');
               if (!currentProject || availableZones.length === 0) return null;
               return (
                 <div className="flex items-center gap-1 ml-2">
@@ -349,7 +362,7 @@ export default function HomePage() {
               </Button>
             )}
             {/* Notification bell for auditors */}
-            {currentUser?.role === 'auditor' && (
+            {canAuditAny && (
               <Button variant="ghost" size="sm" className="relative text-orange-600 hover:text-orange-700 h-7 px-1.5"
                 onClick={async () => {
                   if (currentUser?.id && currentProject?.id) {
@@ -443,7 +456,7 @@ export default function HomePage() {
       </header>
 
       {/* Notification dropdown for auditors */}
-      {showNotifs && currentUser?.role === 'auditor' && (
+      {showNotifs && canAuditAny && (
         <div className="fixed top-12 right-16 z-50 w-80 bg-white border rounded-lg shadow-xl max-h-96 overflow-y-auto">
           <div className="p-3 border-b flex items-center justify-between">
             <span className="text-sm font-semibold">Notificaciones</span>
@@ -513,7 +526,7 @@ export default function HomePage() {
                       </div>
                     )}
                     {/* Auditor notification: show which S-steps are ready for audit */}
-                    {currentZone && currentUser?.role === 'auditor' && (() => {
+                    {currentZone && canAuditAny && (() => {
                       const readyForAudit: number[] = [];
                       for (let s = 1; s <= 5; s++) {
                         // Check if steps 1-4 are completed for this S-step in this zone
@@ -633,18 +646,18 @@ export default function HomePage() {
                                 const isLocked = effectiveStatus === 'locked';
                                 const isCompleted = effectiveStatus === 'completed';
                                 const modalType = getModalType(ms.id, s.id);
-                                // Lock reasons based on role, step, and cross-S dependency
-                                const lockReason = currentUser?.role === 'admin' && !adminFreeNavigation
+                                // Lock reasons based on permissions
+                                const canPerformThisStep = canPerformPerm(s.id, ms.id);
+                                const canViewThisStep = canViewPerm(s.id, ms.id);
+                                const lockReason = isAdmin && !adminFreeNavigation
                                   ? 'Solo lectura (candado cerrado)'
-                                  : currentUser?.role === 'responsable'
+                                  : canViewThisStep && !canPerformThisStep
                                     ? 'Solo lectura'
-                                    : currentUser?.role === 'auditor' && ms.id !== 5
-                                      ? 'Solo lectura'
-                                      : currentUser?.role === 'auditor' && ms.id === 5 && effectiveStatus === 'locked'
+                                    : ms.id === 5 && isLocked && !canPerformThisStep
+                                      ? 'Solo auditores'
+                                      : ms.id === 5 && isLocked && canPerformThisStep
                                         ? 'Espera pasos 1-4'
-                                        : ms.id === 5 && currentUser?.role !== 'admin' && currentUser?.role !== 'auditor'
-                                          ? 'Solo auditores'
-                                          : '';
+                                        : '';
                                 // Get score for steps 4 and 5
                                 const stepScore = (ms.id === 4 || ms.id === 5)
                                   ? progress.find(p => p.sStep === s.id && p.miniStep === ms.id && (p.zoneId === currentZone?.id || p.zoneId === null))?.score

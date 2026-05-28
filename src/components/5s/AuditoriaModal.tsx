@@ -62,8 +62,7 @@ export default function AuditoriaModal({ open, onClose, sStep, miniStep }: Audit
   const { fetchProgress, currentUser, adminFreeNavigation, currentProject, currentZone } = use5SStore();
   const sStepData = S_STEPS.find(s => s.id === sStep);
   const isAdmin = currentUser?.role === 'admin' && adminFreeNavigation;
-  const isAuditor = currentUser?.role === 'auditor';
-  const canAudit = isAdmin || isAuditor;
+  const canAudit = use5SStore.getState().canPerform(sStep, 5) || (currentUser?.role === 'admin' && adminFreeNavigation);
 
   const [sections, setSections] = useState<AuditSection[]>([]);
   const [auditorName, setAuditorName] = useState('');

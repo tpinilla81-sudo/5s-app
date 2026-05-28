@@ -538,17 +538,14 @@ export default function SStepDetail({ sStep, onBack, onOpenModal }: SStepDetailP
                   score={miniStepProgress?.score ?? null}
                   color={sStepData.color}
                   lockedReason={
-                    // Responsable: view-only for all steps
-                    currentUser?.role === 'responsable'
+                    // Permission-based lock reasons
+                    use5SStore.getState().canView(sStep, miniStep.id) && !use5SStore.getState().canPerform(sStep, miniStep.id)
                       ? 'Solo lectura'
-                      : // Auditor: steps 1-4 are view-only (can see but not execute)
-                      currentUser?.role === 'auditor' && miniStep.id !== 5
-                        ? 'Solo lectura'
-                        : currentUser?.role === 'auditor' && miniStep.id === 5 && effectiveStatus === 'locked'
-                          ? 'Espera a que se completen los pasos 1-4'
-                          : miniStep.id === 5 && currentUser?.role !== 'admin' && currentUser?.role !== 'auditor'
-                            ? 'Solo auditores'
-                            : undefined
+                      : miniStep.id === 5 && effectiveStatus === 'locked' && use5SStore.getState().canPerform(sStep, 5)
+                        ? 'Espera a que se completen los pasos 1-4'
+                        : miniStep.id === 5 && !use5SStore.getState().canPerform(sStep, 5) && currentUser?.role !== 'admin'
+                          ? 'Solo auditores'
+                          : undefined
                   }
                   notes={miniStepProgress?.notes ?? null}
                   onClick={() => {
