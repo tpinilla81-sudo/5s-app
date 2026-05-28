@@ -115,7 +115,7 @@ export default function HomePage() {
     checkSession();
   }, []);
 
-  // Fetch notifications for auditors and responsables
+  // Fetch notifications for all board users
   useEffect(() => {
     if (canSeeNotifications && currentProject?.id) {
       const fetchNotifs = async () => {
@@ -228,7 +228,7 @@ export default function HomePage() {
   const canViewPerm = useMemo(() => (sStep: number, miniStep: number): boolean => hasPermission(`s${sStep}_step${miniStep}_a0`), [hasPermission]);
   const canAuditAny = useMemo(() => currentUser ? [1,2,3,4,5].some(s => canPerformPerm(s, 5)) : false, [currentUser, canPerformPerm]);
   const isResponsable = currentUser?.role === 'responsable';
-  const canSeeNotifications = canAuditAny || isResponsable;
+  const canSeeNotifications = hasPermission('view_board'); // All board users can see notifications
 
   const canManageTeam = currentUser && hasPermission('add_members');
   const canSkipSteps = hasPermission('skip_steps');
@@ -369,9 +369,9 @@ export default function HomePage() {
                 {adminFreeNavigation ? <Unlock className="h-3 w-3" /> : <Lock className="h-3 w-3" />}
               </Button>
             )}
-            {/* Notification bell for auditors */}
+            {/* Notification bell — visible to all board users */}
             {canSeeNotifications && (
-              <Button variant="ghost" size="sm" className="relative text-orange-600 hover:text-orange-700 h-7 px-1.5"
+              <Button variant="ghost" size="sm" className={`relative h-7 px-1.5 ${unreadNotifs > 0 ? 'text-orange-600 hover:text-orange-700' : 'text-gray-500 hover:text-gray-700'}`}
                 onClick={async () => {
                   if (currentUser?.id && currentProject?.id) {
                     try {
@@ -382,9 +382,9 @@ export default function HomePage() {
                   }
                   setShowNotifs(!showNotifs);
                 }}>
-                <Bell className="h-3.5 w-3.5" />
+                {unreadNotifs > 0 ? <BellRing className="h-4 w-4" /> : <Bell className="h-3.5 w-3.5" />}
                 {unreadNotifs > 0 && (
-                  <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-red-500 text-white text-[8px] font-bold rounded-full flex items-center justify-center">{unreadNotifs > 9 ? '9+' : unreadNotifs}</span>
+                  <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-red-500 text-white text-[8px] font-bold rounded-full flex items-center justify-center animate-pulse">{unreadNotifs > 9 ? '9+' : unreadNotifs}</span>
                 )}
               </Button>
             )}
@@ -537,8 +537,8 @@ export default function HomePage() {
                         <Board5S onSStepClick={handleSStepClick} />
                       </div>
                     )}
-                    {/* Auditor notification: show which S-steps are ready for audit */}
-                    {currentZone && canAuditAny && (() => {
+                    {/* Notification: show which S-steps are ready for audit — visible to ALL users */}
+                    {currentZone && (() => {
                       const readyForAudit: number[] = [];
                       for (let s = 1; s <= 5; s++) {
                         // Check if steps 1-4 are completed for this S-step in this zone
@@ -700,8 +700,8 @@ export default function HomePage() {
                                         {stepScore}%
                                       </span>
                                     )}
-                                    {/* "Request audit" button above step 5 when steps 1-4 are completed but 5 isn't */}
-                                    {ms.id === 5 && effectiveStatus === 'available' && (() => {
+                                    {/* "Request audit" button above step 5 when steps 1-4 are completed but 5 isn't — visible to ALL users */}
+                                    {ms.id === 5 && (() => {
                                       const steps1to4Done = [1,2,3,4].every(msCheck =>
                                         progress.some(p => p.sStep === s.id && p.miniStep === msCheck && (p.zoneId === currentZone?.id || p.zoneId === null) && p.completed)
                                       );
@@ -709,7 +709,7 @@ export default function HomePage() {
                                       return steps1to4Done && !step5Done;
                                     })() && (
                                       <button
-                                        className="text-[7px] font-bold text-orange-600 hover:text-orange-700 hover:bg-orange-50 px-1 py-0.5 rounded border border-orange-200 mb-0.5 transition-colors leading-tight whitespace-nowrap"
+                                        className="text-[8px] font-bold text-orange-600 hover:text-orange-700 hover:bg-orange-50 px-1.5 py-0.5 rounded border border-orange-300 mb-0.5 transition-colors leading-tight whitespace-nowrap animate-pulse bg-orange-50 shadow-sm"
                                         onClick={async (e) => {
                                           e.stopPropagation();
                                           const proposedDate = new Date();
@@ -749,6 +749,22 @@ export default function HomePage() {
                                                   type: 'audit_requested',
                                                   title: `Solicitud auditoría: S${s.id} — ${sStepData?.japaneseName || ''}`,
                                                   message: msg,
+                                                  sStep: s.id,
+                                                  zoneId: currentZone?.id,
+                                                  projectId: currentProject?.id,
+                                                }),
+                                              });
+                                            }
+                                            // Also notify the requesting user as confirmation
+                                            if (currentUser?.id) {
+                                              await fetch('/api/notifications', {
+                                                method: 'POST',
+                                                headers: { 'Content-Type': 'application/json' },
+                                                body: JSON.stringify({
+                                                  userId: currentUser.id,
+                                                  type: 'audit_ready',
+                                                  title: `Solicitud enviada: S${s.id} — ${sStepData?.japaneseName || ''}`,
+                                                  message: `Tu solicitud de auditoría para S${s.id} ha sido enviada al auditor y responsable. Fecha propuesta: ${formattedDate}.`,
                                                   sStep: s.id,
                                                   zoneId: currentZone?.id,
                                                   projectId: currentProject?.id,
