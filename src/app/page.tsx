@@ -115,24 +115,6 @@ export default function HomePage() {
     checkSession();
   }, []);
 
-  // Fetch notifications for all board users
-  useEffect(() => {
-    if (canSeeNotifications && currentProject?.id) {
-      const fetchNotifs = async () => {
-        try {
-          const res = await fetch(`/api/notifications?userId=${currentUser.id}&projectId=${currentProject.id}&unread=true`);
-          const data = await res.json();
-          if (data.success) {
-            setUnreadNotifs(data.data?.length || 0);
-          }
-        } catch (e) { console.error('Error fetching notifications:', e); }
-      };
-      fetchNotifs();
-      const interval = setInterval(fetchNotifs, 30000); // Poll every 30s
-      return () => clearInterval(interval);
-    }
-  }, [currentUser?.id, currentProject?.id]);
-
   useEffect(() => {
     if (authView === 'board' && !isInitialized) {
       const init = async (retries = 3) => {
@@ -229,6 +211,26 @@ export default function HomePage() {
   const canAuditAny = useMemo(() => currentUser ? [1,2,3,4,5].some(s => canPerformPerm(s, 5)) : false, [currentUser, canPerformPerm]);
   const isResponsable = currentUser?.role === 'responsable';
   const canSeeNotifications = hasPermission('view_board'); // All board users can see notifications
+
+  // Fetch notifications — must be after canSeeNotifications is defined
+  useEffect(() => {
+    if (canSeeNotifications && currentUser?.id && currentProject?.id) {
+      const fetchNotifs = async () => {
+        try {
+          const res = await fetch(`/api/notifications?userId=${currentUser.id}&projectId=${currentProject.id}&unread=true`);
+          const data = await res.json();
+          if (data.success) {
+            setUnreadNotifs(data.data?.length || 0);
+          }
+        } catch (e) { console.error('Error fetching notifications:', e); }
+      };
+      fetchNotifs();
+      const interval = setInterval(fetchNotifs, 30000); // Poll every 30s
+      return () => clearInterval(interval);
+    } else {
+      setUnreadNotifs(0);
+    }
+  }, [canSeeNotifications, currentUser?.id, currentProject?.id]);
 
   const canManageTeam = currentUser && hasPermission('add_members');
   const canSkipSteps = hasPermission('skip_steps');
@@ -543,13 +545,25 @@ export default function HomePage() {
                     {currentZone && (() => {
                       const readyForAudit: number[] = [];
                       for (let s = 1; s <= 5; s++) {
-                        // Use getMiniStepStatus for consistent checking (includes individual employee progress)
+                        // Check using BOTH zone-level AND employee-level progress
                         const steps1to4Done = [1,2,3,4].every(ms => {
-                          const st = getMiniStepStatus(s, ms);
-                          return st === 'completed' || st === 'completed_viewonly';
+                          const zoneCompleted = progress.some(p =>
+                            p.sStep === s && p.miniStep === ms &&
+                            (p.zoneId === currentZone.id || p.zoneId === null) &&
+                            p.completed
+                          );
+                          const empCompleted = employeeProgress.some(ep =>
+                            ep.sStep === s && ep.miniStep === ms &&
+                            ep.zoneId === currentZone.id &&
+                            ep.completed
+                          );
+                          return zoneCompleted || empCompleted;
                         });
-                        const step5St = getMiniStepStatus(s, 5);
-                        const step5Done = step5St === 'completed' || step5St === 'completed_viewonly';
+                        const step5Done = progress.some(p =>
+                          p.sStep === s && p.miniStep === 5 &&
+                          (p.zoneId === currentZone.id || p.zoneId === null) &&
+                          p.completed
+                        );
                         if (steps1to4Done && !step5Done) readyForAudit.push(s);
                       }
                       if (readyForAudit.length === 0) return null;
@@ -689,14 +703,26 @@ export default function HomePage() {
                                     )}
                                     {/* "Request audit" button above step 5 when steps 1-4 are completed but 5 isn't — visible to ALL users */}
                                     {ms.id === 5 && (() => {
+                                      // Check completion using BOTH zone-level progress AND individual employee progress
+                                      // This ensures auditors/responsables see the button even if they don't have personal completion
                                       const steps1to4Done = [1,2,3,4].every(msCheck => {
-                                        const st = getMiniStepStatus(s.id, msCheck);
-                                        return st === 'completed' || st === 'completed_viewonly';
+                                        const zoneCompleted = progress.some(p =>
+                                          p.sStep === s.id && p.miniStep === msCheck &&
+                                          (currentZone ? (p.zoneId === currentZone.id || p.zoneId === null) : true) &&
+                                          p.completed
+                                        );
+                                        const empCompleted = employeeProgress.some(ep =>
+                                          ep.sStep === s.id && ep.miniStep === msCheck &&
+                                          currentZone && ep.zoneId === currentZone.id &&
+                                          ep.completed
+                                        );
+                                        return zoneCompleted || empCompleted;
                                       });
-                                      const step5Done = (() => {
-                                        const st = getMiniStepStatus(s.id, 5);
-                                        return st === 'completed' || st === 'completed_viewonly';
-                                      })();
+                                      const step5Done = progress.some(p =>
+                                        p.sStep === s.id && p.miniStep === 5 &&
+                                        (currentZone ? (p.zoneId === currentZone.id || p.zoneId === null) : true) &&
+                                        p.completed
+                                      );
                                       return steps1to4Done && !step5Done;
                                     })() && (
                                       <button
@@ -715,6 +741,7 @@ export default function HomePage() {
                                             const membersRes = await fetch(`/api/projects/${currentProject?.id}/members`);
                                             const membersData = await membersRes.json();
                                             const allMembers = membersData?.members || [];
+                                            // Notify all auditors
                                             const auditors = allMembers.filter((m: any) => m.role === 'auditor');
                                             for (const auditor of auditors) {
                                               await fetch('/api/notifications', {
@@ -731,12 +758,17 @@ export default function HomePage() {
                                                 }),
                                               });
                                             }
-                                            if (currentZone?.responsableId) {
+                                            // Notify all responsables (from zone.responsableId OR from project members)
+                                            const responsableIds = new Set<string>();
+                                            if (currentZone?.responsableId) responsableIds.add(currentZone.responsableId);
+                                            const responsables = allMembers.filter((m: any) => m.role === 'responsable');
+                                            for (const resp of responsables) responsableIds.add(resp.userId);
+                                            for (const respId of responsableIds) {
                                               await fetch('/api/notifications', {
                                                 method: 'POST',
                                                 headers: { 'Content-Type': 'application/json' },
                                                 body: JSON.stringify({
-                                                  userId: currentZone.responsableId,
+                                                  userId: respId,
                                                   type: 'audit_requested',
                                                   title: `Solicitud auditoría: S${s.id} — ${sStepData?.japaneseName || ''}`,
                                                   message: msg,

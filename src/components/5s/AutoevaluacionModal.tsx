@@ -243,13 +243,17 @@ export default function AutoevaluacionModal({ open, onClose, sStep, miniStep }: 
                 });
               }
 
-              // Notify responsable of the zone
-              if (currentZone.responsableId) {
+              // Notify responsable of the zone (from zone.responsableId OR from project members)
+              const responsableIds = new Set<string>();
+              if (currentZone.responsableId) responsableIds.add(currentZone.responsableId);
+              const responsables = allMembers.filter((m: any) => m.role === 'responsable');
+              for (const resp of responsables) responsableIds.add(resp.userId);
+              for (const respId of responsableIds) {
                 await fetch('/api/notifications', {
                   method: 'POST',
                   headers: { 'Content-Type': 'application/json' },
                   body: JSON.stringify({
-                    userId: currentZone.responsableId,
+                    userId: respId,
                     type: 'audit_ready',
                     title: `Auditoría lista: S${sStep} — ${sStepData?.japaneseName || ''}`,
                     message: notifMessage,
