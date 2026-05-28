@@ -26,6 +26,7 @@ import {
 } from 'lucide-react'
 
 import LayoutEditor from '@/components/5s/LayoutEditor'
+import ColorCodeTable from '@/components/5s/ColorCodeTable'
 
 interface StandardItem {
   id: string
@@ -71,6 +72,7 @@ export default function StandardsLibrary({ open, onClose }: StandardsLibraryProp
   const [isCreating, setIsCreating] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [showLayoutEditor, setShowLayoutEditor] = useState(false)
+  const [showColorCodeTable, setShowColorCodeTable] = useState(false)
 
   // Form state
   const [formSStep, setFormSStep] = useState(1)
@@ -223,6 +225,10 @@ export default function StandardsLibrary({ open, onClose }: StandardsLibraryProp
             <div className="flex-1" />
             {!isCreating && (
               <>
+                <Button size="sm" onClick={() => setShowColorCodeTable(true)}
+                  className="gap-1 bg-yellow-500 hover:bg-yellow-600 text-white text-xs h-8">
+                  <Paintbrush className="h-3 w-3" /> Cuadro Colores
+                </Button>
                 <Button size="sm" onClick={() => setShowLayoutEditor(true)}
                   className="gap-1 bg-blue-600 hover:bg-blue-700 text-white text-xs h-8">
                   <PenTool className="h-3 w-3" /> Dibujar Layout
@@ -381,6 +387,12 @@ export default function StandardsLibrary({ open, onClose }: StandardsLibraryProp
         open={showLayoutEditor}
         onClose={() => setShowLayoutEditor(false)}
         onSave={() => { setShowLayoutEditor(false); loadStandards() }}
+      />
+
+      {/* Color Code Table */}
+      <ColorCodeTable
+        open={showColorCodeTable}
+        onClose={() => setShowColorCodeTable(false)}
       />
     </Dialog>
   )

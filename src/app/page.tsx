@@ -13,6 +13,7 @@ import GlobalInventoryModal from '@/components/5s/GlobalInventoryModal';
 import AuditResultsModal from '@/components/5s/AuditResultsModal';
 import StandardsLibrary from '@/components/5s/StandardsLibrary';
 import PhotoLibrary from '@/components/5s/PhotoLibrary';
+import ColorCodeTable from '@/components/5s/ColorCodeTable';
 import AutoevaluacionModal from '@/components/5s/AutoevaluacionModal';
 import AuditoriaModal from '@/components/5s/AuditoriaModal';
 import LoginPage from '@/components/auth/LoginPage';
@@ -35,7 +36,7 @@ import {
   Loader2, RefreshCw, LogOut, Settings, ChevronDown, Shield, ShieldCheck, Unlock, Lock,
   LayoutDashboard, Wrench, Sparkles, BarChart3, FileText, MapPin, ListChecks,
   ClipboardList, GraduationCap, Camera, CheckSquare, Trophy, ChevronRight,
-  Lock as LockIcon, AlertTriangle, Building2, Zap, Bell, BellRing, BookOpen, Image as ImageIcon
+  Lock as LockIcon, AlertTriangle, Building2, Zap, Bell, BellRing, BookOpen, Image as ImageIcon, Paintbrush
 } from 'lucide-react';
 
 const MODAL_MAP: Record<string, React.ComponentType<{
@@ -107,6 +108,7 @@ export default function HomePage() {
   const [isInitialized, setIsInitialized] = useState(false);
   const [showTeamManagement, setShowTeamManagement] = useState(false);
   const [showRolePermissions, setShowRolePermissions] = useState(false);
+  const [showColorCodeTable, setShowColorCodeTable] = useState(false);
   const [unreadNotifs, setUnreadNotifs] = useState(0);
   const [showNotifs, setShowNotifs] = useState(false);
   const [notifs, setNotifs] = useState<any[]>([]);
@@ -337,6 +339,10 @@ export default function HomePage() {
                 <Button variant="outline" size="sm" onClick={() => openModal('photoLibrary', 0)}
                   className="gap-1 text-[10px] h-7 border-indigo-300 text-indigo-600 hover:bg-indigo-50">
                   <ImageIcon className="h-3 w-3" /> Fotos
+                </Button>
+                <Button variant="outline" size="sm" onClick={() => setShowColorCodeTable(true)}
+                  className="gap-1 text-[10px] h-7 border-yellow-400 text-yellow-700 hover:bg-yellow-50">
+                  <Paintbrush className="h-3 w-3" /> Colores
                 </Button>
               </>
             )}
@@ -798,6 +804,9 @@ export default function HomePage() {
       {activeModal === 'photoLibrary' && (
         <PhotoLibrary open={true} onClose={closeModal} />
       )}
+
+      {/* Color Code Table Modal */}
+      <ColorCodeTable open={showColorCodeTable} onClose={() => setShowColorCodeTable(false)} />
 
       {/* Team Management Modal */}
       <TeamManagement open={showTeamManagement} onClose={() => setShowTeamManagement(false)} />

@@ -27,17 +27,20 @@ import {
 // We need dynamic import for Konva since it needs window
 let Stage: any, Layer: any, Rect: any, KCircle: any, Line: any, Text: any, KImage: any, Group: any, Arrow: any
 
-// 5S Floor marking color codes
+// 5S Floor marking color codes — Based on company standard "CUADRO DE COLORES: SEÑALIZACIÓN EN SUELO Y COMPONENTES"
 const FLOOR_COLORS = [
-  { color: '#22C55E', label: 'Verde — Zona segura / OK', category: 'seguridad_ok' },
-  { color: '#EF4444', label: 'Rojo — Peligro / Prohibido / Innecesario', category: 'peligro' },
-  { color: '#F59E0B', label: 'Amarillo — Precaución / Pasillo', category: 'precaucion' },
-  { color: '#3B82F6', label: 'Azul — Información / Obligatorio', category: 'informacion' },
-  { color: '#8B5CF6', label: 'Morado — EPI obligatorio', category: 'epi' },
-  { color: '#F97316', label: 'Naranja — Advertencia máquina', category: 'advertencia' },
-  { color: '#FFFFFF', label: 'Blanco — Línea general', category: 'general' },
-  { color: '#6B7280', label: 'Gris — Almacén / Stock', category: 'almacen' },
-  { color: '#000000', label: 'Negro — Contorno / Pared', category: 'pared' },
+  { color: '#0E6BA8', label: 'Azul RAL 5017 — Entrada de material / Recepción / Zona suministro logística', ral: 'RAL 5017' },
+  { color: '#2D8C3C', label: 'Verde RAL 6032 — Salida de material premontado', ral: 'RAL 6032' },
+  { color: '#E8E8E8', label: 'Blanco RAL 9003 — Elementos estáticos (carros, mesas, utilajes fijos)', ral: 'RAL 9003' },
+  { color: '#F5E649', label: 'Amarillo RAL 1016 — Área de trabajo', ral: 'RAL 1016' },
+  { color: '#CC0000', label: 'Rojo RAL 3000 — Equipos protección contra incendios', ral: 'RAL 3000' },
+  { color: '#F5A623', label: 'Amarillo anaranjado RAL 1003 — Elementos de seguridad (barandillas, barreras)', ral: 'RAL 1003' },
+  { color: '#8B8B00', label: 'Franjas amarillo/negro — Pasillos y zonas de paso', ral: 'Franjas' },
+  { color: '#FF6666', label: 'Franjas blanco/rojo — Áreas de riesgo permanente', ral: 'Franjas' },
+  { color: '#CC4444', label: 'Franjas rojo/verde — Riesgo de explosión / Trabajos en caliente prohibidos', ral: 'Franjas' },
+  { color: '#66CC66', label: 'Franjas verde/blanco — Área de trabajos en caliente', ral: 'Franjas' },
+  { color: '#8E9498', label: 'Gris RAL 7001 — Medio Ambiente / Gestión de residuos', ral: 'RAL 7001' },
+  { color: '#E85D04', label: 'Naranja RAL 2004 — Fondo del suelo', ral: 'RAL 2004' },
 ]
 
 const DRAW_TOOLS = [
@@ -79,7 +82,7 @@ export default function LayoutEditor({ open, onClose, onSave, initialImage, init
   const { currentProject, currentZone } = use5SStore()
   const [konvaReady, setKonvaReady] = useState(false)
   const [tool, setTool] = useState<string>('select')
-  const [color, setColor] = useState('#F59E0B')
+  const [color, setColor] = useState('#F5E649')
   const [shapes, setShapes] = useState<ShapeData[]>(initialShapes || [])
   const [bgImage, setBgImage] = useState<string | null>(initialImage || null)
   const [bgImageObj, setBgImageObj] = useState<HTMLImageElement | null>(null)
@@ -501,13 +504,16 @@ export default function LayoutEditor({ open, onClose, onSave, initialImage, init
               <Palette className="h-3 w-3" />
             </Button>
             {showColorPicker && (
-              <div className="absolute top-full left-0 z-50 mt-1 bg-white border rounded-lg shadow-xl p-2 w-64">
-                <p className="text-[10px] font-semibold text-muted-foreground mb-1.5">Código de Colores 5S — Marcado de Suelo</p>
+              <div className="absolute top-full left-0 z-50 mt-1 bg-white border rounded-lg shadow-xl p-2 w-80 max-h-[70vh] overflow-y-auto">
+                <p className="text-[10px] font-semibold text-muted-foreground mb-1.5">Código de Colores — Señalización en Suelo y Componentes</p>
                 {FLOOR_COLORS.map(fc => (
                   <button key={fc.color} onClick={() => { setColor(fc.color); setShowColorPicker(false) }}
                     className="flex items-center gap-2 w-full px-2 py-1.5 rounded hover:bg-gray-100 text-left">
-                    <div className="w-4 h-4 rounded border shrink-0" style={{ backgroundColor: fc.color }} />
-                    <span className="text-[10px]">{fc.label}</span>
+                    <div className="w-5 h-5 rounded border shrink-0" style={{ backgroundColor: fc.color }} />
+                    <div className="flex-1 min-w-0">
+                      <span className="text-[10px] font-medium block truncate">{fc.label}</span>
+                      {fc.ral && <span className="text-[8px] text-muted-foreground">{fc.ral}</span>}
+                    </div>
                   </button>
                 ))}
               </div>
