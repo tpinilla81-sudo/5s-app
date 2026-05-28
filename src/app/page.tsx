@@ -336,6 +336,27 @@ export default function HomePage() {
             })()}
           </div>
           <div className="flex items-center gap-1.5">
+            {/* 🔔 Notification bell — FIRST position, prominent for all board users */}
+            {canSeeNotifications && (
+              <Button variant={unreadNotifs > 0 ? 'default' : 'outline'} size="sm"
+                className={`relative gap-1 text-[10px] h-7 ${unreadNotifs > 0 ? 'bg-orange-500 hover:bg-orange-600 text-white border-orange-500' : 'border-orange-300 text-orange-600 hover:bg-orange-50'}`}
+                onClick={async () => {
+                  if (currentUser?.id && currentProject?.id) {
+                    try {
+                      const res = await fetch(`/api/notifications?userId=${currentUser.id}&projectId=${currentProject.id}`);
+                      const data = await res.json();
+                      if (data.success) setNotifs(data.data || []);
+                    } catch (e) { console.error(e); }
+                  }
+                  setShowNotifs(!showNotifs);
+                }}>
+                {unreadNotifs > 0 ? <BellRing className="h-3.5 w-3.5" /> : <Bell className="h-3 w-3" />}
+                <span className="hidden sm:inline">{unreadNotifs > 0 ? `${unreadNotifs} avisos` : 'Avisos'}</span>
+                {unreadNotifs > 0 && (
+                  <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-[8px] font-bold rounded-full flex items-center justify-center animate-pulse">{unreadNotifs > 9 ? '9+' : unreadNotifs}</span>
+                )}
+              </Button>
+            )}
             {/* Quick action buttons */}
             {currentUser && currentProject && (
               <>
@@ -367,25 +388,6 @@ export default function HomePage() {
                 className={`gap-1 text-[10px] h-7 ${adminFreeNavigation ? 'bg-amber-500 hover:bg-amber-600 text-white border-amber-500' : 'text-amber-600 border-amber-300 hover:bg-amber-50'}`}
                 title={adminFreeNavigation ? 'Navegación libre activada' : 'Navegación secuencial'}>
                 {adminFreeNavigation ? <Unlock className="h-3 w-3" /> : <Lock className="h-3 w-3" />}
-              </Button>
-            )}
-            {/* Notification bell — visible to all board users */}
-            {canSeeNotifications && (
-              <Button variant="ghost" size="sm" className={`relative h-7 px-1.5 ${unreadNotifs > 0 ? 'text-orange-600 hover:text-orange-700' : 'text-gray-500 hover:text-gray-700'}`}
-                onClick={async () => {
-                  if (currentUser?.id && currentProject?.id) {
-                    try {
-                      const res = await fetch(`/api/notifications?userId=${currentUser.id}&projectId=${currentProject.id}`);
-                      const data = await res.json();
-                      if (data.success) setNotifs(data.data || []);
-                    } catch (e) { console.error(e); }
-                  }
-                  setShowNotifs(!showNotifs);
-                }}>
-                {unreadNotifs > 0 ? <BellRing className="h-4 w-4" /> : <Bell className="h-3.5 w-3.5" />}
-                {unreadNotifs > 0 && (
-                  <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-red-500 text-white text-[8px] font-bold rounded-full flex items-center justify-center animate-pulse">{unreadNotifs > 9 ? '9+' : unreadNotifs}</span>
-                )}
               </Button>
             )}
             {canManageTeam && (
@@ -541,28 +543,13 @@ export default function HomePage() {
                     {currentZone && (() => {
                       const readyForAudit: number[] = [];
                       for (let s = 1; s <= 5; s++) {
-                        // Check if steps 1-4 are completed for this S-step in this zone
-                        let steps1to4Done = true;
-                        for (let ms = 1; ms <= 4; ms++) {
-                          if (ms === 1) {
-                            const hasEmployee = employeeProgress.some(ep =>
-                              ep.sStep === s && ep.miniStep === 1 && ep.zoneId === currentZone.id && ep.completed
-                            );
-                            const hasZoneProgress = progress.some(p =>
-                              p.sStep === s && p.miniStep === 1 && (p.zoneId === currentZone.id || p.zoneId === null) && p.completed
-                            );
-                            if (!hasEmployee || !hasZoneProgress) { steps1to4Done = false; break; }
-                          } else {
-                            const hasZoneProgress = progress.some(p =>
-                              p.sStep === s && p.miniStep === ms && (p.zoneId === currentZone.id || p.zoneId === null) && p.completed
-                            );
-                            if (!hasZoneProgress) { steps1to4Done = false; break; }
-                          }
-                        }
-                        // Also check step 5 is NOT already completed
-                        const step5Done = progress.some(p =>
-                          p.sStep === s && p.miniStep === 5 && p.zoneId === currentZone.id && p.completed
-                        );
+                        // Use getMiniStepStatus for consistent checking (includes individual employee progress)
+                        const steps1to4Done = [1,2,3,4].every(ms => {
+                          const st = getMiniStepStatus(s, ms);
+                          return st === 'completed' || st === 'completed_viewonly';
+                        });
+                        const step5St = getMiniStepStatus(s, 5);
+                        const step5Done = step5St === 'completed' || step5St === 'completed_viewonly';
                         if (steps1to4Done && !step5Done) readyForAudit.push(s);
                       }
                       if (readyForAudit.length === 0) return null;
@@ -702,10 +689,14 @@ export default function HomePage() {
                                     )}
                                     {/* "Request audit" button above step 5 when steps 1-4 are completed but 5 isn't — visible to ALL users */}
                                     {ms.id === 5 && (() => {
-                                      const steps1to4Done = [1,2,3,4].every(msCheck =>
-                                        progress.some(p => p.sStep === s.id && p.miniStep === msCheck && (p.zoneId === currentZone?.id || p.zoneId === null) && p.completed)
-                                      );
-                                      const step5Done = progress.some(p => p.sStep === s.id && p.miniStep === 5 && (p.zoneId === currentZone?.id || p.zoneId === null) && p.completed);
+                                      const steps1to4Done = [1,2,3,4].every(msCheck => {
+                                        const st = getMiniStepStatus(s.id, msCheck);
+                                        return st === 'completed' || st === 'completed_viewonly';
+                                      });
+                                      const step5Done = (() => {
+                                        const st = getMiniStepStatus(s.id, 5);
+                                        return st === 'completed' || st === 'completed_viewonly';
+                                      })();
                                       return steps1to4Done && !step5Done;
                                     })() && (
                                       <button

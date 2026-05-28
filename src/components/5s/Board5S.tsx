@@ -9,7 +9,7 @@ interface Board5SProps {
 }
 
 export default function Board5S({ onSStepClick }: Board5SProps) {
-  const { getMiniStepStatus, isQuesitoEarned, progress, currentZone } = use5SStore();
+  const { getMiniStepStatus, isQuesitoEarned } = use5SStore();
 
   const cx = 300;
   const cy = 300;
@@ -104,18 +104,12 @@ export default function Board5S({ onSStepClick }: Board5SProps) {
           {/* Pie slices */}
           {S_STEPS.map((s, i) => {
             const earned = isQuesitoEarned(s.id);
-            const zoneId = currentZone?.id;
 
-            // Simple 5-step progress: count how many of 5 mini-steps are completed
+            // Count completed mini-steps using getMiniStepStatus (consistent with dot display)
             let completedMiniSteps = 0;
             for (let ms = 1; ms <= 5; ms++) {
-              const zoneStep = progress.find(p =>
-                p.sStep === s.id &&
-                p.miniStep === ms &&
-                (zoneId ? (p.zoneId === zoneId || p.zoneId === null) : true) &&
-                p.completed
-              );
-              if (zoneStep) completedMiniSteps++;
+              const st = getMiniStepStatus(s.id, ms);
+              if (st === 'completed' || st === 'completed_viewonly') completedMiniSteps++;
             }
             const pct = Math.min(Math.round((completedMiniSteps / 5) * 100), 100);
             const allCompleted = earned; // 5/5 mini-steps completed
