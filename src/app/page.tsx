@@ -115,9 +115,9 @@ export default function HomePage() {
     checkSession();
   }, []);
 
-  // Fetch notifications for users who can audit
+  // Fetch notifications for auditors and responsables
   useEffect(() => {
-    if (canAuditAny && currentProject?.id) {
+    if (canSeeNotifications && currentProject?.id) {
       const fetchNotifs = async () => {
         try {
           const res = await fetch(`/api/notifications?userId=${currentUser.id}&projectId=${currentProject.id}&unread=true`);
@@ -227,6 +227,8 @@ export default function HomePage() {
   const canPerformPerm = useMemo(() => (sStep: number, miniStep: number): boolean => hasPermission(`s${sStep}_step${miniStep}_a1`), [hasPermission]);
   const canViewPerm = useMemo(() => (sStep: number, miniStep: number): boolean => hasPermission(`s${sStep}_step${miniStep}_a0`), [hasPermission]);
   const canAuditAny = useMemo(() => currentUser ? [1,2,3,4,5].some(s => canPerformPerm(s, 5)) : false, [currentUser, canPerformPerm]);
+  const isResponsable = currentUser?.role === 'responsable';
+  const canSeeNotifications = canAuditAny || isResponsable;
 
   const canManageTeam = currentUser && hasPermission('add_members');
   const canSkipSteps = hasPermission('skip_steps');
@@ -368,7 +370,7 @@ export default function HomePage() {
               </Button>
             )}
             {/* Notification bell for auditors */}
-            {canAuditAny && (
+            {canSeeNotifications && (
               <Button variant="ghost" size="sm" className="relative text-orange-600 hover:text-orange-700 h-7 px-1.5"
                 onClick={async () => {
                   if (currentUser?.id && currentProject?.id) {
@@ -462,7 +464,7 @@ export default function HomePage() {
       </header>
 
       {/* Notification dropdown for auditors */}
-      {showNotifs && canAuditAny && (
+      {showNotifs && canSeeNotifications && (
         <div className="fixed top-12 right-16 z-50 w-80 bg-white border rounded-lg shadow-xl max-h-96 overflow-y-auto">
           <div className="p-3 border-b flex items-center justify-between">
             <span className="text-sm font-semibold">Notificaciones</span>
@@ -481,8 +483,12 @@ export default function HomePage() {
           ) : (
             <div className="divide-y">
               {notifs.map((n: any) => (
-                <div key={n.id} className={`p-3 ${n.read ? 'bg-white' : 'bg-blue-50'}`}>
-                  <p className="text-xs font-semibold">{n.title}</p>
+                <div key={n.id} className={`p-3 ${n.read ? 'bg-white' : n.type === 'audit_requested' ? 'bg-orange-50' : 'bg-blue-50'}`}>
+                  <div className="flex items-center gap-1.5 mb-0.5">
+                    {n.type === 'audit_requested' && <BellRing className="h-3 w-3 text-orange-500 shrink-0" />}
+                    {n.type === 'audit_ready' && <ShieldCheck className="h-3 w-3 text-green-500 shrink-0" />}
+                    <p className="text-xs font-semibold">{n.title}</p>
+                  </div>
                   <p className="text-[10px] text-muted-foreground mt-0.5">{n.message}</p>
                   <p className="text-[9px] text-muted-foreground mt-1">{new Date(n.createdAt).toLocaleString('es-ES')}</p>
                 </div>
@@ -693,6 +699,72 @@ export default function HomePage() {
                                       <span className={`text-[7px] font-bold ${stepScore >= 70 ? 'text-green-600' : 'text-red-500'} leading-none mb-0.5`}>
                                         {stepScore}%
                                       </span>
+                                    )}
+                                    {/* "Request audit" button above step 5 when steps 1-4 are completed but 5 isn't */}
+                                    {ms.id === 5 && effectiveStatus === 'available' && (() => {
+                                      const steps1to4Done = [1,2,3,4].every(msCheck =>
+                                        progress.some(p => p.sStep === s.id && p.miniStep === msCheck && (p.zoneId === currentZone?.id || p.zoneId === null) && p.completed)
+                                      );
+                                      const step5Done = progress.some(p => p.sStep === s.id && p.miniStep === 5 && (p.zoneId === currentZone?.id || p.zoneId === null) && p.completed);
+                                      return steps1to4Done && !step5Done;
+                                    })() && (
+                                      <button
+                                        className="text-[7px] font-bold text-orange-600 hover:text-orange-700 hover:bg-orange-50 px-1 py-0.5 rounded border border-orange-200 mb-0.5 transition-colors leading-tight whitespace-nowrap"
+                                        onClick={async (e) => {
+                                          e.stopPropagation();
+                                          const proposedDate = new Date();
+                                          proposedDate.setDate(proposedDate.getDate() + 2);
+                                          const dateStr = proposedDate.toISOString().slice(0, 16);
+                                          const result = prompt(`Propón fecha y hora para la auditoría S${s.id}:\n(Formato: AAAA-MM-DDTHH:MM)`, dateStr);
+                                          if (!result) return;
+                                          try {
+                                            const sStepData = S_STEPS.find(ss => ss.id === s.id);
+                                            const formattedDate = new Date(result).toLocaleString('es-ES', { dateStyle: 'medium', timeStyle: 'short' });
+                                            const msg = `Se solicita auditoría para S${s.id} (${sStepData?.japaneseName || ''}) en la zona "${currentZone?.name || ''}". Fecha propuesta: ${formattedDate}.`;
+                                            const membersRes = await fetch(`/api/projects/${currentProject?.id}/members`);
+                                            const membersData = await membersRes.json();
+                                            const allMembers = membersData?.members || [];
+                                            const auditors = allMembers.filter((m: any) => m.role === 'auditor');
+                                            for (const auditor of auditors) {
+                                              await fetch('/api/notifications', {
+                                                method: 'POST',
+                                                headers: { 'Content-Type': 'application/json' },
+                                                body: JSON.stringify({
+                                                  userId: auditor.userId,
+                                                  type: 'audit_requested',
+                                                  title: `Solicitud auditoría: S${s.id} — ${sStepData?.japaneseName || ''}`,
+                                                  message: msg,
+                                                  sStep: s.id,
+                                                  zoneId: currentZone?.id,
+                                                  projectId: currentProject?.id,
+                                                }),
+                                              });
+                                            }
+                                            if (currentZone?.responsableId) {
+                                              await fetch('/api/notifications', {
+                                                method: 'POST',
+                                                headers: { 'Content-Type': 'application/json' },
+                                                body: JSON.stringify({
+                                                  userId: currentZone.responsableId,
+                                                  type: 'audit_requested',
+                                                  title: `Solicitud auditoría: S${s.id} — ${sStepData?.japaneseName || ''}`,
+                                                  message: msg,
+                                                  sStep: s.id,
+                                                  zoneId: currentZone?.id,
+                                                  projectId: currentProject?.id,
+                                                }),
+                                              });
+                                            }
+                                            alert('Solicitud de auditoría enviada a auditor y responsable.');
+                                          } catch (err) {
+                                            console.error('Error sending audit request:', err);
+                                            alert('Error al enviar la solicitud.');
+                                          }
+                                        }}
+                                        title="Solicitar auditoría: notificar al auditor y responsable para fijar fecha"
+                                      >
+                                        🔔 Auditar
+                                      </button>
                                     )}
                                     <div className="relative">
                                       <button

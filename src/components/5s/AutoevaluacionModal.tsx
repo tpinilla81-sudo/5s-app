@@ -217,12 +217,16 @@ export default function AutoevaluacionModal({ open, onClose, sStep, miniStep }: 
             }
 
             if (allStepsCompleted) {
-              // Find auditor users for this project and notify them
+              // Find auditor and responsable users for this project and notify them
               const membersRes = await fetch(`/api/projects/${currentProject.id}/members`);
               const membersData = await membersRes.json();
-              const auditors = (membersData?.members || []).filter((m: any) => m.role === 'auditor');
+              const allMembers = membersData?.members || [];
 
               const sStepData = S_STEPS.find(s => s.id === sStep);
+              const notifMessage = `Los pasos 1-4 de S${sStep} (${sStepData?.japaneseName || ''}) en la zona "${currentZone.name}" han sido completados. La auditoría (Paso 5) está lista para realizarse.`;
+
+              // Notify auditors
+              const auditors = allMembers.filter((m: any) => m.role === 'auditor');
               for (const auditor of auditors) {
                 await fetch('/api/notifications', {
                   method: 'POST',
@@ -231,7 +235,24 @@ export default function AutoevaluacionModal({ open, onClose, sStep, miniStep }: 
                     userId: auditor.userId,
                     type: 'audit_ready',
                     title: `Auditoría lista: S${sStep} — ${sStepData?.japaneseName || ''}`,
-                    message: `Los pasos 1-4 de S${sStep} (${sStepData?.japaneseName || ''}) en la zona "${currentZone.name}" han sido completados. Ya puedes realizar la auditoría (Paso 5).`,
+                    message: notifMessage,
+                    sStep,
+                    zoneId: currentZone.id,
+                    projectId: currentProject.id,
+                  }),
+                });
+              }
+
+              // Notify responsable of the zone
+              if (currentZone.responsableId) {
+                await fetch('/api/notifications', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    userId: currentZone.responsableId,
+                    type: 'audit_ready',
+                    title: `Auditoría lista: S${sStep} — ${sStepData?.japaneseName || ''}`,
+                    message: notifMessage,
                     sStep,
                     zoneId: currentZone.id,
                     projectId: currentProject.id,
