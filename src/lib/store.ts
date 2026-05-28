@@ -246,9 +246,9 @@ export const use5SStore = create<FiveSState>((set, get) => ({
       const zones: UserZoneAssignment[] = data.zones || []
       set({ userZones: zones })
 
-      // Auto-select zone if user has exactly one assigned zone
+      // Auto-select zone if user has zones but none selected yet
       const { currentUser, currentZone, currentProject } = get()
-      if (zones.length === 1 && !currentZone) {
+      if (zones.length >= 1 && !currentZone) {
         const z = zones[0]
         // Find matching zone in current project
         const projectZone = currentProject?.zones.find(pz => pz.id === z.id) || {
@@ -361,7 +361,7 @@ export const use5SStore = create<FiveSState>((set, get) => ({
     const isAdmin = currentUser.role === 'admin'
     const skipLocks = isAdmin && adminFreeNavigation
 
-    // Check if already completed at zone level
+    // Check if already completed at zone level (or project level if no zone)
     const isStepCompleted = (): boolean => {
       if (currentZone) {
         const zoneStep = progress.find(p =>
@@ -372,20 +372,37 @@ export const use5SStore = create<FiveSState>((set, get) => ({
         )
         return !!zoneStep
       }
-      return false
+      // No zone selected: check if completed at any zone/project level
+      const anyStep = progress.find(p =>
+        p.sStep === sStep &&
+        p.miniStep === miniStep &&
+        p.completed
+      )
+      return !!anyStep
     }
 
-    // Helper: check if steps 1-4 are all completed for this S-step in the current zone
+    // Helper: check if steps 1-4 are all completed for this S-step
     const areSteps1to4Completed = (): boolean => {
-      if (!currentZone) return false
+      if (currentZone) {
+        for (let ms = 1; ms <= 4; ms++) {
+          const zoneStep = progress.find(p =>
+            p.sStep === sStep &&
+            p.miniStep === ms &&
+            (p.zoneId === currentZone.id || p.zoneId === null) &&
+            p.completed
+          )
+          if (!zoneStep) return false
+        }
+        return true
+      }
+      // No zone selected: check if completed at any zone/project level
       for (let ms = 1; ms <= 4; ms++) {
-        const zoneStep = progress.find(p =>
+        const anyStep = progress.find(p =>
           p.sStep === sStep &&
           p.miniStep === ms &&
-          (p.zoneId === currentZone.id || p.zoneId === null) &&
           p.completed
         )
-        if (!zoneStep) return false
+        if (!anyStep) return false
       }
       return true
     }

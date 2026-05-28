@@ -110,3 +110,26 @@ Stage Summary:
 - Step 5 blocked until steps 1-4 completed for ALL users with a1 permission
 - Auditor sees steps 1-4 as locked (can view status on board, can't enter modals)
 - Auditor sees step 5 as locked until 1-4 done, then available to audit
+
+---
+Task ID: 3-6
+Agent: Main Agent
+Task: Fix auditor unable to see completed steps and enter audit - multiple root causes
+
+Work Log:
+- Found root cause 1: /api/auth/zones returned empty zones for auditors without MemberZone records
+  - Fix: Added auditor-specific branch that returns ALL project zones (like admin/responsable)
+- Found root cause 2: fetchUserZones only auto-selected zone when exactly 1 zone existed
+  - Fix: Changed condition from zones.length === 1 to zones.length >= 1 to auto-select first zone
+- Found root cause 3: isStepCompleted() and areSteps1to4Completed() returned false when no zone selected
+  - Fix: Added fallback that checks ANY zone/project level progress when currentZone is null
+- Found root cause 4: Board5S.tsx and page.tsx had zoneId && short-circuit that prevented progress matching
+  - Fix: Changed to (zoneId ? (p.zoneId === zoneId || p.zoneId === null) : true) pattern
+- Build succeeded with no errors
+
+Stage Summary:
+- Auditor now gets all project zones from /api/auth/zones (not dependent on MemberZone)
+- First zone auto-selected on login, so board renders immediately
+- Completed steps (1-4) show as green checkmarks for auditor even without explicit zone
+- Step 5 unlocks when steps 1-4 are completed (business rule preserved)
+- Steps 1-4 remain locked (not clickable) for auditor since they only have a0 permission

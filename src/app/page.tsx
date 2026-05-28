@@ -606,8 +606,7 @@ export default function HomePage() {
                           const zoneStep = progress.find(p =>
                             p.sStep === s.id &&
                             p.miniStep === ms &&
-                            zoneId &&
-                            (p.zoneId === zoneId || p.zoneId === null) &&
+                            (zoneId ? (p.zoneId === zoneId || p.zoneId === null) : true) &&
                             p.completed
                           );
                           if (zoneStep) completedMiniSteps++;

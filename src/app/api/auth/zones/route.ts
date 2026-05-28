@@ -43,7 +43,33 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ zones: allZones, role: user.role }, { status: 200 })
     }
 
-    // For empleado, auditor, gerente: only return their assigned zones via MemberZone
+    // For empleado, gerente: only return their assigned zones via MemberZone
+    // For auditor: return all project zones (they need to audit all zones)
+    if (user.role === 'auditor') {
+      // Auditors see ALL zones in their projects — they need to audit all of them
+      const memberships = await db.projectMember.findMany({
+        where: { userId: user.id },
+        select: { projectId: true },
+      })
+      const projectIds = memberships.map(m => m.projectId)
+
+      const allZones = await db.zone.findMany({
+        where: { projectId: { in: projectIds } },
+        select: {
+          id: true,
+          name: true,
+          description: true,
+          color: true,
+          projectId: true,
+          responsableId: true,
+        },
+        orderBy: { createdAt: 'asc' },
+      })
+
+      return NextResponse.json({ zones: allZones, role: user.role }, { status: 200 })
+    }
+
+    // Empleado, gerente: only their assigned zones via MemberZone
     const memberZones = await db.memberZone.findMany({
       where: {
         member: {

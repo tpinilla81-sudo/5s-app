@@ -106,14 +106,13 @@ export default function Board5S({ onSStepClick }: Board5SProps) {
             const earned = isQuesitoEarned(s.id);
             const zoneId = currentZone?.id;
 
-            // Simple 5-step progress: count how many of 5 mini-steps are completed at zone level
+            // Simple 5-step progress: count how many of 5 mini-steps are completed
             let completedMiniSteps = 0;
             for (let ms = 1; ms <= 5; ms++) {
               const zoneStep = progress.find(p =>
                 p.sStep === s.id &&
                 p.miniStep === ms &&
-                zoneId &&
-                (p.zoneId === zoneId || p.zoneId === null) &&
+                (zoneId ? (p.zoneId === zoneId || p.zoneId === null) : true) &&
                 p.completed
               );
               if (zoneStep) completedMiniSteps++;
