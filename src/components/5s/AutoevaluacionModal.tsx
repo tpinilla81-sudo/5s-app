@@ -16,12 +16,10 @@ import { CheckSquare, CheckCircle, Camera, ChevronDown, ChevronRight, Maximize2,
 import { use5SStore } from '@/lib/store';
 import {
   S_STEPS,
-  AUDIT_CHECKLISTS,
-  AUDIT_TOTAL_ITEMS,
   SELF_EVAL_THRESHOLD,
 } from '@/lib/5s-constants';
-import { SELF_EVAL_THRESHOLD as SELF_EVAL_FALLBACK } from '@/lib/5s-constants';
 import type { AuditSection, AuditItemResult } from '@/lib/5s-constants';
+import { useChecklistTemplate } from '@/lib/checklist-templates';
 
 interface AutoevaluacionModalProps {
   open: boolean;
@@ -30,19 +28,7 @@ interface AutoevaluacionModalProps {
   miniStep: number;
 }
 
-// Convert template content to AuditSection format
-function templateToAuditSections(content: any): AuditSection[] {
-  if (!content || !content.sections) return []
-  return content.sections.map((section: any, sIdx: number) => ({
-    id: section.id || `sec-${sIdx}`,
-    title: section.title || `Sección ${sIdx + 1}`,
-    items: (section.items || []).map((item: any, iIdx: number) => ({
-      id: item.id || `item-${sIdx}-${iIdx}`,
-      description: item.description || '',
-      hasOther: item.hasOther || false,
-    })),
-  }))
-}
+
 
 export default function AutoevaluacionModal({ open, onClose, sStep, miniStep }: AutoevaluacionModalProps) {
   const { fetchProgress, currentUser, adminFreeNavigation, currentProject, currentZone, canPerform, canView, hasPermission } = use5SStore();
@@ -55,7 +41,6 @@ export default function AutoevaluacionModal({ open, onClose, sStep, miniStep }: 
   const canPerformAutoeval = canPerformStep;
 
   const [isFullscreen, setIsFullscreen] = useState(true);
-  const [sections, setSections] = useState<AuditSection[]>([]);
   const [results, setResults] = useState<Record<string, AuditItemResult>>({});
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({});
   const [observaciones, setObservaciones] = useState('');
@@ -63,39 +48,16 @@ export default function AutoevaluacionModal({ open, onClose, sStep, miniStep }: 
   const [isCompleted, setIsCompleted] = useState(false);
   const [finalScore, setFinalScore] = useState(0);
   const [notaMinima, setNotaMinima] = useState(70);
-  const [isLoadingTemplate, setIsLoadingTemplate] = useState(true);
 
   // Load template from API
+  const { sections, isLoading: isLoadingTemplate, notaMinima: templateNotaMinima } = useChecklistTemplate('autoevaluacion', sStep, open);
+
+  // Apply template notaMinima when loaded
   useEffect(() => {
-    if (open) {
-      const loadTemplate = async () => {
-        setIsLoadingTemplate(true)
-        try {
-          const res = await fetch(`/api/templates?type=autoevaluacion&sStep=${sStep}`)
-          const json = await res.json()
-          if (json.success && json.data && json.data.length > 0) {
-            const tpl = json.data[0]
-            const parsed = typeof tpl.content === 'string' ? JSON.parse(tpl.content) : tpl.content
-            const templateSections = templateToAuditSections(parsed)
-            if (templateSections.length > 0) {
-              setSections(templateSections)
-            } else {
-              setSections(AUDIT_CHECKLISTS[sStep] || [])
-            }
-            if (tpl.notaMinima != null) setNotaMinima(tpl.notaMinima)
-          } else {
-            setSections(AUDIT_CHECKLISTS[sStep] || [])
-          }
-        } catch (e) {
-          console.error('Error loading autoeval template:', e)
-          setSections(AUDIT_CHECKLISTS[sStep] || [])
-        } finally {
-          setIsLoadingTemplate(false)
-        }
-      }
-      loadTemplate()
-    }
-  }, [open, sStep])
+    if (templateNotaMinima !== null) setNotaMinima(templateNotaMinima);
+  }, [templateNotaMinima]);
+
+
 
   // Fetch dynamic threshold (overrides template if present)
   useEffect(() => {
@@ -131,7 +93,7 @@ export default function AutoevaluacionModal({ open, onClose, sStep, miniStep }: 
     }
   }, [open, sStep]);
 
-  const totalItems = sections.reduce((sum, s) => sum + s.items.length, 0) || AUDIT_TOTAL_ITEMS[sStep] || 26;
+  const totalItems = sections.reduce((sum, s) => sum + s.items.length, 0) || 26;
 
   const scoring = useMemo(() => {
     const allResults = Object.values(results);
@@ -334,7 +296,21 @@ export default function AutoevaluacionModal({ open, onClose, sStep, miniStep }: 
         )}
 
         <div className="flex-1 overflow-y-auto px-6 pb-6 min-h-0">
-        {isCompleted ? (
+        {isLoadingTemplate ? (
+          <div className="flex items-center justify-center py-12">
+            <div className="h-8 w-8 border-4 border-green-500 border-t-transparent rounded-full animate-spin" />
+          </div>
+        ) : sections.length === 0 ? (
+          <div className="text-center py-12">
+            <AlertCircle className="h-12 w-12 text-amber-500 mx-auto mb-3" />
+            <h3 className="text-lg font-bold mb-2">No hay checklist configurado</h3>
+            <p className="text-sm text-muted-foreground max-w-md mx-auto">
+              No se encontró una plantilla de autoevaluación para S{sStep}. 
+              Crea una plantilla en <strong>Administración → Plantillas → Auditoría Interna</strong> 
+              o pulsa el botón &quot;Crear plantillas por defecto&quot;.
+            </p>
+          </div>
+        ) : isCompleted ? (
           <div className="text-center py-8">
             <CheckCircle className="h-16 w-16 text-green-500 mx-auto mb-3" />
             <h3 className="text-xl font-bold mb-2">¡Autoevaluación Completada!</h3>

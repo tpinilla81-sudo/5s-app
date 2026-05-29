@@ -37,8 +37,9 @@ import {
   Maximize2,
   Minimize2,
 } from 'lucide-react';
-import { S_STEPS, AUDIT_CHECKLISTS } from '@/lib/5s-constants';
+import { S_STEPS } from '@/lib/5s-constants';
 import { use5SStore } from '@/lib/store';
+import { fetchChecklistTemplate } from '@/lib/checklist-templates';
 
 interface ActionItem {
   id: string;
@@ -142,13 +143,34 @@ export default function ActionPlanTracker({ open, onClose }: ActionPlanTrackerPr
     return { total, abiertas, enProceso, resueltas, cerradas, alta, byS };
   }, [actions]);
 
+  // Cache for item descriptions from API templates
+  const [itemDescriptions, setItemDescriptions] = useState<Record<string, string>>({});
+
+  // Load item descriptions from templates
+  useEffect(() => {
+    const loadDescriptions = async () => {
+      const descriptions: Record<string, string> = {};
+      for (let s = 1; s <= 5; s++) {
+        for (const type of ['auditoria', 'autoevaluacion'] as const) {
+          const data = await fetchChecklistTemplate(type, s);
+          if (data) {
+            for (const section of data.sections) {
+              for (const item of section.items) {
+                if (!descriptions[item.id]) {
+                  descriptions[item.id] = item.description;
+                }
+              }
+            }
+          }
+        }
+      }
+      setItemDescriptions(descriptions);
+    };
+    loadDescriptions();
+  }, []);
+
   const getItemDescription = (sStep: number, itemId: string): string => {
-    const sections = AUDIT_CHECKLISTS[sStep] || [];
-    for (const section of sections) {
-      const item = section.items.find(i => i.id === itemId);
-      if (item) return item.description;
-    }
-    return itemId;
+    return itemDescriptions[itemId] || itemId;
   };
 
   const handleUpdateEstado = async (id: string, newEstado: string) => {

@@ -6,11 +6,9 @@ import { use5SStore } from '@/lib/store';
 import {
   S_STEPS,
   AUDIT_PASS_THRESHOLD,
-  WEEKLY_AUDIT_CHECKLIST,
-  WEEKLY_AUDIT_TOTAL_ITEMS,
-  MONTHLY_AUDIT_CHECKLIST,
-  MONTHLY_AUDIT_TOTAL_ITEMS,
 } from '@/lib/5s-constants';
+import type { AuditSection } from '@/lib/5s-constants';
+import { fetchAllChecklistTemplates } from '@/lib/checklist-templates';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -82,6 +80,12 @@ export default function MaintenanceView({ embedded }: MaintenanceViewProps = {})
   const [showWeeklyAudit, setShowWeeklyAudit] = useState(false);
   const [showMonthlyAudit, setShowMonthlyAudit] = useState(false);
 
+  // Dynamic checklist data loaded from API templates
+  const [weeklySections, setWeeklySections] = useState<AuditSection[]>([]);
+  const [monthlySections, setMonthlySections] = useState<AuditSection[]>([]);
+  const [weeklyTotalItems, setWeeklyTotalItems] = useState(0);
+  const [monthlyTotalItems, setMonthlyTotalItems] = useState(0);
+
   const [auditHistory, setAuditHistory] = useState<AuditRecord[]>([]);
   const [actionItems, setActionItems] = useState<ActionItemData[]>([]);
   const [actionStats, setActionStats] = useState({ abierta: 0, en_proceso: 0, resuelta: 0, cerrada: 0 });
@@ -96,6 +100,31 @@ export default function MaintenanceView({ embedded }: MaintenanceViewProps = {})
   useEffect(() => {
     loadData();
   }, [currentProject]);
+
+  // Load checklist templates from API and compute weekly/monthly variants
+  useEffect(() => {
+    const loadChecklists = async () => {
+      const templatesMap = await fetchAllChecklistTemplates('auditoria');
+      // Weekly: only S3 (Seiso/cleaning) sections
+      const s3Sections = templatesMap[3] || [];
+      setWeeklySections(s3Sections);
+      setWeeklyTotalItems(s3Sections.reduce((sum, s) => sum + s.items.length, 0));
+      // Monthly: first 2 items from each section across all S
+      const monthlyList: AuditSection[] = [];
+      for (let s = 1; s <= 5; s++) {
+        const sSections = templatesMap[s] || [];
+        for (const section of sSections) {
+          monthlyList.push({
+            ...section,
+            items: section.items.slice(0, 2),
+          });
+        }
+      }
+      setMonthlySections(monthlyList);
+      setMonthlyTotalItems(monthlyList.reduce((sum, s) => sum + s.items.length, 0));
+    };
+    loadChecklists();
+  }, []);
 
   const loadData = async () => {
     setIsLoadingHistory(true);
@@ -449,7 +478,7 @@ export default function MaintenanceView({ embedded }: MaintenanceViewProps = {})
               </div>
               <div className="flex items-center justify-between">
                 <div className="text-xs text-muted-foreground">
-                  {WEEKLY_AUDIT_TOTAL_ITEMS} puntos a evaluar · Frecuencia: semanal
+                  {weeklyTotalItems} puntos a evaluar · Frecuencia: semanal
                 </div>
                 <Button
                   onClick={() => setShowWeeklyAudit(true)}
@@ -524,7 +553,7 @@ export default function MaintenanceView({ embedded }: MaintenanceViewProps = {})
               </div>
               <div className="flex items-center justify-between">
                 <div className="text-xs text-muted-foreground">
-                  {MONTHLY_AUDIT_TOTAL_ITEMS} puntos a evaluar · Frecuencia: mensual
+                  {monthlyTotalItems} puntos a evaluar · Frecuencia: mensual
                 </div>
                 <Button
                   onClick={() => setShowMonthlyAudit(true)}
@@ -921,8 +950,8 @@ export default function MaintenanceView({ embedded }: MaintenanceViewProps = {})
         open={showWeeklyAudit}
         onClose={handleAuditComplete}
         auditType="weekly"
-        sections={WEEKLY_AUDIT_CHECKLIST}
-        totalItems={WEEKLY_AUDIT_TOTAL_ITEMS}
+        sections={weeklySections}
+        totalItems={weeklyTotalItems}
         title="Auditoría Semanal de Limpieza"
         subtitle="S3 — Seiso: Evaluación semanal de la limpieza de la zona"
         color="#3B82F6"
@@ -933,8 +962,8 @@ export default function MaintenanceView({ embedded }: MaintenanceViewProps = {})
         open={showMonthlyAudit}
         onClose={handleAuditComplete}
         auditType="monthly"
-        sections={MONTHLY_AUDIT_CHECKLIST}
-        totalItems={MONTHLY_AUDIT_TOTAL_ITEMS}
+        sections={monthlySections}
+        totalItems={monthlyTotalItems}
         title="Auditoría Mensual 5S"
         subtitle="Evaluación mensual resumida de las 5S — Puntos clave por cada S"
         color="#8B5CF6"

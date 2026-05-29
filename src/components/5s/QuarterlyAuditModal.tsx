@@ -26,11 +26,10 @@ import {
 import { use5SStore } from '@/lib/store';
 import {
   S_STEPS,
-  QUARTERLY_AUDIT_CHECKLIST,
-  QUARTERLY_AUDIT_TOTAL_ITEMS,
   AUDIT_PASS_THRESHOLD,
 } from '@/lib/5s-constants';
-import type { AuditItemResult } from '@/lib/5s-constants';
+import type { AuditSection, AuditItemResult } from '@/lib/5s-constants';
+import { fetchAllChecklistTemplates } from '@/lib/checklist-templates';
 
 interface QuarterlyAuditModalProps {
   open: boolean;
@@ -39,8 +38,7 @@ interface QuarterlyAuditModalProps {
 
 export default function QuarterlyAuditModal({ open, onClose }: QuarterlyAuditModalProps) {
   const { fetchProgress, currentUser, adminFreeNavigation, currentProject, currentZone } = use5SStore();
-  const sections = QUARTERLY_AUDIT_CHECKLIST;
-
+  const [sections, setSections] = useState<AuditSection[]>([]);
   const [isFullscreen, setIsFullscreen] = useState(true);
   const [auditorName, setAuditorName] = useState('');
   const [results, setResults] = useState<Record<string, AuditItemResult>>({});
@@ -49,6 +47,24 @@ export default function QuarterlyAuditModal({ open, onClose }: QuarterlyAuditMod
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isCompleted, setIsCompleted] = useState(false);
   const [finalScore, setFinalScore] = useState(0);
+
+  // Load all checklist templates from API and combine them for quarterly audit
+  useEffect(() => {
+    if (open) {
+      const loadTemplates = async () => {
+        const templatesMap = await fetchAllChecklistTemplates('auditoria');
+        // Combine all S-steps into one checklist, ordered by S1-S5
+        const allSections: AuditSection[] = [];
+        for (let s = 1; s <= 5; s++) {
+          if (templatesMap[s]) {
+            allSections.push(...templatesMap[s]);
+          }
+        }
+        setSections(allSections);
+      };
+      loadTemplates();
+    }
+  }, [open]);
 
   // Mejoras realizadas
   const [haMejoras, setHaMejoras] = useState<boolean | null>(null);
@@ -69,7 +85,7 @@ export default function QuarterlyAuditModal({ open, onClose }: QuarterlyAuditMod
     }
   }, [open]);
 
-  const totalItems = QUARTERLY_AUDIT_TOTAL_ITEMS;
+  const totalItems = sections.reduce((sum, s) => sum + s.items.length, 0) || 1;
 
   const scoring = useMemo(() => {
     const allResults = Object.values(results);
