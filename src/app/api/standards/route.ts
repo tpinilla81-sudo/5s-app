@@ -40,7 +40,24 @@ export async function POST(request: NextRequest) {
     } = body
 
     if (!sStep || !title || !projectId) {
+      console.error('[Standards POST] Missing required fields:', { sStep, title: !!title, projectId: !!projectId })
       return NextResponse.json({ success: false, error: 'Faltan campos obligatorios: sStep, title, projectId' }, { status: 400 })
+    }
+
+    // Verify project exists (foreign key constraint)
+    const projectExists = await db.project.findUnique({ where: { id: projectId } })
+    if (!projectExists) {
+      console.error('[Standards POST] Project not found:', projectId)
+      return NextResponse.json({ success: false, error: `Proyecto no encontrado: ${projectId}` }, { status: 400 })
+    }
+
+    // Verify zone exists if provided
+    if (zoneId) {
+      const zoneExists = await db.zone.findUnique({ where: { id: zoneId } })
+      if (!zoneExists) {
+        console.error('[Standards POST] Zone not found:', zoneId)
+        return NextResponse.json({ success: false, error: `Zona no encontrada: ${zoneId}` }, { status: 400 })
+      }
     }
 
     const standard = await db.standard.create({
@@ -64,10 +81,15 @@ export async function POST(request: NextRequest) {
       },
     })
 
+    console.log(`[Standards POST] Created: id=${standard.id}, sStep=${sStep}, category=${category}, title=${title}`)
     return NextResponse.json({ success: true, data: standard })
-  } catch (error) {
-    console.error('Error creating standard:', error)
-    return NextResponse.json({ success: false, error: 'Error al crear estándar' }, { status: 500 })
+  } catch (error: any) {
+    console.error('[Standards POST] Error:', error?.message || error)
+    // Check for Prisma foreign key constraint error
+    if (error?.code === 'P2003') {
+      return NextResponse.json({ success: false, error: 'Error de referencia: el proyecto o zona no existe' }, { status: 400 })
+    }
+    return NextResponse.json({ success: false, error: `Error al crear estándar: ${error?.message || 'Error desconocido'}` }, { status: 500 })
   }
 }
 

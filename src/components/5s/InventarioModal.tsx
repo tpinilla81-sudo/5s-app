@@ -161,8 +161,15 @@ export default function InventarioModal({ open, onClose, sStep, miniStep }: Inve
       const formData = new FormData()
       formData.append('file', file)
       formData.append('projectId', currentProject.id)
-      formData.append('filename', `${currentProject.id}_layout_${sStep}_${Date.now()}_${file.name}`)
+      formData.append('filename', `${currentProject.id}_layout_${sStep}_${Date.now()}.png`)
+      console.log('[InventarioModal] Uploading layout image:', file.name, 'size:', (file.size / 1024).toFixed(1) + 'KB')
       const res = await fetch('/api/upload', { method: 'POST', body: formData })
+      if (!res.ok) {
+        console.error('[InventarioModal] Upload HTTP error:', res.status)
+        toast.error(`Error al subir imagen (HTTP ${res.status})`)
+        e.target.value = ''
+        return
+      }
       const json = await res.json()
       if (json.success && json.url) {
         const layoutDescriptions: Record<number, string> = {
@@ -171,33 +178,46 @@ export default function InventarioModal({ open, onClose, sStep, miniStep }: Inve
           4: 'Layout subido como imagen con estándares implantados señalados',
         }
         // Save as a layout standard
+        const standardPayload = {
+          sStep,
+          title: `Layout ${currentZone?.name || 'zona'} ${sStepData?.japaneseName || ''} (subido)`,
+          description: layoutDescriptions[sStep] || 'Layout subido como imagen',
+          category: 'layout',
+          photoUrl: json.url,
+          status: 'activo',
+          version: 1,
+          projectId: currentProject.id,
+          zoneId: currentZone?.id || null,
+        }
+        console.log('[InventarioModal] Saving layout standard:', {
+          sStep, category: 'layout', hasPhotoUrl: true,
+          projectId: currentProject.id, zoneId: currentZone?.id,
+        })
         const saveRes = await fetch('/api/standards', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            sStep,
-            title: `Layout ${currentZone?.name || 'zona'} ${sStepData?.japaneseName || ''} (subido)`,
-            description: layoutDescriptions[sStep] || 'Layout subido como imagen',
-            category: 'layout',
-            photoUrl: json.url,
-            status: 'activo',
-            version: 1,
-            projectId: currentProject.id,
-            zoneId: currentZone?.id || null,
-          }),
+          body: JSON.stringify(standardPayload),
         })
+        if (!saveRes.ok) {
+          console.error('[InventarioModal] Standards API HTTP error:', saveRes.status)
+          toast.error(`Error al guardar estándar (HTTP ${saveRes.status})`)
+          e.target.value = ''
+          return
+        }
         const saveJson = await saveRes.json()
         if (saveJson.success) {
           toast.success('Layout subido y guardado en Biblioteca de Estándares')
           await loadLayouts()
         } else {
+          console.error('[InventarioModal] Standards API error:', saveJson.error)
           toast.error(`Error al guardar estándar: ${saveJson.error || 'Error desconocido'}`)
         }
       } else {
+        console.error('[InventarioModal] Upload failed:', json.error)
         toast.error(`Error al subir imagen: ${json.error || 'Error desconocido'}`)
       }
     } catch (e) {
-      console.error('Upload error:', e)
+      console.error('[InventarioModal] Upload error:', e)
       toast.error('Error al subir la imagen del layout')
     }
     e.target.value = ''
@@ -736,6 +756,7 @@ export default function InventarioModal({ open, onClose, sStep, miniStep }: Inve
   };
 
   return (
+    <>
     <Dialog open={open} onOpenChange={() => onClose()}>
       <DialogContent size={isFullscreen ? "fullscreen" : "xl"} className="flex flex-col overflow-hidden p-0">
         <DialogHeader className="px-6 pt-6 pb-2 flex-shrink-0">
@@ -1533,8 +1554,9 @@ export default function InventarioModal({ open, onClose, sStep, miniStep }: Inve
         )}
         </div>
       </DialogContent>
+    </Dialog>
 
-      {/* Layout Editor — available for S2 (primary) and also for S3/S4 standards */}
+      {/* Layout Editor — rendered OUTSIDE the InventarioModal Dialog to avoid nested Dialog issues */}
       <LayoutEditor
         open={showLayoutEditor}
         onClose={() => setShowLayoutEditor(false)}
@@ -1549,6 +1571,6 @@ export default function InventarioModal({ open, onClose, sStep, miniStep }: Inve
           onClose={() => setShowColorCodeTable(false)}
         />
       )}
-    </Dialog>
+    </>
   );
 }

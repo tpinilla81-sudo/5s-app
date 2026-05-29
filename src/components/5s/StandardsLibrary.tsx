@@ -85,6 +85,15 @@ interface StandardsLibraryProps {
   onClose: () => void
 }
 
+// Standard template field definition (from admin "Plantillas" → "Estándares")
+interface StdTemplateField {
+  key: string
+  label: string
+  type: 'photo' | 'text' | 'number' | 'select'
+  options?: string[]
+  required?: boolean
+}
+
 export default function StandardsLibrary({ open, onClose }: StandardsLibraryProps) {
   const { currentProject, currentZone, currentUser } = use5SStore()
   const [standards, setStandards] = useState<StandardItem[]>([])
@@ -96,6 +105,10 @@ export default function StandardsLibrary({ open, onClose }: StandardsLibraryProp
   const [showLayoutEditor, setShowLayoutEditor] = useState(false)
   const [showColorCodeTable, setShowColorCodeTable] = useState(false)
   const [viewingStandard, setViewingStandard] = useState<StandardItem | null>(null)
+
+  // Template-driven fields
+  const [templateFields, setTemplateFields] = useState<StdTemplateField[]>([])
+  const [templateLoaded, setTemplateLoaded] = useState(false)
 
   // Form state
   const [formSStep, setFormSStep] = useState(1)
@@ -136,6 +149,35 @@ export default function StandardsLibrary({ open, onClose }: StandardsLibraryProp
       setIsLoading(false)
     }
   }, [currentProject, filterS, filterCategory, currentZone])
+
+  // Load the estandar template for the current S step to determine required fields
+  const loadStandardTemplate = useCallback(async (sStep: number) => {
+    try {
+      const res = await fetch(`/api/templates?type=estandar&sStep=${sStep}`)
+      const json = await res.json()
+      if (json.success && json.data && json.data.length > 0) {
+        const content = typeof json.data[0].content === 'string'
+          ? JSON.parse(json.data[0].content)
+          : json.data[0].content
+        if (content.fields && Array.isArray(content.fields)) {
+          setTemplateFields(content.fields)
+          setTemplateLoaded(true)
+          return
+        }
+      }
+    } catch (e) {
+      console.error('Error loading standard template:', e)
+    }
+    // Default fields if no template found
+    setTemplateFields([
+      { key: 'beforePhotoUrl', label: 'Foto Antes', type: 'photo', required: true },
+      { key: 'afterPhotoUrl', label: 'Foto Después', type: 'photo', required: true },
+      { key: 'responsable', label: 'Quién lo ha hecho', type: 'text', required: true },
+      { key: 'contacto', label: 'Contacto', type: 'text', required: true },
+      { key: 'mejoraTipo', label: 'Tipo de Mejora', type: 'select', options: ['seguridad', 'calidad', 'proceso', 'logistica'], required: true },
+    ])
+    setTemplateLoaded(true)
+  }, [])
 
   useEffect(() => {
     if (open) loadStandards()
@@ -202,6 +244,14 @@ export default function StandardsLibrary({ open, onClose }: StandardsLibraryProp
 
   const handleSave = async () => {
     if (!currentProject || !formTitle) return
+    // Validate required fields from template when creating a formato_mejora
+    if (isFormatoMejora) {
+      const validationError = validateRequiredFields()
+      if (validationError) {
+        toast.error(validationError)
+        return
+      }
+    }
     setIsSaving(true)
     try {
       const payload: any = {
@@ -275,6 +325,32 @@ export default function StandardsLibrary({ open, onClose }: StandardsLibraryProp
 
   // Check if form is in "formato mejora" mode
   const isFormatoMejora = formCategory === 'formato_mejora'
+
+  // Load template when S step changes during creation
+  useEffect(() => {
+    if (isCreating && formSStep) {
+      loadStandardTemplate(formSStep)
+    }
+  }, [isCreating, formSStep, loadStandardTemplate])
+
+  // Check if a field is required based on the template
+  const isFieldRequired = (key: string): boolean => {
+    const field = templateFields.find(f => f.key === key)
+    return field?.required ?? false
+  }
+
+  // Validate required fields from template before saving
+  const validateRequiredFields = (): string | null => {
+    for (const field of templateFields) {
+      if (!field.required) continue
+      if (field.key === 'beforePhotoUrl' && !formBeforePhotoUrl) return `Foto ANTES es obligatoria`
+      if (field.key === 'afterPhotoUrl' && !formAfterPhotoUrl) return `Foto DESPUÉS es obligatoria`
+      if (field.key === 'responsable' && !formResponsable.trim()) return `Responsable es obligatorio`
+      if (field.key === 'contacto' && !formContacto.trim()) return `Contacto es obligatorio`
+      if (field.key === 'mejoraTipo' && !formMejoraTipo) return `Tipo de Mejora es obligatorio`
+    }
+    return null
+  }
 
   return (
     <Dialog open={open} onOpenChange={(o) => { if (!o) { onClose(); resetForm(); setViewingStandard(null) } }}>
@@ -394,11 +470,16 @@ export default function StandardsLibrary({ open, onClose }: StandardsLibraryProp
                     <div className="flex items-center gap-2">
                       <Award className="h-5 w-5 text-teal-600" />
                       <h5 className="text-sm font-bold text-teal-800">Formato Estándar de Mejora</h5>
+                      {templateLoaded && (
+                        <Badge variant="outline" className="text-[9px] ml-1">Plantilla cargada</Badge>
+                      )}
                     </div>
 
                     {/* Tipo de Mejora */}
                     <div>
-                      <Label className="text-xs font-semibold">Tipo de Mejora</Label>
+                      <Label className="text-xs font-semibold">
+                        Tipo de Mejora {isFieldRequired('mejoraTipo') && <span className="text-red-500">*</span>}
+                      </Label>
                       <div className="grid grid-cols-4 gap-2 mt-1">
                         {MEJORA_TIPOS.map(tipo => (
                           <button
@@ -425,7 +506,7 @@ export default function StandardsLibrary({ open, onClose }: StandardsLibraryProp
                       <div className="space-y-2">
                         <Label className="text-xs font-semibold flex items-center gap-1">
                           <Camera className="h-3 w-3 text-red-500" />
-                          ANTES (estado original)
+                          ANTES (estado original) {isFieldRequired('beforePhotoUrl') && <span className="text-red-500">*</span>}
                         </Label>
                         <div className="relative border-2 border-dashed border-red-200 rounded-lg overflow-hidden bg-red-50/30 min-h-[160px] flex items-center justify-center">
                           {formBeforePhotoUrl ? (
@@ -457,7 +538,7 @@ export default function StandardsLibrary({ open, onClose }: StandardsLibraryProp
                       <div className="space-y-2">
                         <Label className="text-xs font-semibold flex items-center gap-1">
                           <Camera className="h-3 w-3 text-green-500" />
-                          DESPUÉS (con mejora)
+                          DESPUÉS (con mejora) {isFieldRequired('afterPhotoUrl') && <span className="text-red-500">*</span>}
                         </Label>
                         <div className="relative border-2 border-dashed border-green-200 rounded-lg overflow-hidden bg-green-50/30 min-h-[160px] flex items-center justify-center">
                           {formAfterPhotoUrl ? (
@@ -490,14 +571,14 @@ export default function StandardsLibrary({ open, onClose }: StandardsLibraryProp
                     <div className="grid grid-cols-2 gap-3">
                       <div>
                         <Label className="text-xs font-semibold flex items-center gap-1">
-                          <User className="h-3 w-3" /> Responsable (quién lo ha hecho)
+                          <User className="h-3 w-3" /> Responsable (quién lo ha hecho) {isFieldRequired('responsable') && <span className="text-red-500">*</span>}
                         </Label>
                         <Input value={formResponsable} onChange={e => setFormResponsable(e.target.value)}
                           placeholder="Nombre de la persona responsable" className="h-8 text-xs mt-1" />
                       </div>
                       <div>
                         <Label className="text-xs font-semibold flex items-center gap-1">
-                          <Phone className="h-3 w-3" /> Contacto
+                          <Phone className="h-3 w-3" /> Contacto {isFieldRequired('contacto') && <span className="text-red-500">*</span>}
                         </Label>
                         <Input value={formContacto} onChange={e => setFormContacto(e.target.value)}
                           placeholder="Teléfono o email de contacto" className="h-8 text-xs mt-1" />

@@ -137,3 +137,28 @@ Stage Summary:
 - Admin can customize inventory fields per S step via Templates panel
 - Standard format includes: Before/After photos, Who did it + contact, Improvement type (Safety/Quality/Process/Logistics)
 - Two new template types: "inventario" and "estandar" added to admin panel
+
+---
+Task ID: session-fixes-2026-05-30
+Agent: Main Agent
+Task: Fix permissions reset, layout save, step validation, photo traceability, admin reorder
+
+Work Log:
+- Fixed permissions auto-reseed bug: Changed from deleteMany+recreate to upsert-only for missing permissions, preserving custom edits. Added stale permission cleanup.
+- Fixed seed route: Removed old-format permission seeding (complete_steps, manage_users) that triggered the auto-reseed.
+- Fixed layout upload/save: Added filename sanitization (no spaces), better error handling, moved LayoutEditor outside nested Dialog, added logging.
+- Fixed standards API: Added project/zone existence verification, better error messages with Prisma error codes.
+- Added step validation: Server-side prerequisite validation in PUT /api/progress/step - validates previous steps completed, layout uploaded for S2/S3/S4 step 3.
+- Added photo traceability: FotosModal now saves photos to PhotoLibrary with title, type (ANTES/DESPUÉS/REFERENCIA/HALLAZGO), zone, S step, who uploaded, tags, and description.
+- Connected template system: StandardsLibrary now loads estandar template fields, validates required fields, shows asterisks on required labels.
+- Created estandar templates in DB for all 5 S steps.
+- Reordered admin tabs: Empresas → Usuarios → Proyectos → Plantillas.
+- Reordered template sub-tabs: Formaciones y Exámenes → Inventarios → Estándares → Auditorías.
+
+Stage Summary:
+- Permissions no longer reset when loading (critical fix)
+- Layout drawing upload and save now works with sanitized filenames
+- Step 3 (Layout) is required before completing for S2/S3/S4
+- Photos from step 2 are now saved to Photo Library with full traceability
+- Admin panel order: Empresas/Usuarios/Proyectos/Plantillas
+- Template sub-tabs: Formaciones y Exámenes/Inventarios/Estándares/Auditorías

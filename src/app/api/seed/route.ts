@@ -440,35 +440,10 @@ export async function POST() {
       }
     }
 
-    // Create role permissions
-    const permissions = [
-      { role: 'admin', permission: 'view_board', allowed: true },
-      { role: 'admin', permission: 'complete_steps', allowed: true },
-      { role: 'admin', permission: 'manage_users', allowed: true },
-      { role: 'admin', permission: 'manage_projects', allowed: true },
-      { role: 'admin', permission: 'skip_steps', allowed: true },
-      { role: 'admin', permission: 'view_reports', allowed: true },
-      { role: 'admin', permission: 'manage_zones', allowed: true },
-      { role: 'responsable', permission: 'view_board', allowed: true },
-      { role: 'responsable', permission: 'complete_steps', allowed: true },
-      { role: 'responsable', permission: 'manage_users', allowed: false },
-      { role: 'responsable', permission: 'view_reports', allowed: true },
-      { role: 'empleado', permission: 'view_board', allowed: true },
-      { role: 'empleado', permission: 'complete_steps', allowed: true },
-      { role: 'empleado', permission: 'manage_users', allowed: false },
-      { role: 'empleado', permission: 'view_reports', allowed: false },
-      { role: 'auditor', permission: 'view_board', allowed: true },
-      { role: 'auditor', permission: 'complete_steps', allowed: false },
-      { role: 'auditor', permission: 'conduct_audit', allowed: true },
-      { role: 'auditor', permission: 'view_reports', allowed: true },
-    ]
-    for (const perm of permissions) {
-      await db.rolePermissionConfig.upsert({
-        where: { role_permission: { role: perm.role, permission: perm.permission } },
-        create: perm,
-        update: { allowed: perm.allowed },
-      })
-    }
+    // Permissions are now auto-seeded by GET /api/permissions with the correct per-S format.
+    // Old-format permissions (complete_steps, manage_users, etc.) are NO LONGER created here
+    // because they triggered the auto-reseed in /api/permissions which wiped all customizations.
+    // The GET endpoint will create any missing permissions using UPSERT (preserving custom edits).
 
     // Clear existing templates and recreate
     try {
@@ -530,6 +505,25 @@ export async function POST() {
           title: `Auditoría ${S_NAMES[s - 1]}`,
           description: `Criterios de auditoría para ${S_NAMES[s - 1]}`,
           content: JSON.stringify(AUDIT_TEMPLATES[s]),
+        },
+      })
+
+      // Standard template (formato de mejora)
+      await db.template.create({
+        data: {
+          type: 'estandar',
+          sStep: s,
+          title: `Formato Estándar de Mejora - ${S_NAMES[s - 1]}`,
+          description: `Plantilla de formato estándar para registrar mejoras en ${S_NAMES[s - 1]} (${S_JAPANESE[s - 1]})`,
+          content: JSON.stringify({
+            fields: [
+              { key: 'beforePhotoUrl', label: 'Foto Antes', type: 'photo', required: true },
+              { key: 'afterPhotoUrl', label: 'Foto Después', type: 'photo', required: true },
+              { key: 'responsable', label: 'Quién lo ha hecho', type: 'text', required: true },
+              { key: 'contacto', label: 'Contacto', type: 'text', required: true },
+              { key: 'mejoraTipo', label: 'Tipo de Mejora', type: 'select', options: ['seguridad', 'calidad', 'proceso', 'logistica'], required: true },
+            ],
+          }),
         },
       })
     }

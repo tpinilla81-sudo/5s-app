@@ -56,6 +56,9 @@ interface PhotoItem {
   uploaded: boolean;
   uploading: boolean;
   estimatedSize: number;
+  title: string; // Título descriptivo de la foto
+  photoType: string; // "antes", "despues", "referencia", "hallazgo"
+  savedToLibrary: boolean; // Si ya se guardó en la biblioteca
 }
 
 export default function FotosModal({ open, onClose, sStep, miniStep }: FotosModalProps) {
@@ -84,8 +87,18 @@ export default function FotosModal({ open, onClose, sStep, miniStep }: FotosModa
   const [cameraError, setCameraError] = useState<string | null>(null);
   const [captureFlash, setCaptureFlash] = useState(false);
   const [activeTab, setActiveTab] = useState<'camera' | 'upload'>('camera');
+  const [defaultPhotoType, setDefaultPhotoType] = useState<string>('antes');
 
   const beforePrompt = BEFORE_PROMPT_BY_S[sStep] || 'Fotografía la zona para documentar su estado actual.';
+
+  // Generate auto title with traceability
+  const generatePhotoTitle = (index: number, photoType: string): string => {
+    const sName = sStepData?.japaneseName || `S${sStep}`
+    const zoneName = currentZone?.name || 'Zona'
+    const typeLabel = photoType === 'antes' ? 'ANTES' : photoType === 'despues' ? 'DESPUÉS' : photoType === 'referencia' ? 'Referencia' : 'Hallazgo'
+    const date = new Date().toLocaleDateString('es-ES')
+    return `S${sStep} ${sName} - ${zoneName} - ${typeLabel} ${index + 1} (${date})`
+  }
 
   const uploadPhoto = async (base64Data: string, index: number): Promise<string | null> => {
     try {
@@ -115,6 +128,7 @@ export default function FotosModal({ open, onClose, sStep, miniStep }: FotosModa
     try {
       const compressed = await compressImage(rawBase64);
       const estimatedSize = estimateBase64Size(compressed);
+      const photoType = defaultPhotoType;
 
       const newPhoto: PhotoItem = {
         preview: compressed,
@@ -122,6 +136,9 @@ export default function FotosModal({ open, onClose, sStep, miniStep }: FotosModa
         uploaded: false,
         uploading: true,
         estimatedSize,
+        title: generatePhotoTitle(photos.length, photoType),
+        photoType,
+        savedToLibrary: false,
       };
 
       setPhotos(prev => [...prev, newPhoto]);
@@ -138,7 +155,7 @@ export default function FotosModal({ open, onClose, sStep, miniStep }: FotosModa
     } catch (error) {
       console.error('Error processing photo:', error);
     }
-  }, [sStep, miniStep, currentProject?.id, photos.length]);
+  }, [sStep, miniStep, currentProject?.id, photos.length, defaultPhotoType]);
 
   const stopStream = useCallback(() => {
     if (stream) {
@@ -233,6 +250,40 @@ export default function FotosModal({ open, onClose, sStep, miniStep }: FotosModa
     setIsSubmitting(true);
     try {
       const urls = photos.map(p => p.serverUrl || p.preview).join(',');
+
+      // Save each photo to the PhotoLibrary with full traceability
+      const libraryPromises = photos
+        .filter(p => p.serverUrl && !p.savedToLibrary)
+        .map((p, idx) => {
+          const allUploadedBefore = photos.slice(0, idx).filter(pp => pp.serverUrl).length;
+          return fetch('/api/photo-library', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              sStep,
+              miniStep: 2,
+              title: p.title || generatePhotoTitle(allUploadedBefore, p.photoType),
+              description: `${sStepData?.japaneseName || 'S' + sStep} - ${currentZone?.name || 'Zona'} - Paso 2 Fotos - Subida por ${currentUser?.name || 'Usuario'}`,
+              photoUrl: p.serverUrl,
+              photoType: p.photoType || 'antes',
+              category: `paso2_s${sStep}`,
+              tags: JSON.stringify([`S${sStep}`, sStepData?.japaneseName || '', currentZone?.name || '', `paso2`, p.photoType]),
+              projectId: currentProject?.id,
+              zoneId: currentZone?.id || null,
+              uploadedBy: currentUser?.id || null,
+            }),
+          });
+        });
+      
+      // Save to library in parallel (don't block if it fails)
+      Promise.allSettled(libraryPromises).then(results => {
+        const saved = results.filter(r => r.status === 'fulfilled').length;
+        const failed = results.filter(r => r.status === 'rejected').length;
+        if (failed > 0) console.warn(`[FotosModal] ${failed} photos failed to save to library`);
+        else if (saved > 0) console.log(`[FotosModal] ${saved} photos saved to library`);
+      });
+
+      // Save progress
       const res = await fetch(`/api/progress/step?sStep=${sStep}&miniStep=${miniStep}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -397,6 +448,24 @@ export default function FotosModal({ open, onClose, sStep, miniStep }: FotosModa
               </CardContent>
             </Card>
 
+            {/* Photo type selector */}
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-xs text-muted-foreground font-medium">Tipo de foto:</span>
+              {[
+                { value: 'antes', label: 'ANTES', color: 'bg-red-100 text-red-800 border-red-300' },
+                { value: 'despues', label: 'DESPUÉS', color: 'bg-green-100 text-green-800 border-green-300' },
+                { value: 'referencia', label: 'Referencia', color: 'bg-blue-100 text-blue-800 border-blue-300' },
+                { value: 'hallazgo', label: 'Hallazgo', color: 'bg-amber-100 text-amber-800 border-amber-300' },
+              ].map(t => (
+                <button key={t.value} onClick={() => setDefaultPhotoType(t.value)}
+                  className={`px-2.5 py-1 rounded-full text-[10px] font-semibold border-2 transition-all ${
+                    defaultPhotoType === t.value ? t.color + ' shadow-sm scale-105' : 'bg-gray-50 text-gray-400 border-gray-200'
+                  }`}>
+                  {t.label}
+                </button>
+              ))}
+            </div>
+
             {photos.length > 0 && (
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
@@ -406,24 +475,46 @@ export default function FotosModal({ open, onClose, sStep, miniStep }: FotosModa
                     {uploadingCount > 0 && <span className="text-xs text-blue-500 flex items-center gap-1"><Loader2 className="h-3 w-3 animate-spin" />Subiendo {uploadingCount}...</span>}
                   </div>
                 </div>
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                <div className="space-y-2">
                   {photos.map((photo, index) => (
-                    <div key={index} className="relative group">
-                      <div className="aspect-square rounded-lg overflow-hidden border-2 border-muted bg-muted">
-                        <img src={photo.preview} alt={`Antes ${index + 1}`} className="w-full h-full object-cover" />
+                    <div key={index} className="flex items-start gap-3 p-2 rounded-lg border bg-white group">
+                      <div className="w-16 h-16 rounded-lg overflow-hidden border shrink-0">
+                        <img src={photo.preview} alt={`Foto ${index + 1}`} className="w-full h-full object-cover" />
                       </div>
-                      <div className="absolute top-1.5 left-1.5 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold text-white" style={{ backgroundColor: sStepData?.color }}>{index + 1}</div>
-                      <div className="absolute top-1.5 right-1.5">
-                        {photo.uploading ? <div className="w-5 h-5 rounded-full bg-blue-500/80 flex items-center justify-center"><Loader2 className="h-3 w-3 text-white animate-spin" /></div>
-                        : photo.uploaded ? <div className="w-5 h-5 rounded-full bg-green-500/80 flex items-center justify-center"><CheckCircle className="h-3 w-3 text-white" /></div> : null}
+                      <div className="flex-1 min-w-0 space-y-1.5">
+                        <div className="flex items-center gap-2">
+                          <Badge className={`text-[9px] px-1.5 py-0 ${
+                            photo.photoType === 'antes' ? 'bg-red-100 text-red-700' :
+                            photo.photoType === 'despues' ? 'bg-green-100 text-green-700' :
+                            photo.photoType === 'referencia' ? 'bg-blue-100 text-blue-700' :
+                            'bg-amber-100 text-amber-700'
+                          }`}>
+                            {photo.photoType === 'antes' ? 'ANTES' :
+                             photo.photoType === 'despues' ? 'DESPUÉS' :
+                             photo.photoType === 'referencia' ? 'REF' : 'HALLAZGO'}
+                          </Badge>
+                          {photo.uploaded ? <CheckCircle className="h-3.5 w-3.5 text-green-500" /> :
+                           photo.uploading ? <Loader2 className="h-3.5 w-3.5 animate-spin text-blue-500" /> : null}
+                          <span className="text-[9px] text-muted-foreground">{formatBytes(photo.estimatedSize)}</span>
+                        </div>
+                        <input
+                          type="text"
+                          value={photo.title}
+                          onChange={e => setPhotos(prev => prev.map((p, i) => i === index ? { ...p, title: e.target.value } : p))}
+                          className="w-full text-xs border rounded px-2 py-1 h-7 focus:outline-none focus:ring-1 focus:ring-teal-400"
+                          placeholder="Título de la foto..."
+                        />
                       </div>
-                      <div className="absolute bottom-1.5 left-1.5 bg-black/60 text-white text-[9px] px-1.5 py-0.5 rounded-full">{formatBytes(photo.estimatedSize)}</div>
-                      <button className="absolute -top-2 -right-2 w-7 h-7 bg-destructive text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-md hover:bg-red-600" onClick={() => removePhoto(index)} title="Eliminar foto"><X className="h-3.5 w-3.5" /></button>
+                      <button className="shrink-0 w-6 h-6 rounded-full bg-red-50 text-red-400 hover:bg-red-100 hover:text-red-600 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                        onClick={() => removePhoto(index)} title="Eliminar foto">
+                        <X className="h-3 w-3" />
+                      </button>
                     </div>
                   ))}
-                  <button className="aspect-square rounded-lg border-2 border-dashed border-muted-foreground/25 flex flex-col items-center justify-center gap-1 hover:border-primary/50 hover:bg-muted/20 transition-colors" onClick={() => { if (isMobile) { cameraInputRef.current?.click(); } else { setActiveTab('camera'); if (cameraMode === 'idle') startCamera(); } }}>
-                    <Camera className="h-6 w-6 text-muted-foreground/50" />
-                    <span className="text-[10px] text-muted-foreground/70 font-medium">Añadir</span>
+                  <button className="w-full py-3 rounded-lg border-2 border-dashed border-muted-foreground/25 flex items-center justify-center gap-2 hover:border-primary/50 hover:bg-muted/20 transition-colors text-sm text-muted-foreground"
+                    onClick={() => { if (isMobile) { cameraInputRef.current?.click(); } else { setActiveTab('camera'); if (cameraMode === 'idle') startCamera(); } }}>
+                    <Camera className="h-4 w-4" />
+                    <span className="text-xs font-medium">Añadir foto ({defaultPhotoType === 'antes' ? 'ANTES' : defaultPhotoType === 'despues' ? 'DESPUÉS' : defaultPhotoType === 'referencia' ? 'Referencia' : 'Hallazgo'})</span>
                   </button>
                 </div>
               </div>

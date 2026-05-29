@@ -9,6 +9,91 @@ async function hasPermission(role: string, permission: string): Promise<boolean>
   return config?.allowed === true
 }
 
+// Helper: check if a step is completed at zone/project level
+async function isStepCompleted(sStep: number, miniStep: number, projectId: string, zoneId: string | null): Promise<boolean> {
+  const where: any = { sStep, miniStep, projectId, completed: true }
+  if (zoneId) where.zoneId = zoneId
+  else where.zoneId = null
+
+  const progress = await db.progress.findFirst({ where })
+  if (progress) return true
+
+  // Also check employeeProgress for individual steps (1, 4)
+  if (miniStep === 1 || miniStep === 4) {
+    const empWhere: any = { sStep, miniStep, projectId, completed: true }
+    if (zoneId) empWhere.zoneId = zoneId
+    const empProgress = await db.employeeProgress.findFirst({ where: empWhere })
+    if (empProgress) return true
+  }
+
+  return false
+}
+
+// Helper: validate step prerequisites before marking as completed
+async function validateStepPrerequisites(
+  sStep: number, miniStep: number, projectId: string, zoneId: string | null, userRole: string
+): Promise<{ valid: boolean; error?: string }> {
+  const canSkip = await hasPermission(userRole, 'skip_steps')
+  if (canSkip) return { valid: true } // Admin/skip users can bypass prerequisites
+
+  // INTER-S validation: previous S must be completed (all 5 mini-steps)
+  if (sStep > 1) {
+    for (let ms = 1; ms <= 5; ms++) {
+      const prevSCompleted = await isStepCompleted(sStep - 1, ms, projectId, zoneId)
+      if (!prevSCompleted) {
+        // Also check employeeProgress for any employee
+        const empWhere: any = { sStep: sStep - 1, miniStep: ms, projectId, completed: true }
+        if (zoneId) empWhere.zoneId = zoneId
+        const empDone = await db.employeeProgress.findFirst({ where: empWhere })
+        if (!empDone) {
+          return { valid: false, error: `Debes completar la ${sStep - 1}ª S antes de continuar` }
+        }
+      }
+    }
+  }
+
+  // INTRA-S validation: previous mini-step must be completed
+  if (miniStep > 1 && miniStep <= 4) {
+    const prevCompleted = await isStepCompleted(sStep, miniStep - 1, projectId, zoneId)
+    if (!prevCompleted) {
+      // Also check any employee progress
+      const empWhere: any = { sStep, miniStep: miniStep - 1, projectId, completed: true }
+      if (zoneId) empWhere.zoneId = zoneId
+      const empDone = await db.employeeProgress.findFirst({ where: empWhere })
+      if (!empDone) {
+        return { valid: false, error: `Debes completar el paso ${miniStep - 1} antes de continuar` }
+      }
+    }
+  }
+
+  // Step 5 (audit): requires steps 1-4 ALL completed
+  if (miniStep === 5) {
+    for (let ms = 1; ms <= 4; ms++) {
+      const stepCompleted = await isStepCompleted(sStep, ms, projectId, zoneId)
+      if (!stepCompleted) {
+        const empWhere: any = { sStep, miniStep: ms, projectId, completed: true }
+        if (zoneId) empWhere.zoneId = zoneId
+        const empDone = await db.employeeProgress.findFirst({ where: empWhere })
+        if (!empDone) {
+          return { valid: false, error: `Debes completar los pasos 1-4 antes de la auditoría` }
+        }
+      }
+    }
+  }
+
+  // Step 3 of S2/S3/S4: requires at least one layout standard uploaded
+  if (miniStep === 3 && (sStep === 2 || sStep === 3 || sStep === 4)) {
+    const layoutWhere: any = { projectId, category: 'layout', sStep }
+    if (zoneId) layoutWhere.zoneId = zoneId
+    const layoutCount = await db.standard.count({ where: layoutWhere })
+    if (layoutCount === 0) {
+      return { valid: false, error: `Debes dibujar o subir un layout antes de completar este paso` }
+    }
+  }
+
+  return { valid: true }
+}
+
 // Helper: perform the actual progress upsert
 async function handleProgressUpdate(
   sStep: number,
@@ -128,6 +213,14 @@ export async function PUT(request: NextRequest) {
     const canPerform = await hasPermission(user.role, permId)
     if (!canPerform) {
       return NextResponse.json({ success: false, error: `No tienes permiso para realizar el paso ${miniStepNum} de S${sStepNum}` }, { status: 403 })
+    }
+
+    // Validate step prerequisites when marking as completed
+    if (completed && projectId) {
+      const validation = await validateStepPrerequisites(sStepNum, miniStepNum, projectId, zoneId || null, user.role)
+      if (!validation.valid) {
+        return NextResponse.json({ success: false, error: validation.error }, { status: 400 })
+      }
     }
 
     return await handleProgressUpdate(sStepNum, miniStepNum, { completed, score, notes, photoUrls, projectId, zoneId })

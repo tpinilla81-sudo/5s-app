@@ -37,13 +37,13 @@ interface TemplateData {
   updatedAt: string
 }
 
-type TemplateTab = 'formacion' | 'auditorias' | 'inventarios' | 'estandares'
+type TemplateTab = 'formacion' | 'inventarios' | 'estandares' | 'auditorias'
 
 const TEMPLATE_TABS: { key: TemplateTab; label: string; icon: React.ComponentType<{ className?: string }>; types: string[] }[] = [
   { key: 'formacion', label: 'Formaciones y Exámenes', icon: BookOpen, types: ['formacion', 'examen'] },
-  { key: 'auditorias', label: 'Auditorías', icon: ClipboardCheck, types: ['autoevaluacion', 'auditoria'] },
   { key: 'inventarios', label: 'Inventarios', icon: ClipboardList, types: ['inventario'] },
   { key: 'estandares', label: 'Estándares', icon: Award, types: ['estandar'] },
+  { key: 'auditorias', label: 'Auditorías', icon: ClipboardCheck, types: ['autoevaluacion', 'auditoria'] },
 ]
 
 const S_COLORS: Record<number, string> = { 1: '#8B5CF6', 2: '#EAB308', 3: '#3B82F6', 4: '#F43F5E', 5: '#22C55E' }

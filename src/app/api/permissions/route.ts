@@ -97,27 +97,42 @@ export async function GET() {
   try {
     let configs = await db.rolePermissionConfig.findMany()
 
-    // If no configs exist yet, or if existing configs don't have the new per-S permissions, re-seed
-    const existingPermIds = new Set(configs.map(c => c.permission))
-    const needsReseed = configs.length === 0
-      || !PER_S_PERMISSIONS.some(p => existingPermIds.has(p))
-      || !GENERAL_PERMISSIONS.every(p => existingPermIds.has(p))
+    // Ensure all expected permissions exist in DB using UPSERT (preserve custom edits!)
+    const existingPermIds = new Set(configs.map(c => `${c.role}::${c.permission}`))
+    const upsertPromises: Promise<unknown>[] = []
 
-    if (needsReseed) {
-      // Delete all and re-seed with new structure
-      await db.rolePermissionConfig.deleteMany({})
-      const createPromises: Promise<unknown>[] = []
-      for (const [role, perms] of Object.entries(DEFAULT_PERMISSIONS)) {
-        for (const permission of ALL_PERMISSIONS) {
-          const allowed = perms.includes(permission)
-          createPromises.push(
-            db.rolePermissionConfig.create({
-              data: { role, permission, allowed },
+    for (const [role, defaultPerms] of Object.entries(DEFAULT_PERMISSIONS)) {
+      for (const permission of ALL_PERMISSIONS) {
+        const key = `${role}::${permission}`
+        if (!existingPermIds.has(key)) {
+          // Only create missing permissions with default value - NEVER overwrite existing customizations
+          const allowed = defaultPerms.includes(permission)
+          upsertPromises.push(
+            db.rolePermissionConfig.upsert({
+              where: { role_permission: { role, permission } },
+              update: {}, // Don't change existing values
+              create: { role, permission, allowed },
             })
           )
         }
       }
-      await Promise.all(createPromises)
+    }
+
+    if (upsertPromises.length > 0) {
+      await Promise.all(upsertPromises)
+      configs = await db.rolePermissionConfig.findMany()
+    }
+
+    // Clean up stale/old-format permissions that no longer exist in the current system
+    const allValidPermIds = new Set(ALL_PERMISSIONS)
+    const staleConfigs = configs.filter(c => !allValidPermIds.has(c.permission))
+    if (staleConfigs.length > 0) {
+      const deletePromises = staleConfigs.map(c =>
+        db.rolePermissionConfig.deleteMany({
+          where: { role: c.role, permission: c.permission },
+        })
+      )
+      await Promise.all(deletePromises)
       configs = await db.rolePermissionConfig.findMany()
     }
 

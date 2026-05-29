@@ -326,8 +326,18 @@ export default function LayoutEditor({ open, onClose, onSave, initialImage, init
     }
     setIsSaving(true)
     try {
-      const dataUrl = stageRef.current?.toDataURL({ pixelRatio: 2 })
-      if (!dataUrl) { toast.error('No hay dibujo para guardar'); setIsSaving(false); return }
+      // Export canvas to image
+      let dataUrl: string | null = null
+      try {
+        dataUrl = stageRef.current?.toDataURL({ pixelRatio: 2 }) || null
+      } catch (e) {
+        console.error('[LayoutEditor] Error exporting canvas:', e)
+      }
+      if (!dataUrl) {
+        toast.error('No se pudo exportar el dibujo. Intenta de nuevo.')
+        setIsSaving(false)
+        return
+      }
       const shapesJson = JSON.stringify(shapes)
 
       // Auto-generate name if not provided
@@ -346,15 +356,20 @@ export default function LayoutEditor({ open, onClose, onSave, initialImage, init
         formData.append('projectId', currentProject.id)
         formData.append('filename', `${currentProject.id}_layout_${effectiveSStep}_${Date.now()}.png`)
         const uploadRes = await fetch('/api/upload', { method: 'POST', body: formData })
-        const uploadJson = await uploadRes.json()
-        if (uploadJson.success && uploadJson.url) {
-          photoUrl = uploadJson.url
-        } else {
-          console.warn('Upload returned no URL, using data URL fallback:', uploadJson)
+        if (!uploadRes.ok) {
+          console.error('[LayoutEditor] Upload HTTP error:', uploadRes.status, uploadRes.statusText)
           photoUrl = dataUrl
+        } else {
+          const uploadJson = await uploadRes.json()
+          if (uploadJson.success && uploadJson.url) {
+            photoUrl = uploadJson.url
+          } else {
+            console.warn('[LayoutEditor] Upload returned no URL:', uploadJson)
+            photoUrl = dataUrl
+          }
         }
       } catch (uploadErr) {
-        console.error('Error uploading layout image, storing data URL directly:', uploadErr)
+        console.error('[LayoutEditor] Error uploading layout image:', uploadErr)
         photoUrl = dataUrl // Fallback: store data URL directly
       }
 
@@ -364,22 +379,44 @@ export default function LayoutEditor({ open, onClose, onSave, initialImage, init
         return
       }
 
+      // If photoUrl is a data URL (fallback), it might be too large for JSON body.
+      // In that case, skip storing the photoUrl in the standard and just save shapes.
+      const isDataUrl = photoUrl.startsWith('data:')
+      const standardData: Record<string, unknown> = {
+        sStep: effectiveSStep,
+        title: layoutName,
+        description: 'Layout dibujado con editor',
+        category: 'layout',
+        content: shapesJson,
+        photoUrl: isDataUrl ? null : photoUrl, // Don't store huge data URLs
+        status: 'activo',
+        version: 1,
+        projectId: currentProject.id,
+        zoneId: currentZone?.id || null,
+      }
+
+      console.log('[LayoutEditor] Saving standard:', {
+        sStep: effectiveSStep,
+        category: 'layout',
+        hasPhotoUrl: !!standardData.photoUrl,
+        shapesCount: shapes.length,
+        projectId: currentProject.id,
+        zoneId: currentZone?.id,
+      })
+
       const saveRes = await fetch('/api/standards', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          sStep: effectiveSStep,
-          title: layoutName,
-          description: 'Layout dibujado con editor',
-          category: 'layout',
-          content: shapesJson,
-          photoUrl: photoUrl,
-          status: 'activo',
-          version: 1,
-          projectId: currentProject.id,
-          zoneId: currentZone?.id || null,
-        }),
+        body: JSON.stringify(standardData),
       })
+
+      if (!saveRes.ok) {
+        console.error('[LayoutEditor] Standards API HTTP error:', saveRes.status, saveRes.statusText)
+        toast.error(`Error al guardar (HTTP ${saveRes.status}). Intenta de nuevo.`)
+        setIsSaving(false)
+        return
+      }
+
       const saveJson = await saveRes.json()
 
       if (saveJson.success) {
@@ -387,11 +424,12 @@ export default function LayoutEditor({ open, onClose, onSave, initialImage, init
         toast.success('Layout guardado en la Biblioteca de Estándares')
         setSaveName('')
       } else {
+        console.error('[LayoutEditor] Standards API error:', saveJson.error)
         toast.error(`Error al guardar: ${saveJson.error || 'Error desconocido'}`)
       }
-    } catch (e) {
-      console.error('Error saving layout:', e)
-      toast.error('Error al guardar el layout')
+    } catch (e: any) {
+      console.error('[LayoutEditor] Error saving layout:', e)
+      toast.error(`Error al guardar el layout: ${e?.message || 'Error desconocido'}`)
     } finally {
       setIsSaving(false)
     }

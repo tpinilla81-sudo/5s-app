@@ -129,7 +129,7 @@ interface AdminPanelProps {
 
 export default function AdminPanel({ embedded }: AdminPanelProps = {}) {
   const { setCurrentView, fetchProjects, fetchCompanies, projects, setCurrentProject, currentProject } = use5SStore()
-  const [activeTab, setActiveTab] = useState<'projects' | 'users' | 'companies' | 'plantillas'>('projects')
+  const [activeTab, setActiveTab] = useState<'companies' | 'users' | 'projects' | 'plantillas'>('companies')
 
   // ─── Projects state ──────────────────────────────────────────────────────
   const [allProjects, setAllProjects] = useState<ProjectData[]>([])
@@ -763,19 +763,19 @@ export default function AdminPanel({ embedded }: AdminPanelProps = {}) {
         </header>
       )}
 
-      {/* Tabs */}
+      {/* Tabs — Order: Empresas / Usuarios / Proyectos / Plantillas */}
       <div className="border-b bg-white">
         <div className={`flex gap-1 ${embedded ? '' : 'max-w-5xl mx-auto px-4'}`}>
           <button
-            onClick={() => { setActiveTab('projects'); setSelectedProjectId(null) }}
+            onClick={() => { setActiveTab('companies'); setSelectedProjectId(null) }}
             className={`flex items-center gap-2 px-5 py-3 text-sm font-medium border-b-2 transition-colors ${
-              activeTab === 'projects'
+              activeTab === 'companies'
                 ? 'border-purple-500 text-purple-600'
                 : 'border-transparent text-muted-foreground hover:text-foreground'
             }`}
           >
             <Building2 className="h-4 w-4" />
-            Proyectos
+            Empresas
           </button>
           <button
             onClick={() => { setActiveTab('users'); setSelectedProjectId(null) }}
@@ -789,15 +789,15 @@ export default function AdminPanel({ embedded }: AdminPanelProps = {}) {
             Usuarios
           </button>
           <button
-            onClick={() => { setActiveTab('companies'); setSelectedProjectId(null) }}
+            onClick={() => { setActiveTab('projects'); setSelectedProjectId(null) }}
             className={`flex items-center gap-2 px-5 py-3 text-sm font-medium border-b-2 transition-colors ${
-              activeTab === 'companies'
+              activeTab === 'projects'
                 ? 'border-purple-500 text-purple-600'
                 : 'border-transparent text-muted-foreground hover:text-foreground'
             }`}
           >
             <Building2 className="h-4 w-4" />
-            Empresas
+            Proyectos
           </button>
 
           <button
