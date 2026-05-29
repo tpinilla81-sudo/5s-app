@@ -1152,3 +1152,292 @@ Read more: https://nextjs.org/docs/messages/failed-to-find-server-action
  GET /api/notifications?userId=cmpo528u4003cmg03sdja675b&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 7ms (compile: 1954µs, render: 5ms)
  GET /api/notifications?userId=cmpo528u4003cmg03sdja675b&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 7ms (compile: 2ms, render: 5ms)
  GET / 200 in 39ms (compile: 4ms, render: 35ms)
+ GET / 200 in 34ms (compile: 4ms, render: 29ms)
+ GET /api/notifications?userId=cmpo528u4003cmg03sdja675b&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 8ms (compile: 3ms, render: 6ms)
+ GET /api/notifications?userId=cmpo528u4003cmg03sdja675b&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 7ms (compile: 2ms, render: 5ms)
+ GET / 200 in 30ms (compile: 3ms, render: 27ms)
+ GET /api/auth 200 in 8ms (compile: 2ms, render: 6ms)
+ GET /api/permissions 200 in 10ms (compile: 2ms, render: 8ms)
+ GET /api/projects 200 in 9ms (compile: 2ms, render: 6ms)
+ GET /api/auth/zones 200 in 11ms (compile: 2ms, render: 8ms)
+ GET /api/notifications?userId=cmpo528u4003cmg03sdja675b&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 12ms (compile: 3ms, render: 9ms)
+ GET /api/progress 200 in 13ms (compile: 6ms, render: 7ms)
+ GET /api/employee-progress?projectId=cmpok8xii00rjmgfj1nn1hiuh&zoneId=cmpok8xii00rlmgfjyw6q03ll 200 in 10ms (compile: 3ms, render: 7ms)
+ GET /api/employee-progress?projectId=cmpok8xii00rjmgfj1nn1hiuh&zoneId=cmpok8xii00rlmgfjyw6q03ll 200 in 7ms (compile: 2ms, render: 5ms)
+ POST /api/notifications/auto 200 in 36ms (compile: 2ms, render: 34ms)
+ GET /api/notifications?userId=cmpo528u4003cmg03sdja675b&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 7ms (compile: 2ms, render: 5ms)
+ GET /api/notifications?userId=cmpo528u4003cmg03sdja675b&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 7ms (compile: 2ms, render: 5ms)
+ GET /api/inventory?sStep=2&projectId=cmpok8xii00rjmgfj1nn1hiuh&zoneId=cmpok8xii00rlmgfjyw6q03ll 200 in 7ms (compile: 2ms, render: 5ms)
+ GET /api/standards?projectId=cmpok8xii00rjmgfj1nn1hiuh&category=layout&sStep=2&zoneId=cmpok8xii00rlmgfjyw6q03ll 200 in 58ms (compile: 46ms, render: 12ms)
+ POST /api/upload 200 in 149ms (compile: 130ms, render: 18ms)
+prisma:error 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].standard.create()` invocation in
+/home/z/my-project/.next/dev/server/chunks/[root-of-the-server]__bb3dac69._.js:161:162
+
+  158         status: 400
+  159     });
+  160 }
+→ 161 const standard = await __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].standard.create({
+        data: {
+          sStep: 2,
+          title: "Layout LAVADO Seiton (subido)",
+          description: "Layout subido como imagen con marcado de suelo según estándar de colores",
+          category: "layout",
+          content: null,
+          photoUrl: "/uploads/cmpok8xii00rjmgfj1nn1hiuh_layout_2_1780086117937_WhatsApp Image 2026-04-27 at 23.08.45.jpeg",
+          beforePhotoUrl: null,
+          ~~~~~~~~~~~~~~
+          afterPhotoUrl: null,
+          responsable: null,
+          contacto: null,
+          mejoraTipo: null,
+          status: "activo",
+          version: 1,
+          projectId: "cmpok8xii00rjmgfj1nn1hiuh",
+          zoneId: "cmpok8xii00rlmgfjyw6q03ll",
+          createdBy: null,
+      ?   id?: String,
+      ?   createdAt?: DateTime,
+      ?   updatedAt?: DateTime
+        }
+      })
+
+Unknown argument `beforePhotoUrl`. Available options are marked with ?.
+Error creating standard: Error [PrismaClientValidationError]: 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].standard.create()` invocation in
+/home/z/my-project/.next/dev/server/chunks/[root-of-the-server]__bb3dac69._.js:161:162
+
+  158         status: 400
+  159     });
+  160 }
+→ 161 const standard = await __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].standard.create({
+        data: {
+          sStep: 2,
+          title: "Layout LAVADO Seiton (subido)",
+          description: "Layout subido como imagen con marcado de suelo según estándar de colores",
+          category: "layout",
+          content: null,
+          photoUrl: "/uploads/cmpok8xii00rjmgfj1nn1hiuh_layout_2_1780086117937_WhatsApp Image 2026-04-27 at 23.08.45.jpeg",
+          beforePhotoUrl: null,
+          ~~~~~~~~~~~~~~
+          afterPhotoUrl: null,
+          responsable: null,
+          contacto: null,
+          mejoraTipo: null,
+          status: "activo",
+          version: 1,
+          projectId: "cmpok8xii00rjmgfj1nn1hiuh",
+          zoneId: "cmpok8xii00rlmgfjyw6q03ll",
+          createdBy: null,
+      ?   id?: String,
+      ?   createdAt?: DateTime,
+      ?   updatedAt?: DateTime
+        }
+      })
+
+Unknown argument `beforePhotoUrl`. Available options are marked with ?.
+    at <unknown> (src/app/api/standards/route.ts:46:40)
+    at async POST (src/app/api/standards/route.ts:46:22)
+  44 |     }
+  45 |
+> 46 |     const standard = await db.standard.create({
+     |                                        ^
+  47 |       data: {
+  48 |         sStep: Number(sStep),
+  49 |         title, {
+  clientVersion: '6.19.2'
+}
+ POST /api/standards 500 in 190ms (compile: 2ms, render: 188ms)
+ GET /api/notifications?userId=cmpo528u4003cmg03sdja675b&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 10ms (compile: 4ms, render: 6ms)
+ GET /api/notifications?userId=cmpo528u4003cmg03sdja675b&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 10ms (compile: 4ms, render: 5ms)
+ GET /api/notifications?userId=cmpo528u4003cmg03sdja675b&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 9ms (compile: 4ms, render: 5ms)
+ GET /api/notifications?userId=cmpo528u4003cmg03sdja675b&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 9ms (compile: 4ms, render: 5ms)
+ GET /api/notifications?userId=cmpo528u4003cmg03sdja675b&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 9ms (compile: 4ms, render: 5ms)
+✓ Compiled in 456ms
+ GET / 200 in 276ms (compile: 50ms, render: 226ms)
+ GET /api/auth 200 in 9ms (compile: 3ms, render: 6ms)
+ GET /api/permissions 200 in 11ms (compile: 3ms, render: 8ms)
+ GET /api/projects 200 in 11ms (compile: 2ms, render: 8ms)
+ GET /api/auth/zones 200 in 11ms (compile: 2ms, render: 9ms)
+ GET /api/progress 200 in 7ms (compile: 1622µs, render: 5ms)
+ GET /api/notifications?userId=cmpo528u4003cmg03sdja675b&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 7ms (compile: 2ms, render: 5ms)
+ GET /api/employee-progress?projectId=cmpok8xii00rjmgfj1nn1hiuh&zoneId=cmpok8xii00rlmgfjyw6q03ll 200 in 8ms (compile: 3ms, render: 6ms)
+ GET /api/employee-progress?projectId=cmpok8xii00rjmgfj1nn1hiuh&zoneId=cmpok8xii00rlmgfjyw6q03ll 200 in 10ms (compile: 3ms, render: 7ms)
+ POST /api/notifications/auto 200 in 39ms (compile: 3ms, render: 37ms)
+ GET /api/notifications?userId=cmpo528u4003cmg03sdja675b&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 7ms (compile: 2ms, render: 5ms)
+ GET /api/notifications?userId=cmpo528u4003cmg03sdja675b&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 7ms (compile: 2ms, render: 4ms)
+ GET /api/notifications?userId=cmpo528u4003cmg03sdja675b&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 7ms (compile: 2ms, render: 5ms)
+ GET /api/notifications?userId=cmpo528u4003cmg03sdja675b&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 7ms (compile: 2ms, render: 5ms)
+ GET /api/notifications?userId=cmpo528u4003cmg03sdja675b&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 8ms (compile: 3ms, render: 5ms)
+ GET /api/notifications?userId=cmpo528u4003cmg03sdja675b&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 8ms (compile: 2ms, render: 6ms)
+ GET /api/standards?projectId=cmpok8xii00rjmgfj1nn1hiuh&category=layout&sStep=2&zoneId=cmpok8xii00rlmgfjyw6q03ll 200 in 8ms (compile: 2ms, render: 6ms)
+ GET /api/inventory?sStep=2&projectId=cmpok8xii00rjmgfj1nn1hiuh&zoneId=cmpok8xii00rlmgfjyw6q03ll 200 in 7ms (compile: 2ms, render: 5ms)
+ POST /api/upload 200 in 10ms (compile: 3ms, render: 8ms)
+prisma:error 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].standard.create()` invocation in
+/home/z/my-project/.next/dev/server/chunks/[root-of-the-server]__bb3dac69._.js:161:162
+
+  158         status: 400
+  159     });
+  160 }
+→ 161 const standard = await __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].standard.create({
+        data: {
+          sStep: 2,
+          title: "Layout LAVADO Seiton (subido)",
+          description: "Layout subido como imagen con marcado de suelo según estándar de colores",
+          category: "layout",
+          content: null,
+          photoUrl: "/uploads/cmpok8xii00rjmgfj1nn1hiuh_layout_2_1780086296540_WhatsApp Image 2026-04-27 at 23.08.45.jpeg",
+          beforePhotoUrl: null,
+          ~~~~~~~~~~~~~~
+          afterPhotoUrl: null,
+          responsable: null,
+          contacto: null,
+          mejoraTipo: null,
+          status: "activo",
+          version: 1,
+          projectId: "cmpok8xii00rjmgfj1nn1hiuh",
+          zoneId: "cmpok8xii00rlmgfjyw6q03ll",
+          createdBy: null,
+      ?   id?: String,
+      ?   createdAt?: DateTime,
+      ?   updatedAt?: DateTime
+        }
+      })
+
+Unknown argument `beforePhotoUrl`. Available options are marked with ?.
+Error creating standard: Error [PrismaClientValidationError]: 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].standard.create()` invocation in
+/home/z/my-project/.next/dev/server/chunks/[root-of-the-server]__bb3dac69._.js:161:162
+
+  158         status: 400
+  159     });
+  160 }
+→ 161 const standard = await __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].standard.create({
+        data: {
+          sStep: 2,
+          title: "Layout LAVADO Seiton (subido)",
+          description: "Layout subido como imagen con marcado de suelo según estándar de colores",
+          category: "layout",
+          content: null,
+          photoUrl: "/uploads/cmpok8xii00rjmgfj1nn1hiuh_layout_2_1780086296540_WhatsApp Image 2026-04-27 at 23.08.45.jpeg",
+          beforePhotoUrl: null,
+          ~~~~~~~~~~~~~~
+          afterPhotoUrl: null,
+          responsable: null,
+          contacto: null,
+          mejoraTipo: null,
+          status: "activo",
+          version: 1,
+          projectId: "cmpok8xii00rjmgfj1nn1hiuh",
+          zoneId: "cmpok8xii00rlmgfjyw6q03ll",
+          createdBy: null,
+      ?   id?: String,
+      ?   createdAt?: DateTime,
+      ?   updatedAt?: DateTime
+        }
+      })
+
+Unknown argument `beforePhotoUrl`. Available options are marked with ?.
+    at <unknown> (src/app/api/standards/route.ts:46:40)
+    at async POST (src/app/api/standards/route.ts:46:22)
+  44 |     }
+  45 |
+> 46 |     const standard = await db.standard.create({
+     |                                        ^
+  47 |       data: {
+  48 |         sStep: Number(sStep),
+  49 |         title, {
+  clientVersion: '6.19.2'
+}
+ POST /api/standards 500 in 155ms (compile: 4ms, render: 151ms)
+ POST /api/upload 200 in 12ms (compile: 3ms, render: 9ms)
+prisma:error 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].standard.create()` invocation in
+/home/z/my-project/.next/dev/server/chunks/[root-of-the-server]__bb3dac69._.js:161:162
+
+  158         status: 400
+  159     });
+  160 }
+→ 161 const standard = await __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].standard.create({
+        data: {
+          sStep: 2,
+          title: "Layout LAVADO Seiton (subido)",
+          description: "Layout subido como imagen con marcado de suelo según estándar de colores",
+          category: "layout",
+          content: null,
+          photoUrl: "/uploads/cmpok8xii00rjmgfj1nn1hiuh_layout_2_1780086308243_WhatsApp Image 2026-04-27 at 23.08.45.jpeg",
+          beforePhotoUrl: null,
+          ~~~~~~~~~~~~~~
+          afterPhotoUrl: null,
+          responsable: null,
+          contacto: null,
+          mejoraTipo: null,
+          status: "activo",
+          version: 1,
+          projectId: "cmpok8xii00rjmgfj1nn1hiuh",
+          zoneId: "cmpok8xii00rlmgfjyw6q03ll",
+          createdBy: null,
+      ?   id?: String,
+      ?   createdAt?: DateTime,
+      ?   updatedAt?: DateTime
+        }
+      })
+
+Unknown argument `beforePhotoUrl`. Available options are marked with ?.
+Error creating standard: Error [PrismaClientValidationError]: 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].standard.create()` invocation in
+/home/z/my-project/.next/dev/server/chunks/[root-of-the-server]__bb3dac69._.js:161:162
+
+  158         status: 400
+  159     });
+  160 }
+→ 161 const standard = await __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].standard.create({
+        data: {
+          sStep: 2,
+          title: "Layout LAVADO Seiton (subido)",
+          description: "Layout subido como imagen con marcado de suelo según estándar de colores",
+          category: "layout",
+          content: null,
+          photoUrl: "/uploads/cmpok8xii00rjmgfj1nn1hiuh_layout_2_1780086308243_WhatsApp Image 2026-04-27 at 23.08.45.jpeg",
+          beforePhotoUrl: null,
+          ~~~~~~~~~~~~~~
+          afterPhotoUrl: null,
+          responsable: null,
+          contacto: null,
+          mejoraTipo: null,
+          status: "activo",
+          version: 1,
+          projectId: "cmpok8xii00rjmgfj1nn1hiuh",
+          zoneId: "cmpok8xii00rlmgfjyw6q03ll",
+          createdBy: null,
+      ?   id?: String,
+      ?   createdAt?: DateTime,
+      ?   updatedAt?: DateTime
+        }
+      })
+
+Unknown argument `beforePhotoUrl`. Available options are marked with ?.
+    at <unknown> (src/app/api/standards/route.ts:46:40)
+    at async POST (src/app/api/standards/route.ts:46:22)
+  44 |     }
+  45 |
+> 46 |     const standard = await db.standard.create({
+     |                                        ^
+  47 |       data: {
+  48 |         sStep: Number(sStep),
+  49 |         title, {
+  clientVersion: '6.19.2'
+}
+ POST /api/standards 500 in 141ms (compile: 3ms, render: 137ms)
+✓ Compiled in 163ms
+ GET /api/notifications?userId=cmpo528u4003cmg03sdja675b&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 9ms (compile: 3ms, render: 6ms)
+ GET /api/notifications?userId=cmpo528u4003cmg03sdja675b&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 10ms (compile: 3ms, render: 7ms)
+ GET /api/notifications?userId=cmpo528u4003cmg03sdja675b&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 9ms (compile: 2ms, render: 6ms)
+ GET / 200 in 337ms (compile: 52ms, render: 285ms)
+ GET /api/notifications?userId=cmpo528u4003cmg03sdja675b&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 8ms (compile: 3ms, render: 6ms)
+ GET /api/templates?type=inventario&sStep=2 200 in 27ms (compile: 20ms, render: 8ms)
+ POST /api/inventory 400 in 7ms (compile: 3ms, render: 5ms)
+ GET /api/notifications?userId=cmpo528u4003cmg03sdja675b&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 8ms (compile: 3ms, render: 6ms)
+ GET /api/notifications?userId=cmpo528u4003cmg03sdja675b&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 8ms (compile: 2ms, render: 5ms)
+ GET / 200 in 47ms (compile: 4ms, render: 44ms)

@@ -316,11 +316,18 @@ export default function LayoutEditor({ open, onClose, onSave, initialImage, init
   }
 
   const handleSaveToLibrary = async () => {
-    if (!currentProject) return
+    if (!currentProject) {
+      toast.error('No hay proyecto seleccionado. Selecciona un proyecto primero.')
+      return
+    }
+    if (shapes.length === 0 && !bgImage) {
+      toast.error('No hay elementos dibujados. Dibuja algo antes de guardar.')
+      return
+    }
     setIsSaving(true)
     try {
       const dataUrl = stageRef.current?.toDataURL({ pixelRatio: 2 })
-      if (!dataUrl) { alert('No hay dibujo para guardar'); setIsSaving(false); return }
+      if (!dataUrl) { toast.error('No hay dibujo para guardar'); setIsSaving(false); return }
       const shapesJson = JSON.stringify(shapes)
 
       // Auto-generate name if not provided
@@ -342,10 +349,19 @@ export default function LayoutEditor({ open, onClose, onSave, initialImage, init
         const uploadJson = await uploadRes.json()
         if (uploadJson.success && uploadJson.url) {
           photoUrl = uploadJson.url
+        } else {
+          console.warn('Upload returned no URL, using data URL fallback:', uploadJson)
+          photoUrl = dataUrl
         }
       } catch (uploadErr) {
         console.error('Error uploading layout image, storing data URL directly:', uploadErr)
         photoUrl = dataUrl // Fallback: store data URL directly
+      }
+
+      if (!photoUrl) {
+        toast.error('Error: no se pudo obtener la imagen del layout')
+        setIsSaving(false)
+        return
       }
 
       const saveRes = await fetch('/api/standards', {

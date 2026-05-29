@@ -1,19 +1,58 @@
 ---
 Task ID: 1
-Agent: Main Agent
-Task: Fix step 3 S2 layout save and photo upload, fix audit completion flow
+Agent: main
+Task: Create standard format (formato estándar) with before/after photos, responsible, contact, and improvement type
 
 Work Log:
-- Discovered root cause: `/api/upload` route was MISSING - all file uploads (FotosModal, LayoutEditor, InventarioModal) were failing because this API didn't exist
-- Created `/api/upload/route.ts` with Supabase Storage support and local filesystem fallback
-- Fixed LayoutEditor: removed requirement for `saveName` (auto-generates name), added `sStep` prop, uploads image to storage instead of storing huge base64 in DB, uses toast instead of alert
-- Fixed InventarioModal: extended layout support to S3 and S4 (not just S2), passes `sStep` prop to LayoutEditor, improved `handleUploadLayoutImage` with proper sStep, better error handling, and response checking
-- Fixed `fetchProgress` in store.ts to also refresh `employeeProgress` - this was causing `isQuesitoEarned` to use stale data after audit completion
-- Fixed AuditoriaModal: added proper error handling for progress update failures (403 permission errors were silently failing), always marks UI as completed when audit is saved, shows clear error messages
+- Updated Prisma schema: added `beforePhotoUrl`, `afterPhotoUrl`, `responsable`, `contacto`, `mejoraTipo` fields to Standard model
+- Pushed schema changes to database successfully
+- Updated `/api/standards/route.ts` to handle new fields in POST and PUT
+- Completely rewrote `StandardsLibrary.tsx` with new "Formato Estándar de Mejora" feature:
+  - New category "formato_mejora" with dedicated UI
+  - Before/After photo upload with preview
+  - Responsable field (who made the improvement)
+  - Contacto field (phone/email)
+  - Improvement type selector: Seguridad/Calidad/Proceso/Logística with color-coded icons
+  - Full detail view (StandardFormatCard) with photo comparison
+  - Mini preview in list view with before/after thumbnails
+- Added MEJORA_TIPOS constant with 4 types: seguridad (red), calidad (blue), proceso (green), logística (amber)
 
 Stage Summary:
-- Created: `/home/z/my-project/src/app/api/upload/route.ts` - new upload API route
-- Modified: `/home/z/my-project/src/components/5s/LayoutEditor.tsx` - auto-generate names, upload to storage, sStep prop, toast notifications
-- Modified: `/home/z/my-project/src/components/5s/InventarioModal.tsx` - layout for S2/S3/S4, proper sStep handling, better upload error handling
-- Modified: `/home/z/my-project/src/lib/store.ts` - fetchProgress now also refreshes employeeProgress
-- Modified: `/home/z/my-project/src/components/5s/AuditoriaModal.tsx` - better error handling for progress update failures
+- Standard format with before/after photos, responsible, contact, and improvement type implemented
+- Schema migration completed
+- API supports all new fields
+- UI fully functional with dedicated "Formato Mejora" button
+
+---
+Task ID: 2
+Agent: main
+Task: Fix progress calculation: 1S shows 80% when finished, 2S shows 20% when 2 steps done
+
+Work Log:
+- Identified root cause: SStepDetail.tsx had custom progress calculation that didn't match getMiniStepStatus
+- The old calculation counted employees separately and divided by totalEmployees+4, causing incorrect percentages
+- Replaced with getMiniStepStatus-based calculation: counts completed/completed_viewonly steps out of 5
+- Now uses the same single source of truth as Board5S.tsx (the pie chart)
+
+Stage Summary:
+- Progress bar in SStepDetail now matches the pie chart dots
+- Fixed: 1S completed = 100% (5/5), 2S with 2 steps = 40% (2/5)
+
+---
+Task ID: 3
+Agent: main
+Task: Fix layout save bug in Step 3 S2
+
+Work Log:
+- Improved handleSaveToLibrary in LayoutEditor.tsx:
+  - Added error message when no project selected (was silently returning)
+  - Added check for empty drawing (shapes + bgImage)
+  - Added fallback when upload returns no URL
+  - Added explicit null check for photoUrl before saving
+  - Used toast.error() instead of alert() for all error messages
+  - Added better console.warn for upload failures
+
+Stage Summary:
+- Layout save now has robust error handling
+- All failure paths show user-facing messages
+- Upload fallback to data URL is explicit

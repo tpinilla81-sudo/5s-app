@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { PrismaClient } from '@prisma/client'
-
-const db = new PrismaClient()
+import { db } from '@/lib/db'
 
 export async function GET(request: NextRequest) {
   try {
@@ -35,7 +33,11 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { sStep, title, description, category, content, photoUrl, status, version, projectId, zoneId, createdBy } = body
+    const {
+      sStep, title, description, category, content, photoUrl,
+      beforePhotoUrl, afterPhotoUrl, responsable, contacto, mejoraTipo,
+      status, version, projectId, zoneId, createdBy,
+    } = body
 
     if (!sStep || !title || !projectId) {
       return NextResponse.json({ success: false, error: 'Faltan campos obligatorios: sStep, title, projectId' }, { status: 400 })
@@ -49,6 +51,11 @@ export async function POST(request: NextRequest) {
         category: category || 'general',
         content: content ? (typeof content === 'string' ? content : JSON.stringify(content)) : null,
         photoUrl: photoUrl || null,
+        beforePhotoUrl: beforePhotoUrl || null,
+        afterPhotoUrl: afterPhotoUrl || null,
+        responsable: responsable || null,
+        contacto: contacto || null,
+        mejoraTipo: mejoraTipo || null,
         status: status || 'activo',
         version: version || 1,
         projectId,
@@ -67,7 +74,11 @@ export async function POST(request: NextRequest) {
 export async function PUT(request: NextRequest) {
   try {
     const body = await request.json()
-    const { id, sStep, title, description, category, content, photoUrl, status, version, zoneId } = body
+    const {
+      id, sStep, title, description, category, content, photoUrl,
+      beforePhotoUrl, afterPhotoUrl, responsable, contacto, mejoraTipo,
+      status, version, zoneId,
+    } = body
 
     if (!id) {
       return NextResponse.json({ success: false, error: 'Se requiere el id del estándar' }, { status: 400 })
@@ -80,6 +91,11 @@ export async function PUT(request: NextRequest) {
     if (category !== undefined) data.category = category
     if (content !== undefined) data.content = typeof content === 'string' ? content : JSON.stringify(content)
     if (photoUrl !== undefined) data.photoUrl = photoUrl
+    if (beforePhotoUrl !== undefined) data.beforePhotoUrl = beforePhotoUrl
+    if (afterPhotoUrl !== undefined) data.afterPhotoUrl = afterPhotoUrl
+    if (responsable !== undefined) data.responsable = responsable
+    if (contacto !== undefined) data.contacto = contacto
+    if (mejoraTipo !== undefined) data.mejoraTipo = mejoraTipo
     if (status !== undefined) data.status = status
     if (version !== undefined) data.version = Number(version)
     if (zoneId !== undefined) data.zoneId = zoneId || null

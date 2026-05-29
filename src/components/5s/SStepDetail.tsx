@@ -166,28 +166,16 @@ export default function SStepDetail({ sStep, onBack, onOpenModal }: SStepDetailP
   if (!sStepData) return null;
 
   const sProgress = progress.filter(p => p.sStep === sStep);
-  // Count unique mini-steps completed + employee formation count
-  const zoneId = currentZone?.id;
-  const employeesCompletedStep1 = zoneId
-    ? employeeProgress.filter(ep =>
-        ep.sStep === sStep && ep.miniStep === 1 && ep.zoneId === zoneId && ep.completed
-      ).length
-    : sProgress.filter(p => p.miniStep === 1 && p.completed).length;
-  const totalEmployeesInZone = zoneId
-    ? employeeProgress.filter(ep =>
-        ep.sStep === sStep && ep.miniStep === 1 && ep.zoneId === zoneId
-      ).length
-    : Math.max(1, employeesCompletedStep1);
-  let steps2to5Completed = 0;
-  for (let ms = 2; ms <= 5; ms++) {
-    const zoneStep = sProgress.find(p =>
-      p.miniStep === ms && (p.zoneId === zoneId || p.zoneId === null) && p.completed
-    );
-    if (zoneStep) steps2to5Completed++;
+
+  // Use getMiniStepStatus as the single source of truth for step completion
+  // This ensures the progress bar matches the visual dots on the Board5S
+  let completedCount = 0;
+  for (let ms = 1; ms <= 5; ms++) {
+    const status = getMiniStepStatus(sStep, ms);
+    if (status === 'completed' || status === 'completed_viewonly') completedCount++;
   }
-  const totalSteps = Math.max(1, totalEmployeesInZone || 1) + 4;
-  const completedCount = employeesCompletedStep1 + steps2to5Completed;
-  const progressPercent = Math.min((completedCount / totalSteps) * 100, 100);
+  const totalSteps = 5; // Always 5 mini-steps per S
+  const progressPercent = Math.min(Math.round((completedCount / totalSteps) * 100), 100);
 
   return (
     <motion.div

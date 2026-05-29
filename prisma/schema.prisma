@@ -361,20 +361,25 @@ model CompanyMember {
 }
 
 model Standard {
-  id          String   @id @default(cuid())
-  sStep       Int // 1-5 (which S step this standard belongs to)
-  title       String // Name/title of the standard
-  description String? // Description or details
-  category    String  @default("general") // "layout", "marcado_suelo", "visual", "procedimiento", "general"
-  content     String? // JSON: additional structured data (fields, values, etc.)
-  photoUrl    String? // Reference photo for the standard
-  status      String  @default("activo") // "activo", "en_revision", "obsoleto"
-  version     Int      @default(1) // Version number
-  projectId   String
-  zoneId      String? // null = project-wide standard
-  createdBy   String? // User ID who created it
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id             String   @id @default(cuid())
+  sStep          Int // 1-5 (which S step this standard belongs to)
+  title          String // Name/title of the standard
+  description    String? // Description or details
+  category       String  @default("general") // "layout", "marcado_suelo", "visual", "procedimiento", "general", "formato_mejora"
+  content        String? // JSON: additional structured data (fields, values, etc.)
+  photoUrl       String? // Reference photo for the standard (kept for backward compat)
+  beforePhotoUrl String? // Foto del ANTES (formato estándar de mejora)
+  afterPhotoUrl  String? // Foto del DESPUÉS (formato estándar de mejora)
+  responsable    String? // Quién ha hecho la mejora
+  contacto       String? // Contacto de la persona responsable
+  mejoraTipo     String? // Tipo de mejora: "seguridad", "calidad", "proceso", "logistica"
+  status         String  @default("activo") // "activo", "en_revision", "obsoleto"
+  version        Int      @default(1) // Version number
+  projectId      String
+  zoneId         String? // null = project-wide standard
+  createdBy      String? // User ID who created it
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
   project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
   zone    Zone?   @relation(fields: [zoneId], references: [id], onDelete: SetNull)
