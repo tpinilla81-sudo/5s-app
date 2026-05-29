@@ -387,9 +387,25 @@ export const use5SStore = create<FiveSState>((set, get) => ({
     }
 
     // Check if a specific S-step (all 5 mini-steps) is fully completed (quesito earned)
+    // Also checks employeeProgress for individual steps, consistent with areSteps1to4Completed
     const isSCompleted = (s: number): boolean => {
       for (let ms = 1; ms <= 5; ms++) {
-        if (!isStepCompletedAt(s, ms)) return false
+        // Check zone-level progress first
+        if (isStepCompletedAt(s, ms)) continue
+        // Also check employeeProgress for this step (e.g., individual formación step 1)
+        const anyEmpCompleted = currentZone
+          ? employeeProgress.some(ep =>
+              ep.sStep === s &&
+              ep.miniStep === ms &&
+              ep.zoneId === currentZone.id &&
+              ep.completed
+            )
+          : employeeProgress.some(ep =>
+              ep.sStep === s &&
+              ep.miniStep === ms &&
+              ep.completed
+            )
+        if (!anyEmpCompleted) return false
       }
       return true
     }
@@ -607,18 +623,40 @@ export const use5SStore = create<FiveSState>((set, get) => ({
   },
 
   isQuesitoEarned: (sStep) => {
-    const { progress, currentZone } = get()
+    const { progress, employeeProgress, currentZone } = get()
     const zoneId = currentZone?.id || null
 
     // Check ALL 5 mini-steps are completed — each one individually
+    // For zone-level steps (2,3,5): check progress table
+    // For individual steps (1,4): also check employeeProgress as fallback
     for (let miniStep = 1; miniStep <= 5; miniStep++) {
+      // Check zone-level progress first
       const zoneStep = progress.find(p =>
         p.sStep === sStep &&
         p.miniStep === miniStep &&
         (p.zoneId === zoneId || p.zoneId === null) &&
         p.completed
       )
-      if (!zoneStep) return false
+      if (zoneStep) continue
+
+      // Also check employeeProgress for this step (e.g., individual formación step 1)
+      // This ensures the quesito is earned even when not all employees have completed step 1,
+      // but the auditor was able to pass step 5 (audit) because areSteps1to4Completed returned true
+      const anyEmpCompleted = currentZone
+        ? employeeProgress.some(ep =>
+            ep.sStep === sStep &&
+            ep.miniStep === miniStep &&
+            ep.zoneId === currentZone.id &&
+            ep.completed
+          )
+        : employeeProgress.some(ep =>
+            ep.sStep === sStep &&
+            ep.miniStep === miniStep &&
+            ep.completed
+          )
+      if (anyEmpCompleted) continue
+
+      return false
     }
     return true
   },

@@ -163,19 +163,33 @@ export default function AutoevaluacionModal({ open, onClose, sStep, miniStep }: 
             const progData = await progRes.json();
             const allProgress = progData?.data || [];
 
-            // Check steps 1-4 completed
+            // Also fetch employee progress for individual steps (formación = step 1)
+            const empProgRes = await fetch(`/api/employee-progress?projectId=${currentProject.id}&zoneId=${currentZone.id}`);
+            const empProgData = await empProgRes.json();
+            const allEmpProgress = empProgData?.data || [];
+
+            // Check steps 1-4 completed (both zone-level progress AND employee progress)
             let allStepsCompleted = true;
             for (let ms = 1; ms <= 4; ms++) {
-              const step = allProgress.find((p: any) =>
+              const zoneStep = allProgress.find((p: any) =>
                 p.sStep === sStep &&
                 p.miniStep === ms &&
                 (p.zoneId === currentZone.id || p.zoneId === null) &&
                 p.completed
               );
-              if (!step) {
-                allStepsCompleted = false;
-                break;
-              }
+              if (zoneStep) continue; // Zone-level completed
+
+              // Also check employee progress for individual steps
+              const empStep = allEmpProgress.some((ep: any) =>
+                ep.sStep === sStep &&
+                ep.miniStep === ms &&
+                ep.zoneId === currentZone.id &&
+                ep.completed
+              );
+              if (empStep) continue; // Some employee completed this step
+
+              allStepsCompleted = false;
+              break;
             }
 
             if (allStepsCompleted) {
