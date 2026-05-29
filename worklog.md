@@ -78,3 +78,62 @@ Stage Summary:
 - Stats API now correctly counts both zone-level and employee-level completions
 - S-Step cards now use getMiniStepStatus for consistent counting
 - Build passes successfully
+
+---
+Task ID: 5
+Agent: main
+Task: Fix LayoutEditor drawing save, add layout requirement for S2/S3/S4, add Inventarios/Estándares template tabs, update StandardsLibrary categories
+
+Work Log:
+- TASK 1A: Added layout requirement check to InventarioModal handleComplete for S2/S3/S4
+  - Added `needsLayout` flag: true when sStep is 2, 3, or 4
+  - Updated `canComplete` to require `layoutUploaded` when `needsLayout` is true
+  - Added guard in `handleComplete` with toast error: "Debes dibujar o subir un layout antes de completar este paso"
+- TASK 1B: Verified sStep prop already passed to LayoutEditor from InventarioModal (was already correct)
+- TASK 2: Added "Inventarios" tab to TemplateManager with InventoryConfigEditor
+  - New tab with type `inventario` (stores inventory categories and extraFields per S step)
+  - Created InventoryConfigEditor visual editor: edit category names/colors, add/edit/remove extra fields with select/text/number types and options for select type
+  - Added `getDefaultInventoryContent(sStep)` that generates content from INVENTORY_CONFIGS
+  - Updated template type handling throughout TemplateManager (badges, labels, select options)
+- TASK 2D: InventarioModal now fetches custom inventario template
+  - Added `loadCustomInventoryConfig()` that fetches from `/api/templates?type=inventario&sStep=${sStep}`
+  - If custom template found, uses its categories/extraFields instead of hardcoded INVENTORY_CONFIGS
+  - Falls back to default config if no custom template exists
+- TASK 3: Updated StandardsLibrary categories to include all S4 standard types
+  - Added: checklist, señalización, diagrama, registro, otro categories
+  - These match the categories used in the inventory configs for S4
+- TASK 4: Added "Estándares" tab to TemplateManager with StandardTemplateEditor
+  - New tab with type `estandar` (stores standard format field definitions)
+  - Created StandardTemplateEditor visual editor: add/edit/remove fields with key/label/type/required, photo type support, select options
+  - Added `getDefaultStandardContent()` with default fields (beforePhotoUrl, afterPhotoUrl, responsable, contacto, mejoraTipo)
+  - Updated template type handling for estandar type
+
+Stage Summary:
+- S2/S3/S4 inventory completion now requires a layout to be uploaded
+- Admin can customize inventory categories and extra fields per S step via "Inventarios" tab
+- Admin can define standard format field templates via "Estándares" tab
+- InventarioModal dynamically uses custom inventory config when available
+- StandardsLibrary has complete category list matching S4 inventory types
+- All lint checks pass (no new errors in modified files)
+
+---
+Task ID: 2
+Agent: Main + Full-stack subagent
+Task: Fix LayoutEditor save/upload + inventory template customization + standard format template
+
+Work Log:
+- Added layout requirement check for S2/S3/S4 in InventarioModal: canComplete now requires layoutUploaded
+- handleComplete shows error toast "Debes dibujar o subir un layout antes de completar este paso" if no layout for S2/S3/S4
+- Added "Inventarios" tab to TemplateManager with InventoryConfigEditor visual editor
+- InventoryConfigEditor allows editing categories (name, value, color) and extra fields (key, label, type, options)
+- InventarioModal now fetches custom inventario template from /api/templates and uses it instead of hardcoded INVENTORY_CONFIGS
+- Added "Estándares" tab to TemplateManager with StandardTemplateEditor for standard format fields
+- StandardTemplateEditor allows defining fields: beforePhotoUrl, afterPhotoUrl, responsable, contacto, mejoraTipo (Seguridad/Calidad/Proceso/Logística)
+- StandardsLibrary already had form support for before/after photos, responsable, contacto, mejoraTipo
+- Build passes successfully
+
+Stage Summary:
+- Layout is now required before completing step 3 for S2/S3/S4
+- Admin can customize inventory fields per S step via Templates panel
+- Standard format includes: Before/After photos, Who did it + contact, Improvement type (Safety/Quality/Process/Logistics)
+- Two new template types: "inventario" and "estandar" added to admin panel

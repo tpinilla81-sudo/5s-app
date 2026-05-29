@@ -64,7 +64,9 @@ interface InventarioModalProps {
 export default function InventarioModal({ open, onClose, sStep, miniStep }: InventarioModalProps) {
   const { fetchProgress, currentUser, adminFreeNavigation, currentProject, currentZone, canPerform, canView, hasPermission } = use5SStore();
   const sStepData = S_STEPS.find(s => s.id === sStep);
-  const config: InventoryConfig = INVENTORY_CONFIGS[sStep] || INVENTORY_CONFIGS[1];
+  const defaultConfig: InventoryConfig = INVENTORY_CONFIGS[sStep] || INVENTORY_CONFIGS[1];
+  const [customConfig, setCustomConfig] = useState<InventoryConfig | null>(null);
+  const config: InventoryConfig = customConfig || defaultConfig;
   const canSkipSteps = hasPermission('skip_steps');
   const canPerformStep = canPerform(sStep, miniStep);
   const canViewStep = canView(sStep, miniStep);
@@ -100,8 +102,36 @@ export default function InventarioModal({ open, onClose, sStep, miniStep }: Inve
       loadInventory();
       // Load layouts for any S step that has layout support (S2 primarily, also S3/S4 for estandares)
       if (sStep === 2 || sStep === 3 || sStep === 4) loadLayouts();
+      // Load custom inventory template if available
+      loadCustomInventoryConfig();
     }
   }, [open, sStep]);
+
+  const loadCustomInventoryConfig = async () => {
+    try {
+      const res = await fetch(`/api/templates?type=inventario&sStep=${sStep}`);
+      const json = await res.json();
+      if (json.success && json.data && json.data.length > 0) {
+        const content = JSON.parse(json.data[0].content);
+        if (content.categories && content.extraFields) {
+          setCustomConfig({
+            title: defaultConfig.title,
+            subtitle: defaultConfig.subtitle,
+            templateName: defaultConfig.templateName,
+            categories: content.categories,
+            extraFields: content.extraFields,
+          });
+        } else {
+          setCustomConfig(null);
+        }
+      } else {
+        setCustomConfig(null);
+      }
+    } catch (e) {
+      console.error('Error loading custom inventory config:', e);
+      setCustomConfig(null);
+    }
+  };
 
   const loadLayouts = async () => {
     if (!currentProject) return
@@ -605,7 +635,9 @@ export default function InventarioModal({ open, onClose, sStep, miniStep }: Inve
   // Count classified items
   const classifiedCount = items.filter(i => i.category && i.category !== '').length;
   const classifyPercent = items.length > 0 ? Math.round((classifiedCount / items.length) * 100) : 0;
-  const canComplete = classifyPercent >= INVENTORY_CLASSIFY_THRESHOLD && items.length > 0;
+  // For S2, S3, S4: layout must be uploaded AND classification threshold met
+  const needsLayout = sStep === 2 || sStep === 3 || sStep === 4;
+  const canComplete = classifyPercent >= INVENTORY_CLASSIFY_THRESHOLD && items.length > 0 && (!needsLayout || layoutUploaded);
 
   // S1 specific counts
   const innecesarios = items.filter(i => i.category === 'innecesario');
@@ -614,6 +646,11 @@ export default function InventarioModal({ open, onClose, sStep, miniStep }: Inve
 
   const handleComplete = async () => {
     if (!canComplete) return;
+    // Extra guard: check layout for S2/S3/S4
+    if (needsLayout && !layoutUploaded) {
+      toast.error('Debes dibujar o subir un layout antes de completar este paso');
+      return;
+    }
 
     try {
       const res = await fetch(`/api/progress/step?sStep=${sStep}&miniStep=${miniStep}`, {

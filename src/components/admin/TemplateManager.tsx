@@ -17,9 +17,9 @@ import {
 import {
   Plus, Trash2, Edit3, Save, Loader2, BookOpen, FileCheck, ClipboardCheck,
   ChevronDown, ChevronUp, AlertTriangle, Copy, RotateCcw,
-  Eye, Code, GripVertical, Download, Upload,
+  Eye, Code, GripVertical, Download, Upload, ClipboardList, Award,
 } from 'lucide-react'
-import { S_STEPS, AUDIT_CHECKLISTS, EXAM_PASS_THRESHOLD, SELF_EVAL_THRESHOLD, AUDIT_PASS_THRESHOLD } from '@/lib/5s-constants'
+import { S_STEPS, AUDIT_CHECKLISTS, EXAM_PASS_THRESHOLD, SELF_EVAL_THRESHOLD, AUDIT_PASS_THRESHOLD, INVENTORY_CONFIGS } from '@/lib/5s-constants'
 
 // ═══════════════════════════════════════════════════════
 // TYPES
@@ -37,11 +37,13 @@ interface TemplateData {
   updatedAt: string
 }
 
-type TemplateTab = 'formacion' | 'auditorias'
+type TemplateTab = 'formacion' | 'auditorias' | 'inventarios' | 'estandares'
 
 const TEMPLATE_TABS: { key: TemplateTab; label: string; icon: React.ComponentType<{ className?: string }>; types: string[] }[] = [
   { key: 'formacion', label: 'Formaciones y Exámenes', icon: BookOpen, types: ['formacion', 'examen'] },
   { key: 'auditorias', label: 'Auditorías', icon: ClipboardCheck, types: ['autoevaluacion', 'auditoria'] },
+  { key: 'inventarios', label: 'Inventarios', icon: ClipboardList, types: ['inventario'] },
+  { key: 'estandares', label: 'Estándares', icon: Award, types: ['estandar'] },
 ]
 
 const S_COLORS: Record<number, string> = { 1: '#8B5CF6', 2: '#EAB308', 3: '#3B82F6', 4: '#F43F5E', 5: '#22C55E' }
@@ -87,6 +89,30 @@ function getDefaultChecklistContent(sStep: number) {
         hasOther: item.hasOther || false,
       }))
     }))
+  }
+}
+
+function getDefaultInventoryContent(sStep: number) {
+  const cfg = INVENTORY_CONFIGS[sStep]
+  if (!cfg) return { categories: [], extraFields: [] }
+  return {
+    categories: cfg.categories.map(c => ({ value: c.value, label: c.label, color: c.color })),
+    extraFields: cfg.extraFields.map(f => ({
+      key: f.key, label: f.label, type: f.type,
+      ...(f.options ? { options: f.options } : {}),
+    })),
+  }
+}
+
+function getDefaultStandardContent() {
+  return {
+    fields: [
+      { key: 'beforePhotoUrl', label: 'Foto Antes', type: 'photo', required: true },
+      { key: 'afterPhotoUrl', label: 'Foto Después', type: 'photo', required: true },
+      { key: 'responsable', label: 'Quién lo ha hecho', type: 'text', required: true },
+      { key: 'contacto', label: 'Contacto', type: 'text', required: true },
+      { key: 'mejoraTipo', label: 'Tipo de Mejora', type: 'select', options: ['Seguridad', 'Calidad', 'Proceso', 'Logística'], required: true },
+    ],
   }
 }
 
@@ -512,6 +538,359 @@ function FormationEditor({ content, onChange }: { content: string; onChange: (v:
 }
 
 // ═══════════════════════════════════════════════════════
+// VISUAL EDITOR: InventoryConfigEditor (inventario)
+// ═══════════════════════════════════════════════════════
+interface InvCategory { value: string; label: string; color: string }
+interface InvField { key: string; label: string; type: 'select' | 'text' | 'number'; options?: string[] }
+
+function InventoryConfigEditor({ content, onChange }: { content: string; onChange: (v: string) => void }) {
+  let parsed: { categories: InvCategory[]; extraFields: InvField[] }
+  try {
+    parsed = JSON.parse(content)
+  } catch {
+    return (
+      <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-sm text-red-600">
+        El JSON no es válido. Corrígelo en modo JSON o carga el contenido por defecto.
+      </div>
+    )
+  }
+
+  const categories = parsed.categories || []
+  const extraFields = parsed.extraFields || []
+
+  const update = (newData: Partial<typeof parsed>) => {
+    onChange(JSON.stringify({ ...parsed, ...newData }, null, 2))
+  }
+
+  const addCategory = () => {
+    update({ categories: [...categories, { value: '', label: '', color: 'bg-gray-100 text-gray-800' }] })
+  }
+
+  const removeCategory = (idx: number) => {
+    update({ categories: categories.filter((_, i) => i !== idx) })
+  }
+
+  const updateCategory = (idx: number, field: keyof InvCategory, value: string) => {
+    const updated = [...categories]
+    updated[idx] = { ...updated[idx], [field]: value }
+    update({ categories: updated })
+  }
+
+  const moveCategory = (idx: number, dir: -1 | 1) => {
+    const target = idx + dir
+    if (target < 0 || target >= categories.length) return
+    const updated = [...categories]
+    ;[updated[idx], updated[target]] = [updated[target], updated[idx]]
+    update({ categories: updated })
+  }
+
+  const addField = () => {
+    update({ extraFields: [...extraFields, { key: '', label: '', type: 'text' }] })
+  }
+
+  const removeField = (idx: number) => {
+    update({ extraFields: extraFields.filter((_, i) => i !== idx) })
+  }
+
+  const updateField = (idx: number, field: string, value: string | boolean) => {
+    const updated = [...extraFields]
+    updated[idx] = { ...updated[idx], [field]: value }
+    // Remove options if type is not select
+    if (field === 'type' && value !== 'select') {
+      const { options, ...rest } = updated[idx]
+      updated[idx] = rest as InvField
+    }
+    update({ extraFields: updated })
+  }
+
+  const moveField = (idx: number, dir: -1 | 1) => {
+    const target = idx + dir
+    if (target < 0 || target >= extraFields.length) return
+    const updated = [...extraFields]
+    ;[updated[idx], updated[target]] = [updated[target], updated[idx]]
+    update({ extraFields: updated })
+  }
+
+  const addOption = (fIdx: number) => {
+    const updated = [...extraFields]
+    const opts = [...(updated[fIdx].options || []), '']
+    updated[fIdx] = { ...updated[fIdx], options: opts }
+    update({ extraFields: updated })
+  }
+
+  const removeOption = (fIdx: number, oIdx: number) => {
+    const updated = [...extraFields]
+    const opts = (updated[fIdx].options || []).filter((_, i) => i !== oIdx)
+    updated[fIdx] = { ...updated[fIdx], options: opts }
+    update({ extraFields: updated })
+  }
+
+  const updateOption = (fIdx: number, oIdx: number, value: string) => {
+    const updated = [...extraFields]
+    const opts = [...(updated[fIdx].options || [])]
+    opts[oIdx] = value
+    updated[fIdx] = { ...updated[fIdx], options: opts }
+    update({ extraFields: updated })
+  }
+
+  const COLOR_PRESETS = [
+    'bg-green-100 text-green-800', 'bg-blue-100 text-blue-800', 'bg-yellow-100 text-yellow-800',
+    'bg-red-100 text-red-800', 'bg-purple-100 text-purple-800', 'bg-orange-100 text-orange-800',
+    'bg-gray-100 text-gray-800', 'bg-cyan-100 text-cyan-800', 'bg-amber-100 text-amber-800',
+    'bg-teal-100 text-teal-800', 'bg-pink-100 text-pink-800',
+  ]
+
+  return (
+    <div className="space-y-6">
+      {/* CATEGORIES */}
+      <div>
+        <h4 className="text-sm font-bold text-orange-700 mb-2 flex items-center gap-2">
+          <Badge className="bg-orange-100 text-orange-800">Categorías</Badge>
+          {categories.length} categoría(s)
+        </h4>
+        <div className="space-y-2">
+          {categories.map((cat, idx) => (
+            <div key={idx} className="flex items-center gap-2 group border rounded-lg p-2 bg-white">
+              <div className="flex flex-col gap-0.5">
+                <button onClick={() => moveCategory(idx, -1)} className="text-gray-300 hover:text-gray-500 leading-none">
+                  <ChevronUp className="h-3.5 w-3.5" />
+                </button>
+                <button onClick={() => moveCategory(idx, 1)} className="text-gray-300 hover:text-gray-500 leading-none">
+                  <ChevronDown className="h-3.5 w-3.5" />
+                </button>
+              </div>
+              <Input value={cat.value} onChange={e => updateCategory(idx, 'value', e.target.value)}
+                className="w-32 h-8 text-xs" placeholder="Valor (ej: muy_frecuente)" />
+              <Input value={cat.label} onChange={e => updateCategory(idx, 'label', e.target.value)}
+                className="flex-1 h-8 text-xs" placeholder="Etiqueta (ej: Muy frecuente)" />
+              <select value={cat.color} onChange={e => updateCategory(idx, 'color', e.target.value)}
+                className="h-8 text-xs border rounded px-1 max-w-[180px]">
+                {COLOR_PRESETS.map(c => <option key={c} value={c}>{c}</option>)}
+              </select>
+              <Badge className={cat.color}>{cat.label || 'Preview'}</Badge>
+              <Button variant="ghost" size="sm" onClick={() => removeCategory(idx)}
+                className="h-8 w-8 p-0 text-red-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity">
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </div>
+          ))}
+          <Button variant="outline" onClick={addCategory} size="sm"
+            className="w-full border-dashed border-2 text-orange-600 hover:bg-orange-50 hover:border-orange-400 gap-1">
+            <Plus className="h-4 w-4" /> Añadir categoría
+          </Button>
+        </div>
+      </div>
+
+      {/* EXTRA FIELDS */}
+      <div>
+        <h4 className="text-sm font-bold text-teal-700 mb-2 flex items-center gap-2">
+          <Badge className="bg-teal-100 text-teal-800">Campos extra</Badge>
+          {extraFields.length} campo(s)
+        </h4>
+        <div className="space-y-2">
+          {extraFields.map((field, fIdx) => (
+            <div key={fIdx} className="border-2 rounded-lg overflow-hidden bg-white shadow-sm">
+              <div className="flex items-center gap-2 px-3 py-2 bg-teal-50 border-b border-teal-200">
+                <div className="flex flex-col gap-0.5">
+                  <button onClick={() => moveField(fIdx, -1)} className="text-gray-300 hover:text-gray-500 leading-none">
+                    <ChevronUp className="h-3.5 w-3.5" />
+                  </button>
+                  <button onClick={() => moveField(fIdx, 1)} className="text-gray-300 hover:text-gray-500 leading-none">
+                    <ChevronDown className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+                <Badge className="bg-teal-200 text-teal-800 shrink-0 text-[10px] px-1.5 py-0.5">Campo {fIdx + 1}</Badge>
+                <Input value={field.key} onChange={e => updateField(fIdx, 'key', e.target.value)}
+                  className="w-36 h-7 text-xs font-mono" placeholder="key (ej: ubicacion)" />
+                <Input value={field.label} onChange={e => updateField(fIdx, 'label', e.target.value)}
+                  className="flex-1 h-7 text-xs" placeholder="Etiqueta (ej: Ubicación asignada)" />
+                <select value={field.type} onChange={e => updateField(fIdx, 'type', e.target.value)}
+                  className="h-7 text-xs border rounded px-2">
+                  <option value="text">Texto</option>
+                  <option value="number">Número</option>
+                  <option value="select">Selección</option>
+                </select>
+                <Button variant="ghost" size="sm" onClick={() => removeField(fIdx)}
+                  className="h-7 w-7 p-0 text-red-400 hover:text-red-500">
+                  <Trash2 className="h-3.5 w-3.5" />
+                </Button>
+              </div>
+              {field.type === 'select' && (
+                <div className="px-3 py-2 space-y-1">
+                  <Label className="text-[10px] text-muted-foreground">Opciones:</Label>
+                  {(field.options || []).map((opt, oIdx) => (
+                    <div key={oIdx} className="flex items-center gap-1">
+                      <Input value={opt} onChange={e => updateOption(fIdx, oIdx, e.target.value)}
+                        className="flex-1 h-7 text-xs" placeholder={`Opción ${oIdx + 1}`} />
+                      <Button variant="ghost" size="sm" onClick={() => removeOption(fIdx, oIdx)}
+                        className="h-7 w-7 p-0 text-red-300 hover:text-red-500">
+                        <Trash2 className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  ))}
+                  <Button variant="ghost" size="sm" onClick={() => addOption(fIdx)}
+                    className="h-7 text-xs text-teal-600 hover:text-teal-700 gap-1 px-2">
+                    <Plus className="h-3 w-3" /> Añadir opción
+                  </Button>
+                </div>
+              )}
+            </div>
+          ))}
+          <Button variant="outline" onClick={addField} size="sm"
+            className="w-full border-dashed border-2 text-teal-600 hover:bg-teal-50 hover:border-teal-400 gap-1">
+            <Plus className="h-4 w-4" /> Añadir campo extra
+          </Button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ═══════════════════════════════════════════════════════
+// VISUAL EDITOR: StandardTemplateEditor (estandar)
+// ═══════════════════════════════════════════════════════
+interface StdField { key: string; label: string; type: 'photo' | 'text' | 'number' | 'select'; options?: string[]; required?: boolean }
+
+function StandardTemplateEditor({ content, onChange }: { content: string; onChange: (v: string) => void }) {
+  let parsed: { fields: StdField[] }
+  try {
+    parsed = JSON.parse(content)
+  } catch {
+    return (
+      <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-sm text-red-600">
+        El JSON no es válido. Corrígelo en modo JSON o carga el contenido por defecto.
+      </div>
+    )
+  }
+
+  const fields = parsed.fields || []
+
+  const update = (newFields: StdField[]) => {
+    onChange(JSON.stringify({ ...parsed, fields: newFields }, null, 2))
+  }
+
+  const addField = () => {
+    update([...fields, { key: '', label: '', type: 'text', required: false }])
+  }
+
+  const removeField = (idx: number) => {
+    update(fields.filter((_, i) => i !== idx))
+  }
+
+  const updateField = (idx: number, field: string, value: string | boolean) => {
+    const updated = [...fields]
+    updated[idx] = { ...updated[idx], [field]: value }
+    // Remove options if type is not select
+    if (field === 'type' && value !== 'select') {
+      const { options, ...rest } = updated[idx]
+      updated[idx] = rest as StdField
+    }
+    update(updated)
+  }
+
+  const moveField = (idx: number, dir: -1 | 1) => {
+    const target = idx + dir
+    if (target < 0 || target >= fields.length) return
+    const updated = [...fields]
+    ;[updated[idx], updated[target]] = [updated[target], updated[idx]]
+    update(updated)
+  }
+
+  const addOption = (fIdx: number) => {
+    const updated = [...fields]
+    const opts = [...(updated[fIdx].options || []), '']
+    updated[fIdx] = { ...updated[fIdx], options: opts }
+    update(updated)
+  }
+
+  const removeOption = (fIdx: number, oIdx: number) => {
+    const updated = [...fields]
+    const opts = (updated[fIdx].options || []).filter((_, i) => i !== oIdx)
+    updated[fIdx] = { ...updated[fIdx], options: opts }
+    update(updated)
+  }
+
+  const updateOption = (fIdx: number, oIdx: number, value: string) => {
+    const updated = [...fields]
+    const opts = [...(updated[fIdx].options || [])]
+    opts[oIdx] = value
+    updated[fIdx] = { ...updated[fIdx], options: opts }
+    update(updated)
+  }
+
+  const TYPE_LABELS: Record<string, string> = { photo: 'Foto', text: 'Texto', number: 'Número', select: 'Selección' }
+
+  return (
+    <div className="space-y-3">
+      {fields.map((field, fIdx) => (
+        <div key={fIdx} className="border-2 rounded-lg overflow-hidden bg-white shadow-sm">
+          <div className="flex items-center gap-2 px-3 py-2 bg-violet-50 border-b border-violet-200">
+            <div className="flex flex-col gap-0.5">
+              <button onClick={() => moveField(fIdx, -1)} className="text-gray-300 hover:text-gray-500 leading-none">
+                <ChevronUp className="h-3.5 w-3.5" />
+              </button>
+              <button onClick={() => moveField(fIdx, 1)} className="text-gray-300 hover:text-gray-500 leading-none">
+                <ChevronDown className="h-3.5 w-3.5" />
+              </button>
+            </div>
+            <Badge className="bg-violet-200 text-violet-800 shrink-0 text-[10px] px-1.5 py-0.5">Campo {fIdx + 1}</Badge>
+            <Input value={field.key} onChange={e => updateField(fIdx, 'key', e.target.value)}
+              className="w-36 h-7 text-xs font-mono" placeholder="key (ej: beforePhotoUrl)" />
+            <Input value={field.label} onChange={e => updateField(fIdx, 'label', e.target.value)}
+              className="flex-1 h-7 text-xs" placeholder="Etiqueta (ej: Foto Antes)" />
+            <select value={field.type} onChange={e => updateField(fIdx, 'type', e.target.value)}
+              className="h-7 text-xs border rounded px-2">
+              <option value="text">Texto</option>
+              <option value="number">Número</option>
+              <option value="select">Selección</option>
+              <option value="photo">Foto</option>
+            </select>
+            <label className="flex items-center gap-1 text-[10px] text-muted-foreground whitespace-nowrap cursor-pointer">
+              <input type="checkbox" checked={field.required || false}
+                onChange={e => updateField(fIdx, 'required', e.target.checked)}
+                className="rounded border-gray-300 h-3.5 w-3.5" />
+              Oblig.
+            </label>
+            <Button variant="ghost" size="sm" onClick={() => removeField(fIdx)}
+              className="h-7 w-7 p-0 text-red-400 hover:text-red-500">
+              <Trash2 className="h-3.5 w-3.5" />
+            </Button>
+          </div>
+          {field.type === 'select' && (
+            <div className="px-3 py-2 space-y-1">
+              <Label className="text-[10px] text-muted-foreground">Opciones:</Label>
+              {(field.options || []).map((opt, oIdx) => (
+                <div key={oIdx} className="flex items-center gap-1">
+                  <Input value={opt} onChange={e => updateOption(fIdx, oIdx, e.target.value)}
+                    className="flex-1 h-7 text-xs" placeholder={`Opción ${oIdx + 1}`} />
+                  <Button variant="ghost" size="sm" onClick={() => removeOption(fIdx, oIdx)}
+                    className="h-7 w-7 p-0 text-red-300 hover:text-red-500">
+                    <Trash2 className="h-3 w-3" />
+                  </Button>
+                </div>
+              ))}
+              <Button variant="ghost" size="sm" onClick={() => addOption(fIdx)}
+                className="h-7 text-xs text-violet-600 hover:text-violet-700 gap-1 px-2">
+                <Plus className="h-3 w-3" /> Añadir opción
+              </Button>
+            </div>
+          )}
+        </div>
+      ))}
+
+      <Button variant="outline" onClick={addField} size="sm"
+        className="w-full border-dashed border-2 text-violet-600 hover:bg-violet-50 hover:border-violet-400 gap-1">
+        <Plus className="h-4 w-4" /> Añadir campo
+      </Button>
+
+      <div className="text-sm text-muted-foreground text-center">
+        {fields.length} campo(s) · {fields.filter(f => f.required).length} obligatorio(s)
+      </div>
+    </div>
+  )
+}
+
+// ═══════════════════════════════════════════════════════
 // COMPONENT
 // ═══════════════════════════════════════════════════════
 export default function TemplateManager() {
@@ -572,7 +951,7 @@ export default function TemplateManager() {
     setFormSStep(sStep)
     setFormTitle(`S${sStep} - ${S_STEPS.find(s => s.id === sStep)?.japaneseName || ''}`)
     setFormDescription('')
-    setFormNotaMinima(type === 'formacion' || type === 'examen' ? EXAM_PASS_THRESHOLD : type === 'autoevaluacion' ? SELF_EVAL_THRESHOLD : AUDIT_PASS_THRESHOLD)
+    setFormNotaMinima(type === 'formacion' || type === 'examen' ? EXAM_PASS_THRESHOLD : type === 'autoevaluacion' ? SELF_EVAL_THRESHOLD : type === 'inventario' || type === 'estandar' ? 0 : AUDIT_PASS_THRESHOLD)
     setFormActive(true)
     setEditorMode('visual')
 
@@ -580,6 +959,10 @@ export default function TemplateManager() {
       setFormContent(JSON.stringify(getDefaultFormationContent(sStep), null, 2))
     } else if (type === 'examen') {
       setFormContent(JSON.stringify(getDefaultExamContent(sStep), null, 2))
+    } else if (type === 'inventario') {
+      setFormContent(JSON.stringify(getDefaultInventoryContent(sStep), null, 2))
+    } else if (type === 'estandar') {
+      setFormContent(JSON.stringify(getDefaultStandardContent(), null, 2))
     } else {
       setFormContent(JSON.stringify(getDefaultChecklistContent(sStep), null, 2))
     }
@@ -729,6 +1112,8 @@ export default function TemplateManager() {
     try {
       const data = typeof template.content === 'string' ? JSON.parse(template.content) : template.content
       if (data.questions) return `${data.questions.length} pregunta(s)`
+      if (data.fields) return `${data.fields.length} campo(s)`
+      if (data.categories || data.extraFields) return `${(data.categories || []).length} cat. / ${(data.extraFields || []).length} campos`
       if (data.sections) {
         const totalItems = data.sections.reduce((s: number, sec: any) => s + (sec.items?.length || 0), 0)
         return totalItems > 0 ? `${data.sections.length} sec. / ${totalItems} items` : `${data.sections.length} sección(es)`
@@ -821,7 +1206,7 @@ export default function TemplateManager() {
                               className="gap-1 text-xs"
                               onClick={() => startCreate(s.id, type)}>
                               <Plus className="h-3.5 w-3.5" />
-                              Nueva {type === 'formacion' ? 'Formación' : type === 'examen' ? 'Examen' : type === 'autoevaluacion' ? 'Autoevaluación' : 'Auditoría Externa'}
+                              Nueva {type === 'formacion' ? 'Formación' : type === 'examen' ? 'Examen' : type === 'autoevaluacion' ? 'Autoevaluación' : type === 'auditoria' ? 'Auditoría Externa' : type === 'inventario' ? 'Config. Inventario' : 'Formato Estándar'}
                             </Button>
                           ))}
                         </div>
@@ -838,10 +1223,10 @@ export default function TemplateManager() {
                                 className={`flex items-center justify-between p-3 rounded-lg border ${tpl.active ? 'bg-white border-gray-200' : 'bg-gray-50 border-gray-300 opacity-60'}`}>
                                 <div className="flex items-center gap-3 flex-1 min-w-0">
                                   <Badge className="shrink-0" style={{
-                                    backgroundColor: tpl.type === 'formacion' ? '#DBEAFE' : tpl.type === 'examen' ? '#FEF3C7' : tpl.type === 'autoevaluacion' ? '#D1FAE5' : '#FED7AA',
-                                    color: tpl.type === 'formacion' ? '#1D4ED8' : tpl.type === 'examen' ? '#92400E' : tpl.type === 'autoevaluacion' ? '#065F46' : '#9A3412',
+                                    backgroundColor: tpl.type === 'formacion' ? '#DBEAFE' : tpl.type === 'examen' ? '#FEF3C7' : tpl.type === 'autoevaluacion' ? '#D1FAE5' : tpl.type === 'auditoria' ? '#FED7AA' : tpl.type === 'inventario' ? '#FFEDD5' : '#EDE9FE',
+                                    color: tpl.type === 'formacion' ? '#1D4ED8' : tpl.type === 'examen' ? '#92400E' : tpl.type === 'autoevaluacion' ? '#065F46' : tpl.type === 'auditoria' ? '#9A3412' : tpl.type === 'inventario' ? '#9A3412' : '#6D28D9',
                                   }}>
-                                    {tpl.type === 'formacion' ? 'Formación' : tpl.type === 'examen' ? 'Examen' : tpl.type === 'autoevaluacion' ? 'Aut. Int.' : 'Aud. Ext.'}
+                                    {tpl.type === 'formacion' ? 'Formación' : tpl.type === 'examen' ? 'Examen' : tpl.type === 'autoevaluacion' ? 'Aut. Int.' : tpl.type === 'auditoria' ? 'Aud. Ext.' : tpl.type === 'inventario' ? 'Inventario' : 'Estándar'}
                                   </Badge>
                                   <div className="min-w-0">
                                     <p className="text-sm font-medium truncate">{tpl.title}</p>
@@ -915,6 +1300,8 @@ export default function TemplateManager() {
                     <SelectItem value="examen">Examen</SelectItem>
                     <SelectItem value="autoevaluacion">Auditoría Interna</SelectItem>
                     <SelectItem value="auditoria">Auditoría Externa</SelectItem>
+                    <SelectItem value="inventario">Inventario</SelectItem>
+                    <SelectItem value="estandar">Estándar</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -993,6 +1380,20 @@ export default function TemplateManager() {
                       Cargar examen por defecto
                     </Button>
                   )}
+                  {formType === 'inventario' && (
+                    <Button variant="outline" size="sm" className="text-xs h-6"
+                      onClick={() => setFormContent(JSON.stringify(getDefaultInventoryContent(formSStep), null, 2))}>
+                      <RotateCcw className="h-3 w-3 mr-1" />
+                      Cargar inventario por defecto
+                    </Button>
+                  )}
+                  {formType === 'estandar' && (
+                    <Button variant="outline" size="sm" className="text-xs h-6"
+                      onClick={() => setFormContent(JSON.stringify(getDefaultStandardContent(), null, 2))}>
+                      <RotateCcw className="h-3 w-3 mr-1" />
+                      Cargar estándar por defecto
+                    </Button>
+                  )}
 
                   {/* Upload JSON */}
                   <Button variant="outline" size="sm" className="text-xs h-6" onClick={handleUploadJson}>
@@ -1033,6 +1434,12 @@ export default function TemplateManager() {
                   )}
                   {formType === 'formacion' && (
                     <FormationEditor content={formContent} onChange={setFormContent} />
+                  )}
+                  {formType === 'inventario' && (
+                    <InventoryConfigEditor content={formContent} onChange={setFormContent} />
+                  )}
+                  {formType === 'estandar' && (
+                    <StandardTemplateEditor content={formContent} onChange={setFormContent} />
                   )}
                 </div>
               ) : (

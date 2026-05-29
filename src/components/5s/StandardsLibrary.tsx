@@ -59,6 +59,11 @@ const CATEGORIES = [
   { value: 'marcado_suelo', label: 'Código de Colores / Marcado de Suelo', icon: Paintbrush, color: 'bg-yellow-100 text-yellow-800' },
   { value: 'visual', label: 'Señalización Visual', icon: FileText, color: 'bg-purple-100 text-purple-800' },
   { value: 'procedimiento', label: 'Procedimiento', icon: FileText, color: 'bg-green-100 text-green-800' },
+  { value: 'checklist', label: 'Checklist', icon: FileText, color: 'bg-cyan-100 text-cyan-800' },
+  { value: 'senalizacion', label: 'Señalización', icon: FileText, color: 'bg-amber-100 text-amber-800' },
+  { value: 'diagrama', label: 'Diagrama flujo', icon: FileText, color: 'bg-indigo-100 text-indigo-800' },
+  { value: 'registro', label: 'Registro', icon: FileText, color: 'bg-rose-100 text-rose-800' },
+  { value: 'otro', label: 'Otro', icon: FileText, color: 'bg-orange-100 text-orange-800' },
   { value: 'general', label: 'General', icon: FileText, color: 'bg-gray-100 text-gray-800' },
 ]
 
