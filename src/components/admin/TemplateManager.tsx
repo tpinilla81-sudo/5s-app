@@ -16,7 +16,7 @@ import {
 } from '@/components/ui/dialog'
 import {
   Plus, Trash2, Edit3, Save, Loader2, BookOpen, FileCheck, ClipboardCheck,
-  Target, ChevronDown, ChevronUp, AlertTriangle, Copy, RotateCcw,
+  ChevronDown, ChevronUp, AlertTriangle, Copy, RotateCcw,
   Eye, Code, GripVertical, Download, Upload,
 } from 'lucide-react'
 import { S_STEPS, AUDIT_CHECKLISTS, EXAM_PASS_THRESHOLD, SELF_EVAL_THRESHOLD, AUDIT_PASS_THRESHOLD } from '@/lib/5s-constants'
@@ -37,12 +37,11 @@ interface TemplateData {
   updatedAt: string
 }
 
-type TemplateTab = 'formacion' | 'autoevaluacion' | 'auditoria'
+type TemplateTab = 'formacion' | 'auditorias'
 
 const TEMPLATE_TABS: { key: TemplateTab; label: string; icon: React.ComponentType<{ className?: string }>; types: string[] }[] = [
   { key: 'formacion', label: 'Formaciones y Exámenes', icon: BookOpen, types: ['formacion', 'examen'] },
-  { key: 'autoevaluacion', label: 'Auditoría Interna', icon: Target, types: ['autoevaluacion'] },
-  { key: 'auditoria', label: 'Auditoría Externa', icon: ClipboardCheck, types: ['auditoria'] },
+  { key: 'auditorias', label: 'Auditorías', icon: ClipboardCheck, types: ['autoevaluacion', 'auditoria'] },
 ]
 
 const S_COLORS: Record<number, string> = { 1: '#8B5CF6', 2: '#EAB308', 3: '#3B82F6', 4: '#F43F5E', 5: '#22C55E' }
@@ -560,7 +559,7 @@ export default function TemplateManager() {
     setFormTitle('')
     setFormDescription('')
     setFormContent('')
-    setFormNotaMinima(activeTab === 'formacion' ? EXAM_PASS_THRESHOLD : activeTab === 'autoevaluacion' ? SELF_EVAL_THRESHOLD : AUDIT_PASS_THRESHOLD)
+    setFormNotaMinima(activeTab === 'formacion' ? EXAM_PASS_THRESHOLD : AUDIT_PASS_THRESHOLD)
     setFormActive(true)
     setEditingTemplate(null)
     setIsCreating(false)
@@ -573,7 +572,7 @@ export default function TemplateManager() {
     setFormSStep(sStep)
     setFormTitle(`S${sStep} - ${S_STEPS.find(s => s.id === sStep)?.japaneseName || ''}`)
     setFormDescription('')
-    setFormNotaMinima(activeTab === 'formacion' ? EXAM_PASS_THRESHOLD : activeTab === 'autoevaluacion' ? SELF_EVAL_THRESHOLD : AUDIT_PASS_THRESHOLD)
+    setFormNotaMinima(type === 'formacion' || type === 'examen' ? EXAM_PASS_THRESHOLD : type === 'autoevaluacion' ? SELF_EVAL_THRESHOLD : AUDIT_PASS_THRESHOLD)
     setFormActive(true)
     setEditorMode('visual')
 
@@ -593,7 +592,7 @@ export default function TemplateManager() {
     setFormTitle(template.title)
     setFormDescription(template.description || '')
     setFormContent(typeof template.content === 'string' ? template.content : JSON.stringify(template.content, null, 2))
-    setFormNotaMinima(template.notaMinima ?? (activeTab === 'formacion' ? EXAM_PASS_THRESHOLD : activeTab === 'autoevaluacion' ? SELF_EVAL_THRESHOLD : AUDIT_PASS_THRESHOLD))
+    setFormNotaMinima(template.notaMinima ?? (template.type === 'autoevaluacion' ? SELF_EVAL_THRESHOLD : template.type === 'auditoria' ? AUDIT_PASS_THRESHOLD : EXAM_PASS_THRESHOLD))
     setFormActive(template.active)
     setIsCreating(true)
     setEditorMode('visual')
@@ -822,7 +821,7 @@ export default function TemplateManager() {
                               className="gap-1 text-xs"
                               onClick={() => startCreate(s.id, type)}>
                               <Plus className="h-3.5 w-3.5" />
-                              Nueva {type === 'formacion' ? 'Formación' : type === 'examen' ? 'Examen' : type === 'autoevaluacion' ? 'Autoevaluación' : 'Auditoría'}
+                              Nueva {type === 'formacion' ? 'Formación' : type === 'examen' ? 'Examen' : type === 'autoevaluacion' ? 'Autoevaluación' : 'Auditoría Externa'}
                             </Button>
                           ))}
                         </div>
@@ -842,7 +841,7 @@ export default function TemplateManager() {
                                     backgroundColor: tpl.type === 'formacion' ? '#DBEAFE' : tpl.type === 'examen' ? '#FEF3C7' : tpl.type === 'autoevaluacion' ? '#D1FAE5' : '#FED7AA',
                                     color: tpl.type === 'formacion' ? '#1D4ED8' : tpl.type === 'examen' ? '#92400E' : tpl.type === 'autoevaluacion' ? '#065F46' : '#9A3412',
                                   }}>
-                                    {tpl.type === 'formacion' ? 'Formación' : tpl.type === 'examen' ? 'Examen' : tpl.type === 'autoevaluacion' ? 'Autoeval.' : 'Auditoría'}
+                                    {tpl.type === 'formacion' ? 'Formación' : tpl.type === 'examen' ? 'Examen' : tpl.type === 'autoevaluacion' ? 'Aut. Int.' : 'Aud. Ext.'}
                                   </Badge>
                                   <div className="min-w-0">
                                     <p className="text-sm font-medium truncate">{tpl.title}</p>
@@ -914,8 +913,8 @@ export default function TemplateManager() {
                   <SelectContent>
                     <SelectItem value="formacion">Formación</SelectItem>
                     <SelectItem value="examen">Examen</SelectItem>
-                    <SelectItem value="autoevaluacion">Autoevaluación</SelectItem>
-                    <SelectItem value="auditoria">Auditoría</SelectItem>
+                    <SelectItem value="autoevaluacion">Auditoría Interna</SelectItem>
+                    <SelectItem value="auditoria">Auditoría Externa</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
