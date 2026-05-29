@@ -17,6 +17,7 @@ import {
 import {
   Plus, Trash2, Edit3, Save, Loader2, BookOpen, FileCheck, ClipboardCheck,
   Target, ChevronDown, ChevronUp, AlertTriangle, Copy, RotateCcw,
+  Eye, Code, GripVertical, Download, Upload,
 } from 'lucide-react'
 import { S_STEPS, AUDIT_CHECKLISTS, EXAM_PASS_THRESHOLD, SELF_EVAL_THRESHOLD, AUDIT_PASS_THRESHOLD } from '@/lib/5s-constants'
 
@@ -77,7 +78,6 @@ function getDefaultExamContent(sStep: number) {
 function getDefaultChecklistContent(sStep: number) {
   const checklist = AUDIT_CHECKLISTS[sStep]
   if (!checklist) return { sections: [] }
-  // Convert AUDIT_CHECKLISTS to template format
   return {
     sections: checklist.map(section => ({
       id: section.id,
@@ -92,6 +92,427 @@ function getDefaultChecklistContent(sStep: number) {
 }
 
 // ═══════════════════════════════════════════════════════
+// VISUAL EDITOR: ChecklistEditor (autoevaluacion / auditoria)
+// ═══════════════════════════════════════════════════════
+interface ChecklistSection {
+  id: string
+  title: string
+  items: { id: string; description: string; hasOther: boolean }[]
+}
+
+function ChecklistEditor({ content, onChange }: { content: string; onChange: (v: string) => void }) {
+  let parsed: { sections: ChecklistSection[] }
+  try {
+    parsed = JSON.parse(content)
+  } catch {
+    return (
+      <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-sm text-red-600">
+        El JSON no es válido. Corrígelo en modo JSON o carga el contenido por defecto.
+      </div>
+    )
+  }
+
+  const sections = parsed.sections || []
+  const sPrefix = String(content.match(/"id"\s*:\s*"(\d+)\./)?.[1] || '1')
+
+  const update = (newSections: ChecklistSection[]) => {
+    onChange(JSON.stringify({ ...parsed, sections: newSections }, null, 2))
+  }
+
+  const addSection = () => {
+    const newId = `${sPrefix}.${sections.length + 1}`
+    update([...sections, { id: newId, title: 'Nueva Sección', items: [] }])
+  }
+
+  const removeSection = (idx: number) => {
+    update(sections.filter((_, i) => i !== idx))
+  }
+
+  const updateSection = (idx: number, field: 'id' | 'title', value: string) => {
+    const updated = [...sections]
+    updated[idx] = { ...updated[idx], [field]: value }
+    update(updated)
+  }
+
+  const moveSection = (idx: number, dir: -1 | 1) => {
+    const target = idx + dir
+    if (target < 0 || target >= sections.length) return
+    const updated = [...sections]
+    ;[updated[idx], updated[target]] = [updated[target], updated[idx]]
+    update(updated)
+  }
+
+  const addItem = (sectionIdx: number) => {
+    const sec = sections[sectionIdx]
+    const newItemId = `${sec.id}.${sec.items.length + 1}`
+    const updated = [...sections]
+    updated[sectionIdx] = {
+      ...updated[sectionIdx],
+      items: [...updated[sectionIdx].items, { id: newItemId, description: '', hasOther: false }]
+    }
+    update(updated)
+  }
+
+  const removeItem = (sectionIdx: number, itemIdx: number) => {
+    const updated = [...sections]
+    updated[sectionIdx] = {
+      ...updated[sectionIdx],
+      items: updated[sectionIdx].items.filter((_, i) => i !== itemIdx)
+    }
+    update(updated)
+  }
+
+  const updateItem = (sectionIdx: number, itemIdx: number, field: string, value: string | boolean) => {
+    const updated = [...sections]
+    updated[sectionIdx] = {
+      ...updated[sectionIdx],
+      items: updated[sectionIdx].items.map((item, i) =>
+        i === itemIdx ? { ...item, [field]: value } : item
+      )
+    }
+    update(updated)
+  }
+
+  const moveItem = (sectionIdx: number, itemIdx: number, dir: -1 | 1) => {
+    const items = sections[sectionIdx].items
+    const target = itemIdx + dir
+    if (target < 0 || target >= items.length) return
+    const updated = [...sections]
+    const newItems = [...updated[sectionIdx].items]
+    ;[newItems[itemIdx], newItems[target]] = [newItems[target], newItems[itemIdx]]
+    updated[sectionIdx] = { ...updated[sectionIdx], items: newItems }
+    update(updated)
+  }
+
+  return (
+    <div className="space-y-3">
+      {sections.map((section, sIdx) => (
+        <div key={sIdx} className="border-2 rounded-lg overflow-hidden bg-white">
+          {/* Section header */}
+          <div className="flex items-center gap-2 px-3 py-2 bg-gray-50 border-b">
+            <div className="flex flex-col gap-0.5">
+              <button onClick={() => moveSection(sIdx, -1)} className="text-gray-400 hover:text-gray-600 leading-none" title="Subir sección">
+                <ChevronUp className="h-3 w-3" />
+              </button>
+              <button onClick={() => moveSection(sIdx, 1)} className="text-gray-400 hover:text-gray-600 leading-none" title="Bajar sección">
+                <ChevronDown className="h-3 w-3" />
+              </button>
+            </div>
+            <Input
+              value={section.id}
+              onChange={(e) => updateSection(sIdx, 'id', e.target.value)}
+              className="w-16 h-7 text-xs font-mono"
+              placeholder="ID"
+            />
+            <Input
+              value={section.title}
+              onChange={(e) => updateSection(sIdx, 'title', e.target.value)}
+              className="flex-1 h-7 text-sm font-semibold"
+              placeholder="Título de sección"
+            />
+            <Button variant="ghost" size="sm" onClick={() => addItem(sIdx)}
+              className="h-7 w-7 p-0 text-green-600 hover:text-green-700 hover:bg-green-50" title="Añadir item">
+              <Plus className="h-4 w-4" />
+            </Button>
+            <Button variant="ghost" size="sm" onClick={() => removeSection(sIdx)}
+              className="h-7 w-7 p-0 text-red-500 hover:text-red-600 hover:bg-red-50" title="Eliminar sección">
+              <Trash2 className="h-3.5 w-3.5" />
+            </Button>
+          </div>
+
+          {/* Items */}
+          <div className="p-2 space-y-1">
+            {section.items.length === 0 && (
+              <p className="text-xs text-muted-foreground italic px-2 py-1">Sin items. Pulsa + para añadir.</p>
+            )}
+            {section.items.map((item, iIdx) => (
+              <div key={iIdx} className="flex items-center gap-2 group">
+                <div className="flex flex-col gap-0.5">
+                  <button onClick={() => moveItem(sIdx, iIdx, -1)} className="text-gray-300 hover:text-gray-500 leading-none" title="Subir">
+                    <ChevronUp className="h-2.5 w-2.5" />
+                  </button>
+                  <button onClick={() => moveItem(sIdx, iIdx, 1)} className="text-gray-300 hover:text-gray-500 leading-none" title="Bajar">
+                    <ChevronDown className="h-2.5 w-2.5" />
+                  </button>
+                </div>
+                <Input
+                  value={item.id}
+                  onChange={(e) => updateItem(sIdx, iIdx, 'id', e.target.value)}
+                  className="w-14 h-6 text-[10px] font-mono"
+                  placeholder="ID"
+                />
+                <Input
+                  value={item.description}
+                  onChange={(e) => updateItem(sIdx, iIdx, 'description', e.target.value)}
+                  className="flex-1 h-6 text-xs"
+                  placeholder="Descripción del item"
+                />
+                <label className="flex items-center gap-1 text-[10px] text-muted-foreground whitespace-nowrap cursor-pointer shrink-0">
+                  <input
+                    type="checkbox"
+                    checked={item.hasOther}
+                    onChange={(e) => updateItem(sIdx, iIdx, 'hasOther', e.target.checked)}
+                    className="rounded border-gray-300 h-3.5 w-3.5"
+                  />
+                  Otros
+                </label>
+                <Button variant="ghost" size="sm"
+                  onClick={() => removeItem(sIdx, iIdx)}
+                  className="h-6 w-6 p-0 text-red-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity" title="Eliminar">
+                  <Trash2 className="h-3 w-3" />
+                </Button>
+              </div>
+            ))}
+          </div>
+        </div>
+      ))}
+
+      <Button variant="outline" onClick={addSection}
+        className="w-full border-dashed border-2 text-green-600 hover:bg-green-50 hover:border-green-400 gap-1">
+        <Plus className="h-4 w-4" />
+        Añadir sección
+      </Button>
+
+      <div className="text-xs text-muted-foreground text-center">
+        {sections.length} sección(es) · {sections.reduce((s, sec) => s + sec.items.length, 0)} item(s) en total
+      </div>
+    </div>
+  )
+}
+
+// ═══════════════════════════════════════════════════════
+// VISUAL EDITOR: ExamEditor (examen)
+// ═══════════════════════════════════════════════════════
+function ExamEditor({ content, onChange }: { content: string; onChange: (v: string) => void }) {
+  let parsed: { questions: { question: string; options: string[]; correctIndex: number }[] }
+  try {
+    parsed = JSON.parse(content)
+  } catch {
+    return (
+      <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-sm text-red-600">
+        El JSON no es válido. Corrígelo en modo JSON o carga el contenido por defecto.
+      </div>
+    )
+  }
+
+  const questions = parsed.questions || []
+
+  const update = (newQuestions: typeof questions) => {
+    onChange(JSON.stringify({ ...parsed, questions: newQuestions }, null, 2))
+  }
+
+  const addQuestion = () => {
+    update([...questions, { question: '', options: ['Opción A', 'Opción B', 'Opción C', 'Opción D'], correctIndex: 0 }])
+  }
+
+  const removeQuestion = (idx: number) => {
+    update(questions.filter((_, i) => i !== idx))
+  }
+
+  const updateQuestion = (idx: number, field: string, value: any) => {
+    const updated = [...questions]
+    updated[idx] = { ...updated[idx], [field]: value }
+    update(updated)
+  }
+
+  const updateOption = (qIdx: number, oIdx: number, value: string) => {
+    const updated = [...questions]
+    updated[qIdx] = { ...updated[qIdx], options: updated[qIdx].options.map((o, i) => i === oIdx ? value : o) }
+    update(updated)
+  }
+
+  const addOption = (qIdx: number) => {
+    const updated = [...questions]
+    const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+    const newIdx = updated[qIdx].options.length
+    updated[qIdx] = { ...updated[qIdx], options: [...updated[qIdx].options, `Opción ${letters[newIdx] || newIdx + 1}`] }
+    update(updated)
+  }
+
+  const removeOption = (qIdx: number, oIdx: number) => {
+    const updated = [...questions]
+    const newOptions = updated[qIdx].options.filter((_, i) => i !== oIdx)
+    let newCorrect = updated[qIdx].correctIndex
+    if (newCorrect >= newOptions.length) newCorrect = 0
+    else if (newCorrect > oIdx) newCorrect--
+    updated[qIdx] = { ...updated[qIdx], options: newOptions, correctIndex: newCorrect }
+    update(updated)
+  }
+
+  const moveQuestion = (idx: number, dir: -1 | 1) => {
+    const target = idx + dir
+    if (target < 0 || target >= questions.length) return
+    const updated = [...questions]
+    ;[updated[idx], updated[target]] = [updated[target], updated[idx]]
+    update(updated)
+  }
+
+  return (
+    <div className="space-y-3">
+      {questions.map((q, qIdx) => (
+        <div key={qIdx} className="border-2 rounded-lg overflow-hidden bg-white">
+          <div className="flex items-center gap-2 px-3 py-2 bg-amber-50 border-b border-amber-200">
+            <div className="flex flex-col gap-0.5">
+              <button onClick={() => moveQuestion(qIdx, -1)} className="text-gray-400 hover:text-gray-600 leading-none">
+                <ChevronUp className="h-3 w-3" />
+              </button>
+              <button onClick={() => moveQuestion(qIdx, 1)} className="text-gray-400 hover:text-gray-600 leading-none">
+                <ChevronDown className="h-3 w-3" />
+              </button>
+            </div>
+            <Badge className="bg-amber-200 text-amber-800 shrink-0">P{qIdx + 1}</Badge>
+            <Input
+              value={q.question}
+              onChange={(e) => updateQuestion(qIdx, 'question', e.target.value)}
+              className="flex-1 h-7 text-sm"
+              placeholder="Pregunta"
+            />
+            <Button variant="ghost" size="sm" onClick={() => removeQuestion(qIdx)}
+              className="h-7 w-7 p-0 text-red-500 hover:text-red-600 hover:bg-red-50" title="Eliminar pregunta">
+              <Trash2 className="h-3.5 w-3.5" />
+            </Button>
+          </div>
+
+          <div className="p-3 space-y-1.5">
+            {q.options.map((opt, oIdx) => (
+              <div key={oIdx} className="flex items-center gap-2 group">
+                <label className="flex items-center gap-1 cursor-pointer shrink-0">
+                  <input
+                    type="radio"
+                    name={`correct-${qIdx}`}
+                    checked={q.correctIndex === oIdx}
+                    onChange={() => updateQuestion(qIdx, 'correctIndex', oIdx)}
+                    className="h-3.5 w-3.5 text-green-600"
+                  />
+                  <span className="text-[10px] text-muted-foreground w-4">{String.fromCharCode(65 + oIdx)}</span>
+                </label>
+                <Input
+                  value={opt}
+                  onChange={(e) => updateOption(qIdx, oIdx, e.target.value)}
+                  className={`flex-1 h-6 text-xs ${q.correctIndex === oIdx ? 'border-green-400 bg-green-50' : ''}`}
+                />
+                <Button variant="ghost" size="sm"
+                  onClick={() => removeOption(qIdx, oIdx)}
+                  className="h-6 w-6 p-0 text-red-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
+                  title="Eliminar opción">
+                  <Trash2 className="h-3 w-3" />
+                </Button>
+              </div>
+            ))}
+            <Button variant="ghost" size="sm" onClick={() => addOption(qIdx)}
+              className="h-6 text-xs text-blue-500 hover:text-blue-600 gap-1 px-2">
+              <Plus className="h-3 w-3" /> Añadir opción
+            </Button>
+          </div>
+        </div>
+      ))}
+
+      <Button variant="outline" onClick={addQuestion}
+        className="w-full border-dashed border-2 text-amber-600 hover:bg-amber-50 hover:border-amber-400 gap-1">
+        <Plus className="h-4 w-4" />
+        Añadir pregunta
+      </Button>
+
+      <div className="text-xs text-muted-foreground text-center">
+        {questions.length} pregunta(s)
+      </div>
+    </div>
+  )
+}
+
+// ═══════════════════════════════════════════════════════
+// VISUAL EDITOR: FormationEditor (formacion)
+// ═══════════════════════════════════════════════════════
+function FormationEditor({ content, onChange }: { content: string; onChange: (v: string) => void }) {
+  let parsed: { sections: { title: string; content: string }[] }
+  try {
+    parsed = JSON.parse(content)
+  } catch {
+    return (
+      <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-sm text-red-600">
+        El JSON no es válido. Corrígelo en modo JSON o carga el contenido por defecto.
+      </div>
+    )
+  }
+
+  const sections = parsed.sections || []
+
+  const update = (newSections: typeof sections) => {
+    onChange(JSON.stringify({ ...parsed, sections: newSections }, null, 2))
+  }
+
+  const addSection = () => {
+    update([...sections, { title: '', content: '' }])
+  }
+
+  const removeSection = (idx: number) => {
+    update(sections.filter((_, i) => i !== idx))
+  }
+
+  const updateSection = (idx: number, field: 'title' | 'content', value: string) => {
+    const updated = [...sections]
+    updated[idx] = { ...updated[idx], [field]: value }
+    update(updated)
+  }
+
+  const moveSection = (idx: number, dir: -1 | 1) => {
+    const target = idx + dir
+    if (target < 0 || target >= sections.length) return
+    const updated = [...sections]
+    ;[updated[idx], updated[target]] = [updated[target], updated[idx]]
+    update(updated)
+  }
+
+  return (
+    <div className="space-y-3">
+      {sections.map((sec, idx) => (
+        <div key={idx} className="border-2 rounded-lg overflow-hidden bg-white">
+          <div className="flex items-center gap-2 px-3 py-2 bg-blue-50 border-b border-blue-200">
+            <div className="flex flex-col gap-0.5">
+              <button onClick={() => moveSection(idx, -1)} className="text-gray-400 hover:text-gray-600 leading-none">
+                <ChevronUp className="h-3 w-3" />
+              </button>
+              <button onClick={() => moveSection(idx, 1)} className="text-gray-400 hover:text-gray-600 leading-none">
+                <ChevronDown className="h-3 w-3" />
+              </button>
+            </div>
+            <Badge className="bg-blue-200 text-blue-800 shrink-0">Sección {idx + 1}</Badge>
+            <Input
+              value={sec.title}
+              onChange={(e) => updateSection(idx, 'title', e.target.value)}
+              className="flex-1 h-7 text-sm font-semibold"
+              placeholder="Título de la sección"
+            />
+            <Button variant="ghost" size="sm" onClick={() => removeSection(idx)}
+              className="h-7 w-7 p-0 text-red-500 hover:text-red-600 hover:bg-red-50" title="Eliminar sección">
+              <Trash2 className="h-3.5 w-3.5" />
+            </Button>
+          </div>
+          <div className="p-3">
+            <textarea
+              value={sec.content}
+              onChange={(e) => updateSection(idx, 'content', e.target.value)}
+              className="w-full h-20 p-2 border rounded text-sm resize-y focus:ring-2 focus:ring-blue-300 focus:border-blue-400"
+              placeholder="Contenido de la sección..."
+            />
+          </div>
+        </div>
+      ))}
+
+      <Button variant="outline" onClick={addSection}
+        className="w-full border-dashed border-2 text-blue-600 hover:bg-blue-50 hover:border-blue-400 gap-1">
+        <Plus className="h-4 w-4" />
+        Añadir sección
+      </Button>
+
+      <div className="text-xs text-muted-foreground text-center">
+        {sections.length} sección(es) de formación
+      </div>
+    </div>
+  )
+}
+
+// ═══════════════════════════════════════════════════════
 // COMPONENT
 // ═══════════════════════════════════════════════════════
 export default function TemplateManager() {
@@ -103,6 +524,7 @@ export default function TemplateManager() {
   const [isCreating, setIsCreating] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
   const [expandedS, setExpandedS] = useState<number | null>(null)
+  const [editorMode, setEditorMode] = useState<'visual' | 'json'>('visual')
 
   // Form state
   const [formType, setFormType] = useState<string>('formacion')
@@ -142,6 +564,7 @@ export default function TemplateManager() {
     setFormActive(true)
     setEditingTemplate(null)
     setIsCreating(false)
+    setEditorMode('visual')
   }
 
   const startCreate = (sStep: number, type: string) => {
@@ -152,6 +575,7 @@ export default function TemplateManager() {
     setFormDescription('')
     setFormNotaMinima(activeTab === 'formacion' ? EXAM_PASS_THRESHOLD : activeTab === 'autoevaluacion' ? SELF_EVAL_THRESHOLD : AUDIT_PASS_THRESHOLD)
     setFormActive(true)
+    setEditorMode('visual')
 
     if (type === 'formacion') {
       setFormContent(JSON.stringify(getDefaultFormationContent(sStep), null, 2))
@@ -172,6 +596,7 @@ export default function TemplateManager() {
     setFormNotaMinima(template.notaMinima ?? (activeTab === 'formacion' ? EXAM_PASS_THRESHOLD : activeTab === 'autoevaluacion' ? SELF_EVAL_THRESHOLD : AUDIT_PASS_THRESHOLD))
     setFormActive(template.active)
     setIsCreating(true)
+    setEditorMode('visual')
   }
 
   const handleSave = async () => {
@@ -262,7 +687,56 @@ export default function TemplateManager() {
     finally { setIsSaving(false) }
   }
 
+  const handleDownload = (template: TemplateData) => {
+    try {
+      const data = typeof template.content === 'string' ? JSON.parse(template.content) : template.content
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `${template.type}_S${template.sStep}_${template.title.replace(/[^a-zA-Z0-9]/g, '_')}.json`
+      a.click()
+      URL.revokeObjectURL(url)
+    } catch {
+      alert('Error al descargar la plantilla')
+    }
+  }
+
+  const handleUploadJson = () => {
+    const input = document.createElement('input')
+    input.type = 'file'
+    input.accept = '.json'
+    input.onchange = (e: any) => {
+      const file = e.target.files?.[0]
+      if (!file) return
+      const reader = new FileReader()
+      reader.onload = (ev) => {
+        try {
+          const data = JSON.parse(ev.target?.result as string)
+          setFormContent(JSON.stringify(data, null, 2))
+        } catch {
+          alert('El archivo JSON no es válido')
+        }
+      }
+      reader.readAsText(file)
+    }
+    input.click()
+  }
+
   const templatesByS = (sStep: number) => templates.filter(t => t.sStep === sStep)
+
+  // Count summary for a template
+  const getTemplateSummary = (template: TemplateData) => {
+    try {
+      const data = typeof template.content === 'string' ? JSON.parse(template.content) : template.content
+      if (data.questions) return `${data.questions.length} pregunta(s)`
+      if (data.sections) {
+        const totalItems = data.sections.reduce((s: number, sec: any) => s + (sec.items?.length || 0), 0)
+        return totalItems > 0 ? `${data.sections.length} sec. / ${totalItems} items` : `${data.sections.length} sección(es)`
+      }
+      return ''
+    } catch { return '' }
+  }
 
   // ═══════════════════════════════════════════════════════
   // RENDER
@@ -374,6 +848,11 @@ export default function TemplateManager() {
                                     <p className="text-sm font-medium truncate">{tpl.title}</p>
                                     {tpl.description && <p className="text-xs text-muted-foreground truncate">{tpl.description}</p>}
                                   </div>
+                                  {getTemplateSummary(tpl) && (
+                                    <Badge variant="outline" className="shrink-0 text-[10px]">
+                                      {getTemplateSummary(tpl)}
+                                    </Badge>
+                                  )}
                                   {tpl.notaMinima != null && (
                                     <Badge variant="outline" className="shrink-0 text-xs">
                                       Nota mín: {tpl.notaMinima}%
@@ -384,6 +863,10 @@ export default function TemplateManager() {
                                   )}
                                 </div>
                                 <div className="flex items-center gap-1 shrink-0 ml-2">
+                                  <Button variant="ghost" size="sm" onClick={() => handleDownload(tpl)}
+                                    className="h-7 w-7 p-0 text-gray-500 hover:text-gray-700" title="Descargar JSON">
+                                    <Download className="h-3.5 w-3.5" />
+                                  </Button>
                                   <Button variant="ghost" size="sm" onClick={() => startEdit(tpl)}
                                     className="h-7 w-7 p-0 text-blue-600 hover:text-blue-700">
                                     <Edit3 className="h-3.5 w-3.5" />
@@ -484,66 +967,98 @@ export default function TemplateManager() {
               <Label className="text-sm">Plantilla activa</Label>
             </div>
 
-            {/* Content editor */}
+            {/* ═══════════ Content Editor ═══════════ */}
             <div>
               <div className="flex items-center justify-between mb-1">
-                <Label className="text-sm font-semibold">Contenido (JSON)</Label>
-                <div className="flex gap-2">
+                <Label className="text-sm font-semibold">Contenido</Label>
+                <div className="flex items-center gap-2">
+                  {/* Default data buttons */}
                   {(formType === 'autoevaluacion' || formType === 'auditoria') && (
                     <Button variant="outline" size="sm" className="text-xs h-6"
                       onClick={() => setFormContent(JSON.stringify(getDefaultChecklistContent(formSStep), null, 2))}>
+                      <RotateCcw className="h-3 w-3 mr-1" />
                       Cargar checklist por defecto
                     </Button>
                   )}
                   {formType === 'formacion' && (
                     <Button variant="outline" size="sm" className="text-xs h-6"
                       onClick={() => setFormContent(JSON.stringify(getDefaultFormationContent(formSStep), null, 2))}>
+                      <RotateCcw className="h-3 w-3 mr-1" />
                       Cargar formación por defecto
                     </Button>
                   )}
                   {formType === 'examen' && (
                     <Button variant="outline" size="sm" className="text-xs h-6"
                       onClick={() => setFormContent(JSON.stringify(getDefaultExamContent(formSStep), null, 2))}>
+                      <RotateCcw className="h-3 w-3 mr-1" />
                       Cargar examen por defecto
                     </Button>
                   )}
+
+                  {/* Upload JSON */}
+                  <Button variant="outline" size="sm" className="text-xs h-6" onClick={handleUploadJson}>
+                    <Upload className="h-3 w-3 mr-1" />
+                    Subir JSON
+                  </Button>
+
+                  {/* Visual / JSON toggle */}
+                  <div className="flex rounded-md border overflow-hidden">
+                    <button
+                      onClick={() => setEditorMode('visual')}
+                      className={`flex items-center gap-1 px-2.5 py-1 text-xs font-medium transition-colors ${
+                        editorMode === 'visual' ? 'bg-green-100 text-green-700' : 'bg-white text-gray-500 hover:bg-gray-50'
+                      }`}>
+                      <Eye className="h-3 w-3" />
+                      Visual
+                    </button>
+                    <button
+                      onClick={() => setEditorMode('json')}
+                      className={`flex items-center gap-1 px-2.5 py-1 text-xs font-medium transition-colors ${
+                        editorMode === 'json' ? 'bg-gray-800 text-white' : 'bg-white text-gray-500 hover:bg-gray-50'
+                      }`}>
+                      <Code className="h-3 w-3" />
+                      JSON
+                    </button>
+                  </div>
                 </div>
               </div>
-              <textarea
-                value={formContent}
-                onChange={(e) => setFormContent(e.target.value)}
-                className="w-full h-64 p-3 border rounded-lg font-mono text-xs bg-gray-50 focus:ring-2 focus:ring-green-300 focus:border-green-400"
-                spellCheck={false}
-              />
-              {/* JSON preview */}
+
+              {/* Editor content */}
+              {editorMode === 'visual' ? (
+                <div className="border rounded-lg p-2 min-h-[200px] max-h-[500px] overflow-y-auto bg-gray-50">
+                  {(formType === 'autoevaluacion' || formType === 'auditoria') && (
+                    <ChecklistEditor content={formContent} onChange={setFormContent} />
+                  )}
+                  {formType === 'examen' && (
+                    <ExamEditor content={formContent} onChange={setFormContent} />
+                  )}
+                  {formType === 'formacion' && (
+                    <FormationEditor content={formContent} onChange={setFormContent} />
+                  )}
+                </div>
+              ) : (
+                <textarea
+                  value={formContent}
+                  onChange={(e) => setFormContent(e.target.value)}
+                  className="w-full h-64 p-3 border rounded-lg font-mono text-xs bg-gray-50 focus:ring-2 focus:ring-green-300 focus:border-green-400"
+                  spellCheck={false}
+                />
+              )}
+
+              {/* JSON validation preview */}
               {(() => {
                 try {
-                  const parsed = JSON.parse(formContent)
+                  JSON.parse(formContent)
                   return (
-                    <div className="mt-2 p-3 bg-green-50 border border-green-200 rounded-lg">
-                      <p className="text-xs font-semibold text-green-700 mb-1">Vista previa:</p>
-                      {parsed.sections && (
-                        <div className="text-xs text-green-600">
-                          {parsed.sections.length} sección(es)
-                          {parsed.sections.map((s: any, i: number) => (
-                            <div key={i} className="ml-2">• {s.title}: {s.items?.length || s.content ? '✓' : '⚠ vacía'}</div>
-                          ))}
-                        </div>
-                      )}
-                      {parsed.questions && (
-                        <div className="text-xs text-green-600">
-                          {parsed.questions.length} pregunta(s)
-                          {parsed.questions.map((q: any, i: number) => (
-                            <div key={i} className="ml-2">• P{i + 1}: {q.question?.slice(0, 50)}... ({q.options?.length || 0} opciones)</div>
-                          ))}
-                        </div>
-                      )}
+                    <div className="mt-1 flex items-center gap-1 text-xs text-green-600">
+                      <span className="inline-block w-2 h-2 rounded-full bg-green-500" />
+                      JSON válido
                     </div>
                   )
                 } catch { return (
-                  <div className="mt-2 p-2 bg-red-50 border border-red-200 rounded-lg flex items-center gap-2">
-                    <AlertTriangle className="h-4 w-4 text-red-500" />
-                    <span className="text-xs text-red-600">JSON inválido - revisa el formato</span>
+                  <div className="mt-1 flex items-center gap-1 text-xs text-red-600">
+                    <AlertTriangle className="h-3 w-3" />
+                    JSON inválido - revisa el formato
                   </div>
                 )}
               })()}
