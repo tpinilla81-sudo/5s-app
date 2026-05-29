@@ -217,6 +217,8 @@ export default function HomePage() {
   const canPerformPerm = useMemo(() => (sStep: number, miniStep: number): boolean => hasPermission(`s${sStep}_step${miniStep}_a1`), [hasPermission]);
   const canViewPerm = useMemo(() => (sStep: number, miniStep: number): boolean => hasPermission(`s${sStep}_step${miniStep}_a0`), [hasPermission]);
   const canAuditAny = useMemo(() => currentUser ? [1,2,3,4,5].some(s => canPerformPerm(s, 5)) : false, [currentUser, canPerformPerm]);
+  const canNotifyAudit = hasPermission('notify_audit'); // Only employees (by default) can trigger audit notification
+  const canAcceptAuditMeeting = hasPermission('accept_audit_meeting'); // Auditors and responsables can accept audit meetings
   const isResponsable = currentUser?.role === 'responsable';
   const canSeeNotifications = hasPermission('view_board'); // All board users can see notifications
 
@@ -499,10 +501,63 @@ export default function HomePage() {
                   <div className="flex items-center gap-1.5 mb-0.5">
                     {n.type === 'audit_requested' && <BellRing className="h-3 w-3 text-orange-500 shrink-0" />}
                     {n.type === 'audit_ready' && <ShieldCheck className="h-3 w-3 text-green-500 shrink-0" />}
+                    {n.type === 'audit_meeting_accepted' && <CheckSquare className="h-3 w-3 text-green-600 shrink-0" />}
                     <p className="text-xs font-semibold">{n.title}</p>
                   </div>
                   <p className="text-[10px] text-muted-foreground mt-0.5">{n.message}</p>
-                  <p className="text-[9px] text-muted-foreground mt-1">{new Date(n.createdAt).toLocaleString('es-ES')}</p>
+                  <div className="flex items-center justify-between mt-1.5">
+                    <p className="text-[9px] text-muted-foreground">{new Date(n.createdAt).toLocaleString('es-ES')}</p>
+                    {/* Accept audit meeting button — only for audit_requested notifications and users with accept_audit_meeting permission */}
+                    {n.type === 'audit_requested' && !n.read && canAcceptAuditMeeting && (
+                      <button
+                        className="text-[10px] font-semibold text-green-700 bg-green-100 hover:bg-green-200 px-2 py-0.5 rounded border border-green-300 transition-colors"
+                        onClick={async () => {
+                          try {
+                            // Mark this notification as read
+                            await fetch('/api/notifications', {
+                              method: 'PUT',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({ notificationId: n.id, read: true }),
+                            });
+                            // Send acceptance notification back to the employee who requested
+                            // Find the zone info for context
+                            const zoneName = currentZone?.name || 'la zona';
+                            const sStepName = n.sStep ? `S${n.sStep} (${S_STEPS.find(s => s.id === n.sStep)?.japaneseName || ''})` : 'la auditoría';
+                            // Notify all employees in the zone
+                            if (currentProject?.id && currentZone?.id) {
+                              const membersRes = await fetch(`/api/projects/${currentProject.id}/members`);
+                              const membersData = await membersRes.json();
+                              const employees = (membersData?.members || []).filter((m: any) => m.role === 'empleado');
+                              for (const emp of employees) {
+                                await fetch('/api/notifications', {
+                                  method: 'POST',
+                                  headers: { 'Content-Type': 'application/json' },
+                                  body: JSON.stringify({
+                                    userId: emp.userId,
+                                    type: 'audit_meeting_accepted',
+                                    title: `Reunión aceptada: ${sStepName}`,
+                                    message: `${currentUser?.name || 'El auditor/responsable'} ha aceptado la reunión de auditoría para ${sStepName} en la zona "${zoneName}".`,
+                                    sStep: n.sStep,
+                                    zoneId: currentZone.id,
+                                    projectId: currentProject.id,
+                                  }),
+                                });
+                              }
+                            }
+                            // Refresh notifications
+                            setNotifs(notifs.map((nn: any) => nn.id === n.id ? { ...nn, read: true } : nn));
+                            setUnreadNotifs(prev => Math.max(0, prev - 1));
+                            alert('Reunión de auditoría aceptada. Se ha notificado al empleado.');
+                          } catch (err) {
+                            console.error('Error accepting meeting:', err);
+                            alert('Error al aceptar la reunión.');
+                          }
+                        }}
+                      >
+                        ✓ Aceptar reunión
+                      </button>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>
@@ -549,8 +604,8 @@ export default function HomePage() {
                         <Board5S onSStepClick={handleSStepClick} />
                       </div>
                     )}
-                    {/* Notification: show which S-steps are ready for audit — visible to ALL users */}
-                    {currentZone && (() => {
+                    {/* Notification: show which S-steps are ready for audit — only for users who can notify (employees) */}
+                    {currentZone && canNotifyAudit && (() => {
                       const readyForAudit: number[] = [];
                       for (let s = 1; s <= 5; s++) {
                         // Check using BOTH zone-level AND employee-level progress
@@ -709,8 +764,8 @@ export default function HomePage() {
                                         {stepScore}%
                                       </span>
                                     )}
-                                    {/* "Request audit" button above step 5 when steps 1-4 are completed but 5 isn't — visible to ALL users */}
-                                    {ms.id === 5 && (() => {
+                                    {/* "Request audit" button above step 5 when steps 1-4 are completed but 5 isn't — only for users with notify_audit permission */}
+                                    {ms.id === 5 && canNotifyAudit && (() => {
                                       // Check completion using BOTH zone-level progress AND individual employee progress
                                       // This ensures auditors/responsables see the button even if they don't have personal completion
                                       const steps1to4Done = [1,2,3,4].every(msCheck => {

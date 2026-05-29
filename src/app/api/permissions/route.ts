@@ -31,6 +31,7 @@ const GENERAL_PERMISSIONS = [
   'view_team', 'add_members', 'remove_members', 'change_roles',
   'manage_training', 'delete_photos', 'delete_inventory', 'approve_audit',
   'delete_project', 'reset_data', 'manage_templates', 'skip_steps',
+  'notify_audit', 'accept_audit_meeting',
 ]
 
 const ALL_PERMISSIONS = [...PER_S_PERMISSIONS, ...GENERAL_PERMISSIONS]
@@ -44,7 +45,7 @@ const DEFAULT_PERMISSIONS: Record<string, string[]> = {
 
   gerente: [
     'view_board', 'view_progress', 'view_project', 'view_team',
-    'edit_project', 'manage_zones',
+    'edit_project', 'manage_zones', 'accept_audit_meeting',
     // S-steps: can view all mini-steps, can edit inventory
     ...PER_S_PERMISSIONS.filter(id => {
       // All "view" actions (a0)
@@ -59,6 +60,7 @@ const DEFAULT_PERMISSIONS: Record<string, string[]> = {
     'view_board', 'view_progress', 'view_project', 'view_team',
     'edit_project', 'manage_zones', 'add_members', 'remove_members', 'change_roles',
     'manage_training', 'delete_photos', 'delete_inventory', 'approve_audit',
+    'accept_audit_meeting',
     // S-steps: can view and execute steps 1-4, but NOT step 5 (conduct audit)
     ...PER_S_PERMISSIONS.filter(id => {
       if (id.endsWith('_a0')) return true // All view
@@ -69,6 +71,7 @@ const DEFAULT_PERMISSIONS: Record<string, string[]> = {
 
   empleado: [
     'view_board', 'view_progress', 'view_project', 'view_team',
+    'notify_audit',
     // S-steps: can view all, can execute steps 1-4, can only view step 5
     ...PER_S_PERMISSIONS.filter(id => {
       if (id.endsWith('_a0')) return true // All view
@@ -79,14 +82,14 @@ const DEFAULT_PERMISSIONS: Record<string, string[]> = {
 
   auditor: [
     'view_board', 'view_progress', 'view_project', 'view_team',
-    'approve_audit',
+    'approve_audit', 'accept_audit_meeting',
     // S-steps: can view all, can conduct audits (step 5 a1), but NOT execute steps 1-4
     ...PER_S_PERMISSIONS.filter(id => {
       if (id.endsWith('_a0')) return true // All view
       if (id.match(/_step5_a1$/)) return true // Can conduct audits
       return false // Cannot execute steps 1-4
     }),
-  ],
+  ]
 }
 
 // GET /api/permissions

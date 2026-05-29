@@ -20,7 +20,7 @@ import {
   Lock, Unlock, Crown, UserCheck, HardHat, ClipboardCheck, BookOpen,
   Camera, ListChecks, FileCheck, Building2, BarChart3, UserPlus,
   UserMinus, KeyRound, RotateCcw, Save, Loader2, AlertTriangle,
-  ArrowLeft, X, GraduationCap, MapPin, Target,
+  ArrowLeft, X, GraduationCap, MapPin, Target, Bell,
 } from 'lucide-react'
 
 interface RolePermissionsProps {
@@ -83,6 +83,8 @@ const GENERAL_PERMS = [
   { id: 'delete_project', name: 'Eliminar proyecto', desc: 'Eliminar el proyecto completo', icon: Trash2 },
   { id: 'reset_data', name: 'Reiniciar datos', desc: 'Reiniciar progreso y datos del proyecto', icon: Lock },
   { id: 'manage_templates', name: 'Gestionar plantillas', desc: 'Crear, editar y eliminar plantillas', icon: Pencil },
+  { id: 'notify_audit', name: 'Solicitar auditoría', desc: 'Puede activar el aviso de auditoría en el paso 5', icon: Bell },
+  { id: 'accept_audit_meeting', name: 'Aceptar reunión auditoría', desc: 'Puede aceptar la reunión de auditoría para apagar el aviso', icon: CheckCircle2 },
 ]
 
 // All permission IDs
@@ -98,6 +100,7 @@ const DEFAULT_PERMISSIONS: Record<string, string[]> = {
   admin: ALL_PERM_IDS, // Admin has everything
   gerente: [
     'view_board', 'view_progress', 'view_project', 'view_team',
+    'accept_audit_meeting',
     // S-steps: can view all, but cannot execute most actions
     ...PERM_ID_MAP.filter(p => p.actionIdx === 0).map(p => p.id), // All "view" actions
     's2_step3_a1', 's3_step3_a1', // edit inventory for S2, S3
@@ -106,11 +109,13 @@ const DEFAULT_PERMISSIONS: Record<string, string[]> = {
     'view_board', 'view_progress', 'view_project', 'view_team',
     'edit_project', 'manage_zones', 'add_members', 'remove_members', 'change_roles',
     'manage_training', 'delete_photos', 'delete_inventory', 'approve_audit',
+    'accept_audit_meeting',
     // S-steps: can view and execute most
     ...PERM_ID_MAP.filter(p => p.miniStep !== 5 || p.actionIdx === 0).map(p => p.id), // All except conduct audit
   ],
   empleado: [
     'view_board', 'view_progress', 'view_project', 'view_team',
+    'notify_audit',
     // S-steps: can view all, can execute steps 1-4 but NOT step 5
     ...PERM_ID_MAP.filter(p => p.miniStep < 5).map(p => p.id),
     // Can view audits but not conduct
@@ -118,6 +123,7 @@ const DEFAULT_PERMISSIONS: Record<string, string[]> = {
   ],
   auditor: [
     'view_board', 'view_progress', 'view_project', 'view_team',
+    'accept_audit_meeting',
     // S-steps: can view all, can conduct audits but not do steps 1-4
     ...PERM_ID_MAP.filter(p => p.actionIdx === 0).map(p => p.id), // All "view" actions
     ...PERM_ID_MAP.filter(p => p.miniStep === 5 && p.actionIdx === 1).map(p => p.id), // Conduct audits
