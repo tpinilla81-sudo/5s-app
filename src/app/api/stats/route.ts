@@ -32,38 +32,73 @@ export async function GET(request: NextRequest) {
     // Latest audit score
     const latestAudit = auditsWithScore.length > 0 ? auditsWithScore[0] : null
 
-    // Get progress items
+    // Get progress items (zone-level)
     const progressItems = await db.progress.findMany({
       where: projectId ? { projectId } : {},
       select: { sStep: true, miniStep: true, completed: true, score: true, photoUrls: true },
     })
 
-    const completedSteps = progressItems.filter(p => p.completed)
-    const totalMiniSteps = progressItems.length
-    const completedMiniSteps = completedSteps.length
-    const progressPercent = totalMiniSteps > 0 ? Math.round((completedMiniSteps / totalMiniSteps) * 100) : 0
+    // Also get employee-level progress (for individual steps like Formación/step 1)
+    const employeeProgressItems = await db.employeeProgress.findMany({
+      where: projectId ? { projectId } : {},
+      select: { sStep: true, miniStep: true, completed: true, score: true },
+    })
 
-    // Per-S progress
+    // Helper: check if a mini-step is completed at EITHER zone-level OR by any employee
+    const isStepCompleted = (s: number, ms: number): boolean => {
+      // Check zone-level progress first
+      const zoneStep = progressItems.find(p => p.sStep === s && p.miniStep === ms && p.completed)
+      if (zoneStep) return true
+      // Also check employee progress (for individual steps like formación/step 1)
+      const empStep = employeeProgressItems.find(ep => ep.sStep === s && ep.miniStep === ms && ep.completed)
+      if (empStep) return true
+      return false
+    }
+
+    const totalMiniSteps = 25 // Always 5 S-steps × 5 mini-steps
+    let completedMiniSteps = 0
+    for (let s = 1; s <= 5; s++) {
+      for (let ms = 1; ms <= 5; ms++) {
+        if (isStepCompleted(s, ms)) completedMiniSteps++
+      }
+    }
+    const progressPercent = Math.round((completedMiniSteps / totalMiniSteps) * 100)
+
+    // Per-S progress — always 5 mini-steps per S
     const perSProgress: Record<number, { completed: number; total: number; percent: number; avgScore: number | null }> = {}
     for (let s = 1; s <= 5; s++) {
-      const sItems = progressItems.filter(p => p.sStep === s)
-      const sCompleted = sItems.filter(p => p.completed)
-      const sWithScore = sCompleted.filter(p => p.score !== null)
+      let sCompletedCount = 0
+      let sScoreSum = 0
+      let sScoreCount = 0
+      for (let ms = 1; ms <= 5; ms++) {
+        if (isStepCompleted(s, ms)) {
+          sCompletedCount++
+          // Get score from either zone-level or employee progress
+          const zoneStep = progressItems.find(p => p.sStep === s && p.miniStep === ms && p.completed)
+          const empStep = employeeProgressItems.find(ep => ep.sStep === s && ep.miniStep === ms && ep.completed)
+          const score = zoneStep?.score ?? empStep?.score ?? null
+          if (score !== null) {
+            sScoreSum += score
+            sScoreCount++
+          }
+        }
+      }
       perSProgress[s] = {
-        completed: sCompleted.length,
-        total: sItems.length,
-        percent: sItems.length > 0 ? Math.round((sCompleted.length / sItems.length) * 100) : 0,
-        avgScore: sWithScore.length > 0
-          ? Math.round(sWithScore.reduce((sum, p) => sum + (p.score ?? 0), 0) / sWithScore.length)
-          : null,
+        completed: sCompletedCount,
+        total: 5, // Always 5 mini-steps per S
+        percent: Math.round((sCompletedCount / 5) * 100),
+        avgScore: sScoreCount > 0 ? Math.round(sScoreSum / sScoreCount) : null,
       }
     }
 
     // Count quesitos earned (all 5 mini-steps completed for an S)
     let quesitosEarned = 0
     for (let s = 1; s <= 5; s++) {
-      const sItems = progressItems.filter(p => p.sStep === s)
-      if (sItems.length > 0 && sItems.every(p => p.completed)) quesitosEarned++
+      let allDone = true
+      for (let ms = 1; ms <= 5; ms++) {
+        if (!isStepCompleted(s, ms)) { allDone = false; break }
+      }
+      if (allDone) quesitosEarned++
     }
 
     // Actions by status
