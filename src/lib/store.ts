@@ -186,13 +186,26 @@ export const use5SStore = create<FiveSState>((set, get) => ({
   // Progress & Board Actions
   fetchProgress: async () => {
     try {
-      const { currentProject } = get()
+      const { currentProject, currentZone } = get()
       const params = currentProject ? `?projectId=${currentProject.id}` : ''
       const res = await fetch(`/api/progress${params}`)
       const data = await res.json()
       // API returns { success: true, data: [...] }
       const progressData = data?.data ? data.data : (Array.isArray(data) ? data : [])
       set({ progress: progressData, isLoadingProgress: false })
+
+      // Also refresh employee progress to keep isQuesitoEarned accurate
+      if (currentProject) {
+        try {
+          const epParams = `?projectId=${currentProject.id}` + (currentZone ? `&zoneId=${currentZone.id}` : '')
+          const epRes = await fetch(`/api/employee-progress${epParams}`)
+          const epData = await epRes.json()
+          const epResult = epData?.data ? epData.data : (Array.isArray(epData) ? epData : [])
+          set({ employeeProgress: epResult })
+        } catch (epError) {
+          console.error('Error fetching employee progress during refresh:', epError)
+        }
+      }
     } catch (error) {
       console.error('Error fetching progress:', error)
       set({ isLoadingProgress: false })

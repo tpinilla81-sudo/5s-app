@@ -23,6 +23,7 @@ import {
   Square, Circle, Minus, Type, MousePointer, Trash2, Download,
   Upload, Save, X, Undo2, RotateCcw, Image as ImageIcon, Palette
 } from 'lucide-react'
+import { toast } from 'sonner'
 
 // We need dynamic import for Konva since it needs window
 let Stage: any, Layer: any, Rect: any, KCircle: any, Line: any, Text: any, KImage: any, Group: any, Arrow: any
@@ -76,9 +77,10 @@ interface LayoutEditorProps {
   onSave?: (imageDataUrl: string, shapes: ShapeData[]) => void
   initialImage?: string | null
   initialShapes?: ShapeData[]
+  sStep?: number // Which S step this layout belongs to (default: 2)
 }
 
-export default function LayoutEditor({ open, onClose, onSave, initialImage, initialShapes }: LayoutEditorProps) {
+export default function LayoutEditor({ open, onClose, onSave, initialImage, initialShapes, sStep: sStepProp }: LayoutEditorProps) {
   const { currentProject, currentZone } = use5SStore()
   const [konvaReady, setKonvaReady] = useState(false)
   const [tool, setTool] = useState<string>('select')
@@ -314,35 +316,66 @@ export default function LayoutEditor({ open, onClose, onSave, initialImage, init
   }
 
   const handleSaveToLibrary = async () => {
-    if (!currentProject || !saveName) return
+    if (!currentProject) return
     setIsSaving(true)
     try {
       const dataUrl = stageRef.current?.toDataURL({ pixelRatio: 2 })
+      if (!dataUrl) { alert('No hay dibujo para guardar'); setIsSaving(false); return }
       const shapesJson = JSON.stringify(shapes)
 
-      await fetch('/api/standards', {
+      // Auto-generate name if not provided
+      const layoutName = saveName || `Layout ${currentZone?.name || 'Zona'} ${new Date().toLocaleDateString('es-ES')}`
+      const effectiveSStep = sStepProp || 2
+
+      // Upload the image file to storage instead of storing huge base64 in DB
+      let photoUrl: string | null = null
+      try {
+        // Convert data URL to File
+        const res = await fetch(dataUrl)
+        const blob = await res.blob()
+        const file = new File([blob], `layout_${Date.now()}.png`, { type: 'image/png' })
+        const formData = new FormData()
+        formData.append('file', file)
+        formData.append('projectId', currentProject.id)
+        formData.append('filename', `${currentProject.id}_layout_${effectiveSStep}_${Date.now()}.png`)
+        const uploadRes = await fetch('/api/upload', { method: 'POST', body: formData })
+        const uploadJson = await uploadRes.json()
+        if (uploadJson.success && uploadJson.url) {
+          photoUrl = uploadJson.url
+        }
+      } catch (uploadErr) {
+        console.error('Error uploading layout image, storing data URL directly:', uploadErr)
+        photoUrl = dataUrl // Fallback: store data URL directly
+      }
+
+      const saveRes = await fetch('/api/standards', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          sStep: 2, // Layout is primarily S2
-          title: saveName,
+          sStep: effectiveSStep,
+          title: layoutName,
           description: 'Layout dibujado con editor',
           category: 'layout',
           content: shapesJson,
-          photoUrl: dataUrl,
+          photoUrl: photoUrl,
           status: 'activo',
           version: 1,
           projectId: currentProject.id,
           zoneId: currentZone?.id || null,
         }),
       })
+      const saveJson = await saveRes.json()
 
-      if (onSave) onSave(dataUrl, shapes)
-      alert('Layout guardado en la Biblioteca de Estándares')
-      setSaveName('')
+      if (saveJson.success) {
+        if (onSave) onSave(dataUrl, shapes)
+        toast.success('Layout guardado en la Biblioteca de Estándares')
+        setSaveName('')
+      } else {
+        toast.error(`Error al guardar: ${saveJson.error || 'Error desconocido'}`)
+      }
     } catch (e) {
       console.error('Error saving layout:', e)
-      alert('Error al guardar el layout')
+      toast.error('Error al guardar el layout')
     } finally {
       setIsSaving(false)
     }
@@ -616,7 +649,7 @@ export default function LayoutEditor({ open, onClose, onSave, initialImage, init
           <Input value={saveName} onChange={e => setSaveName(e.target.value)}
             placeholder="Nombre del layout (ej: Layout Zona Montaje)"
             className="h-8 text-xs flex-1 max-w-xs" />
-          <Button onClick={handleSaveToLibrary} disabled={isSaving || !saveName}
+          <Button onClick={handleSaveToLibrary} disabled={isSaving}
             className="gap-1 bg-teal-600 hover:bg-teal-700 text-white text-xs h-8">
             <Save className="h-3 w-3" />
             {isSaving ? 'Guardando...' : 'Guardar en Biblioteca de Estándares'}

@@ -98,14 +98,15 @@ export default function InventarioModal({ open, onClose, sStep, miniStep }: Inve
   useEffect(() => {
     if (open) {
       loadInventory();
-      if (sStep === 2) loadLayouts();
+      // Load layouts for any S step that has layout support (S2 primarily, also S3/S4 for estandares)
+      if (sStep === 2 || sStep === 3 || sStep === 4) loadLayouts();
     }
   }, [open, sStep]);
 
   const loadLayouts = async () => {
     if (!currentProject) return
     try {
-      const params = new URLSearchParams({ projectId: currentProject.id, category: 'layout', sStep: '2' })
+      const params = new URLSearchParams({ projectId: currentProject.id, category: 'layout', sStep: String(sStep) })
       if (currentZone?.id) params.set('zoneId', currentZone.id)
       const res = await fetch(`/api/standards?${params}`)
       const json = await res.json()
@@ -130,17 +131,23 @@ export default function InventarioModal({ open, onClose, sStep, miniStep }: Inve
       const formData = new FormData()
       formData.append('file', file)
       formData.append('projectId', currentProject.id)
+      formData.append('filename', `${currentProject.id}_layout_${sStep}_${Date.now()}_${file.name}`)
       const res = await fetch('/api/upload', { method: 'POST', body: formData })
       const json = await res.json()
-      if (json.url) {
+      if (json.success && json.url) {
+        const layoutDescriptions: Record<number, string> = {
+          2: 'Layout subido como imagen con marcado de suelo según estándar de colores',
+          3: 'Layout subido como imagen con puntos de suciedad y zonas de limpieza',
+          4: 'Layout subido como imagen con estándares implantados señalados',
+        }
         // Save as a layout standard
-        await fetch('/api/standards', {
+        const saveRes = await fetch('/api/standards', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            sStep: 2,
-            title: `Layout ${currentZone?.name || 'zona'} (subido)`,
-            description: 'Layout subido como imagen con marcado de suelo según estándar de colores',
+            sStep,
+            title: `Layout ${currentZone?.name || 'zona'} ${sStepData?.japaneseName || ''} (subido)`,
+            description: layoutDescriptions[sStep] || 'Layout subido como imagen',
             category: 'layout',
             photoUrl: json.url,
             status: 'activo',
@@ -149,8 +156,15 @@ export default function InventarioModal({ open, onClose, sStep, miniStep }: Inve
             zoneId: currentZone?.id || null,
           }),
         })
-        toast.success('Layout subido correctamente')
-        await loadLayouts()
+        const saveJson = await saveRes.json()
+        if (saveJson.success) {
+          toast.success('Layout subido y guardado en Biblioteca de Estándares')
+          await loadLayouts()
+        } else {
+          toast.error(`Error al guardar estándar: ${saveJson.error || 'Error desconocido'}`)
+        }
+      } else {
+        toast.error(`Error al subir imagen: ${json.error || 'Error desconocido'}`)
       }
     } catch (e) {
       console.error('Upload error:', e)
@@ -747,20 +761,27 @@ export default function InventarioModal({ open, onClose, sStep, miniStep }: Inve
               </p>
             </div>
 
-            {/* ═══ S2: LAYOUT DE LA ZONA CON MARCADO DE SUELO ═══ */}
-            {sStep === 2 && (
+            {/* ═══ LAYOUT DE LA ZONA — S2 (Marcado de Suelo), S3 (Limpieza), S4 (Estándares) ═══ */}
+            {(sStep === 2 || sStep === 3 || sStep === 4) && (
               <Card className="border-2 border-blue-200 bg-blue-50/30">
                 <CardContent className="p-4">
                   <div className="flex items-center gap-2 mb-3">
                     <PenTool className="h-5 w-5 text-blue-600" />
-                    <h4 className="font-semibold text-blue-800">Layout de la Zona — Marcado de Suelo</h4>
+                    <h4 className="font-semibold text-blue-800">
+                      {sStep === 2 ? 'Layout de la Zona — Marcado de Suelo' 
+                        : sStep === 3 ? 'Layout de la Zona — Puntos de Limpieza' 
+                        : 'Layout de la Zona — Estándares Implantados'}
+                    </h4>
                     <Badge className={layoutUploaded ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800'}>
                       {layoutUploaded ? 'Layout adjuntado' : 'Pendiente'}
                     </Badge>
                   </div>
                   <p className="text-xs text-muted-foreground mb-3">
-                    Dibuja o sube el layout de la zona con el marcado de suelo según el estándar de colores. 
-                    Esto es obligatorio para completar el paso 3 de S2 (Seiton).
+                    {sStep === 2
+                      ? 'Dibuja o sube el layout de la zona con el marcado de suelo según el estándar de colores. Esto es obligatorio para completar el paso 3 de S2 (Seiton).'
+                      : sStep === 3
+                      ? 'Dibuja o sube el layout de la zona indicando los puntos de suciedad y las zonas de limpieza. Esto forma parte del inventario de S3 (Seiso).'
+                      : 'Dibuja o sube el layout de la zona con los estándares implantados señalados. Esto forma parte del inventario de S4 (Seiketsu).'}
                   </p>
 
                   {/* Action buttons */}
@@ -770,10 +791,12 @@ export default function InventarioModal({ open, onClose, sStep, miniStep }: Inve
                         className="gap-1 bg-blue-600 hover:bg-blue-700 text-white text-xs h-8">
                         <PenTool className="h-3 w-3" /> Dibujar Layout
                       </Button>
-                      <Button variant="outline" size="sm" onClick={() => setShowColorCodeTable(true)}
-                        className="gap-1 text-xs h-8 border-yellow-400 text-yellow-700 hover:bg-yellow-50">
-                        <Eye className="h-3 w-3" /> Ver Estándar Colores
-                      </Button>
+                      {sStep === 2 && (
+                        <Button variant="outline" size="sm" onClick={() => setShowColorCodeTable(true)}
+                          className="gap-1 text-xs h-8 border-yellow-400 text-yellow-700 hover:bg-yellow-50">
+                          <Eye className="h-3 w-3" /> Ver Estándar Colores
+                        </Button>
+                      )}
                       <div className="relative">
                         <Button variant="outline" size="sm"
                           className="gap-1 text-xs h-8 border-green-400 text-green-700 hover:bg-green-50"
@@ -1474,14 +1497,13 @@ export default function InventarioModal({ open, onClose, sStep, miniStep }: Inve
         </div>
       </DialogContent>
 
-      {/* Layout Editor for S2 */}
-      {sStep === 2 && (
-        <LayoutEditor
-          open={showLayoutEditor}
-          onClose={() => setShowLayoutEditor(false)}
-          onSave={() => { setShowLayoutEditor(false); loadLayouts() }}
-        />
-      )}
+      {/* Layout Editor — available for S2 (primary) and also for S3/S4 standards */}
+      <LayoutEditor
+        open={showLayoutEditor}
+        onClose={() => setShowLayoutEditor(false)}
+        onSave={() => { setShowLayoutEditor(false); loadLayouts() }}
+        sStep={sStep}
+      />
 
       {/* Color Code Table for S2 */}
       {sStep === 2 && (

@@ -220,7 +220,7 @@ export default function AuditoriaModal({ open, onClose, sStep, miniStep }: Audit
           });
         }
 
-        // Mark the mini-step as completed (even if no_apto, the audit was done)
+        // Mark the mini-step as completed
         const progressRes = await fetch(`/api/progress/step?sStep=${sStep}&miniStep=${miniStep}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
@@ -245,11 +245,24 @@ export default function AuditoriaModal({ open, onClose, sStep, miniStep }: Audit
         });
 
         const progressJson = await progressRes.json();
-        if (progressJson.success) {
-          setIsCompleted(true);
-          setFinalScore(scoring.scorePercent);
-          await fetchProgress();
+
+        // Handle progress update failure
+        if (!progressJson.success) {
+          console.error('Error updating progress after audit:', progressJson.error);
+          if (progressRes.status === 403) {
+            alert(`La auditoría se ha guardado, pero no se pudo marcar el paso como completado: ${progressJson.error}. Verifica los permisos del auditor.`);
+          } else {
+            alert(`La auditoría se ha guardado, pero hubo un error al actualizar el progreso: ${progressJson.error || 'Error desconocido'}`);
+          }
         }
+
+        // Always mark as completed in UI if audit was saved successfully
+        // (even if progress update failed, the audit result is saved)
+        setIsCompleted(true);
+        setFinalScore(scoring.scorePercent);
+
+        // Refresh progress (this also refreshes employeeProgress now)
+        await fetchProgress();
       }
     } catch (error) {
       console.error('Error submitting audit:', error);
