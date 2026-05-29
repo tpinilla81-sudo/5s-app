@@ -184,81 +184,81 @@ function ChecklistEditor({ content, onChange }: { content: string; onChange: (v:
   }
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-4">
       {sections.map((section, sIdx) => (
-        <div key={sIdx} className="border-2 rounded-lg overflow-hidden bg-white">
+        <div key={sIdx} className="border-2 rounded-lg overflow-hidden bg-white shadow-sm">
           {/* Section header */}
-          <div className="flex items-center gap-2 px-3 py-2 bg-gray-50 border-b">
+          <div className="flex items-center gap-3 px-4 py-3 bg-gray-50 border-b">
             <div className="flex flex-col gap-0.5">
               <button onClick={() => moveSection(sIdx, -1)} className="text-gray-400 hover:text-gray-600 leading-none" title="Subir sección">
-                <ChevronUp className="h-3 w-3" />
+                <ChevronUp className="h-4 w-4" />
               </button>
               <button onClick={() => moveSection(sIdx, 1)} className="text-gray-400 hover:text-gray-600 leading-none" title="Bajar sección">
-                <ChevronDown className="h-3 w-3" />
+                <ChevronDown className="h-4 w-4" />
               </button>
             </div>
             <Input
               value={section.id}
               onChange={(e) => updateSection(sIdx, 'id', e.target.value)}
-              className="w-16 h-7 text-xs font-mono"
+              className="w-20 h-9 text-sm font-mono"
               placeholder="ID"
             />
             <Input
               value={section.title}
               onChange={(e) => updateSection(sIdx, 'title', e.target.value)}
-              className="flex-1 h-7 text-sm font-semibold"
+              className="flex-1 h-9 text-base font-semibold"
               placeholder="Título de sección"
             />
             <Button variant="ghost" size="sm" onClick={() => addItem(sIdx)}
-              className="h-7 w-7 p-0 text-green-600 hover:text-green-700 hover:bg-green-50" title="Añadir item">
-              <Plus className="h-4 w-4" />
+              className="h-9 w-9 p-0 text-green-600 hover:text-green-700 hover:bg-green-50" title="Añadir item">
+              <Plus className="h-5 w-5" />
             </Button>
             <Button variant="ghost" size="sm" onClick={() => removeSection(sIdx)}
-              className="h-7 w-7 p-0 text-red-500 hover:text-red-600 hover:bg-red-50" title="Eliminar sección">
-              <Trash2 className="h-3.5 w-3.5" />
+              className="h-9 w-9 p-0 text-red-500 hover:text-red-600 hover:bg-red-50" title="Eliminar sección">
+              <Trash2 className="h-4 w-4" />
             </Button>
           </div>
 
           {/* Items */}
-          <div className="p-2 space-y-1">
+          <div className="p-3 space-y-2">
             {section.items.length === 0 && (
-              <p className="text-xs text-muted-foreground italic px-2 py-1">Sin items. Pulsa + para añadir.</p>
+              <p className="text-sm text-muted-foreground italic px-2 py-2">Sin items. Pulsa + para añadir.</p>
             )}
             {section.items.map((item, iIdx) => (
-              <div key={iIdx} className="flex items-center gap-2 group">
+              <div key={iIdx} className="flex items-center gap-3 group">
                 <div className="flex flex-col gap-0.5">
                   <button onClick={() => moveItem(sIdx, iIdx, -1)} className="text-gray-300 hover:text-gray-500 leading-none" title="Subir">
-                    <ChevronUp className="h-2.5 w-2.5" />
+                    <ChevronUp className="h-3.5 w-3.5" />
                   </button>
                   <button onClick={() => moveItem(sIdx, iIdx, 1)} className="text-gray-300 hover:text-gray-500 leading-none" title="Bajar">
-                    <ChevronDown className="h-2.5 w-2.5" />
+                    <ChevronDown className="h-3.5 w-3.5" />
                   </button>
                 </div>
                 <Input
                   value={item.id}
                   onChange={(e) => updateItem(sIdx, iIdx, 'id', e.target.value)}
-                  className="w-14 h-6 text-[10px] font-mono"
+                  className="w-20 h-8 text-xs font-mono"
                   placeholder="ID"
                 />
                 <Input
                   value={item.description}
                   onChange={(e) => updateItem(sIdx, iIdx, 'description', e.target.value)}
-                  className="flex-1 h-6 text-xs"
+                  className="flex-1 h-8 text-sm"
                   placeholder="Descripción del item"
                 />
-                <label className="flex items-center gap-1 text-[10px] text-muted-foreground whitespace-nowrap cursor-pointer shrink-0">
+                <label className="flex items-center gap-1.5 text-xs text-muted-foreground whitespace-nowrap cursor-pointer shrink-0">
                   <input
                     type="checkbox"
                     checked={item.hasOther}
                     onChange={(e) => updateItem(sIdx, iIdx, 'hasOther', e.target.checked)}
-                    className="rounded border-gray-300 h-3.5 w-3.5"
+                    className="rounded border-gray-300 h-4 w-4"
                   />
                   Otros
                 </label>
                 <Button variant="ghost" size="sm"
                   onClick={() => removeItem(sIdx, iIdx)}
-                  className="h-6 w-6 p-0 text-red-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity" title="Eliminar">
-                  <Trash2 className="h-3 w-3" />
+                  className="h-8 w-8 p-0 text-red-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity" title="Eliminar">
+                  <Trash2 className="h-4 w-4" />
                 </Button>
               </div>
             ))}
@@ -267,12 +267,12 @@ function ChecklistEditor({ content, onChange }: { content: string; onChange: (v:
       ))}
 
       <Button variant="outline" onClick={addSection}
-        className="w-full border-dashed border-2 text-green-600 hover:bg-green-50 hover:border-green-400 gap-1">
-        <Plus className="h-4 w-4" />
+        className="w-full border-dashed border-2 text-green-600 hover:bg-green-50 hover:border-green-400 gap-1 h-10">
+        <Plus className="h-5 w-5" />
         Añadir sección
       </Button>
 
-      <div className="text-xs text-muted-foreground text-center">
+      <div className="text-sm text-muted-foreground text-center">
         {sections.length} sección(es) · {sections.reduce((s, sec) => s + sec.items.length, 0)} item(s) en total
       </div>
     </div>
@@ -347,72 +347,72 @@ function ExamEditor({ content, onChange }: { content: string; onChange: (v: stri
   }
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-4">
       {questions.map((q, qIdx) => (
-        <div key={qIdx} className="border-2 rounded-lg overflow-hidden bg-white">
-          <div className="flex items-center gap-2 px-3 py-2 bg-amber-50 border-b border-amber-200">
+        <div key={qIdx} className="border-2 rounded-lg overflow-hidden bg-white shadow-sm">
+          <div className="flex items-center gap-3 px-4 py-3 bg-amber-50 border-b border-amber-200">
             <div className="flex flex-col gap-0.5">
               <button onClick={() => moveQuestion(qIdx, -1)} className="text-gray-400 hover:text-gray-600 leading-none">
-                <ChevronUp className="h-3 w-3" />
+                <ChevronUp className="h-4 w-4" />
               </button>
               <button onClick={() => moveQuestion(qIdx, 1)} className="text-gray-400 hover:text-gray-600 leading-none">
-                <ChevronDown className="h-3 w-3" />
+                <ChevronDown className="h-4 w-4" />
               </button>
             </div>
-            <Badge className="bg-amber-200 text-amber-800 shrink-0">P{qIdx + 1}</Badge>
+            <Badge className="bg-amber-200 text-amber-800 shrink-0 text-sm px-2 py-0.5">P{qIdx + 1}</Badge>
             <Input
               value={q.question}
               onChange={(e) => updateQuestion(qIdx, 'question', e.target.value)}
-              className="flex-1 h-7 text-sm"
+              className="flex-1 h-9 text-base"
               placeholder="Pregunta"
             />
             <Button variant="ghost" size="sm" onClick={() => removeQuestion(qIdx)}
-              className="h-7 w-7 p-0 text-red-500 hover:text-red-600 hover:bg-red-50" title="Eliminar pregunta">
-              <Trash2 className="h-3.5 w-3.5" />
+              className="h-9 w-9 p-0 text-red-500 hover:text-red-600 hover:bg-red-50" title="Eliminar pregunta">
+              <Trash2 className="h-4 w-4" />
             </Button>
           </div>
 
-          <div className="p-3 space-y-1.5">
+          <div className="p-4 space-y-2">
             {q.options.map((opt, oIdx) => (
-              <div key={oIdx} className="flex items-center gap-2 group">
-                <label className="flex items-center gap-1 cursor-pointer shrink-0">
+              <div key={oIdx} className="flex items-center gap-3 group">
+                <label className="flex items-center gap-1.5 cursor-pointer shrink-0">
                   <input
                     type="radio"
                     name={`correct-${qIdx}`}
                     checked={q.correctIndex === oIdx}
                     onChange={() => updateQuestion(qIdx, 'correctIndex', oIdx)}
-                    className="h-3.5 w-3.5 text-green-600"
+                    className="h-4 w-4 text-green-600"
                   />
-                  <span className="text-[10px] text-muted-foreground w-4">{String.fromCharCode(65 + oIdx)}</span>
+                  <span className="text-xs text-muted-foreground w-5 font-semibold">{String.fromCharCode(65 + oIdx)}</span>
                 </label>
                 <Input
                   value={opt}
                   onChange={(e) => updateOption(qIdx, oIdx, e.target.value)}
-                  className={`flex-1 h-6 text-xs ${q.correctIndex === oIdx ? 'border-green-400 bg-green-50' : ''}`}
+                  className={`flex-1 h-8 text-sm ${q.correctIndex === oIdx ? 'border-green-400 bg-green-50' : ''}`}
                 />
                 <Button variant="ghost" size="sm"
                   onClick={() => removeOption(qIdx, oIdx)}
-                  className="h-6 w-6 p-0 text-red-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
+                  className="h-8 w-8 p-0 text-red-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
                   title="Eliminar opción">
-                  <Trash2 className="h-3 w-3" />
+                  <Trash2 className="h-4 w-4" />
                 </Button>
               </div>
             ))}
             <Button variant="ghost" size="sm" onClick={() => addOption(qIdx)}
-              className="h-6 text-xs text-blue-500 hover:text-blue-600 gap-1 px-2">
-              <Plus className="h-3 w-3" /> Añadir opción
+              className="h-8 text-sm text-blue-500 hover:text-blue-600 gap-1 px-3">
+              <Plus className="h-4 w-4" /> Añadir opción
             </Button>
           </div>
         </div>
       ))}
 
       <Button variant="outline" onClick={addQuestion}
-        className="w-full border-dashed border-2 text-amber-600 hover:bg-amber-50 hover:border-amber-400 gap-1">
-        <Plus className="h-4 w-4" />
+        className="w-full border-dashed border-2 text-amber-600 hover:bg-amber-50 hover:border-amber-400 gap-1 h-10">
+        <Plus className="h-5 w-5" />
         Añadir pregunta
       </Button>
 
-      <div className="text-xs text-muted-foreground text-center">
+      <div className="text-sm text-muted-foreground text-center">
         {questions.length} pregunta(s)
       </div>
     </div>
@@ -463,35 +463,35 @@ function FormationEditor({ content, onChange }: { content: string; onChange: (v:
   }
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-4">
       {sections.map((sec, idx) => (
-        <div key={idx} className="border-2 rounded-lg overflow-hidden bg-white">
-          <div className="flex items-center gap-2 px-3 py-2 bg-blue-50 border-b border-blue-200">
+        <div key={idx} className="border-2 rounded-lg overflow-hidden bg-white shadow-sm">
+          <div className="flex items-center gap-3 px-4 py-3 bg-blue-50 border-b border-blue-200">
             <div className="flex flex-col gap-0.5">
               <button onClick={() => moveSection(idx, -1)} className="text-gray-400 hover:text-gray-600 leading-none">
-                <ChevronUp className="h-3 w-3" />
+                <ChevronUp className="h-4 w-4" />
               </button>
               <button onClick={() => moveSection(idx, 1)} className="text-gray-400 hover:text-gray-600 leading-none">
-                <ChevronDown className="h-3 w-3" />
+                <ChevronDown className="h-4 w-4" />
               </button>
             </div>
-            <Badge className="bg-blue-200 text-blue-800 shrink-0">Sección {idx + 1}</Badge>
+            <Badge className="bg-blue-200 text-blue-800 shrink-0 text-sm px-2 py-0.5">Sección {idx + 1}</Badge>
             <Input
               value={sec.title}
               onChange={(e) => updateSection(idx, 'title', e.target.value)}
-              className="flex-1 h-7 text-sm font-semibold"
+              className="flex-1 h-9 text-base font-semibold"
               placeholder="Título de la sección"
             />
             <Button variant="ghost" size="sm" onClick={() => removeSection(idx)}
-              className="h-7 w-7 p-0 text-red-500 hover:text-red-600 hover:bg-red-50" title="Eliminar sección">
-              <Trash2 className="h-3.5 w-3.5" />
+              className="h-9 w-9 p-0 text-red-500 hover:text-red-600 hover:bg-red-50" title="Eliminar sección">
+              <Trash2 className="h-4 w-4" />
             </Button>
           </div>
-          <div className="p-3">
+          <div className="p-4">
             <textarea
               value={sec.content}
               onChange={(e) => updateSection(idx, 'content', e.target.value)}
-              className="w-full h-20 p-2 border rounded text-sm resize-y focus:ring-2 focus:ring-blue-300 focus:border-blue-400"
+              className="w-full h-28 p-3 border rounded-lg text-sm resize-y focus:ring-2 focus:ring-blue-300 focus:border-blue-400"
               placeholder="Contenido de la sección..."
             />
           </div>
@@ -499,12 +499,12 @@ function FormationEditor({ content, onChange }: { content: string; onChange: (v:
       ))}
 
       <Button variant="outline" onClick={addSection}
-        className="w-full border-dashed border-2 text-blue-600 hover:bg-blue-50 hover:border-blue-400 gap-1">
-        <Plus className="h-4 w-4" />
+        className="w-full border-dashed border-2 text-blue-600 hover:bg-blue-50 hover:border-blue-400 gap-1 h-10">
+        <Plus className="h-5 w-5" />
         Añadir sección
       </Button>
 
-      <div className="text-xs text-muted-foreground text-center">
+      <div className="text-sm text-muted-foreground text-center">
         {sections.length} sección(es) de formación
       </div>
     </div>
@@ -893,7 +893,7 @@ export default function TemplateManager() {
       {/* EDIT / CREATE DIALOG */}
       {/* ═══════════════════════════════════════════════════════ */}
       <Dialog open={isCreating} onOpenChange={(open) => { if (!open) resetForm() }}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-auto">
+        <DialogContent className="max-w-[95vw] max-h-[95vh] overflow-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               {editingTemplate ? <Edit3 className="h-5 w-5 text-blue-500" /> : <Plus className="h-5 w-5 text-green-500" />}
@@ -1024,7 +1024,7 @@ export default function TemplateManager() {
 
               {/* Editor content */}
               {editorMode === 'visual' ? (
-                <div className="border rounded-lg p-2 min-h-[200px] max-h-[500px] overflow-y-auto bg-gray-50">
+                <div className="border rounded-lg p-3 min-h-[400px] max-h-[65vh] overflow-y-auto bg-gray-50">
                   {(formType === 'autoevaluacion' || formType === 'auditoria') && (
                     <ChecklistEditor content={formContent} onChange={setFormContent} />
                   )}
@@ -1039,7 +1039,7 @@ export default function TemplateManager() {
                 <textarea
                   value={formContent}
                   onChange={(e) => setFormContent(e.target.value)}
-                  className="w-full h-64 p-3 border rounded-lg font-mono text-xs bg-gray-50 focus:ring-2 focus:ring-green-300 focus:border-green-400"
+                  className="w-full h-[65vh] p-3 border rounded-lg font-mono text-sm bg-gray-50 focus:ring-2 focus:ring-green-300 focus:border-green-400"
                   spellCheck={false}
                 />
               )}
