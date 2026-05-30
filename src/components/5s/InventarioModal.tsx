@@ -26,7 +26,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { ClipboardList, Plus, CheckCircle, Download, Upload, FileSpreadsheet, BookOpen, Package, ArrowRight, AlertTriangle, FileUp, Maximize2, Minimize2, File, PenTool, Image as ImageIcon, Eye } from 'lucide-react';
+import { ClipboardList, Plus, CheckCircle, Download, Upload, FileSpreadsheet, BookOpen, Package, ArrowRight, AlertTriangle, FileUp, Maximize2, Minimize2, File, PenTool, Image as ImageIcon, Eye, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { use5SStore } from '@/lib/store';
 import { S_STEPS, INVENTORY_CONFIGS, INVENTORY_CLASSIFY_THRESHOLD } from '@/lib/5s-constants';
@@ -66,6 +66,7 @@ export default function InventarioModal({ open, onClose, sStep, miniStep }: Inve
   const sStepData = S_STEPS.find(s => s.id === sStep);
   const defaultConfig: InventoryConfig = INVENTORY_CONFIGS[sStep] || INVENTORY_CONFIGS[1];
   const [customConfig, setCustomConfig] = useState<InventoryConfig | null>(null);
+  const [hasTemplate, setHasTemplate] = useState<boolean | null>(null); // null = loading, false = no template, true = has template
   const config: InventoryConfig = customConfig || defaultConfig;
   const canSkipSteps = hasPermission('skip_steps');
   const canPerformStep = canPerform(sStep, miniStep);
@@ -109,27 +110,31 @@ export default function InventarioModal({ open, onClose, sStep, miniStep }: Inve
 
   const loadCustomInventoryConfig = async () => {
     try {
-      const res = await fetch(`/api/templates?type=inventario&sStep=${sStep}`);
+      const res = await fetch(`/api/templates?type=inventario&sStep=${sStep}&miniStep=3`);
       const json = await res.json();
       if (json.success && json.data && json.data.length > 0) {
         const content = JSON.parse(json.data[0].content);
         if (content.categories && content.extraFields) {
           setCustomConfig({
-            title: defaultConfig.title,
-            subtitle: defaultConfig.subtitle,
-            templateName: defaultConfig.templateName,
+            title: content.title || defaultConfig.title,
+            subtitle: content.subtitle || defaultConfig.subtitle,
+            templateName: content.templateName || defaultConfig.templateName,
             categories: content.categories,
             extraFields: content.extraFields,
           });
+          setHasTemplate(true);
         } else {
           setCustomConfig(null);
+          setHasTemplate(false);
         }
       } else {
         setCustomConfig(null);
+        setHasTemplate(false);
       }
     } catch (e) {
       console.error('Error loading custom inventory config:', e);
       setCustomConfig(null);
+      setHasTemplate(false);
     }
   };
 
@@ -797,7 +802,21 @@ export default function InventarioModal({ open, onClose, sStep, miniStep }: Inve
         )}
 
         <div className="flex-1 overflow-y-auto px-6 pb-6 min-h-0">
-        {isCompleted ? (
+        {hasTemplate === null ? (
+          <div className="flex items-center justify-center py-12">
+            <Loader2 className="h-8 w-8 text-green-500 animate-spin" />
+            <span className="ml-3 text-muted-foreground">Cargando plantilla...</span>
+          </div>
+        ) : hasTemplate === false ? (
+          <div className="text-center py-16">
+            <ClipboardList className="h-16 w-16 text-gray-300 mx-auto mb-4" />
+            <h3 className="text-xl font-bold text-gray-500 mb-2">Sin plantilla configurada</h3>
+            <p className="text-muted-foreground max-w-md mx-auto">
+              El administrador no ha configurado ninguna plantilla de inventario para S{sStep} ({sStepData?.japaneseName}) en el Paso 3.
+              Contacta con el administrador para que configure la plantilla desde el panel de administración.
+            </p>
+          </div>
+        ) : isCompleted ? (
           <div className="text-center py-8">
             <CheckCircle className="h-16 w-16 text-green-500 mx-auto mb-3" />
             <h3 className="text-xl font-bold mb-2">¡Inventario Completado!</h3>

@@ -11,7 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { GraduationCap, CheckCircle, XCircle, AlertCircle, Maximize2, Minimize2 } from 'lucide-react';
+import { GraduationCap, CheckCircle, XCircle, AlertCircle, Maximize2, Minimize2, BookOpen } from 'lucide-react';
 import { use5SStore } from '@/lib/store';
 import { S_STEPS } from '@/lib/5s-constants';
 
@@ -219,9 +219,13 @@ export default function FormacionModal({ open, onClose, sStep, miniStep }: Forma
                 ))}
               </div>
             ) : formationContent.length === 0 ? (
-              <p className="text-muted-foreground text-center py-8">
-                No hay contenido de formación disponible.
-              </p>
+              <div className="text-center py-12">
+                <BookOpen className="h-12 w-12 text-amber-500 mx-auto mb-3" />
+                <h3 className="text-lg font-bold mb-2">Sin formación configurada</h3>
+                <p className="text-sm text-muted-foreground max-w-md mx-auto">
+                  El administrador no ha configurado contenido de formación para S{sStep}. Contacta con el administrador para que configure la plantilla desde el panel de administración.
+                </p>
+              </div>
             ) : (
               <div className="space-y-4">
                 {formationContent.map((section, i) => (
@@ -307,6 +311,15 @@ export default function FormacionModal({ open, onClose, sStep, miniStep }: Forma
                 )}
               </div>
             ) : !examStarted ? (
+              examQuestions.length === 0 ? (
+                <div className="text-center py-12">
+                  <AlertCircle className="h-12 w-12 text-amber-500 mx-auto mb-3" />
+                  <h3 className="text-lg font-bold mb-2">Sin examen configurado</h3>
+                  <p className="text-sm text-muted-foreground max-w-md mx-auto">
+                    El administrador no ha configurado un examen para S{sStep}. Contacta con el administrador para que configure la plantilla desde el panel de administración.
+                  </p>
+                </div>
+              ) : (
               <div className="text-center py-8 space-y-4">
                 <AlertCircle className="h-12 w-12 text-muted-foreground mx-auto" />
                 <div>
@@ -326,6 +339,7 @@ export default function FormacionModal({ open, onClose, sStep, miniStep }: Forma
                   Comenzar Examen
                 </Button>
               </div>
+              )
             ) : (
               <div className="space-y-4">
                 {examQuestions.map((q, qIdx) => (
