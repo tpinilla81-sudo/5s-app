@@ -943,3 +943,3152 @@ Unknown argument `miniStep`. Available options are marked with ?.
  GET /api/templates?type=examen&includeInactive=true 500 in 124ms (compile: 2ms, render: 121ms)
  GET /api/notifications?userId=cmpo4w07k0000mg034fx4pt72&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 8ms (compile: 2ms, render: 5ms)
  GET / 200 in 43ms (compile: 4ms, render: 40ms)
+ GET / 200 in 39ms (compile: 4ms, render: 35ms)
+ GET /api/notifications?userId=cmpo4w07k0000mg034fx4pt72&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 7ms (compile: 3ms, render: 5ms)
+ GET /api/notifications?userId=cmpo4w07k0000mg034fx4pt72&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 7ms (compile: 2ms, render: 5ms)
+ GET /api/notifications?userId=cmpo4w07k0000mg034fx4pt72&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 7ms (compile: 2ms, render: 5ms)
+ GET /api/notifications?userId=cmpo4w07k0000mg034fx4pt72&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 7ms (compile: 2ms, render: 5ms)
+prisma:error 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.findMany()` invocation in
+/home/z/my-project/.next/dev/server/chunks/[root-of-the-server]__f59e6f19._.js:112:163
+
+  109 if (type) where.type = type;
+  110 if (sStep) where.sStep = parseInt(sStep);
+  111 if (miniStep) where.miniStep = parseInt(miniStep);
+→ 112 const templates = await __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.findMany({
+        where: {
+          type: "inventario"
+        },
+        orderBy: [
+          {
+            sStep: "asc"
+          },
+          {
+            miniStep: "asc"
+          },
+          {
+            createdAt: "desc"
+          }
+        ]
+      })
+
+Unknown argument `miniStep`. Available options are marked with ?.
+Error fetching templates: Error [PrismaClientValidationError]: 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.findMany()` invocation in
+/home/z/my-project/.next/dev/server/chunks/[root-of-the-server]__f59e6f19._.js:112:163
+
+  109 if (type) where.type = type;
+  110 if (sStep) where.sStep = parseInt(sStep);
+  111 if (miniStep) where.miniStep = parseInt(miniStep);
+→ 112 const templates = await __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.findMany({
+        where: {
+          type: "inventario"
+        },
+        orderBy: [
+          {
+            sStep: "asc"
+          },
+          {
+            miniStep: "asc"
+          },
+          {
+            createdAt: "desc"
+          }
+        ]
+      })
+
+Unknown argument `miniStep`. Available options are marked with ?.
+    at <unknown> (src/app/api/templates/route.ts:19:41)
+    at async GET (src/app/api/templates/route.ts:19:23)
+  17 |     if (miniStep) where.miniStep = parseInt(miniStep)
+  18 |
+> 19 |     const templates = await db.template.findMany({ where, orderBy: [{ sStep: 'asc' }, { miniStep: 'asc' }, { createdAt: 'desc' }] })
+     |                                         ^
+  20 |     return NextResponse.json({ success: true, data: templates })
+  21 |   } catch (error) {
+  22 |     console.error('Error fetching templates:', error) {
+  clientVersion: '6.19.2'
+}
+ GET /api/templates?type=inventario&includeInactive=true 500 in 152ms (compile: 2ms, render: 150ms)
+prisma:error 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.findMany()` invocation in
+/home/z/my-project/.next/dev/server/chunks/[root-of-the-server]__f59e6f19._.js:112:163
+
+  109 if (type) where.type = type;
+  110 if (sStep) where.sStep = parseInt(sStep);
+  111 if (miniStep) where.miniStep = parseInt(miniStep);
+→ 112 const templates = await __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.findMany({
+        where: {
+          type: "estandar"
+        },
+        orderBy: [
+          {
+            sStep: "asc"
+          },
+          {
+            miniStep: "asc"
+          },
+          {
+            createdAt: "desc"
+          }
+        ]
+      })
+
+Unknown argument `miniStep`. Available options are marked with ?.
+Error fetching templates: Error [PrismaClientValidationError]: 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.findMany()` invocation in
+/home/z/my-project/.next/dev/server/chunks/[root-of-the-server]__f59e6f19._.js:112:163
+
+  109 if (type) where.type = type;
+  110 if (sStep) where.sStep = parseInt(sStep);
+  111 if (miniStep) where.miniStep = parseInt(miniStep);
+→ 112 const templates = await __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.findMany({
+        where: {
+          type: "estandar"
+        },
+        orderBy: [
+          {
+            sStep: "asc"
+          },
+          {
+            miniStep: "asc"
+          },
+          {
+            createdAt: "desc"
+          }
+        ]
+      })
+
+Unknown argument `miniStep`. Available options are marked with ?.
+    at <unknown> (src/app/api/templates/route.ts:19:41)
+    at async GET (src/app/api/templates/route.ts:19:23)
+  17 |     if (miniStep) where.miniStep = parseInt(miniStep)
+  18 |
+> 19 |     const templates = await db.template.findMany({ where, orderBy: [{ sStep: 'asc' }, { miniStep: 'asc' }, { createdAt: 'desc' }] })
+     |                                         ^
+  20 |     return NextResponse.json({ success: true, data: templates })
+  21 |   } catch (error) {
+  22 |     console.error('Error fetching templates:', error) {
+  clientVersion: '6.19.2'
+}
+ GET /api/templates?type=estandar&includeInactive=true 500 in 104ms (compile: 1907µs, render: 102ms)
+prisma:error 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.findMany()` invocation in
+/home/z/my-project/.next/dev/server/chunks/[root-of-the-server]__f59e6f19._.js:112:163
+
+  109 if (type) where.type = type;
+  110 if (sStep) where.sStep = parseInt(sStep);
+  111 if (miniStep) where.miniStep = parseInt(miniStep);
+→ 112 const templates = await __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.findMany({
+        where: {
+          type: "autoevaluacion"
+        },
+        orderBy: [
+          {
+            sStep: "asc"
+          },
+          {
+            miniStep: "asc"
+          },
+          {
+            createdAt: "desc"
+          }
+        ]
+      })
+
+Unknown argument `miniStep`. Available options are marked with ?.
+Error fetching templates: Error [PrismaClientValidationError]: 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.findMany()` invocation in
+/home/z/my-project/.next/dev/server/chunks/[root-of-the-server]__f59e6f19._.js:112:163
+
+  109 if (type) where.type = type;
+  110 if (sStep) where.sStep = parseInt(sStep);
+  111 if (miniStep) where.miniStep = parseInt(miniStep);
+→ 112 const templates = await __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.findMany({
+        where: {
+          type: "autoevaluacion"
+        },
+        orderBy: [
+          {
+            sStep: "asc"
+          },
+          {
+            miniStep: "asc"
+          },
+          {
+            createdAt: "desc"
+          }
+        ]
+      })
+
+Unknown argument `miniStep`. Available options are marked with ?.
+    at <unknown> (src/app/api/templates/route.ts:19:41)
+    at async GET (src/app/api/templates/route.ts:19:23)
+  17 |     if (miniStep) where.miniStep = parseInt(miniStep)
+  18 |
+> 19 |     const templates = await db.template.findMany({ where, orderBy: [{ sStep: 'asc' }, { miniStep: 'asc' }, { createdAt: 'desc' }] })
+     |                                         ^
+  20 |     return NextResponse.json({ success: true, data: templates })
+  21 |   } catch (error) {
+  22 |     console.error('Error fetching templates:', error) {
+  clientVersion: '6.19.2'
+}
+ GET /api/templates?type=autoevaluacion&includeInactive=true 500 in 154ms (compile: 2ms, render: 152ms)
+prisma:error 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.findMany()` invocation in
+/home/z/my-project/.next/dev/server/chunks/[root-of-the-server]__f59e6f19._.js:112:163
+
+  109 if (type) where.type = type;
+  110 if (sStep) where.sStep = parseInt(sStep);
+  111 if (miniStep) where.miniStep = parseInt(miniStep);
+→ 112 const templates = await __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.findMany({
+        where: {
+          type: "auditoria"
+        },
+        orderBy: [
+          {
+            sStep: "asc"
+          },
+          {
+            miniStep: "asc"
+          },
+          {
+            createdAt: "desc"
+          }
+        ]
+      })
+
+Unknown argument `miniStep`. Available options are marked with ?.
+Error fetching templates: Error [PrismaClientValidationError]: 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.findMany()` invocation in
+/home/z/my-project/.next/dev/server/chunks/[root-of-the-server]__f59e6f19._.js:112:163
+
+  109 if (type) where.type = type;
+  110 if (sStep) where.sStep = parseInt(sStep);
+  111 if (miniStep) where.miniStep = parseInt(miniStep);
+→ 112 const templates = await __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.findMany({
+        where: {
+          type: "auditoria"
+        },
+        orderBy: [
+          {
+            sStep: "asc"
+          },
+          {
+            miniStep: "asc"
+          },
+          {
+            createdAt: "desc"
+          }
+        ]
+      })
+
+Unknown argument `miniStep`. Available options are marked with ?.
+    at <unknown> (src/app/api/templates/route.ts:19:41)
+    at async GET (src/app/api/templates/route.ts:19:23)
+  17 |     if (miniStep) where.miniStep = parseInt(miniStep)
+  18 |
+> 19 |     const templates = await db.template.findMany({ where, orderBy: [{ sStep: 'asc' }, { miniStep: 'asc' }, { createdAt: 'desc' }] })
+     |                                         ^
+  20 |     return NextResponse.json({ success: true, data: templates })
+  21 |   } catch (error) {
+  22 |     console.error('Error fetching templates:', error) {
+  clientVersion: '6.19.2'
+}
+ GET /api/templates?type=auditoria&includeInactive=true 500 in 106ms (compile: 1856µs, render: 105ms)
+ GET /api/notifications?userId=cmpo4w07k0000mg034fx4pt72&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 5ms (compile: 1632µs, render: 4ms)
+ GET /api/notifications?userId=cmpo4w07k0000mg034fx4pt72&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 6ms (compile: 1785µs, render: 4ms)
+prisma:error 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.findMany()` invocation in
+/home/z/my-project/.next/dev/server/chunks/[root-of-the-server]__f59e6f19._.js:112:163
+
+  109 if (type) where.type = type;
+  110 if (sStep) where.sStep = parseInt(sStep);
+  111 if (miniStep) where.miniStep = parseInt(miniStep);
+→ 112 const templates = await __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.findMany({
+        where: {
+          type: "formacion"
+        },
+        orderBy: [
+          {
+            sStep: "asc"
+          },
+          {
+            miniStep: "asc"
+          },
+          {
+            createdAt: "desc"
+          }
+        ]
+      })
+
+Unknown argument `miniStep`. Available options are marked with ?.
+Error fetching templates: Error [PrismaClientValidationError]: 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.findMany()` invocation in
+/home/z/my-project/.next/dev/server/chunks/[root-of-the-server]__f59e6f19._.js:112:163
+
+  109 if (type) where.type = type;
+  110 if (sStep) where.sStep = parseInt(sStep);
+  111 if (miniStep) where.miniStep = parseInt(miniStep);
+→ 112 const templates = await __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.findMany({
+        where: {
+          type: "formacion"
+        },
+        orderBy: [
+          {
+            sStep: "asc"
+          },
+          {
+            miniStep: "asc"
+          },
+          {
+            createdAt: "desc"
+          }
+        ]
+      })
+
+Unknown argument `miniStep`. Available options are marked with ?.
+    at <unknown> (src/app/api/templates/route.ts:19:41)
+    at async GET (src/app/api/templates/route.ts:19:23)
+  17 |     if (miniStep) where.miniStep = parseInt(miniStep)
+  18 |
+> 19 |     const templates = await db.template.findMany({ where, orderBy: [{ sStep: 'asc' }, { miniStep: 'asc' }, { createdAt: 'desc' }] })
+     |                                         ^
+  20 |     return NextResponse.json({ success: true, data: templates })
+  21 |   } catch (error) {
+  22 |     console.error('Error fetching templates:', error) {
+  clientVersion: '6.19.2'
+}
+ GET /api/templates?type=formacion&includeInactive=true 500 in 141ms (compile: 1596µs, render: 140ms)
+prisma:error 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.findMany()` invocation in
+/home/z/my-project/.next/dev/server/chunks/[root-of-the-server]__f59e6f19._.js:112:163
+
+  109 if (type) where.type = type;
+  110 if (sStep) where.sStep = parseInt(sStep);
+  111 if (miniStep) where.miniStep = parseInt(miniStep);
+→ 112 const templates = await __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.findMany({
+        where: {
+          type: "examen"
+        },
+        orderBy: [
+          {
+            sStep: "asc"
+          },
+          {
+            miniStep: "asc"
+          },
+          {
+            createdAt: "desc"
+          }
+        ]
+      })
+
+Unknown argument `miniStep`. Available options are marked with ?.
+Error fetching templates: Error [PrismaClientValidationError]: 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.findMany()` invocation in
+/home/z/my-project/.next/dev/server/chunks/[root-of-the-server]__f59e6f19._.js:112:163
+
+  109 if (type) where.type = type;
+  110 if (sStep) where.sStep = parseInt(sStep);
+  111 if (miniStep) where.miniStep = parseInt(miniStep);
+→ 112 const templates = await __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.findMany({
+        where: {
+          type: "examen"
+        },
+        orderBy: [
+          {
+            sStep: "asc"
+          },
+          {
+            miniStep: "asc"
+          },
+          {
+            createdAt: "desc"
+          }
+        ]
+      })
+
+Unknown argument `miniStep`. Available options are marked with ?.
+    at <unknown> (src/app/api/templates/route.ts:19:41)
+    at async GET (src/app/api/templates/route.ts:19:23)
+  17 |     if (miniStep) where.miniStep = parseInt(miniStep)
+  18 |
+> 19 |     const templates = await db.template.findMany({ where, orderBy: [{ sStep: 'asc' }, { miniStep: 'asc' }, { createdAt: 'desc' }] })
+     |                                         ^
+  20 |     return NextResponse.json({ success: true, data: templates })
+  21 |   } catch (error) {
+  22 |     console.error('Error fetching templates:', error) {
+  clientVersion: '6.19.2'
+}
+ GET /api/templates?type=examen&includeInactive=true 500 in 189ms (compile: 3ms, render: 186ms)
+prisma:error 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.create()` invocation in
+/home/z/my-project/.next/dev/server/chunks/[root-of-the-server]__f59e6f19._.js:161:162
+
+  158     content: typeof content === 'string' ? content : JSON.stringify(content),
+  159     notaMinima: notaMinima != null ? Number(notaMinima) : null
+  160 };
+→ 161 const template = await __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.create({
+        data: {
+          type: "formacion",
+          sStep: 1,
+          miniStep: 1,
+          ~~~~~~~~
+          title: "Formación S1 - Seiri",
+          description: null,
+          content: "{\"sections\":[{\"title\":\"¿Qué es Seiri?\",\"content\":\"Explicación detallada de Clasificar (Seiri). Describe los objetivos, metodología y beneficios de esta S en el lugar de trabajo.\"},{\"title\":\"Objetivos\",\"content\":\"Lista de objetivos específicos que se persiguen con la implementación de esta S en el entorno laboral.\"},{\"title\":\"Metodología\",\"content\":\"Pasos a seguir para implementar correctamente esta S en el lugar de trabajo.\"},{\"title\":\"Beneficios esperados\",\"content\":\"Descripción de los beneficios que se obtienen al aplicar correctamente esta S.\"}]}",
+          notaMinima: 80,
+      ?   id?: String,
+      ?   active?: Boolean,
+      ?   createdAt?: DateTime,
+      ?   updatedAt?: DateTime
+        }
+      })
+
+Unknown argument `miniStep`. Available options are marked with ?.
+Error creating template: Error [PrismaClientValidationError]: 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.create()` invocation in
+/home/z/my-project/.next/dev/server/chunks/[root-of-the-server]__f59e6f19._.js:161:162
+
+  158     content: typeof content === 'string' ? content : JSON.stringify(content),
+  159     notaMinima: notaMinima != null ? Number(notaMinima) : null
+  160 };
+→ 161 const template = await __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.create({
+        data: {
+          type: "formacion",
+          sStep: 1,
+          miniStep: 1,
+          ~~~~~~~~
+          title: "Formación S1 - Seiri",
+          description: null,
+          content: "{\"sections\":[{\"title\":\"¿Qué es Seiri?\",\"content\":\"Explicación detallada de Clasificar (Seiri). Describe los objetivos, metodología y beneficios de esta S en el lugar de trabajo.\"},{\"title\":\"Objetivos\",\"content\":\"Lista de objetivos específicos que se persiguen con la implementación de esta S en el entorno laboral.\"},{\"title\":\"Metodología\",\"content\":\"Pasos a seguir para implementar correctamente esta S en el lugar de trabajo.\"},{\"title\":\"Beneficios esperados\",\"content\":\"Descripción de los beneficios que se obtienen al aplicar correctamente esta S.\"}]}",
+          notaMinima: 80,
+      ?   id?: String,
+      ?   active?: Boolean,
+      ?   createdAt?: DateTime,
+      ?   updatedAt?: DateTime
+        }
+      })
+
+Unknown argument `miniStep`. Available options are marked with ?.
+    at <unknown> (src/app/api/templates/route.ts:47:40)
+    at async POST (src/app/api/templates/route.ts:47:22)
+  45 |     }
+  46 |
+> 47 |     const template = await db.template.create({ data })
+     |                                        ^
+  48 |
+  49 |     return NextResponse.json({ success: true, data: template })
+  50 |   } catch (error) { {
+  clientVersion: '6.19.2'
+}
+ POST /api/templates 500 in 184ms (compile: 3ms, render: 181ms)
+prisma:error 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.create()` invocation in
+/home/z/my-project/.next/dev/server/chunks/[root-of-the-server]__f59e6f19._.js:161:162
+
+  158     content: typeof content === 'string' ? content : JSON.stringify(content),
+  159     notaMinima: notaMinima != null ? Number(notaMinima) : null
+  160 };
+→ 161 const template = await __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.create({
+        data: {
+          type: "examen",
+          sStep: 1,
+          miniStep: 1,
+          ~~~~~~~~
+          title: "Examen S1 - Seiri",
+          description: null,
+          content: "{\"questions\":[{\"question\":\"¿Cuál es el objetivo principal de Seiri?\",\"options\":[\"Opción A\",\"Opción B\",\"Opción C\",\"Opción D\"],\"correctIndex\":0},{\"question\":\"¿Qué significa Clasificar?\",\"options\":[\"Opción A\",\"Opción B\",\"Opción C\",\"Opción D\"],\"correctIndex\":1},{\"question\":\"¿Cuál es el primer paso para implementar esta S?\",\"options\":[\"Opción A\",\"Opción B\",\"Opción C\",\"Opción D\"],\"correctIndex\":2},{\"question\":\"¿Qué beneficio aporta esta S al lugar de trabajo?\",\"options\":[\"Opción A\",\"Opción B\",\"Opción C\",\"Opción D\"],\"correctIndex\":0},{\"question\":\"¿Cómo se mantiene el resultado de esta S?\",\"options\":[\"Opción A\",\"Opción B\",\"Opción C\",\"Opción D\"],\"correctIndex\":1}]}",
+          notaMinima: 80,
+      ?   id?: String,
+      ?   active?: Boolean,
+      ?   createdAt?: DateTime,
+      ?   updatedAt?: DateTime
+        }
+      })
+
+Unknown argument `miniStep`. Available options are marked with ?.
+Error creating template: Error [PrismaClientValidationError]: 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.create()` invocation in
+/home/z/my-project/.next/dev/server/chunks/[root-of-the-server]__f59e6f19._.js:161:162
+
+  158     content: typeof content === 'string' ? content : JSON.stringify(content),
+  159     notaMinima: notaMinima != null ? Number(notaMinima) : null
+  160 };
+→ 161 const template = await __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.create({
+        data: {
+          type: "examen",
+          sStep: 1,
+          miniStep: 1,
+          ~~~~~~~~
+          title: "Examen S1 - Seiri",
+          description: null,
+          content: "{\"questions\":[{\"question\":\"¿Cuál es el objetivo principal de Seiri?\",\"options\":[\"Opción A\",\"Opción B\",\"Opción C\",\"Opción D\"],\"correctIndex\":0},{\"question\":\"¿Qué significa Clasificar?\",\"options\":[\"Opción A\",\"Opción B\",\"Opción C\",\"Opción D\"],\"correctIndex\":1},{\"question\":\"¿Cuál es el primer paso para implementar esta S?\",\"options\":[\"Opción A\",\"Opción B\",\"Opción C\",\"Opción D\"],\"correctIndex\":2},{\"question\":\"¿Qué beneficio aporta esta S al lugar de trabajo?\",\"options\":[\"Opción A\",\"Opción B\",\"Opción C\",\"Opción D\"],\"correctIndex\":0},{\"question\":\"¿Cómo se mantiene el resultado de esta S?\",\"options\":[\"Opción A\",\"Opción B\",\"Opción C\",\"Opción D\"],\"correctIndex\":1}]}",
+          notaMinima: 80,
+      ?   id?: String,
+      ?   active?: Boolean,
+      ?   createdAt?: DateTime,
+      ?   updatedAt?: DateTime
+        }
+      })
+
+Unknown argument `miniStep`. Available options are marked with ?.
+    at <unknown> (src/app/api/templates/route.ts:47:40)
+    at async POST (src/app/api/templates/route.ts:47:22)
+  45 |     }
+  46 |
+> 47 |     const template = await db.template.create({ data })
+     |                                        ^
+  48 |
+  49 |     return NextResponse.json({ success: true, data: template })
+  50 |   } catch (error) { {
+  clientVersion: '6.19.2'
+}
+ POST /api/templates 500 in 107ms (compile: 1971µs, render: 105ms)
+prisma:error 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.create()` invocation in
+/home/z/my-project/.next/dev/server/chunks/[root-of-the-server]__f59e6f19._.js:161:162
+
+  158     content: typeof content === 'string' ? content : JSON.stringify(content),
+  159     notaMinima: notaMinima != null ? Number(notaMinima) : null
+  160 };
+→ 161 const template = await __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.create({
+        data: {
+          type: "formacion",
+          sStep: 2,
+          miniStep: 1,
+          ~~~~~~~~
+          title: "Formación S2 - Seiton",
+          description: null,
+          content: "{\"sections\":[{\"title\":\"¿Qué es Seiton?\",\"content\":\"Explicación detallada de Organizar (Seiton). Describe los objetivos, metodología y beneficios de esta S en el lugar de trabajo.\"},{\"title\":\"Objetivos\",\"content\":\"Lista de objetivos específicos que se persiguen con la implementación de esta S en el entorno laboral.\"},{\"title\":\"Metodología\",\"content\":\"Pasos a seguir para implementar correctamente esta S en el lugar de trabajo.\"},{\"title\":\"Beneficios esperados\",\"content\":\"Descripción de los beneficios que se obtienen al aplicar correctamente esta S.\"}]}",
+          notaMinima: 80,
+      ?   id?: String,
+      ?   active?: Boolean,
+      ?   createdAt?: DateTime,
+      ?   updatedAt?: DateTime
+        }
+      })
+
+Unknown argument `miniStep`. Available options are marked with ?.
+Error creating template: Error [PrismaClientValidationError]: 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.create()` invocation in
+/home/z/my-project/.next/dev/server/chunks/[root-of-the-server]__f59e6f19._.js:161:162
+
+  158     content: typeof content === 'string' ? content : JSON.stringify(content),
+  159     notaMinima: notaMinima != null ? Number(notaMinima) : null
+  160 };
+→ 161 const template = await __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.create({
+        data: {
+          type: "formacion",
+          sStep: 2,
+          miniStep: 1,
+          ~~~~~~~~
+          title: "Formación S2 - Seiton",
+          description: null,
+          content: "{\"sections\":[{\"title\":\"¿Qué es Seiton?\",\"content\":\"Explicación detallada de Organizar (Seiton). Describe los objetivos, metodología y beneficios de esta S en el lugar de trabajo.\"},{\"title\":\"Objetivos\",\"content\":\"Lista de objetivos específicos que se persiguen con la implementación de esta S en el entorno laboral.\"},{\"title\":\"Metodología\",\"content\":\"Pasos a seguir para implementar correctamente esta S en el lugar de trabajo.\"},{\"title\":\"Beneficios esperados\",\"content\":\"Descripción de los beneficios que se obtienen al aplicar correctamente esta S.\"}]}",
+          notaMinima: 80,
+      ?   id?: String,
+      ?   active?: Boolean,
+      ?   createdAt?: DateTime,
+      ?   updatedAt?: DateTime
+        }
+      })
+
+Unknown argument `miniStep`. Available options are marked with ?.
+    at <unknown> (src/app/api/templates/route.ts:47:40)
+    at async POST (src/app/api/templates/route.ts:47:22)
+  45 |     }
+  46 |
+> 47 |     const template = await db.template.create({ data })
+     |                                        ^
+  48 |
+  49 |     return NextResponse.json({ success: true, data: template })
+  50 |   } catch (error) { {
+  clientVersion: '6.19.2'
+}
+ POST /api/templates 500 in 98ms (compile: 1552µs, render: 96ms)
+prisma:error 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.create()` invocation in
+/home/z/my-project/.next/dev/server/chunks/[root-of-the-server]__f59e6f19._.js:161:162
+
+  158     content: typeof content === 'string' ? content : JSON.stringify(content),
+  159     notaMinima: notaMinima != null ? Number(notaMinima) : null
+  160 };
+→ 161 const template = await __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.create({
+        data: {
+          type: "examen",
+          sStep: 2,
+          miniStep: 1,
+          ~~~~~~~~
+          title: "Examen S2 - Seiton",
+          description: null,
+          content: "{\"questions\":[{\"question\":\"¿Cuál es el objetivo principal de Seiton?\",\"options\":[\"Opción A\",\"Opción B\",\"Opción C\",\"Opción D\"],\"correctIndex\":0},{\"question\":\"¿Qué significa Organizar?\",\"options\":[\"Opción A\",\"Opción B\",\"Opción C\",\"Opción D\"],\"correctIndex\":1},{\"question\":\"¿Cuál es el primer paso para implementar esta S?\",\"options\":[\"Opción A\",\"Opción B\",\"Opción C\",\"Opción D\"],\"correctIndex\":2},{\"question\":\"¿Qué beneficio aporta esta S al lugar de trabajo?\",\"options\":[\"Opción A\",\"Opción B\",\"Opción C\",\"Opción D\"],\"correctIndex\":0},{\"question\":\"¿Cómo se mantiene el resultado de esta S?\",\"options\":[\"Opción A\",\"Opción B\",\"Opción C\",\"Opción D\"],\"correctIndex\":1}]}",
+          notaMinima: 80,
+      ?   id?: String,
+      ?   active?: Boolean,
+      ?   createdAt?: DateTime,
+      ?   updatedAt?: DateTime
+        }
+      })
+
+Unknown argument `miniStep`. Available options are marked with ?.
+Error creating template: Error [PrismaClientValidationError]: 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.create()` invocation in
+/home/z/my-project/.next/dev/server/chunks/[root-of-the-server]__f59e6f19._.js:161:162
+
+  158     content: typeof content === 'string' ? content : JSON.stringify(content),
+  159     notaMinima: notaMinima != null ? Number(notaMinima) : null
+  160 };
+→ 161 const template = await __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.create({
+        data: {
+          type: "examen",
+          sStep: 2,
+          miniStep: 1,
+          ~~~~~~~~
+          title: "Examen S2 - Seiton",
+          description: null,
+          content: "{\"questions\":[{\"question\":\"¿Cuál es el objetivo principal de Seiton?\",\"options\":[\"Opción A\",\"Opción B\",\"Opción C\",\"Opción D\"],\"correctIndex\":0},{\"question\":\"¿Qué significa Organizar?\",\"options\":[\"Opción A\",\"Opción B\",\"Opción C\",\"Opción D\"],\"correctIndex\":1},{\"question\":\"¿Cuál es el primer paso para implementar esta S?\",\"options\":[\"Opción A\",\"Opción B\",\"Opción C\",\"Opción D\"],\"correctIndex\":2},{\"question\":\"¿Qué beneficio aporta esta S al lugar de trabajo?\",\"options\":[\"Opción A\",\"Opción B\",\"Opción C\",\"Opción D\"],\"correctIndex\":0},{\"question\":\"¿Cómo se mantiene el resultado de esta S?\",\"options\":[\"Opción A\",\"Opción B\",\"Opción C\",\"Opción D\"],\"correctIndex\":1}]}",
+          notaMinima: 80,
+      ?   id?: String,
+      ?   active?: Boolean,
+      ?   createdAt?: DateTime,
+      ?   updatedAt?: DateTime
+        }
+      })
+
+Unknown argument `miniStep`. Available options are marked with ?.
+    at <unknown> (src/app/api/templates/route.ts:47:40)
+    at async POST (src/app/api/templates/route.ts:47:22)
+  45 |     }
+  46 |
+> 47 |     const template = await db.template.create({ data })
+     |                                        ^
+  48 |
+  49 |     return NextResponse.json({ success: true, data: template })
+  50 |   } catch (error) { {
+  clientVersion: '6.19.2'
+}
+ POST /api/templates 500 in 115ms (compile: 1694µs, render: 114ms)
+prisma:error 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.create()` invocation in
+/home/z/my-project/.next/dev/server/chunks/[root-of-the-server]__f59e6f19._.js:161:162
+
+  158     content: typeof content === 'string' ? content : JSON.stringify(content),
+  159     notaMinima: notaMinima != null ? Number(notaMinima) : null
+  160 };
+→ 161 const template = await __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.create({
+        data: {
+          type: "formacion",
+          sStep: 3,
+          miniStep: 1,
+          ~~~~~~~~
+          title: "Formación S3 - Seiso",
+          description: null,
+          content: "{\"sections\":[{\"title\":\"¿Qué es Seiso?\",\"content\":\"Explicación detallada de Limpiar (Seiso). Describe los objetivos, metodología y beneficios de esta S en el lugar de trabajo.\"},{\"title\":\"Objetivos\",\"content\":\"Lista de objetivos específicos que se persiguen con la implementación de esta S en el entorno laboral.\"},{\"title\":\"Metodología\",\"content\":\"Pasos a seguir para implementar correctamente esta S en el lugar de trabajo.\"},{\"title\":\"Beneficios esperados\",\"content\":\"Descripción de los beneficios que se obtienen al aplicar correctamente esta S.\"}]}",
+          notaMinima: 80,
+      ?   id?: String,
+      ?   active?: Boolean,
+      ?   createdAt?: DateTime,
+      ?   updatedAt?: DateTime
+        }
+      })
+
+Unknown argument `miniStep`. Available options are marked with ?.
+Error creating template: Error [PrismaClientValidationError]: 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.create()` invocation in
+/home/z/my-project/.next/dev/server/chunks/[root-of-the-server]__f59e6f19._.js:161:162
+
+  158     content: typeof content === 'string' ? content : JSON.stringify(content),
+  159     notaMinima: notaMinima != null ? Number(notaMinima) : null
+  160 };
+→ 161 const template = await __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.create({
+        data: {
+          type: "formacion",
+          sStep: 3,
+          miniStep: 1,
+          ~~~~~~~~
+          title: "Formación S3 - Seiso",
+          description: null,
+          content: "{\"sections\":[{\"title\":\"¿Qué es Seiso?\",\"content\":\"Explicación detallada de Limpiar (Seiso). Describe los objetivos, metodología y beneficios de esta S en el lugar de trabajo.\"},{\"title\":\"Objetivos\",\"content\":\"Lista de objetivos específicos que se persiguen con la implementación de esta S en el entorno laboral.\"},{\"title\":\"Metodología\",\"content\":\"Pasos a seguir para implementar correctamente esta S en el lugar de trabajo.\"},{\"title\":\"Beneficios esperados\",\"content\":\"Descripción de los beneficios que se obtienen al aplicar correctamente esta S.\"}]}",
+          notaMinima: 80,
+      ?   id?: String,
+      ?   active?: Boolean,
+      ?   createdAt?: DateTime,
+      ?   updatedAt?: DateTime
+        }
+      })
+
+Unknown argument `miniStep`. Available options are marked with ?.
+    at <unknown> (src/app/api/templates/route.ts:47:40)
+    at async POST (src/app/api/templates/route.ts:47:22)
+  45 |     }
+  46 |
+> 47 |     const template = await db.template.create({ data })
+     |                                        ^
+  48 |
+  49 |     return NextResponse.json({ success: true, data: template })
+  50 |   } catch (error) { {
+  clientVersion: '6.19.2'
+}
+ POST /api/templates 500 in 116ms (compile: 1665µs, render: 114ms)
+prisma:error 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.create()` invocation in
+/home/z/my-project/.next/dev/server/chunks/[root-of-the-server]__f59e6f19._.js:161:162
+
+  158     content: typeof content === 'string' ? content : JSON.stringify(content),
+  159     notaMinima: notaMinima != null ? Number(notaMinima) : null
+  160 };
+→ 161 const template = await __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.create({
+        data: {
+          type: "examen",
+          sStep: 3,
+          miniStep: 1,
+          ~~~~~~~~
+          title: "Examen S3 - Seiso",
+          description: null,
+          content: "{\"questions\":[{\"question\":\"¿Cuál es el objetivo principal de Seiso?\",\"options\":[\"Opción A\",\"Opción B\",\"Opción C\",\"Opción D\"],\"correctIndex\":0},{\"question\":\"¿Qué significa Limpiar?\",\"options\":[\"Opción A\",\"Opción B\",\"Opción C\",\"Opción D\"],\"correctIndex\":1},{\"question\":\"¿Cuál es el primer paso para implementar esta S?\",\"options\":[\"Opción A\",\"Opción B\",\"Opción C\",\"Opción D\"],\"correctIndex\":2},{\"question\":\"¿Qué beneficio aporta esta S al lugar de trabajo?\",\"options\":[\"Opción A\",\"Opción B\",\"Opción C\",\"Opción D\"],\"correctIndex\":0},{\"question\":\"¿Cómo se mantiene el resultado de esta S?\",\"options\":[\"Opción A\",\"Opción B\",\"Opción C\",\"Opción D\"],\"correctIndex\":1}]}",
+          notaMinima: 80,
+      ?   id?: String,
+      ?   active?: Boolean,
+      ?   createdAt?: DateTime,
+      ?   updatedAt?: DateTime
+        }
+      })
+
+Unknown argument `miniStep`. Available options are marked with ?.
+Error creating template: Error [PrismaClientValidationError]: 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.create()` invocation in
+/home/z/my-project/.next/dev/server/chunks/[root-of-the-server]__f59e6f19._.js:161:162
+
+  158     content: typeof content === 'string' ? content : JSON.stringify(content),
+  159     notaMinima: notaMinima != null ? Number(notaMinima) : null
+  160 };
+→ 161 const template = await __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.create({
+        data: {
+          type: "examen",
+          sStep: 3,
+          miniStep: 1,
+          ~~~~~~~~
+          title: "Examen S3 - Seiso",
+          description: null,
+          content: "{\"questions\":[{\"question\":\"¿Cuál es el objetivo principal de Seiso?\",\"options\":[\"Opción A\",\"Opción B\",\"Opción C\",\"Opción D\"],\"correctIndex\":0},{\"question\":\"¿Qué significa Limpiar?\",\"options\":[\"Opción A\",\"Opción B\",\"Opción C\",\"Opción D\"],\"correctIndex\":1},{\"question\":\"¿Cuál es el primer paso para implementar esta S?\",\"options\":[\"Opción A\",\"Opción B\",\"Opción C\",\"Opción D\"],\"correctIndex\":2},{\"question\":\"¿Qué beneficio aporta esta S al lugar de trabajo?\",\"options\":[\"Opción A\",\"Opción B\",\"Opción C\",\"Opción D\"],\"correctIndex\":0},{\"question\":\"¿Cómo se mantiene el resultado de esta S?\",\"options\":[\"Opción A\",\"Opción B\",\"Opción C\",\"Opción D\"],\"correctIndex\":1}]}",
+          notaMinima: 80,
+      ?   id?: String,
+      ?   active?: Boolean,
+      ?   createdAt?: DateTime,
+      ?   updatedAt?: DateTime
+        }
+      })
+
+Unknown argument `miniStep`. Available options are marked with ?.
+    at <unknown> (src/app/api/templates/route.ts:47:40)
+    at async POST (src/app/api/templates/route.ts:47:22)
+  45 |     }
+  46 |
+> 47 |     const template = await db.template.create({ data })
+     |                                        ^
+  48 |
+  49 |     return NextResponse.json({ success: true, data: template })
+  50 |   } catch (error) { {
+  clientVersion: '6.19.2'
+}
+ POST /api/templates 500 in 107ms (compile: 1814µs, render: 105ms)
+prisma:error 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.create()` invocation in
+/home/z/my-project/.next/dev/server/chunks/[root-of-the-server]__f59e6f19._.js:161:162
+
+  158     content: typeof content === 'string' ? content : JSON.stringify(content),
+  159     notaMinima: notaMinima != null ? Number(notaMinima) : null
+  160 };
+→ 161 const template = await __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.create({
+        data: {
+          type: "formacion",
+          sStep: 4,
+          miniStep: 1,
+          ~~~~~~~~
+          title: "Formación S4 - Seiketsu",
+          description: null,
+          content: "{\"sections\":[{\"title\":\"¿Qué es Seiketsu?\",\"content\":\"Explicación detallada de Estandarizar (Seiketsu). Describe los objetivos, metodología y beneficios de esta S en el lugar de trabajo.\"},{\"title\":\"Objetivos\",\"content\":\"Lista de objetivos específicos que se persiguen con la implementación de esta S en el entorno laboral.\"},{\"title\":\"Metodología\",\"content\":\"Pasos a seguir para implementar correctamente esta S en el lugar de trabajo.\"},{\"title\":\"Beneficios esperados\",\"content\":\"Descripción de los beneficios que se obtienen al aplicar correctamente esta S.\"}]}",
+          notaMinima: 80,
+      ?   id?: String,
+      ?   active?: Boolean,
+      ?   createdAt?: DateTime,
+      ?   updatedAt?: DateTime
+        }
+      })
+
+Unknown argument `miniStep`. Available options are marked with ?.
+Error creating template: Error [PrismaClientValidationError]: 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.create()` invocation in
+/home/z/my-project/.next/dev/server/chunks/[root-of-the-server]__f59e6f19._.js:161:162
+
+  158     content: typeof content === 'string' ? content : JSON.stringify(content),
+  159     notaMinima: notaMinima != null ? Number(notaMinima) : null
+  160 };
+→ 161 const template = await __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.create({
+        data: {
+          type: "formacion",
+          sStep: 4,
+          miniStep: 1,
+          ~~~~~~~~
+          title: "Formación S4 - Seiketsu",
+          description: null,
+          content: "{\"sections\":[{\"title\":\"¿Qué es Seiketsu?\",\"content\":\"Explicación detallada de Estandarizar (Seiketsu). Describe los objetivos, metodología y beneficios de esta S en el lugar de trabajo.\"},{\"title\":\"Objetivos\",\"content\":\"Lista de objetivos específicos que se persiguen con la implementación de esta S en el entorno laboral.\"},{\"title\":\"Metodología\",\"content\":\"Pasos a seguir para implementar correctamente esta S en el lugar de trabajo.\"},{\"title\":\"Beneficios esperados\",\"content\":\"Descripción de los beneficios que se obtienen al aplicar correctamente esta S.\"}]}",
+          notaMinima: 80,
+      ?   id?: String,
+      ?   active?: Boolean,
+      ?   createdAt?: DateTime,
+      ?   updatedAt?: DateTime
+        }
+      })
+
+Unknown argument `miniStep`. Available options are marked with ?.
+    at <unknown> (src/app/api/templates/route.ts:47:40)
+    at async POST (src/app/api/templates/route.ts:47:22)
+  45 |     }
+  46 |
+> 47 |     const template = await db.template.create({ data })
+     |                                        ^
+  48 |
+  49 |     return NextResponse.json({ success: true, data: template })
+  50 |   } catch (error) { {
+  clientVersion: '6.19.2'
+}
+ POST /api/templates 500 in 131ms (compile: 1970µs, render: 129ms)
+prisma:error 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.create()` invocation in
+/home/z/my-project/.next/dev/server/chunks/[root-of-the-server]__f59e6f19._.js:161:162
+
+  158     content: typeof content === 'string' ? content : JSON.stringify(content),
+  159     notaMinima: notaMinima != null ? Number(notaMinima) : null
+  160 };
+→ 161 const template = await __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.create({
+        data: {
+          type: "examen",
+          sStep: 4,
+          miniStep: 1,
+          ~~~~~~~~
+          title: "Examen S4 - Seiketsu",
+          description: null,
+          content: "{\"questions\":[{\"question\":\"¿Cuál es el objetivo principal de Seiketsu?\",\"options\":[\"Opción A\",\"Opción B\",\"Opción C\",\"Opción D\"],\"correctIndex\":0},{\"question\":\"¿Qué significa Estandarizar?\",\"options\":[\"Opción A\",\"Opción B\",\"Opción C\",\"Opción D\"],\"correctIndex\":1},{\"question\":\"¿Cuál es el primer paso para implementar esta S?\",\"options\":[\"Opción A\",\"Opción B\",\"Opción C\",\"Opción D\"],\"correctIndex\":2},{\"question\":\"¿Qué beneficio aporta esta S al lugar de trabajo?\",\"options\":[\"Opción A\",\"Opción B\",\"Opción C\",\"Opción D\"],\"correctIndex\":0},{\"question\":\"¿Cómo se mantiene el resultado de esta S?\",\"options\":[\"Opción A\",\"Opción B\",\"Opción C\",\"Opción D\"],\"correctIndex\":1}]}",
+          notaMinima: 80,
+      ?   id?: String,
+      ?   active?: Boolean,
+      ?   createdAt?: DateTime,
+      ?   updatedAt?: DateTime
+        }
+      })
+
+Unknown argument `miniStep`. Available options are marked with ?.
+Error creating template: Error [PrismaClientValidationError]: 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.create()` invocation in
+/home/z/my-project/.next/dev/server/chunks/[root-of-the-server]__f59e6f19._.js:161:162
+
+  158     content: typeof content === 'string' ? content : JSON.stringify(content),
+  159     notaMinima: notaMinima != null ? Number(notaMinima) : null
+  160 };
+→ 161 const template = await __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.create({
+        data: {
+          type: "examen",
+          sStep: 4,
+          miniStep: 1,
+          ~~~~~~~~
+          title: "Examen S4 - Seiketsu",
+          description: null,
+          content: "{\"questions\":[{\"question\":\"¿Cuál es el objetivo principal de Seiketsu?\",\"options\":[\"Opción A\",\"Opción B\",\"Opción C\",\"Opción D\"],\"correctIndex\":0},{\"question\":\"¿Qué significa Estandarizar?\",\"options\":[\"Opción A\",\"Opción B\",\"Opción C\",\"Opción D\"],\"correctIndex\":1},{\"question\":\"¿Cuál es el primer paso para implementar esta S?\",\"options\":[\"Opción A\",\"Opción B\",\"Opción C\",\"Opción D\"],\"correctIndex\":2},{\"question\":\"¿Qué beneficio aporta esta S al lugar de trabajo?\",\"options\":[\"Opción A\",\"Opción B\",\"Opción C\",\"Opción D\"],\"correctIndex\":0},{\"question\":\"¿Cómo se mantiene el resultado de esta S?\",\"options\":[\"Opción A\",\"Opción B\",\"Opción C\",\"Opción D\"],\"correctIndex\":1}]}",
+          notaMinima: 80,
+      ?   id?: String,
+      ?   active?: Boolean,
+      ?   createdAt?: DateTime,
+      ?   updatedAt?: DateTime
+        }
+      })
+
+Unknown argument `miniStep`. Available options are marked with ?.
+    at <unknown> (src/app/api/templates/route.ts:47:40)
+    at async POST (src/app/api/templates/route.ts:47:22)
+  45 |     }
+  46 |
+> 47 |     const template = await db.template.create({ data })
+     |                                        ^
+  48 |
+  49 |     return NextResponse.json({ success: true, data: template })
+  50 |   } catch (error) { {
+  clientVersion: '6.19.2'
+}
+ POST /api/templates 500 in 106ms (compile: 1990µs, render: 104ms)
+prisma:error 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.create()` invocation in
+/home/z/my-project/.next/dev/server/chunks/[root-of-the-server]__f59e6f19._.js:161:162
+
+  158     content: typeof content === 'string' ? content : JSON.stringify(content),
+  159     notaMinima: notaMinima != null ? Number(notaMinima) : null
+  160 };
+→ 161 const template = await __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.create({
+        data: {
+          type: "formacion",
+          sStep: 5,
+          miniStep: 1,
+          ~~~~~~~~
+          title: "Formación S5 - Shitsuke",
+          description: null,
+          content: "{\"sections\":[{\"title\":\"¿Qué es Shitsuke?\",\"content\":\"Explicación detallada de Disciplina (Shitsuke). Describe los objetivos, metodología y beneficios de esta S en el lugar de trabajo.\"},{\"title\":\"Objetivos\",\"content\":\"Lista de objetivos específicos que se persiguen con la implementación de esta S en el entorno laboral.\"},{\"title\":\"Metodología\",\"content\":\"Pasos a seguir para implementar correctamente esta S en el lugar de trabajo.\"},{\"title\":\"Beneficios esperados\",\"content\":\"Descripción de los beneficios que se obtienen al aplicar correctamente esta S.\"}]}",
+          notaMinima: 80,
+      ?   id?: String,
+      ?   active?: Boolean,
+      ?   createdAt?: DateTime,
+      ?   updatedAt?: DateTime
+        }
+      })
+
+Unknown argument `miniStep`. Available options are marked with ?.
+Error creating template: Error [PrismaClientValidationError]: 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.create()` invocation in
+/home/z/my-project/.next/dev/server/chunks/[root-of-the-server]__f59e6f19._.js:161:162
+
+  158     content: typeof content === 'string' ? content : JSON.stringify(content),
+  159     notaMinima: notaMinima != null ? Number(notaMinima) : null
+  160 };
+→ 161 const template = await __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.create({
+        data: {
+          type: "formacion",
+          sStep: 5,
+          miniStep: 1,
+          ~~~~~~~~
+          title: "Formación S5 - Shitsuke",
+          description: null,
+          content: "{\"sections\":[{\"title\":\"¿Qué es Shitsuke?\",\"content\":\"Explicación detallada de Disciplina (Shitsuke). Describe los objetivos, metodología y beneficios de esta S en el lugar de trabajo.\"},{\"title\":\"Objetivos\",\"content\":\"Lista de objetivos específicos que se persiguen con la implementación de esta S en el entorno laboral.\"},{\"title\":\"Metodología\",\"content\":\"Pasos a seguir para implementar correctamente esta S en el lugar de trabajo.\"},{\"title\":\"Beneficios esperados\",\"content\":\"Descripción de los beneficios que se obtienen al aplicar correctamente esta S.\"}]}",
+          notaMinima: 80,
+      ?   id?: String,
+      ?   active?: Boolean,
+      ?   createdAt?: DateTime,
+      ?   updatedAt?: DateTime
+        }
+      })
+
+Unknown argument `miniStep`. Available options are marked with ?.
+    at <unknown> (src/app/api/templates/route.ts:47:40)
+    at async POST (src/app/api/templates/route.ts:47:22)
+  45 |     }
+  46 |
+> 47 |     const template = await db.template.create({ data })
+     |                                        ^
+  48 |
+  49 |     return NextResponse.json({ success: true, data: template })
+  50 |   } catch (error) { {
+  clientVersion: '6.19.2'
+}
+ POST /api/templates 500 in 99ms (compile: 1529µs, render: 97ms)
+prisma:error 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.create()` invocation in
+/home/z/my-project/.next/dev/server/chunks/[root-of-the-server]__f59e6f19._.js:161:162
+
+  158     content: typeof content === 'string' ? content : JSON.stringify(content),
+  159     notaMinima: notaMinima != null ? Number(notaMinima) : null
+  160 };
+→ 161 const template = await __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.create({
+        data: {
+          type: "examen",
+          sStep: 5,
+          miniStep: 1,
+          ~~~~~~~~
+          title: "Examen S5 - Shitsuke",
+          description: null,
+          content: "{\"questions\":[{\"question\":\"¿Cuál es el objetivo principal de Shitsuke?\",\"options\":[\"Opción A\",\"Opción B\",\"Opción C\",\"Opción D\"],\"correctIndex\":0},{\"question\":\"¿Qué significa Disciplina?\",\"options\":[\"Opción A\",\"Opción B\",\"Opción C\",\"Opción D\"],\"correctIndex\":1},{\"question\":\"¿Cuál es el primer paso para implementar esta S?\",\"options\":[\"Opción A\",\"Opción B\",\"Opción C\",\"Opción D\"],\"correctIndex\":2},{\"question\":\"¿Qué beneficio aporta esta S al lugar de trabajo?\",\"options\":[\"Opción A\",\"Opción B\",\"Opción C\",\"Opción D\"],\"correctIndex\":0},{\"question\":\"¿Cómo se mantiene el resultado de esta S?\",\"options\":[\"Opción A\",\"Opción B\",\"Opción C\",\"Opción D\"],\"correctIndex\":1}]}",
+          notaMinima: 80,
+      ?   id?: String,
+      ?   active?: Boolean,
+      ?   createdAt?: DateTime,
+      ?   updatedAt?: DateTime
+        }
+      })
+
+Unknown argument `miniStep`. Available options are marked with ?.
+Error creating template: Error [PrismaClientValidationError]: 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.create()` invocation in
+/home/z/my-project/.next/dev/server/chunks/[root-of-the-server]__f59e6f19._.js:161:162
+
+  158     content: typeof content === 'string' ? content : JSON.stringify(content),
+  159     notaMinima: notaMinima != null ? Number(notaMinima) : null
+  160 };
+→ 161 const template = await __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.create({
+        data: {
+          type: "examen",
+          sStep: 5,
+          miniStep: 1,
+          ~~~~~~~~
+          title: "Examen S5 - Shitsuke",
+          description: null,
+          content: "{\"questions\":[{\"question\":\"¿Cuál es el objetivo principal de Shitsuke?\",\"options\":[\"Opción A\",\"Opción B\",\"Opción C\",\"Opción D\"],\"correctIndex\":0},{\"question\":\"¿Qué significa Disciplina?\",\"options\":[\"Opción A\",\"Opción B\",\"Opción C\",\"Opción D\"],\"correctIndex\":1},{\"question\":\"¿Cuál es el primer paso para implementar esta S?\",\"options\":[\"Opción A\",\"Opción B\",\"Opción C\",\"Opción D\"],\"correctIndex\":2},{\"question\":\"¿Qué beneficio aporta esta S al lugar de trabajo?\",\"options\":[\"Opción A\",\"Opción B\",\"Opción C\",\"Opción D\"],\"correctIndex\":0},{\"question\":\"¿Cómo se mantiene el resultado de esta S?\",\"options\":[\"Opción A\",\"Opción B\",\"Opción C\",\"Opción D\"],\"correctIndex\":1}]}",
+          notaMinima: 80,
+      ?   id?: String,
+      ?   active?: Boolean,
+      ?   createdAt?: DateTime,
+      ?   updatedAt?: DateTime
+        }
+      })
+
+Unknown argument `miniStep`. Available options are marked with ?.
+    at <unknown> (src/app/api/templates/route.ts:47:40)
+    at async POST (src/app/api/templates/route.ts:47:22)
+  45 |     }
+  46 |
+> 47 |     const template = await db.template.create({ data })
+     |                                        ^
+  48 |
+  49 |     return NextResponse.json({ success: true, data: template })
+  50 |   } catch (error) { {
+  clientVersion: '6.19.2'
+}
+ POST /api/templates 500 in 116ms (compile: 1753µs, render: 114ms)
+prisma:error 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.findMany()` invocation in
+/home/z/my-project/.next/dev/server/chunks/[root-of-the-server]__f59e6f19._.js:112:163
+
+  109 if (type) where.type = type;
+  110 if (sStep) where.sStep = parseInt(sStep);
+  111 if (miniStep) where.miniStep = parseInt(miniStep);
+→ 112 const templates = await __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.findMany({
+        where: {
+          type: "formacion"
+        },
+        orderBy: [
+          {
+            sStep: "asc"
+          },
+          {
+            miniStep: "asc"
+          },
+          {
+            createdAt: "desc"
+          }
+        ]
+      })
+
+Unknown argument `miniStep`. Available options are marked with ?.
+Error fetching templates: Error [PrismaClientValidationError]: 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.findMany()` invocation in
+/home/z/my-project/.next/dev/server/chunks/[root-of-the-server]__f59e6f19._.js:112:163
+
+  109 if (type) where.type = type;
+  110 if (sStep) where.sStep = parseInt(sStep);
+  111 if (miniStep) where.miniStep = parseInt(miniStep);
+→ 112 const templates = await __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.findMany({
+        where: {
+          type: "formacion"
+        },
+        orderBy: [
+          {
+            sStep: "asc"
+          },
+          {
+            miniStep: "asc"
+          },
+          {
+            createdAt: "desc"
+          }
+        ]
+      })
+
+Unknown argument `miniStep`. Available options are marked with ?.
+    at <unknown> (src/app/api/templates/route.ts:19:41)
+    at async GET (src/app/api/templates/route.ts:19:23)
+  17 |     if (miniStep) where.miniStep = parseInt(miniStep)
+  18 |
+> 19 |     const templates = await db.template.findMany({ where, orderBy: [{ sStep: 'asc' }, { miniStep: 'asc' }, { createdAt: 'desc' }] })
+     |                                         ^
+  20 |     return NextResponse.json({ success: true, data: templates })
+  21 |   } catch (error) {
+  22 |     console.error('Error fetching templates:', error) {
+  clientVersion: '6.19.2'
+}
+ GET /api/templates?type=formacion&includeInactive=true 500 in 115ms (compile: 1941µs, render: 113ms)
+prisma:error 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.findMany()` invocation in
+/home/z/my-project/.next/dev/server/chunks/[root-of-the-server]__f59e6f19._.js:112:163
+
+  109 if (type) where.type = type;
+  110 if (sStep) where.sStep = parseInt(sStep);
+  111 if (miniStep) where.miniStep = parseInt(miniStep);
+→ 112 const templates = await __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.findMany({
+        where: {
+          type: "examen"
+        },
+        orderBy: [
+          {
+            sStep: "asc"
+          },
+          {
+            miniStep: "asc"
+          },
+          {
+            createdAt: "desc"
+          }
+        ]
+      })
+
+Unknown argument `miniStep`. Available options are marked with ?.
+Error fetching templates: Error [PrismaClientValidationError]: 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.findMany()` invocation in
+/home/z/my-project/.next/dev/server/chunks/[root-of-the-server]__f59e6f19._.js:112:163
+
+  109 if (type) where.type = type;
+  110 if (sStep) where.sStep = parseInt(sStep);
+  111 if (miniStep) where.miniStep = parseInt(miniStep);
+→ 112 const templates = await __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.findMany({
+        where: {
+          type: "examen"
+        },
+        orderBy: [
+          {
+            sStep: "asc"
+          },
+          {
+            miniStep: "asc"
+          },
+          {
+            createdAt: "desc"
+          }
+        ]
+      })
+
+Unknown argument `miniStep`. Available options are marked with ?.
+    at <unknown> (src/app/api/templates/route.ts:19:41)
+    at async GET (src/app/api/templates/route.ts:19:23)
+  17 |     if (miniStep) where.miniStep = parseInt(miniStep)
+  18 |
+> 19 |     const templates = await db.template.findMany({ where, orderBy: [{ sStep: 'asc' }, { miniStep: 'asc' }, { createdAt: 'desc' }] })
+     |                                         ^
+  20 |     return NextResponse.json({ success: true, data: templates })
+  21 |   } catch (error) {
+  22 |     console.error('Error fetching templates:', error) {
+  clientVersion: '6.19.2'
+}
+ GET /api/templates?type=examen&includeInactive=true 500 in 106ms (compile: 3ms, render: 103ms)
+ GET /api/notifications?userId=cmpo4w07k0000mg034fx4pt72&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 6ms (compile: 1852µs, render: 4ms)
+prisma:error 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.findMany()` invocation in
+/home/z/my-project/.next/dev/server/chunks/[root-of-the-server]__f59e6f19._.js:112:163
+
+  109 if (type) where.type = type;
+  110 if (sStep) where.sStep = parseInt(sStep);
+  111 if (miniStep) where.miniStep = parseInt(miniStep);
+→ 112 const templates = await __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.findMany({
+        where: {
+          active: true,
+          type: "formacion",
+          sStep: 1
+        },
+        orderBy: [
+          {
+            sStep: "asc"
+          },
+          {
+            miniStep: "asc"
+          },
+          {
+            createdAt: "desc"
+          }
+        ]
+      })
+
+Unknown argument `miniStep`. Available options are marked with ?.
+Error fetching templates: Error [PrismaClientValidationError]: 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.findMany()` invocation in
+/home/z/my-project/.next/dev/server/chunks/[root-of-the-server]__f59e6f19._.js:112:163
+
+  109 if (type) where.type = type;
+  110 if (sStep) where.sStep = parseInt(sStep);
+  111 if (miniStep) where.miniStep = parseInt(miniStep);
+→ 112 const templates = await __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.findMany({
+        where: {
+          active: true,
+          type: "formacion",
+          sStep: 1
+        },
+        orderBy: [
+          {
+            sStep: "asc"
+          },
+          {
+            miniStep: "asc"
+          },
+          {
+            createdAt: "desc"
+          }
+        ]
+      })
+
+Unknown argument `miniStep`. Available options are marked with ?.
+    at <unknown> (src/app/api/templates/route.ts:19:41)
+    at async GET (src/app/api/templates/route.ts:19:23)
+  17 |     if (miniStep) where.miniStep = parseInt(miniStep)
+  18 |
+> 19 |     const templates = await db.template.findMany({ where, orderBy: [{ sStep: 'asc' }, { miniStep: 'asc' }, { createdAt: 'desc' }] })
+     |                                         ^
+  20 |     return NextResponse.json({ success: true, data: templates })
+  21 |   } catch (error) {
+  22 |     console.error('Error fetching templates:', error) {
+  clientVersion: '6.19.2'
+}
+ GET /api/templates?type=formacion&sStep=1 500 in 194ms (compile: 3ms, render: 192ms)
+prisma:error 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.findMany()` invocation in
+/home/z/my-project/.next/dev/server/chunks/[root-of-the-server]__f59e6f19._.js:112:163
+
+  109 if (type) where.type = type;
+  110 if (sStep) where.sStep = parseInt(sStep);
+  111 if (miniStep) where.miniStep = parseInt(miniStep);
+→ 112 const templates = await __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.findMany({
+        where: {
+          active: true,
+          type: "examen",
+          sStep: 1
+        },
+        orderBy: [
+          {
+            sStep: "asc"
+          },
+          {
+            miniStep: "asc"
+          },
+          {
+            createdAt: "desc"
+          }
+        ]
+      })
+
+Unknown argument `miniStep`. Available options are marked with ?.
+Error fetching templates: Error [PrismaClientValidationError]: 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.findMany()` invocation in
+/home/z/my-project/.next/dev/server/chunks/[root-of-the-server]__f59e6f19._.js:112:163
+
+  109 if (type) where.type = type;
+  110 if (sStep) where.sStep = parseInt(sStep);
+  111 if (miniStep) where.miniStep = parseInt(miniStep);
+→ 112 const templates = await __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.findMany({
+        where: {
+          active: true,
+          type: "examen",
+          sStep: 1
+        },
+        orderBy: [
+          {
+            sStep: "asc"
+          },
+          {
+            miniStep: "asc"
+          },
+          {
+            createdAt: "desc"
+          }
+        ]
+      })
+
+Unknown argument `miniStep`. Available options are marked with ?.
+    at <unknown> (src/app/api/templates/route.ts:19:41)
+    at async GET (src/app/api/templates/route.ts:19:23)
+  17 |     if (miniStep) where.miniStep = parseInt(miniStep)
+  18 |
+> 19 |     const templates = await db.template.findMany({ where, orderBy: [{ sStep: 'asc' }, { miniStep: 'asc' }, { createdAt: 'desc' }] })
+     |                                         ^
+  20 |     return NextResponse.json({ success: true, data: templates })
+  21 |   } catch (error) {
+  22 |     console.error('Error fetching templates:', error) {
+  clientVersion: '6.19.2'
+}
+ GET /api/templates?type=examen&sStep=1 500 in 171ms (compile: 2ms, render: 169ms)
+ DELETE /api/auth 200 in 6ms (compile: 1694µs, render: 5ms)
+ POST /api/auth 200 in 8ms (compile: 1840µs, render: 6ms)
+ GET /api/permissions 200 in 9ms (compile: 1838µs, render: 7ms)
+ GET /api/projects 200 in 8ms (compile: 2ms, render: 6ms)
+ GET /api/auth/zones 200 in 14ms (compile: 2ms, render: 11ms)
+ GET /api/progress 200 in 8ms (compile: 2ms, render: 6ms)
+ GET /api/notifications?userId=cmpo528u4003cmg03sdja675b&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 6ms (compile: 2ms, render: 4ms)
+ GET /api/employee-progress?projectId=cmpok8xii00rjmgfj1nn1hiuh&zoneId=cmpok8xii00rlmgfjyw6q03ll 200 in 7ms (compile: 1647µs, render: 5ms)
+ GET /api/employee-progress?projectId=cmpok8xii00rjmgfj1nn1hiuh&zoneId=cmpok8xii00rlmgfjyw6q03ll 200 in 8ms (compile: 2ms, render: 5ms)
+ POST /api/notifications/auto 200 in 37ms (compile: 2ms, render: 35ms)
+prisma:error 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.findMany()` invocation in
+/home/z/my-project/.next/dev/server/chunks/[root-of-the-server]__f59e6f19._.js:112:163
+
+  109 if (type) where.type = type;
+  110 if (sStep) where.sStep = parseInt(sStep);
+  111 if (miniStep) where.miniStep = parseInt(miniStep);
+→ 112 const templates = await __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.findMany({
+        where: {
+          active: true,
+          type: "formacion",
+          sStep: 1
+        },
+        orderBy: [
+          {
+            sStep: "asc"
+          },
+          {
+            miniStep: "asc"
+          },
+          {
+            createdAt: "desc"
+          }
+        ]
+      })
+
+Unknown argument `miniStep`. Available options are marked with ?.
+Error fetching templates: Error [PrismaClientValidationError]: 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.findMany()` invocation in
+/home/z/my-project/.next/dev/server/chunks/[root-of-the-server]__f59e6f19._.js:112:163
+
+  109 if (type) where.type = type;
+  110 if (sStep) where.sStep = parseInt(sStep);
+  111 if (miniStep) where.miniStep = parseInt(miniStep);
+→ 112 const templates = await __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.findMany({
+        where: {
+          active: true,
+          type: "formacion",
+          sStep: 1
+        },
+        orderBy: [
+          {
+            sStep: "asc"
+          },
+          {
+            miniStep: "asc"
+          },
+          {
+            createdAt: "desc"
+          }
+        ]
+      })
+
+Unknown argument `miniStep`. Available options are marked with ?.
+    at <unknown> (src/app/api/templates/route.ts:19:41)
+    at async GET (src/app/api/templates/route.ts:19:23)
+  17 |     if (miniStep) where.miniStep = parseInt(miniStep)
+  18 |
+> 19 |     const templates = await db.template.findMany({ where, orderBy: [{ sStep: 'asc' }, { miniStep: 'asc' }, { createdAt: 'desc' }] })
+     |                                         ^
+  20 |     return NextResponse.json({ success: true, data: templates })
+  21 |   } catch (error) {
+  22 |     console.error('Error fetching templates:', error) {
+  clientVersion: '6.19.2'
+}
+ GET /api/templates?type=formacion&sStep=1 500 in 187ms (compile: 1746µs, render: 185ms)
+prisma:error 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.findMany()` invocation in
+/home/z/my-project/.next/dev/server/chunks/[root-of-the-server]__f59e6f19._.js:112:163
+
+  109 if (type) where.type = type;
+  110 if (sStep) where.sStep = parseInt(sStep);
+  111 if (miniStep) where.miniStep = parseInt(miniStep);
+→ 112 const templates = await __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.findMany({
+        where: {
+          active: true,
+          type: "examen",
+          sStep: 1
+        },
+        orderBy: [
+          {
+            sStep: "asc"
+          },
+          {
+            miniStep: "asc"
+          },
+          {
+            createdAt: "desc"
+          }
+        ]
+      })
+
+Unknown argument `miniStep`. Available options are marked with ?.
+Error fetching templates: Error [PrismaClientValidationError]: 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.findMany()` invocation in
+/home/z/my-project/.next/dev/server/chunks/[root-of-the-server]__f59e6f19._.js:112:163
+
+  109 if (type) where.type = type;
+  110 if (sStep) where.sStep = parseInt(sStep);
+  111 if (miniStep) where.miniStep = parseInt(miniStep);
+→ 112 const templates = await __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.findMany({
+        where: {
+          active: true,
+          type: "examen",
+          sStep: 1
+        },
+        orderBy: [
+          {
+            sStep: "asc"
+          },
+          {
+            miniStep: "asc"
+          },
+          {
+            createdAt: "desc"
+          }
+        ]
+      })
+
+Unknown argument `miniStep`. Available options are marked with ?.
+    at <unknown> (src/app/api/templates/route.ts:19:41)
+    at async GET (src/app/api/templates/route.ts:19:23)
+  17 |     if (miniStep) where.miniStep = parseInt(miniStep)
+  18 |
+> 19 |     const templates = await db.template.findMany({ where, orderBy: [{ sStep: 'asc' }, { miniStep: 'asc' }, { createdAt: 'desc' }] })
+     |                                         ^
+  20 |     return NextResponse.json({ success: true, data: templates })
+  21 |   } catch (error) {
+  22 |     console.error('Error fetching templates:', error) {
+  clientVersion: '6.19.2'
+}
+ GET /api/templates?type=examen&sStep=1 500 in 103ms (compile: 2ms, render: 101ms)
+ DELETE /api/auth 200 in 5ms (compile: 1906µs, render: 3ms)
+ POST /api/auth 200 in 6ms (compile: 1548µs, render: 4ms)
+ GET /api/permissions 200 in 24ms (compile: 16ms, render: 8ms)
+ GET /api/projects 200 in 10ms (compile: 3ms, render: 7ms)
+ GET /api/auth/zones 200 in 11ms (compile: 2ms, render: 9ms)
+ GET /api/progress 200 in 6ms (compile: 1246µs, render: 5ms)
+ GET /api/notifications?userId=cmpo4w07k0000mg034fx4pt72&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 5ms (compile: 1301µs, render: 4ms)
+ GET /api/employee-progress?projectId=cmpok8xii00rjmgfj1nn1hiuh&zoneId=cmpok8xii00rkmgfjvv2ri8f8 200 in 8ms (compile: 3ms, render: 6ms)
+ GET /api/employee-progress?projectId=cmpok8xii00rjmgfj1nn1hiuh&zoneId=cmpok8xii00rkmgfjvv2ri8f8 200 in 7ms (compile: 1620µs, render: 5ms)
+ POST /api/notifications/auto 200 in 40ms (compile: 3ms, render: 36ms)
+ GET /api/employee-progress?projectId=cmpok8xii00rjmgfj1nn1hiuh&zoneId=cmpok8xii00rlmgfjyw6q03ll 200 in 10ms (compile: 5ms, render: 5ms)
+ GET /api/auth 200 in 6ms (compile: 2ms, render: 4ms)
+ DELETE /api/progress/step?sStep=1&miniStep=5&projectId=cmpok8xii00rjmgfj1nn1hiuh&zoneId=cmpok8xii00rlmgfjyw6q03ll 200 in 127ms (compile: 95ms, render: 32ms)
+ GET /api/progress?projectId=cmpok8xii00rjmgfj1nn1hiuh 200 in 11ms (compile: 2ms, render: 8ms)
+ GET /api/employee-progress?projectId=cmpok8xii00rjmgfj1nn1hiuh&zoneId=cmpok8xii00rlmgfjyw6q03ll 200 in 10ms (compile: 4ms, render: 6ms)
+ GET /api/employee-progress?projectId=cmpok8xii00rjmgfj1nn1hiuh&zoneId=cmpok8xii00rlmgfjyw6q03ll 200 in 10ms (compile: 2ms, render: 8ms)
+ GET /api/auth 200 in 6ms (compile: 1718µs, render: 4ms)
+ DELETE /api/progress/step?sStep=1&miniStep=4&projectId=cmpok8xii00rjmgfj1nn1hiuh&zoneId=cmpok8xii00rlmgfjyw6q03ll 200 in 20ms (compile: 2ms, render: 18ms)
+ GET /api/progress?projectId=cmpok8xii00rjmgfj1nn1hiuh 200 in 9ms (compile: 2ms, render: 6ms)
+ GET /api/employee-progress?projectId=cmpok8xii00rjmgfj1nn1hiuh&zoneId=cmpok8xii00rlmgfjyw6q03ll 200 in 8ms (compile: 3ms, render: 6ms)
+ GET /api/employee-progress?projectId=cmpok8xii00rjmgfj1nn1hiuh&zoneId=cmpok8xii00rlmgfjyw6q03ll 200 in 8ms (compile: 2ms, render: 5ms)
+ GET /api/auth 200 in 6ms (compile: 1728µs, render: 4ms)
+ DELETE /api/progress/step?sStep=2&miniStep=3&projectId=cmpok8xii00rjmgfj1nn1hiuh&zoneId=cmpok8xii00rlmgfjyw6q03ll 200 in 23ms (compile: 2ms, render: 21ms)
+ GET /api/progress?projectId=cmpok8xii00rjmgfj1nn1hiuh 200 in 10ms (compile: 3ms, render: 7ms)
+ GET /api/employee-progress?projectId=cmpok8xii00rjmgfj1nn1hiuh&zoneId=cmpok8xii00rlmgfjyw6q03ll 200 in 8ms (compile: 3ms, render: 6ms)
+ GET /api/employee-progress?projectId=cmpok8xii00rjmgfj1nn1hiuh&zoneId=cmpok8xii00rlmgfjyw6q03ll 200 in 8ms (compile: 1799µs, render: 6ms)
+ GET /api/auth 200 in 5ms (compile: 1291µs, render: 4ms)
+ DELETE /api/progress/step?sStep=2&miniStep=2&projectId=cmpok8xii00rjmgfj1nn1hiuh&zoneId=cmpok8xii00rlmgfjyw6q03ll 200 in 27ms (compile: 1717µs, render: 25ms)
+ GET /api/progress?projectId=cmpok8xii00rjmgfj1nn1hiuh 200 in 10ms (compile: 2ms, render: 7ms)
+ GET /api/employee-progress?projectId=cmpok8xii00rjmgfj1nn1hiuh&zoneId=cmpok8xii00rlmgfjyw6q03ll 200 in 7ms (compile: 1965µs, render: 5ms)
+ GET /api/employee-progress?projectId=cmpok8xii00rjmgfj1nn1hiuh&zoneId=cmpok8xii00rlmgfjyw6q03ll 200 in 7ms (compile: 2ms, render: 5ms)
+ GET /api/auth 200 in 5ms (compile: 1292µs, render: 4ms)
+ DELETE /api/progress/step?sStep=2&miniStep=1&projectId=cmpok8xii00rjmgfj1nn1hiuh&zoneId=cmpok8xii00rlmgfjyw6q03ll 200 in 18ms (compile: 1967µs, render: 16ms)
+ GET /api/progress?projectId=cmpok8xii00rjmgfj1nn1hiuh 200 in 7ms (compile: 2ms, render: 5ms)
+ GET /api/employee-progress?projectId=cmpok8xii00rjmgfj1nn1hiuh&zoneId=cmpok8xii00rlmgfjyw6q03ll 200 in 10ms (compile: 5ms, render: 5ms)
+ GET /api/employee-progress?projectId=cmpok8xii00rjmgfj1nn1hiuh&zoneId=cmpok8xii00rlmgfjyw6q03ll 200 in 7ms (compile: 2ms, render: 5ms)
+ GET /api/auth 200 in 6ms (compile: 1736µs, render: 4ms)
+ DELETE /api/progress/step?sStep=1&miniStep=3&projectId=cmpok8xii00rjmgfj1nn1hiuh&zoneId=cmpok8xii00rlmgfjyw6q03ll 200 in 17ms (compile: 1797µs, render: 15ms)
+ GET /api/progress?projectId=cmpok8xii00rjmgfj1nn1hiuh 200 in 7ms (compile: 1956µs, render: 5ms)
+ GET /api/employee-progress?projectId=cmpok8xii00rjmgfj1nn1hiuh&zoneId=cmpok8xii00rlmgfjyw6q03ll 200 in 8ms (compile: 2ms, render: 5ms)
+ GET /api/employee-progress?projectId=cmpok8xii00rjmgfj1nn1hiuh&zoneId=cmpok8xii00rlmgfjyw6q03ll 200 in 8ms (compile: 2ms, render: 6ms)
+ GET /api/auth 200 in 6ms (compile: 1567µs, render: 4ms)
+ DELETE /api/progress/step?sStep=1&miniStep=2&projectId=cmpok8xii00rjmgfj1nn1hiuh&zoneId=cmpok8xii00rlmgfjyw6q03ll 200 in 24ms (compile: 2ms, render: 22ms)
+ GET /api/progress?projectId=cmpok8xii00rjmgfj1nn1hiuh 200 in 8ms (compile: 2ms, render: 6ms)
+ GET /api/employee-progress?projectId=cmpok8xii00rjmgfj1nn1hiuh&zoneId=cmpok8xii00rlmgfjyw6q03ll 200 in 8ms (compile: 2ms, render: 6ms)
+ GET /api/employee-progress?projectId=cmpok8xii00rjmgfj1nn1hiuh&zoneId=cmpok8xii00rlmgfjyw6q03ll 200 in 9ms (compile: 2ms, render: 7ms)
+ GET /api/auth 200 in 6ms (compile: 1657µs, render: 4ms)
+ DELETE /api/progress/step?sStep=1&miniStep=1&projectId=cmpok8xii00rjmgfj1nn1hiuh&zoneId=cmpok8xii00rlmgfjyw6q03ll 200 in 21ms (compile: 2ms, render: 19ms)
+ GET /api/notifications?userId=cmpo4w07k0000mg034fx4pt72&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 8ms (compile: 2ms, render: 5ms)
+ GET /api/progress?projectId=cmpok8xii00rjmgfj1nn1hiuh 200 in 8ms (compile: 2ms, render: 6ms)
+ GET /api/employee-progress?projectId=cmpok8xii00rjmgfj1nn1hiuh&zoneId=cmpok8xii00rlmgfjyw6q03ll 200 in 9ms (compile: 3ms, render: 7ms)
+ GET /api/employee-progress?projectId=cmpok8xii00rjmgfj1nn1hiuh&zoneId=cmpok8xii00rlmgfjyw6q03ll 200 in 8ms (compile: 2ms, render: 5ms)
+ GET /api/employee-progress?projectId=cmpok8xii00rjmgfj1nn1hiuh&zoneId=cmpok8xii00rkmgfjvv2ri8f8 200 in 8ms (compile: 2ms, render: 6ms)
+ GET /api/employee-progress?projectId=cmpok8xii00rjmgfj1nn1hiuh&zoneId=cmpok8xii00rlmgfjyw6q03ll 200 in 30ms (compile: 2ms, render: 28ms)
+ GET /api/photo-library?projectId=cmpok8xii00rjmgfj1nn1hiuh&zoneId=cmpok8xii00rlmgfjyw6q03ll 200 in 103ms (compile: 94ms, render: 9ms)
+ GET /api/standards?projectId=cmpok8xii00rjmgfj1nn1hiuh&zoneId=cmpok8xii00rlmgfjyw6q03ll 200 in 101ms (compile: 95ms, render: 6ms)
+ GET /api/notifications?userId=cmpo4w07k0000mg034fx4pt72&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 9ms (compile: 3ms, render: 6ms)
+prisma:error 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.findMany()` invocation in
+/home/z/my-project/.next/dev/server/chunks/[root-of-the-server]__f59e6f19._.js:112:163
+
+  109 if (type) where.type = type;
+  110 if (sStep) where.sStep = parseInt(sStep);
+  111 if (miniStep) where.miniStep = parseInt(miniStep);
+→ 112 const templates = await __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.findMany({
+        where: {
+          active: true,
+          type: "estandar",
+          sStep: 1
+        },
+        orderBy: [
+          {
+            sStep: "asc"
+          },
+          {
+            miniStep: "asc"
+          },
+          {
+            createdAt: "desc"
+          }
+        ]
+      })
+
+Unknown argument `miniStep`. Available options are marked with ?.
+Error fetching templates: Error [PrismaClientValidationError]: 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.findMany()` invocation in
+/home/z/my-project/.next/dev/server/chunks/[root-of-the-server]__f59e6f19._.js:112:163
+
+  109 if (type) where.type = type;
+  110 if (sStep) where.sStep = parseInt(sStep);
+  111 if (miniStep) where.miniStep = parseInt(miniStep);
+→ 112 const templates = await __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.findMany({
+        where: {
+          active: true,
+          type: "estandar",
+          sStep: 1
+        },
+        orderBy: [
+          {
+            sStep: "asc"
+          },
+          {
+            miniStep: "asc"
+          },
+          {
+            createdAt: "desc"
+          }
+        ]
+      })
+
+Unknown argument `miniStep`. Available options are marked with ?.
+    at <unknown> (src/app/api/templates/route.ts:19:41)
+    at async GET (src/app/api/templates/route.ts:19:23)
+  17 |     if (miniStep) where.miniStep = parseInt(miniStep)
+  18 |
+> 19 |     const templates = await db.template.findMany({ where, orderBy: [{ sStep: 'asc' }, { miniStep: 'asc' }, { createdAt: 'desc' }] })
+     |                                         ^
+  20 |     return NextResponse.json({ success: true, data: templates })
+  21 |   } catch (error) {
+  22 |     console.error('Error fetching templates:', error) {
+  clientVersion: '6.19.2'
+}
+ GET /api/templates?type=estandar&sStep=1 500 in 199ms (compile: 2ms, render: 197ms)
+ GET /api/notifications?userId=cmpo4w07k0000mg034fx4pt72&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 6ms (compile: 1945µs, render: 4ms)
+ GET /api/employee-progress?projectId=cmpok8xii00rjmgfj1nn1hiuh&zoneId=cmpok8xii00rkmgfjvv2ri8f8 200 in 5ms (compile: 1619µs, render: 4ms)
+ GET /api/employee-progress?projectId=cmpok8xii00rjmgfj1nn1hiuh&zoneId=cmpok8xii00rlmgfjyw6q03ll 200 in 6ms (compile: 1630µs, render: 4ms)
+ GET /api/notifications?userId=cmpo4w07k0000mg034fx4pt72&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 6ms (compile: 1734µs, render: 4ms)
+ GET /api/projects 200 in 8ms (compile: 1655µs, render: 7ms)
+ GET /api/users 200 in 8ms (compile: 3ms, render: 5ms)
+ GET /api/companies 200 in 9ms (compile: 3ms, render: 5ms)
+ GET /api/companies/cmpokbph9000rmg1o6j1cx87d 200 in 892ms (compile: 876ms, render: 16ms)
+ GET /api/notifications?userId=cmpo4w07k0000mg034fx4pt72&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 10ms (compile: 3ms, render: 7ms)
+ GET /api/companies/cmpo54p95003emg03ji8uemo9 200 in 76ms (compile: 62ms, render: 14ms)
+ DELETE /api/companies/cmpokbph9000rmg1o6j1cx87d 200 in 67ms (compile: 48ms, render: 19ms)
+ GET /api/companies 200 in 10ms (compile: 3ms, render: 7ms)
+ GET /api/companies 200 in 11ms (compile: 4ms, render: 8ms)
+ GET /api/notifications?userId=cmpo4w07k0000mg034fx4pt72&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 9ms (compile: 3ms, render: 6ms)
+ GET /api/notifications?userId=cmpo4w07k0000mg034fx4pt72&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 12ms (compile: 3ms, render: 9ms)
+ GET /api/notifications?userId=cmpo4w07k0000mg034fx4pt72&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 9ms (compile: 5ms, render: 5ms)
+ GET /api/notifications?userId=cmpo4w07k0000mg034fx4pt72&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 6ms (compile: 1909µs, render: 4ms)
+ GET /api/notifications?userId=cmpo4w07k0000mg034fx4pt72&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 7ms (compile: 3ms, render: 4ms)
+ GET /api/notifications?userId=cmpo4w07k0000mg034fx4pt72&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 12ms (compile: 1809µs, render: 11ms)
+ GET /api/notifications?userId=cmpo4w07k0000mg034fx4pt72&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 6ms (compile: 1901µs, render: 4ms)
+ GET /api/notifications?userId=cmpo4w07k0000mg034fx4pt72&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 6ms (compile: 1732µs, render: 4ms)
+ GET /api/notifications?userId=cmpo4w07k0000mg034fx4pt72&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 5ms (compile: 1806µs, render: 4ms)
+ GET /api/notifications?userId=cmpo4w07k0000mg034fx4pt72&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 6ms (compile: 1830µs, render: 5ms)
+ GET /api/notifications?userId=cmpo4w07k0000mg034fx4pt72&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 7ms (compile: 1761µs, render: 5ms)
+ GET /api/notifications?userId=cmpo4w07k0000mg034fx4pt72&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 8ms (compile: 2ms, render: 5ms)
+ GET /api/notifications?userId=cmpo4w07k0000mg034fx4pt72&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 7ms (compile: 1885µs, render: 5ms)
+ GET /api/notifications?userId=cmpo4w07k0000mg034fx4pt72&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 7ms (compile: 1932µs, render: 5ms)
+ GET /api/notifications?userId=cmpo4w07k0000mg034fx4pt72&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 8ms (compile: 4ms, render: 4ms)
+ GET /api/notifications?userId=cmpo4w07k0000mg034fx4pt72&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 15ms (compile: 6ms, render: 9ms)
+ GET /api/notifications?userId=cmpo4w07k0000mg034fx4pt72&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 6ms (compile: 1872µs, render: 4ms)
+ GET /api/notifications?userId=cmpo4w07k0000mg034fx4pt72&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 6ms (compile: 1700µs, render: 4ms)
+ GET /api/notifications?userId=cmpo4w07k0000mg034fx4pt72&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 7ms (compile: 1772µs, render: 5ms)
+ GET /api/notifications?userId=cmpo4w07k0000mg034fx4pt72&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 8ms (compile: 1733µs, render: 6ms)
+ GET /api/notifications?userId=cmpo4w07k0000mg034fx4pt72&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 7ms (compile: 2ms, render: 4ms)
+ GET /api/notifications?userId=cmpo4w07k0000mg034fx4pt72&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 5ms (compile: 1716µs, render: 4ms)
+ GET /api/notifications?userId=cmpo4w07k0000mg034fx4pt72&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 5ms (compile: 1750µs, render: 4ms)
+ GET /api/notifications?userId=cmpo4w07k0000mg034fx4pt72&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 6ms (compile: 1561µs, render: 4ms)
+ GET /api/notifications?userId=cmpo4w07k0000mg034fx4pt72&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 6ms (compile: 1765µs, render: 4ms)
+ GET /api/notifications?userId=cmpo4w07k0000mg034fx4pt72&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 6ms (compile: 2ms, render: 4ms)
+ GET /api/notifications?userId=cmpo4w07k0000mg034fx4pt72&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 6ms (compile: 1926µs, render: 4ms)
+ GET /api/notifications?userId=cmpo4w07k0000mg034fx4pt72&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 8ms (compile: 3ms, render: 5ms)
+ GET /api/notifications?userId=cmpo4w07k0000mg034fx4pt72&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 5ms (compile: 1780µs, render: 4ms)
+ GET /api/notifications?userId=cmpo4w07k0000mg034fx4pt72&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 6ms (compile: 1766µs, render: 4ms)
+ GET /api/notifications?userId=cmpo4w07k0000mg034fx4pt72&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 6ms (compile: 2000µs, render: 4ms)
+ GET /api/notifications?userId=cmpo4w07k0000mg034fx4pt72&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 6ms (compile: 1812µs, render: 4ms)
+ GET /api/notifications?userId=cmpo4w07k0000mg034fx4pt72&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 6ms (compile: 1672µs, render: 4ms)
+ GET /api/notifications?userId=cmpo4w07k0000mg034fx4pt72&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 6ms (compile: 1702µs, render: 4ms)
+ GET /api/notifications?userId=cmpo4w07k0000mg034fx4pt72&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 5ms (compile: 1670µs, render: 4ms)
+ GET /api/notifications?userId=cmpo4w07k0000mg034fx4pt72&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 6ms (compile: 1643µs, render: 4ms)
+ GET /api/notifications?userId=cmpo4w07k0000mg034fx4pt72&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 6ms (compile: 1897µs, render: 4ms)
+ GET /api/notifications?userId=cmpo4w07k0000mg034fx4pt72&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 6ms (compile: 1537µs, render: 4ms)
+ GET /api/notifications?userId=cmpo4w07k0000mg034fx4pt72&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 9ms (compile: 5ms, render: 4ms)
+ GET /api/notifications?userId=cmpo4w07k0000mg034fx4pt72&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 6ms (compile: 3ms, render: 3ms)
+ GET /api/notifications?userId=cmpo4w07k0000mg034fx4pt72&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 8ms (compile: 5ms, render: 4ms)
+ GET /api/notifications?userId=cmpo4w07k0000mg034fx4pt72&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 9ms (compile: 5ms, render: 4ms)
+ GET /api/notifications?userId=cmpo4w07k0000mg034fx4pt72&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 9ms (compile: 5ms, render: 4ms)
+ GET /api/notifications?userId=cmpo4w07k0000mg034fx4pt72&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 5ms (compile: 1611µs, render: 4ms)
+ GET /api/notifications?userId=cmpo4w07k0000mg034fx4pt72&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 6ms (compile: 1687µs, render: 4ms)
+ GET /api/notifications?userId=cmpo4w07k0000mg034fx4pt72&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 6ms (compile: 1776µs, render: 4ms)
+ GET /api/notifications?userId=cmpo4w07k0000mg034fx4pt72&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 5ms (compile: 1567µs, render: 4ms)
+ GET /api/notifications?userId=cmpo4w07k0000mg034fx4pt72&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 6ms (compile: 1725µs, render: 4ms)
+ GET /api/notifications?userId=cmpo4w07k0000mg034fx4pt72&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 6ms (compile: 1837µs, render: 4ms)
+ GET / 200 in 48ms (compile: 6ms, render: 42ms)
+ GET /api/auth 200 in 5ms (compile: 1806µs, render: 3ms)
+ GET / 200 in 35ms (compile: 6ms, render: 29ms)
+ GET /api/notifications?userId=cmpo4w07k0000mg034fx4pt72&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 6ms (compile: 1540µs, render: 5ms)
+ GET /api/auth 200 in 6ms (compile: 3ms, render: 3ms)
+ GET /api/notifications?userId=cmpo4w07k0000mg034fx4pt72&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 6ms (compile: 1676µs, render: 4ms)
+ GET / 200 in 42ms (compile: 7ms, render: 35ms)
+ GET /api/notifications?userId=cmpo4w07k0000mg034fx4pt72&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 8ms (compile: 2ms, render: 5ms)
+ GET /api/notifications?userId=cmpo4w07k0000mg034fx4pt72&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 7ms (compile: 1537µs, render: 5ms)
+ GET /api/notifications?userId=cmpo4w07k0000mg034fx4pt72&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 7ms (compile: 1797µs, render: 5ms)
+ GET /api/notifications?userId=cmpo4w07k0000mg034fx4pt72&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 5ms (compile: 1586µs, render: 4ms)
+ GET /api/notifications?userId=cmpo4w07k0000mg034fx4pt72&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 6ms (compile: 1583µs, render: 4ms)
+ GET / 200 in 35ms (compile: 6ms, render: 29ms)
+ GET /api/auth 200 in 4ms (compile: 1500µs, render: 3ms)
+ GET /api/notifications?userId=cmpo4w07k0000mg034fx4pt72&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 8ms (compile: 3ms, render: 5ms)
+ GET /api/notifications?userId=cmpo4w07k0000mg034fx4pt72&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 6ms (compile: 1767µs, render: 4ms)
+ GET /api/photo-library?projectId=cmpok8xii00rjmgfj1nn1hiuh&zoneId=cmpok8xii00rlmgfjyw6q03ll 200 in 6ms (compile: 1808µs, render: 5ms)
+ GET /api/standards?projectId=cmpok8xii00rjmgfj1nn1hiuh&zoneId=cmpok8xii00rlmgfjyw6q03ll 200 in 6ms (compile: 1937µs, render: 4ms)
+ GET /api/notifications?userId=cmpo4w07k0000mg034fx4pt72&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 6ms (compile: 1647µs, render: 4ms)
+ GET /api/inventory?sStep=2&projectId=cmpok8xii00rjmgfj1nn1hiuh 200 in 16ms (compile: 3ms, render: 13ms)
+ GET /api/inventory?sStep=1&projectId=cmpok8xii00rjmgfj1nn1hiuh 200 in 8ms (compile: 1401µs, render: 7ms)
+ GET /api/inventory?sStep=3&projectId=cmpok8xii00rjmgfj1nn1hiuh 200 in 9ms (compile: 3ms, render: 7ms)
+ GET /api/inventory?sStep=4&projectId=cmpok8xii00rjmgfj1nn1hiuh 200 in 9ms (compile: 4ms, render: 5ms)
+ GET /api/inventory?sStep=5&projectId=cmpok8xii00rjmgfj1nn1hiuh 200 in 7ms (compile: 2ms, render: 5ms)
+ GET /api/projects/cmpok8xii00rjmgfj1nn1hiuh/zones 200 in 870ms (compile: 859ms, render: 11ms)
+ DELETE /api/inventory?id=cmppe023q0017l6md5jqrgswp 200 in 10ms (compile: 3ms, render: 8ms)
+ GET /api/notifications?userId=cmpo4w07k0000mg034fx4pt72&projectId=cmpok8xii00rjmgfj1nn1hiuh 200 in 15ms (compile: 3ms, render: 12ms)
+ GET /api/projects/cmpok8xii00rjmgfj1nn1hiuh/zones 200 in 72ms (compile: 57ms, render: 15ms)
+ GET /api/actions?projectId=cmpok8xii00rjmgfj1nn1hiuh&userId=cmpo4w07k0000mg034fx4pt72&userRole=admin 200 in 284ms (compile: 277ms, render: 7ms)
+ GET /api/notifications?userId=cmpo4w07k0000mg034fx4pt72&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 11ms (compile: 3ms, render: 8ms)
+ GET /api/inventory?sStep=1&projectId=cmpok8xii00rjmgfj1nn1hiuh 200 in 9ms (compile: 3ms, render: 6ms)
+ GET /api/inventory?sStep=2&projectId=cmpok8xii00rjmgfj1nn1hiuh 200 in 6ms (compile: 1518µs, render: 5ms)
+ GET /api/inventory?sStep=4&projectId=cmpok8xii00rjmgfj1nn1hiuh 200 in 7ms (compile: 2ms, render: 5ms)
+ GET /api/inventory?sStep=3&projectId=cmpok8xii00rjmgfj1nn1hiuh 200 in 9ms (compile: 3ms, render: 6ms)
+ GET /api/inventory?sStep=5&projectId=cmpok8xii00rjmgfj1nn1hiuh 200 in 9ms (compile: 1951µs, render: 7ms)
+ GET /api/projects/cmpok8xii00rjmgfj1nn1hiuh/zones 200 in 98ms (compile: 79ms, render: 18ms)
+ DELETE /api/inventory?id=cmprbpi3v00mqt2li9ypwo7dj 200 in 13ms (compile: 7ms, render: 6ms)
+ GET /api/notifications?userId=cmpo4w07k0000mg034fx4pt72&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 8ms (compile: 2ms, render: 5ms)
+ GET /api/notifications?userId=cmpo4w07k0000mg034fx4pt72&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 6ms (compile: 1891µs, render: 4ms)
+ GET /api/projects/cmpok8xii00rjmgfj1nn1hiuh/zones 200 in 69ms (compile: 53ms, render: 15ms)
+ GET /api/audit?projectId=cmpok8xii00rjmgfj1nn1hiuh&sStep=0 200 in 298ms (compile: 288ms, render: 10ms)
+ GET /api/audit?sStep=2&projectId=cmpok8xii00rjmgfj1nn1hiuh 200 in 14ms (compile: 3ms, render: 11ms)
+ GET /api/audit?sStep=1&projectId=cmpok8xii00rjmgfj1nn1hiuh 200 in 6ms (compile: 1831µs, render: 4ms)
+ GET /api/audit?sStep=3&projectId=cmpok8xii00rjmgfj1nn1hiuh 200 in 7ms (compile: 1941µs, render: 5ms)
+ GET /api/audit?sStep=4&projectId=cmpok8xii00rjmgfj1nn1hiuh 200 in 7ms (compile: 1619µs, render: 5ms)
+ GET /api/audit?sStep=0&projectId=cmpok8xii00rjmgfj1nn1hiuh 200 in 9ms (compile: 2ms, render: 7ms)
+ GET /api/audit?sStep=5&projectId=cmpok8xii00rjmgfj1nn1hiuh 200 in 8ms (compile: 1834µs, render: 6ms)
+ GET /api/actions?projectId=cmpok8xii00rjmgfj1nn1hiuh&userId=cmpo4w07k0000mg034fx4pt72&userRole=admin 200 in 8ms (compile: 1935µs, render: 6ms)
+ GET /api/notifications?userId=cmpo4w07k0000mg034fx4pt72&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 7ms (compile: 1904µs, render: 6ms)
+prisma:error 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.findMany()` invocation in
+/home/z/my-project/.next/dev/server/chunks/[root-of-the-server]__f59e6f19._.js:112:163
+
+  109 if (type) where.type = type;
+  110 if (sStep) where.sStep = parseInt(sStep);
+  111 if (miniStep) where.miniStep = parseInt(miniStep);
+→ 112 const templates = await __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.findMany({
+        where: {
+          type: "formacion"
+        },
+        orderBy: [
+          {
+            sStep: "asc"
+          },
+          {
+            miniStep: "asc"
+          },
+          {
+            createdAt: "desc"
+          }
+        ]
+      })
+
+Unknown argument `miniStep`. Available options are marked with ?.
+Error fetching templates: Error [PrismaClientValidationError]: 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.findMany()` invocation in
+/home/z/my-project/.next/dev/server/chunks/[root-of-the-server]__f59e6f19._.js:112:163
+
+  109 if (type) where.type = type;
+  110 if (sStep) where.sStep = parseInt(sStep);
+  111 if (miniStep) where.miniStep = parseInt(miniStep);
+→ 112 const templates = await __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.findMany({
+        where: {
+          type: "formacion"
+        },
+        orderBy: [
+          {
+            sStep: "asc"
+          },
+          {
+            miniStep: "asc"
+          },
+          {
+            createdAt: "desc"
+          }
+        ]
+      })
+
+Unknown argument `miniStep`. Available options are marked with ?.
+    at <unknown> (src/app/api/templates/route.ts:19:41)
+    at async GET (src/app/api/templates/route.ts:19:23)
+  17 |     if (miniStep) where.miniStep = parseInt(miniStep)
+  18 |
+> 19 |     const templates = await db.template.findMany({ where, orderBy: [{ sStep: 'asc' }, { miniStep: 'asc' }, { createdAt: 'desc' }] })
+     |                                         ^
+  20 |     return NextResponse.json({ success: true, data: templates })
+  21 |   } catch (error) {
+  22 |     console.error('Error fetching templates:', error) {
+  clientVersion: '6.19.2'
+}
+ GET /api/templates?type=formacion&includeInactive=true 500 in 213ms (compile: 3ms, render: 211ms)
+prisma:error 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.findMany()` invocation in
+/home/z/my-project/.next/dev/server/chunks/[root-of-the-server]__f59e6f19._.js:112:163
+
+  109 if (type) where.type = type;
+  110 if (sStep) where.sStep = parseInt(sStep);
+  111 if (miniStep) where.miniStep = parseInt(miniStep);
+→ 112 const templates = await __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.findMany({
+        where: {
+          type: "examen"
+        },
+        orderBy: [
+          {
+            sStep: "asc"
+          },
+          {
+            miniStep: "asc"
+          },
+          {
+            createdAt: "desc"
+          }
+        ]
+      })
+
+Unknown argument `miniStep`. Available options are marked with ?.
+Error fetching templates: Error [PrismaClientValidationError]: 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.findMany()` invocation in
+/home/z/my-project/.next/dev/server/chunks/[root-of-the-server]__f59e6f19._.js:112:163
+
+  109 if (type) where.type = type;
+  110 if (sStep) where.sStep = parseInt(sStep);
+  111 if (miniStep) where.miniStep = parseInt(miniStep);
+→ 112 const templates = await __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.findMany({
+        where: {
+          type: "examen"
+        },
+        orderBy: [
+          {
+            sStep: "asc"
+          },
+          {
+            miniStep: "asc"
+          },
+          {
+            createdAt: "desc"
+          }
+        ]
+      })
+
+Unknown argument `miniStep`. Available options are marked with ?.
+    at <unknown> (src/app/api/templates/route.ts:19:41)
+    at async GET (src/app/api/templates/route.ts:19:23)
+  17 |     if (miniStep) where.miniStep = parseInt(miniStep)
+  18 |
+> 19 |     const templates = await db.template.findMany({ where, orderBy: [{ sStep: 'asc' }, { miniStep: 'asc' }, { createdAt: 'desc' }] })
+     |                                         ^
+  20 |     return NextResponse.json({ success: true, data: templates })
+  21 |   } catch (error) {
+  22 |     console.error('Error fetching templates:', error) {
+  clientVersion: '6.19.2'
+}
+ GET /api/templates?type=examen&includeInactive=true 500 in 168ms (compile: 3ms, render: 165ms)
+ GET /api/notifications?userId=cmpo4w07k0000mg034fx4pt72&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 10ms (compile: 3ms, render: 7ms)
+ GET /api/permissions 200 in 12ms (compile: 3ms, render: 9ms)
+ GET /api/notifications?userId=cmpo4w07k0000mg034fx4pt72&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 7ms (compile: 2ms, render: 5ms)
+✓ Compiled in 220ms
+prisma:error 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.findMany()` invocation in
+/home/z/my-project/.next/dev/server/chunks/[root-of-the-server]__f59e6f19._.js:112:163
+
+  109 if (type) where.type = type;
+  110 if (sStep) where.sStep = parseInt(sStep);
+  111 if (miniStep) where.miniStep = parseInt(miniStep);
+→ 112 const templates = await __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.findMany({
+        where: {
+          type: "formacion"
+        },
+        orderBy: [
+          {
+            sStep: "asc"
+          },
+          {
+            miniStep: "asc"
+          },
+          {
+            createdAt: "desc"
+          }
+        ]
+      })
+
+Unknown argument `miniStep`. Available options are marked with ?.
+Error fetching templates: Error [PrismaClientValidationError]: 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.findMany()` invocation in
+/home/z/my-project/.next/dev/server/chunks/[root-of-the-server]__f59e6f19._.js:112:163
+
+  109 if (type) where.type = type;
+  110 if (sStep) where.sStep = parseInt(sStep);
+  111 if (miniStep) where.miniStep = parseInt(miniStep);
+→ 112 const templates = await __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.findMany({
+        where: {
+          type: "formacion"
+        },
+        orderBy: [
+          {
+            sStep: "asc"
+          },
+          {
+            miniStep: "asc"
+          },
+          {
+            createdAt: "desc"
+          }
+        ]
+      })
+
+Unknown argument `miniStep`. Available options are marked with ?.
+    at <unknown> (src/app/api/templates/route.ts:19:41)
+    at async GET (src/app/api/templates/route.ts:19:23)
+  17 |     if (miniStep) where.miniStep = parseInt(miniStep)
+  18 |
+> 19 |     const templates = await db.template.findMany({ where, orderBy: [{ sStep: 'asc' }, { miniStep: 'asc' }, { createdAt: 'desc' }] })
+     |                                         ^
+  20 |     return NextResponse.json({ success: true, data: templates })
+  21 |   } catch (error) {
+  22 |     console.error('Error fetching templates:', error) {
+  clientVersion: '6.19.2'
+}
+ GET /api/templates?type=formacion&includeInactive=true 500 in 220ms (compile: 1967µs, render: 218ms)
+prisma:error 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.findMany()` invocation in
+/home/z/my-project/.next/dev/server/chunks/[root-of-the-server]__f59e6f19._.js:112:163
+
+  109 if (type) where.type = type;
+  110 if (sStep) where.sStep = parseInt(sStep);
+  111 if (miniStep) where.miniStep = parseInt(miniStep);
+→ 112 const templates = await __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.findMany({
+        where: {
+          type: "examen"
+        },
+        orderBy: [
+          {
+            sStep: "asc"
+          },
+          {
+            miniStep: "asc"
+          },
+          {
+            createdAt: "desc"
+          }
+        ]
+      })
+
+Unknown argument `miniStep`. Available options are marked with ?.
+Error fetching templates: Error [PrismaClientValidationError]: 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.findMany()` invocation in
+/home/z/my-project/.next/dev/server/chunks/[root-of-the-server]__f59e6f19._.js:112:163
+
+  109 if (type) where.type = type;
+  110 if (sStep) where.sStep = parseInt(sStep);
+  111 if (miniStep) where.miniStep = parseInt(miniStep);
+→ 112 const templates = await __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.findMany({
+        where: {
+          type: "examen"
+        },
+        orderBy: [
+          {
+            sStep: "asc"
+          },
+          {
+            miniStep: "asc"
+          },
+          {
+            createdAt: "desc"
+          }
+        ]
+      })
+
+Unknown argument `miniStep`. Available options are marked with ?.
+    at <unknown> (src/app/api/templates/route.ts:19:41)
+    at async GET (src/app/api/templates/route.ts:19:23)
+  17 |     if (miniStep) where.miniStep = parseInt(miniStep)
+  18 |
+> 19 |     const templates = await db.template.findMany({ where, orderBy: [{ sStep: 'asc' }, { miniStep: 'asc' }, { createdAt: 'desc' }] })
+     |                                         ^
+  20 |     return NextResponse.json({ success: true, data: templates })
+  21 |   } catch (error) {
+  22 |     console.error('Error fetching templates:', error) {
+  clientVersion: '6.19.2'
+}
+ GET /api/templates?type=examen&includeInactive=true 500 in 165ms (compile: 1737µs, render: 163ms)
+ GET /api/notifications?userId=cmpo4w07k0000mg034fx4pt72&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 8ms (compile: 1993µs, render: 6ms)
+ GET /api/notifications?userId=cmpo4w07k0000mg034fx4pt72&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 7ms (compile: 1849µs, render: 5ms)
+✓ Compiled in 182ms
+prisma:error 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.findMany()` invocation in
+/home/z/my-project/.next/dev/server/chunks/[root-of-the-server]__f59e6f19._.js:112:163
+
+  109 if (type) where.type = type;
+  110 if (sStep) where.sStep = parseInt(sStep);
+  111 if (miniStep) where.miniStep = parseInt(miniStep);
+→ 112 const templates = await __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.findMany({
+        where: {
+          type: "formacion"
+        },
+        orderBy: [
+          {
+            sStep: "asc"
+          },
+          {
+            miniStep: "asc"
+          },
+          {
+            createdAt: "desc"
+          }
+        ]
+      })
+
+Unknown argument `miniStep`. Available options are marked with ?.
+Error fetching templates: Error [PrismaClientValidationError]: 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.findMany()` invocation in
+/home/z/my-project/.next/dev/server/chunks/[root-of-the-server]__f59e6f19._.js:112:163
+
+  109 if (type) where.type = type;
+  110 if (sStep) where.sStep = parseInt(sStep);
+  111 if (miniStep) where.miniStep = parseInt(miniStep);
+→ 112 const templates = await __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.findMany({
+        where: {
+          type: "formacion"
+        },
+        orderBy: [
+          {
+            sStep: "asc"
+          },
+          {
+            miniStep: "asc"
+          },
+          {
+            createdAt: "desc"
+          }
+        ]
+      })
+
+Unknown argument `miniStep`. Available options are marked with ?.
+    at <unknown> (src/app/api/templates/route.ts:19:41)
+    at async GET (src/app/api/templates/route.ts:19:23)
+  17 |     if (miniStep) where.miniStep = parseInt(miniStep)
+  18 |
+> 19 |     const templates = await db.template.findMany({ where, orderBy: [{ sStep: 'asc' }, { miniStep: 'asc' }, { createdAt: 'desc' }] })
+     |                                         ^
+  20 |     return NextResponse.json({ success: true, data: templates })
+  21 |   } catch (error) {
+  22 |     console.error('Error fetching templates:', error) {
+  clientVersion: '6.19.2'
+}
+ GET /api/templates?type=formacion&includeInactive=true 500 in 146ms (compile: 1697µs, render: 144ms)
+prisma:error 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.findMany()` invocation in
+/home/z/my-project/.next/dev/server/chunks/[root-of-the-server]__f59e6f19._.js:112:163
+
+  109 if (type) where.type = type;
+  110 if (sStep) where.sStep = parseInt(sStep);
+  111 if (miniStep) where.miniStep = parseInt(miniStep);
+→ 112 const templates = await __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.findMany({
+        where: {
+          type: "examen"
+        },
+        orderBy: [
+          {
+            sStep: "asc"
+          },
+          {
+            miniStep: "asc"
+          },
+          {
+            createdAt: "desc"
+          }
+        ]
+      })
+
+Unknown argument `miniStep`. Available options are marked with ?.
+Error fetching templates: Error [PrismaClientValidationError]: 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.findMany()` invocation in
+/home/z/my-project/.next/dev/server/chunks/[root-of-the-server]__f59e6f19._.js:112:163
+
+  109 if (type) where.type = type;
+  110 if (sStep) where.sStep = parseInt(sStep);
+  111 if (miniStep) where.miniStep = parseInt(miniStep);
+→ 112 const templates = await __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.findMany({
+        where: {
+          type: "examen"
+        },
+        orderBy: [
+          {
+            sStep: "asc"
+          },
+          {
+            miniStep: "asc"
+          },
+          {
+            createdAt: "desc"
+          }
+        ]
+      })
+
+Unknown argument `miniStep`. Available options are marked with ?.
+    at <unknown> (src/app/api/templates/route.ts:19:41)
+    at async GET (src/app/api/templates/route.ts:19:23)
+  17 |     if (miniStep) where.miniStep = parseInt(miniStep)
+  18 |
+> 19 |     const templates = await db.template.findMany({ where, orderBy: [{ sStep: 'asc' }, { miniStep: 'asc' }, { createdAt: 'desc' }] })
+     |                                         ^
+  20 |     return NextResponse.json({ success: true, data: templates })
+  21 |   } catch (error) {
+  22 |     console.error('Error fetching templates:', error) {
+  clientVersion: '6.19.2'
+}
+ GET /api/templates?type=examen&includeInactive=true 500 in 166ms (compile: 1975µs, render: 164ms)
+ GET / 200 in 338ms (compile: 64ms, render: 275ms)
+ GET / 200 in 54ms (compile: 3ms, render: 52ms)
+ GET /api/auth 200 in 7ms (compile: 2ms, render: 5ms)
+ GET /api/notifications?userId=cmpo4w07k0000mg034fx4pt72&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 10ms (compile: 3ms, render: 7ms)
+ GET /api/notifications?userId=cmpo4w07k0000mg034fx4pt72&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 8ms (compile: 2ms, render: 5ms)
+ GET / 200 in 39ms (compile: 4ms, render: 36ms)
+ GET /api/auth 200 in 8ms (compile: 1955µs, render: 6ms)
+ GET /api/permissions 200 in 9ms (compile: 1756µs, render: 7ms)
+ GET /api/projects 200 in 8ms (compile: 1875µs, render: 6ms)
+ GET /api/auth/zones 200 in 11ms (compile: 2ms, render: 9ms)
+ GET /api/progress 200 in 6ms (compile: 1440µs, render: 5ms)
+ GET /api/notifications?userId=cmpo4w07k0000mg034fx4pt72&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 4ms (compile: 1200µs, render: 3ms)
+ GET /api/employee-progress?projectId=cmpok8xii00rjmgfj1nn1hiuh&zoneId=cmpok8xii00rkmgfjvv2ri8f8 200 in 5ms (compile: 1351µs, render: 3ms)
+ POST /api/notifications/auto 200 in 24ms (compile: 1360µs, render: 23ms)
+ GET /api/companies 200 in 8ms (compile: 2ms, render: 5ms)
+ GET /api/users 200 in 9ms (compile: 3ms, render: 6ms)
+ GET /api/projects 200 in 6ms (compile: 1328µs, render: 5ms)
+✓ Compiled in 215ms
+prisma:error 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.findMany()` invocation in
+/home/z/my-project/.next/dev/server/chunks/[root-of-the-server]__f59e6f19._.js:112:163
+
+  109 if (type) where.type = type;
+  110 if (sStep) where.sStep = parseInt(sStep);
+  111 if (miniStep) where.miniStep = parseInt(miniStep);
+→ 112 const templates = await __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.findMany({
+        where: {
+          type: "formacion"
+        },
+        orderBy: [
+          {
+            sStep: "asc"
+          },
+          {
+            miniStep: "asc"
+          },
+          {
+            createdAt: "desc"
+          }
+        ]
+      })
+
+Unknown argument `miniStep`. Available options are marked with ?.
+Error fetching templates: Error [PrismaClientValidationError]: 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.findMany()` invocation in
+/home/z/my-project/.next/dev/server/chunks/[root-of-the-server]__f59e6f19._.js:112:163
+
+  109 if (type) where.type = type;
+  110 if (sStep) where.sStep = parseInt(sStep);
+  111 if (miniStep) where.miniStep = parseInt(miniStep);
+→ 112 const templates = await __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.findMany({
+        where: {
+          type: "formacion"
+        },
+        orderBy: [
+          {
+            sStep: "asc"
+          },
+          {
+            miniStep: "asc"
+          },
+          {
+            createdAt: "desc"
+          }
+        ]
+      })
+
+Unknown argument `miniStep`. Available options are marked with ?.
+    at <unknown> (src/app/api/templates/route.ts:19:41)
+    at async GET (src/app/api/templates/route.ts:19:23)
+  17 |     if (miniStep) where.miniStep = parseInt(miniStep)
+  18 |
+> 19 |     const templates = await db.template.findMany({ where, orderBy: [{ sStep: 'asc' }, { miniStep: 'asc' }, { createdAt: 'desc' }] })
+     |                                         ^
+  20 |     return NextResponse.json({ success: true, data: templates })
+  21 |   } catch (error) {
+  22 |     console.error('Error fetching templates:', error) {
+  clientVersion: '6.19.2'
+}
+ GET /api/templates?type=formacion&includeInactive=true 500 in 102ms (compile: 1774µs, render: 101ms)
+prisma:error 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.findMany()` invocation in
+/home/z/my-project/.next/dev/server/chunks/[root-of-the-server]__f59e6f19._.js:112:163
+
+  109 if (type) where.type = type;
+  110 if (sStep) where.sStep = parseInt(sStep);
+  111 if (miniStep) where.miniStep = parseInt(miniStep);
+→ 112 const templates = await __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.findMany({
+        where: {
+          type: "examen"
+        },
+        orderBy: [
+          {
+            sStep: "asc"
+          },
+          {
+            miniStep: "asc"
+          },
+          {
+            createdAt: "desc"
+          }
+        ]
+      })
+
+Unknown argument `miniStep`. Available options are marked with ?.
+Error fetching templates: Error [PrismaClientValidationError]: 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.findMany()` invocation in
+/home/z/my-project/.next/dev/server/chunks/[root-of-the-server]__f59e6f19._.js:112:163
+
+  109 if (type) where.type = type;
+  110 if (sStep) where.sStep = parseInt(sStep);
+  111 if (miniStep) where.miniStep = parseInt(miniStep);
+→ 112 const templates = await __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.findMany({
+        where: {
+          type: "examen"
+        },
+        orderBy: [
+          {
+            sStep: "asc"
+          },
+          {
+            miniStep: "asc"
+          },
+          {
+            createdAt: "desc"
+          }
+        ]
+      })
+
+Unknown argument `miniStep`. Available options are marked with ?.
+    at <unknown> (src/app/api/templates/route.ts:19:41)
+    at async GET (src/app/api/templates/route.ts:19:23)
+  17 |     if (miniStep) where.miniStep = parseInt(miniStep)
+  18 |
+> 19 |     const templates = await db.template.findMany({ where, orderBy: [{ sStep: 'asc' }, { miniStep: 'asc' }, { createdAt: 'desc' }] })
+     |                                         ^
+  20 |     return NextResponse.json({ success: true, data: templates })
+  21 |   } catch (error) {
+  22 |     console.error('Error fetching templates:', error) {
+  clientVersion: '6.19.2'
+}
+ GET /api/templates?type=examen&includeInactive=true 500 in 204ms (compile: 3ms, render: 201ms)
+prisma:error 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.findMany()` invocation in
+/home/z/my-project/.next/dev/server/chunks/[root-of-the-server]__f59e6f19._.js:112:163
+
+  109 if (type) where.type = type;
+  110 if (sStep) where.sStep = parseInt(sStep);
+  111 if (miniStep) where.miniStep = parseInt(miniStep);
+→ 112 const templates = await __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.findMany({
+        where: {
+          type: "formacion"
+        },
+        orderBy: [
+          {
+            sStep: "asc"
+          },
+          {
+            miniStep: "asc"
+          },
+          {
+            createdAt: "desc"
+          }
+        ]
+      })
+
+Unknown argument `miniStep`. Available options are marked with ?.
+Error fetching templates: Error [PrismaClientValidationError]: 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.findMany()` invocation in
+/home/z/my-project/.next/dev/server/chunks/[root-of-the-server]__f59e6f19._.js:112:163
+
+  109 if (type) where.type = type;
+  110 if (sStep) where.sStep = parseInt(sStep);
+  111 if (miniStep) where.miniStep = parseInt(miniStep);
+→ 112 const templates = await __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.findMany({
+        where: {
+          type: "formacion"
+        },
+        orderBy: [
+          {
+            sStep: "asc"
+          },
+          {
+            miniStep: "asc"
+          },
+          {
+            createdAt: "desc"
+          }
+        ]
+      })
+
+Unknown argument `miniStep`. Available options are marked with ?.
+    at <unknown> (src/app/api/templates/route.ts:19:41)
+    at async GET (src/app/api/templates/route.ts:19:23)
+  17 |     if (miniStep) where.miniStep = parseInt(miniStep)
+  18 |
+> 19 |     const templates = await db.template.findMany({ where, orderBy: [{ sStep: 'asc' }, { miniStep: 'asc' }, { createdAt: 'desc' }] })
+     |                                         ^
+  20 |     return NextResponse.json({ success: true, data: templates })
+  21 |   } catch (error) {
+  22 |     console.error('Error fetching templates:', error) {
+  clientVersion: '6.19.2'
+}
+ GET /api/templates?type=formacion&includeInactive=true 500 in 170ms (compile: 1834µs, render: 168ms)
+prisma:error 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.findMany()` invocation in
+/home/z/my-project/.next/dev/server/chunks/[root-of-the-server]__f59e6f19._.js:112:163
+
+  109 if (type) where.type = type;
+  110 if (sStep) where.sStep = parseInt(sStep);
+  111 if (miniStep) where.miniStep = parseInt(miniStep);
+→ 112 const templates = await __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.findMany({
+        where: {
+          type: "examen"
+        },
+        orderBy: [
+          {
+            sStep: "asc"
+          },
+          {
+            miniStep: "asc"
+          },
+          {
+            createdAt: "desc"
+          }
+        ]
+      })
+
+Unknown argument `miniStep`. Available options are marked with ?.
+Error fetching templates: Error [PrismaClientValidationError]: 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.findMany()` invocation in
+/home/z/my-project/.next/dev/server/chunks/[root-of-the-server]__f59e6f19._.js:112:163
+
+  109 if (type) where.type = type;
+  110 if (sStep) where.sStep = parseInt(sStep);
+  111 if (miniStep) where.miniStep = parseInt(miniStep);
+→ 112 const templates = await __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.findMany({
+        where: {
+          type: "examen"
+        },
+        orderBy: [
+          {
+            sStep: "asc"
+          },
+          {
+            miniStep: "asc"
+          },
+          {
+            createdAt: "desc"
+          }
+        ]
+      })
+
+Unknown argument `miniStep`. Available options are marked with ?.
+    at <unknown> (src/app/api/templates/route.ts:19:41)
+    at async GET (src/app/api/templates/route.ts:19:23)
+  17 |     if (miniStep) where.miniStep = parseInt(miniStep)
+  18 |
+> 19 |     const templates = await db.template.findMany({ where, orderBy: [{ sStep: 'asc' }, { miniStep: 'asc' }, { createdAt: 'desc' }] })
+     |                                         ^
+  20 |     return NextResponse.json({ success: true, data: templates })
+  21 |   } catch (error) {
+  22 |     console.error('Error fetching templates:', error) {
+  clientVersion: '6.19.2'
+}
+ GET /api/templates?type=examen&includeInactive=true 500 in 204ms (compile: 3ms, render: 201ms)
+prisma:error 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.create()` invocation in
+/home/z/my-project/.next/dev/server/chunks/[root-of-the-server]__f59e6f19._.js:161:162
+
+  158     content: typeof content === 'string' ? content : JSON.stringify(content),
+  159     notaMinima: notaMinima != null ? Number(notaMinima) : null
+  160 };
+→ 161 const template = await __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.create({
+        data: {
+          type: "formacion",
+          sStep: 1,
+          miniStep: 1,
+          ~~~~~~~~
+          title: "Formación S1 - Seiri",
+          description: null,
+          content: "{\"sections\":[{\"title\":\"¿Qué es Seiri (Clasificar)?\",\"content\":\"Seiri es la primera de las 5S y significa \\\"clasificar\\\" o \\\"separar\\\". Consiste en identificar y separar los elementos necesarios de los innecesarios en el lugar de trabajo, eliminando todo aquello que no se utiliza o que no aporta valor al proceso. El objetivo es crear un entorno de trabajo más limpio, seguro y eficiente, donde solo permanezcan los elementos esenciales para realizar las tareas diarias.\"},{\"title\":\"Objetivos de Seiri\",\"content\":\"1. Eliminar del área de trabajo los elementos innecesarios que ocupan espacio y generan desorden.\\n2. Liberar espacio útil para mejorar la organización y el flujo de trabajo.\\n3. Reducir el tiempo de búsqueda de herramientas, materiales y documentos.\\n4. Prevenir accidentes y errores causados por la acumulación de objetos innecesarios.\\n5. Facilitar la identificación visual de los recursos realmente necesarios.\"},{\"title\":\"Metodología de implementación\",\"content\":\"1. Recorrer el área de trabajo y clasificar todos los elementos en necesarios e innecesarios.\\n2. Utilizar tarjetas de color rojo (Tarjetas Rojas) para marcar los elementos innecesarios.\\n3. Colocar los elementos marcados en una \\\"jaula de innecesarios\\\" o zona temporal.\\n4. Decidir el destino de cada elemento: eliminar, trasladar, donar o almacenar fuera del área.\\n5. Documentar todas las decisiones y mantener un registro de los elementos retirados.\\n6. Revisar periódicamente para evitar la acumulación de nuevos innecesarios.\"},{\"title\":\"Beneficios esperados\",\"content\":\"Al aplicar correctamente Seiri se obtienen beneficios como: mayor espacio disponible en el lugar de trabajo, reducción del tiempo perdido buscando elementos, disminución de accidentes por acumulación, mejora de la productividad al eliminar distracciones, y una cultura de orden y limpieza que se extiende a todas las áreas de la organización.\"}]}",
+          notaMinima: 80,
+      ?   id?: String,
+      ?   active?: Boolean,
+      ?   createdAt?: DateTime,
+      ?   updatedAt?: DateTime
+        }
+      })
+
+Unknown argument `miniStep`. Available options are marked with ?.
+Error creating template: Error [PrismaClientValidationError]: 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.create()` invocation in
+/home/z/my-project/.next/dev/server/chunks/[root-of-the-server]__f59e6f19._.js:161:162
+
+  158     content: typeof content === 'string' ? content : JSON.stringify(content),
+  159     notaMinima: notaMinima != null ? Number(notaMinima) : null
+  160 };
+→ 161 const template = await __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.create({
+        data: {
+          type: "formacion",
+          sStep: 1,
+          miniStep: 1,
+          ~~~~~~~~
+          title: "Formación S1 - Seiri",
+          description: null,
+          content: "{\"sections\":[{\"title\":\"¿Qué es Seiri (Clasificar)?\",\"content\":\"Seiri es la primera de las 5S y significa \\\"clasificar\\\" o \\\"separar\\\". Consiste en identificar y separar los elementos necesarios de los innecesarios en el lugar de trabajo, eliminando todo aquello que no se utiliza o que no aporta valor al proceso. El objetivo es crear un entorno de trabajo más limpio, seguro y eficiente, donde solo permanezcan los elementos esenciales para realizar las tareas diarias.\"},{\"title\":\"Objetivos de Seiri\",\"content\":\"1. Eliminar del área de trabajo los elementos innecesarios que ocupan espacio y generan desorden.\\n2. Liberar espacio útil para mejorar la organización y el flujo de trabajo.\\n3. Reducir el tiempo de búsqueda de herramientas, materiales y documentos.\\n4. Prevenir accidentes y errores causados por la acumulación de objetos innecesarios.\\n5. Facilitar la identificación visual de los recursos realmente necesarios.\"},{\"title\":\"Metodología de implementación\",\"content\":\"1. Recorrer el área de trabajo y clasificar todos los elementos en necesarios e innecesarios.\\n2. Utilizar tarjetas de color rojo (Tarjetas Rojas) para marcar los elementos innecesarios.\\n3. Colocar los elementos marcados en una \\\"jaula de innecesarios\\\" o zona temporal.\\n4. Decidir el destino de cada elemento: eliminar, trasladar, donar o almacenar fuera del área.\\n5. Documentar todas las decisiones y mantener un registro de los elementos retirados.\\n6. Revisar periódicamente para evitar la acumulación de nuevos innecesarios.\"},{\"title\":\"Beneficios esperados\",\"content\":\"Al aplicar correctamente Seiri se obtienen beneficios como: mayor espacio disponible en el lugar de trabajo, reducción del tiempo perdido buscando elementos, disminución de accidentes por acumulación, mejora de la productividad al eliminar distracciones, y una cultura de orden y limpieza que se extiende a todas las áreas de la organización.\"}]}",
+          notaMinima: 80,
+      ?   id?: String,
+      ?   active?: Boolean,
+      ?   createdAt?: DateTime,
+      ?   updatedAt?: DateTime
+        }
+      })
+
+Unknown argument `miniStep`. Available options are marked with ?.
+    at <unknown> (src/app/api/templates/route.ts:47:40)
+    at async POST (src/app/api/templates/route.ts:47:22)
+  45 |     }
+  46 |
+> 47 |     const template = await db.template.create({ data })
+     |                                        ^
+  48 |
+  49 |     return NextResponse.json({ success: true, data: template })
+  50 |   } catch (error) { {
+  clientVersion: '6.19.2'
+}
+ POST /api/templates 500 in 215ms (compile: 2ms, render: 213ms)
+prisma:error 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.create()` invocation in
+/home/z/my-project/.next/dev/server/chunks/[root-of-the-server]__f59e6f19._.js:161:162
+
+  158     content: typeof content === 'string' ? content : JSON.stringify(content),
+  159     notaMinima: notaMinima != null ? Number(notaMinima) : null
+  160 };
+→ 161 const template = await __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.create({
+        data: {
+          type: "examen",
+          sStep: 1,
+          miniStep: 1,
+          ~~~~~~~~
+          title: "Examen S1 - Seiri",
+          description: null,
+          content: "{\"questions\":[{\"question\":\"¿Cuál es el objetivo principal de Seiri (Clasificar)?\",\"options\":[\"Separar lo necesario de lo innecesario\",\"Organizar los elementos por tamaño\",\"Limpiar las máquinas\",\"Crear estándares visuales\"],\"correctIndex\":0},{\"question\":\"¿Qué herramienta se utiliza en Seiri para marcar los elementos innecesarios?\",\"options\":[\"Etiqueta verde\",\"Tarjeta roja\",\"Código de barras\",\"Señal de tráfico\"],\"correctIndex\":1},{\"question\":\"¿Dónde se colocan temporalmente los elementos marcados como innecesarios?\",\"options\":[\"En el almacén principal\",\"En la jaula de innecesarios\",\"En la mesa del responsable\",\"En el pasillo\"],\"correctIndex\":1},{\"question\":\"¿Cuál es un beneficio de aplicar Seiri correctamente?\",\"options\":[\"Aumentar el número de herramientas\",\"Liberar espacio útil en el área de trabajo\",\"Crear más documentos\",\"Añadir más pasos al proceso\"],\"correctIndex\":1},{\"question\":\"¿Qué decisión NO se puede tomar sobre un elemento innecesario?\",\"options\":[\"Eliminarlo\",\"Trasladarlo a otra zona\",\"Dejarlo donde está sin más\",\"Donarlo o almacenarlo fuera del área\"],\"correctIndex\":2},{\"question\":\"¿Cada cuánto se debe revisar el área para evitar acumulación de innecesarios?\",\"options\":[\"Solo al inicio del proyecto\",\"Una vez al año\",\"Periódicamente de forma regular\",\"Nunca, solo una vez\"],\"correctIndex\":2},{\"question\":\"¿Qué tipo de elementos se deben eliminar en Seiri?\",\"options\":[\"Los que se usan diariamente\",\"Los que no se utilizan o no aportan valor\",\"Los más caros\",\"Los que tienen etiqueta\"],\"correctIndex\":1},{\"question\":\"¿Quién debe participar en el proceso de clasificación de Seiri?\",\"options\":[\"Solo el responsable del área\",\"Solo el jefe de producción\",\"Todas las personas que trabajan en el área\",\"Solo el equipo de mantenimiento\"],\"correctIndex\":2}]}",
+          notaMinima: 80,
+      ?   id?: String,
+      ?   active?: Boolean,
+      ?   createdAt?: DateTime,
+      ?   updatedAt?: DateTime
+        }
+      })
+
+Unknown argument `miniStep`. Available options are marked with ?.
+Error creating template: Error [PrismaClientValidationError]: 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.create()` invocation in
+/home/z/my-project/.next/dev/server/chunks/[root-of-the-server]__f59e6f19._.js:161:162
+
+  158     content: typeof content === 'string' ? content : JSON.stringify(content),
+  159     notaMinima: notaMinima != null ? Number(notaMinima) : null
+  160 };
+→ 161 const template = await __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.create({
+        data: {
+          type: "examen",
+          sStep: 1,
+          miniStep: 1,
+          ~~~~~~~~
+          title: "Examen S1 - Seiri",
+          description: null,
+          content: "{\"questions\":[{\"question\":\"¿Cuál es el objetivo principal de Seiri (Clasificar)?\",\"options\":[\"Separar lo necesario de lo innecesario\",\"Organizar los elementos por tamaño\",\"Limpiar las máquinas\",\"Crear estándares visuales\"],\"correctIndex\":0},{\"question\":\"¿Qué herramienta se utiliza en Seiri para marcar los elementos innecesarios?\",\"options\":[\"Etiqueta verde\",\"Tarjeta roja\",\"Código de barras\",\"Señal de tráfico\"],\"correctIndex\":1},{\"question\":\"¿Dónde se colocan temporalmente los elementos marcados como innecesarios?\",\"options\":[\"En el almacén principal\",\"En la jaula de innecesarios\",\"En la mesa del responsable\",\"En el pasillo\"],\"correctIndex\":1},{\"question\":\"¿Cuál es un beneficio de aplicar Seiri correctamente?\",\"options\":[\"Aumentar el número de herramientas\",\"Liberar espacio útil en el área de trabajo\",\"Crear más documentos\",\"Añadir más pasos al proceso\"],\"correctIndex\":1},{\"question\":\"¿Qué decisión NO se puede tomar sobre un elemento innecesario?\",\"options\":[\"Eliminarlo\",\"Trasladarlo a otra zona\",\"Dejarlo donde está sin más\",\"Donarlo o almacenarlo fuera del área\"],\"correctIndex\":2},{\"question\":\"¿Cada cuánto se debe revisar el área para evitar acumulación de innecesarios?\",\"options\":[\"Solo al inicio del proyecto\",\"Una vez al año\",\"Periódicamente de forma regular\",\"Nunca, solo una vez\"],\"correctIndex\":2},{\"question\":\"¿Qué tipo de elementos se deben eliminar en Seiri?\",\"options\":[\"Los que se usan diariamente\",\"Los que no se utilizan o no aportan valor\",\"Los más caros\",\"Los que tienen etiqueta\"],\"correctIndex\":1},{\"question\":\"¿Quién debe participar en el proceso de clasificación de Seiri?\",\"options\":[\"Solo el responsable del área\",\"Solo el jefe de producción\",\"Todas las personas que trabajan en el área\",\"Solo el equipo de mantenimiento\"],\"correctIndex\":2}]}",
+          notaMinima: 80,
+      ?   id?: String,
+      ?   active?: Boolean,
+      ?   createdAt?: DateTime,
+      ?   updatedAt?: DateTime
+        }
+      })
+
+Unknown argument `miniStep`. Available options are marked with ?.
+    at <unknown> (src/app/api/templates/route.ts:47:40)
+    at async POST (src/app/api/templates/route.ts:47:22)
+  45 |     }
+  46 |
+> 47 |     const template = await db.template.create({ data })
+     |                                        ^
+  48 |
+  49 |     return NextResponse.json({ success: true, data: template })
+  50 |   } catch (error) { {
+  clientVersion: '6.19.2'
+}
+ POST /api/templates 500 in 234ms (compile: 1628µs, render: 232ms)
+prisma:error 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.create()` invocation in
+/home/z/my-project/.next/dev/server/chunks/[root-of-the-server]__f59e6f19._.js:161:162
+
+  158     content: typeof content === 'string' ? content : JSON.stringify(content),
+  159     notaMinima: notaMinima != null ? Number(notaMinima) : null
+  160 };
+→ 161 const template = await __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.create({
+        data: {
+          type: "formacion",
+          sStep: 2,
+          miniStep: 1,
+          ~~~~~~~~
+          title: "Formación S2 - Seiton",
+          description: null,
+          content: "{\"sections\":[{\"title\":\"¿Qué es Seiton (Organizar)?\",\"content\":\"Seiton es la segunda de las 5S y significa \\\"organizar\\\" o \\\"ordenar\\\". Consiste en establecer una ubicación definida para cada elemento necesario, de forma que sea fácil de encontrar, usar y devolver a su lugar. Seiton aplica el principio de \\\"un lugar para cada cosa y cada cosa en su lugar\\\", utilizando señalización visual, códigos de color y etiquetas para garantizar que cualquier persona pueda localizar y devolver los objetos de forma intuitiva.\"},{\"title\":\"Objetivos de Seiton\",\"content\":\"1. Asignar una ubicación fija y lógica a cada elemento necesario del lugar de trabajo.\\n2. Facilitar la localización rápida de herramientas, materiales y documentos.\\n3. Garantizar que cualquier persona pueda encontrar y devolver los objetos sin necesidad de preguntar.\\n4. Reducir el tiempo de preparación y cambio de herramientas.\\n5. Implementar señalización visual y códigos de color para una identificación inmediata.\"},{\"title\":\"Metodología de implementación\",\"content\":\"1. Analizar la frecuencia de uso de cada elemento: muy frecuente (cerca del puesto), frecuente (zona accesible), ocasional (almacén cercano) y raro (almacén lejano).\\n2. Definir la ubicación óptima según la cercanía al punto de uso y la ergonomía.\\n3. Implementar métodos de identificación: etiquetas, códigos de color, señales visuales, sombras, soportes.\\n4. Crear un layout o distribución visual del área de trabajo.\\n5. Señalizar pasillos, zonas de almacenamiento y ubicaciones específicas.\\n6. Establecer reglas claras para la devolución de elementos a su ubicación.\"},{\"title\":\"Beneficios esperados\",\"content\":\"Los beneficios de aplicar Seiton incluyen: eliminación del tiempo perdido buscando herramientas o materiales, reducción de errores por confusión de elementos, mejora de la seguridad al tener pasillos despejados y zonas señalizadas, aumento de la eficiencia operativa, y una comunicación visual que permite detectar anomalías de forma inmediata.\"}]}",
+          notaMinima: 80,
+      ?   id?: String,
+      ?   active?: Boolean,
+      ?   createdAt?: DateTime,
+      ?   updatedAt?: DateTime
+        }
+      })
+
+Unknown argument `miniStep`. Available options are marked with ?.
+Error creating template: Error [PrismaClientValidationError]: 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.create()` invocation in
+/home/z/my-project/.next/dev/server/chunks/[root-of-the-server]__f59e6f19._.js:161:162
+
+  158     content: typeof content === 'string' ? content : JSON.stringify(content),
+  159     notaMinima: notaMinima != null ? Number(notaMinima) : null
+  160 };
+→ 161 const template = await __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.create({
+        data: {
+          type: "formacion",
+          sStep: 2,
+          miniStep: 1,
+          ~~~~~~~~
+          title: "Formación S2 - Seiton",
+          description: null,
+          content: "{\"sections\":[{\"title\":\"¿Qué es Seiton (Organizar)?\",\"content\":\"Seiton es la segunda de las 5S y significa \\\"organizar\\\" o \\\"ordenar\\\". Consiste en establecer una ubicación definida para cada elemento necesario, de forma que sea fácil de encontrar, usar y devolver a su lugar. Seiton aplica el principio de \\\"un lugar para cada cosa y cada cosa en su lugar\\\", utilizando señalización visual, códigos de color y etiquetas para garantizar que cualquier persona pueda localizar y devolver los objetos de forma intuitiva.\"},{\"title\":\"Objetivos de Seiton\",\"content\":\"1. Asignar una ubicación fija y lógica a cada elemento necesario del lugar de trabajo.\\n2. Facilitar la localización rápida de herramientas, materiales y documentos.\\n3. Garantizar que cualquier persona pueda encontrar y devolver los objetos sin necesidad de preguntar.\\n4. Reducir el tiempo de preparación y cambio de herramientas.\\n5. Implementar señalización visual y códigos de color para una identificación inmediata.\"},{\"title\":\"Metodología de implementación\",\"content\":\"1. Analizar la frecuencia de uso de cada elemento: muy frecuente (cerca del puesto), frecuente (zona accesible), ocasional (almacén cercano) y raro (almacén lejano).\\n2. Definir la ubicación óptima según la cercanía al punto de uso y la ergonomía.\\n3. Implementar métodos de identificación: etiquetas, códigos de color, señales visuales, sombras, soportes.\\n4. Crear un layout o distribución visual del área de trabajo.\\n5. Señalizar pasillos, zonas de almacenamiento y ubicaciones específicas.\\n6. Establecer reglas claras para la devolución de elementos a su ubicación.\"},{\"title\":\"Beneficios esperados\",\"content\":\"Los beneficios de aplicar Seiton incluyen: eliminación del tiempo perdido buscando herramientas o materiales, reducción de errores por confusión de elementos, mejora de la seguridad al tener pasillos despejados y zonas señalizadas, aumento de la eficiencia operativa, y una comunicación visual que permite detectar anomalías de forma inmediata.\"}]}",
+          notaMinima: 80,
+      ?   id?: String,
+      ?   active?: Boolean,
+      ?   createdAt?: DateTime,
+      ?   updatedAt?: DateTime
+        }
+      })
+
+Unknown argument `miniStep`. Available options are marked with ?.
+    at <unknown> (src/app/api/templates/route.ts:47:40)
+    at async POST (src/app/api/templates/route.ts:47:22)
+  45 |     }
+  46 |
+> 47 |     const template = await db.template.create({ data })
+     |                                        ^
+  48 |
+  49 |     return NextResponse.json({ success: true, data: template })
+  50 |   } catch (error) { {
+  clientVersion: '6.19.2'
+}
+ POST /api/templates 500 in 137ms (compile: 1631µs, render: 135ms)
+prisma:error 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.create()` invocation in
+/home/z/my-project/.next/dev/server/chunks/[root-of-the-server]__f59e6f19._.js:161:162
+
+  158     content: typeof content === 'string' ? content : JSON.stringify(content),
+  159     notaMinima: notaMinima != null ? Number(notaMinima) : null
+  160 };
+→ 161 const template = await __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.create({
+        data: {
+          type: "examen",
+          sStep: 2,
+          miniStep: 1,
+          ~~~~~~~~
+          title: "Examen S2 - Seiton",
+          description: null,
+          content: "{\"questions\":[{\"question\":\"¿Cuál es el objetivo principal de Seiton (Organizar)?\",\"options\":[\"Eliminar innecesarios\",\"Asignar una ubicación definida a cada elemento necesario\",\"Limpiar los equipos\",\"Auditar el proceso\"],\"correctIndex\":1},{\"question\":\"¿Qué principio fundamental aplica Seiton?\",\"options\":[\"Más es mejor\",\"Un lugar para cada cosa y cada cosa en su lugar\",\"Todo en una sola estantería\",\"Guardar todo en cajas cerradas\"],\"correctIndex\":1},{\"question\":\"¿Dónde se deben ubicar los elementos de uso muy frecuente?\",\"options\":[\"En el almacén lejano\",\"Cerca del puesto de trabajo\",\"En el suelo del pasillo\",\"En la oficina del jefe\"],\"correctIndex\":1},{\"question\":\"¿Cuál de estos NO es un método de identificación visual en Seiton?\",\"options\":[\"Etiquetas\",\"Código de colores\",\"Memorizar la ubicación\",\"Sombras y siluetas\"],\"correctIndex\":2},{\"question\":\"¿Qué es un layout en el contexto de Seiton?\",\"options\":[\"Un tipo de herramienta\",\"Una distribución visual del área de trabajo\",\"Un informe de auditoría\",\"Un código de barras\"],\"correctIndex\":1},{\"question\":\"¿Qué se debe hacer después de usar una herramienta según Seiton?\",\"options\":[\"Dejarla donde se usó\",\"Devolverla a su ubicación asignada\",\"Pasarla al compañero\",\"Guardarla en un cajón cualquiera\"],\"correctIndex\":1},{\"question\":\"¿Cómo se clasifica la frecuencia de uso en Seiton?\",\"options\":[\"Barato y caro\",\"Muy frecuente, frecuente, ocasional y raro\",\"Grande y pequeño\",\"Nuevo y viejo\"],\"correctIndex\":1},{\"question\":\"¿Qué beneficio aporta la señalización visual en Seiton?\",\"options\":[\"Decorar el lugar de trabajo\",\"Permitir detectar anomalías de forma inmediata\",\"Aumentar el presupuesto\",\"Reducir el número de herramientas\"],\"correctIndex\":1}]}",
+          notaMinima: 80,
+      ?   id?: String,
+      ?   active?: Boolean,
+      ?   createdAt?: DateTime,
+      ?   updatedAt?: DateTime
+        }
+      })
+
+Unknown argument `miniStep`. Available options are marked with ?.
+Error creating template: Error [PrismaClientValidationError]: 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.create()` invocation in
+/home/z/my-project/.next/dev/server/chunks/[root-of-the-server]__f59e6f19._.js:161:162
+
+  158     content: typeof content === 'string' ? content : JSON.stringify(content),
+  159     notaMinima: notaMinima != null ? Number(notaMinima) : null
+  160 };
+→ 161 const template = await __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.create({
+        data: {
+          type: "examen",
+          sStep: 2,
+          miniStep: 1,
+          ~~~~~~~~
+          title: "Examen S2 - Seiton",
+          description: null,
+          content: "{\"questions\":[{\"question\":\"¿Cuál es el objetivo principal de Seiton (Organizar)?\",\"options\":[\"Eliminar innecesarios\",\"Asignar una ubicación definida a cada elemento necesario\",\"Limpiar los equipos\",\"Auditar el proceso\"],\"correctIndex\":1},{\"question\":\"¿Qué principio fundamental aplica Seiton?\",\"options\":[\"Más es mejor\",\"Un lugar para cada cosa y cada cosa en su lugar\",\"Todo en una sola estantería\",\"Guardar todo en cajas cerradas\"],\"correctIndex\":1},{\"question\":\"¿Dónde se deben ubicar los elementos de uso muy frecuente?\",\"options\":[\"En el almacén lejano\",\"Cerca del puesto de trabajo\",\"En el suelo del pasillo\",\"En la oficina del jefe\"],\"correctIndex\":1},{\"question\":\"¿Cuál de estos NO es un método de identificación visual en Seiton?\",\"options\":[\"Etiquetas\",\"Código de colores\",\"Memorizar la ubicación\",\"Sombras y siluetas\"],\"correctIndex\":2},{\"question\":\"¿Qué es un layout en el contexto de Seiton?\",\"options\":[\"Un tipo de herramienta\",\"Una distribución visual del área de trabajo\",\"Un informe de auditoría\",\"Un código de barras\"],\"correctIndex\":1},{\"question\":\"¿Qué se debe hacer después de usar una herramienta según Seiton?\",\"options\":[\"Dejarla donde se usó\",\"Devolverla a su ubicación asignada\",\"Pasarla al compañero\",\"Guardarla en un cajón cualquiera\"],\"correctIndex\":1},{\"question\":\"¿Cómo se clasifica la frecuencia de uso en Seiton?\",\"options\":[\"Barato y caro\",\"Muy frecuente, frecuente, ocasional y raro\",\"Grande y pequeño\",\"Nuevo y viejo\"],\"correctIndex\":1},{\"question\":\"¿Qué beneficio aporta la señalización visual en Seiton?\",\"options\":[\"Decorar el lugar de trabajo\",\"Permitir detectar anomalías de forma inmediata\",\"Aumentar el presupuesto\",\"Reducir el número de herramientas\"],\"correctIndex\":1}]}",
+          notaMinima: 80,
+      ?   id?: String,
+      ?   active?: Boolean,
+      ?   createdAt?: DateTime,
+      ?   updatedAt?: DateTime
+        }
+      })
+
+Unknown argument `miniStep`. Available options are marked with ?.
+    at <unknown> (src/app/api/templates/route.ts:47:40)
+    at async POST (src/app/api/templates/route.ts:47:22)
+  45 |     }
+  46 |
+> 47 |     const template = await db.template.create({ data })
+     |                                        ^
+  48 |
+  49 |     return NextResponse.json({ success: true, data: template })
+  50 |   } catch (error) { {
+  clientVersion: '6.19.2'
+}
+ POST /api/templates 500 in 306ms (compile: 1579µs, render: 305ms)
+prisma:error 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.create()` invocation in
+/home/z/my-project/.next/dev/server/chunks/[root-of-the-server]__f59e6f19._.js:161:162
+
+  158     content: typeof content === 'string' ? content : JSON.stringify(content),
+  159     notaMinima: notaMinima != null ? Number(notaMinima) : null
+  160 };
+→ 161 const template = await __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.create({
+        data: {
+          type: "formacion",
+          sStep: 3,
+          miniStep: 1,
+          ~~~~~~~~
+          title: "Formación S3 - Seiso",
+          description: null,
+          content: "{\"sections\":[{\"title\":\"¿Qué es Seiso (Limpiar)?\",\"content\":\"Seiso es la tercera de las 5S y significa \\\"limpiar\\\" o \\\"brillar\\\". Va más allá de la simple limpieza: consiste en inspeccionar el lugar de trabajo mientras se limpia, identificando las fuentes de suciedad, las anomalías y los defectos. Seiso convierte la limpieza en una actividad de mantenimiento preventivo, donde cada persona es responsable de mantener su zona limpia y en condiciones óptimas.\"},{\"title\":\"Objetivos de Seiso\",\"content\":\"1. Mantener el lugar de trabajo limpio y en condiciones óptimas de funcionamiento.\\n2. Identificar y eliminar las fuentes de suciedad en su origen.\\n3. Detectar anomalías, fugas, desgastes y defectos durante la limpieza.\\n4. Establecer un plan de limpieza regular con responsables y frecuencias definidas.\\n5. Crear el hábito de limpieza como parte de la rutina diaria de trabajo.\"},{\"title\":\"Metodología de implementación\",\"content\":\"1. Realizar un inventario de puntos de suciedad: polvo, grasa, manchas, residuos, humedad, oxidación.\\n2. Clasificar cada punto por nivel (leve, moderado, grave) y fuente (proceso, medio ambiente, falta de limpieza, escape, desgaste, derrame).\\n3. Definir el método de limpieza adecuado para cada tipo de suciedad: aspirado, fregado, pulido, desinfección, reparación.\\n4. Asignar frecuencias de limpieza: diaria, 3 veces por semana, semanal, quincenal, mensual.\\n5. Crear un mapa de puntos de suciedad con responsables y plan de limpieza.\\n6. Establecer un kit de limpieza accesible en cada zona.\"},{\"title\":\"Beneficios esperados\",\"content\":\"Aplicar Seiso aporta beneficios como: detección temprana de fallos y fugas, reducción de accidentes por suciedad, mejora de la calidad del producto al evitar contaminación, aumento de la vida útil de los equipos, y un entorno de trabajo más agradable y motivador para los empleados.\"}]}",
+          notaMinima: 80,
+      ?   id?: String,
+      ?   active?: Boolean,
+      ?   createdAt?: DateTime,
+      ?   updatedAt?: DateTime
+        }
+      })
+
+Unknown argument `miniStep`. Available options are marked with ?.
+Error creating template: Error [PrismaClientValidationError]: 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.create()` invocation in
+/home/z/my-project/.next/dev/server/chunks/[root-of-the-server]__f59e6f19._.js:161:162
+
+  158     content: typeof content === 'string' ? content : JSON.stringify(content),
+  159     notaMinima: notaMinima != null ? Number(notaMinima) : null
+  160 };
+→ 161 const template = await __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.create({
+        data: {
+          type: "formacion",
+          sStep: 3,
+          miniStep: 1,
+          ~~~~~~~~
+          title: "Formación S3 - Seiso",
+          description: null,
+          content: "{\"sections\":[{\"title\":\"¿Qué es Seiso (Limpiar)?\",\"content\":\"Seiso es la tercera de las 5S y significa \\\"limpiar\\\" o \\\"brillar\\\". Va más allá de la simple limpieza: consiste en inspeccionar el lugar de trabajo mientras se limpia, identificando las fuentes de suciedad, las anomalías y los defectos. Seiso convierte la limpieza en una actividad de mantenimiento preventivo, donde cada persona es responsable de mantener su zona limpia y en condiciones óptimas.\"},{\"title\":\"Objetivos de Seiso\",\"content\":\"1. Mantener el lugar de trabajo limpio y en condiciones óptimas de funcionamiento.\\n2. Identificar y eliminar las fuentes de suciedad en su origen.\\n3. Detectar anomalías, fugas, desgastes y defectos durante la limpieza.\\n4. Establecer un plan de limpieza regular con responsables y frecuencias definidas.\\n5. Crear el hábito de limpieza como parte de la rutina diaria de trabajo.\"},{\"title\":\"Metodología de implementación\",\"content\":\"1. Realizar un inventario de puntos de suciedad: polvo, grasa, manchas, residuos, humedad, oxidación.\\n2. Clasificar cada punto por nivel (leve, moderado, grave) y fuente (proceso, medio ambiente, falta de limpieza, escape, desgaste, derrame).\\n3. Definir el método de limpieza adecuado para cada tipo de suciedad: aspirado, fregado, pulido, desinfección, reparación.\\n4. Asignar frecuencias de limpieza: diaria, 3 veces por semana, semanal, quincenal, mensual.\\n5. Crear un mapa de puntos de suciedad con responsables y plan de limpieza.\\n6. Establecer un kit de limpieza accesible en cada zona.\"},{\"title\":\"Beneficios esperados\",\"content\":\"Aplicar Seiso aporta beneficios como: detección temprana de fallos y fugas, reducción de accidentes por suciedad, mejora de la calidad del producto al evitar contaminación, aumento de la vida útil de los equipos, y un entorno de trabajo más agradable y motivador para los empleados.\"}]}",
+          notaMinima: 80,
+      ?   id?: String,
+      ?   active?: Boolean,
+      ?   createdAt?: DateTime,
+      ?   updatedAt?: DateTime
+        }
+      })
+
+Unknown argument `miniStep`. Available options are marked with ?.
+    at <unknown> (src/app/api/templates/route.ts:47:40)
+    at async POST (src/app/api/templates/route.ts:47:22)
+  45 |     }
+  46 |
+> 47 |     const template = await db.template.create({ data })
+     |                                        ^
+  48 |
+  49 |     return NextResponse.json({ success: true, data: template })
+  50 |   } catch (error) { {
+  clientVersion: '6.19.2'
+}
+ POST /api/templates 500 in 211ms (compile: 1741µs, render: 210ms)
+prisma:error 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.create()` invocation in
+/home/z/my-project/.next/dev/server/chunks/[root-of-the-server]__f59e6f19._.js:161:162
+
+  158     content: typeof content === 'string' ? content : JSON.stringify(content),
+  159     notaMinima: notaMinima != null ? Number(notaMinima) : null
+  160 };
+→ 161 const template = await __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.create({
+        data: {
+          type: "examen",
+          sStep: 3,
+          miniStep: 1,
+          ~~~~~~~~
+          title: "Examen S3 - Seiso",
+          description: null,
+          content: "{\"questions\":[{\"question\":\"¿Cuál es el objetivo principal de Seiso (Limpiar)?\",\"options\":[\"Hacer que todo brille\",\"Inspeccionar mientras se limpia, identificando anomalías y fuentes de suciedad\",\"Pintar las paredes\",\"Comprar productos de limpieza\"],\"correctIndex\":1},{\"question\":\"¿En qué se diferencia Seiso de una limpieza normal?\",\"options\":[\"En que se usa más agua\",\"En que convierte la limpieza en mantenimiento preventivo\",\"En que solo la hace el equipo de limpieza\",\"En que se hace una vez al año\"],\"correctIndex\":1},{\"question\":\"¿Qué tipos de suciedad se deben inventariar en Seiso?\",\"options\":[\"Solo polvo\",\"Polvo, grasa, manchas, residuos, humedad y oxidación\",\"Solo grasa\",\"Solo restos de comida\"],\"correctIndex\":1},{\"question\":\"¿Quién es responsable de la limpieza en Seiso?\",\"options\":[\"Solo el equipo de limpieza\",\"Solo el encargado\",\"Cada persona en su zona de trabajo\",\"El departamento de calidad\"],\"correctIndex\":2},{\"question\":\"¿Qué se debe hacer al detectar una fuga durante la limpieza?\",\"options\":[\"Ignorarla y seguir limpiando\",\"Identificarla como fuente de suciedad y reportarla\",\"Taparla con cinta\",\"Esperar a que se seque sola\"],\"correctIndex\":1},{\"question\":\"¿Qué es un mapa de puntos de suciedad?\",\"options\":[\"Un mapa del mundo\",\"Una representación visual de las zonas con suciedad y sus características\",\"Un plano del edificio\",\"Un calendario de limpieza\"],\"correctIndex\":1},{\"question\":\"¿Qué frecuencia de limpieza se recomienda para zonas de alto tráfico?\",\"options\":[\"Mensual\",\"Diaria o varias veces por semana\",\"Anual\",\"Solo cuando está muy sucio\"],\"correctIndex\":1},{\"question\":\"¿Qué debe contener un kit de limpieza según Seiso?\",\"options\":[\"Solo una escoba\",\"Los productos y herramientas necesarios para la limpieza de la zona\",\"Documentos de calidad\",\"Herramientas de producción\"],\"correctIndex\":1}]}",
+          notaMinima: 80,
+      ?   id?: String,
+      ?   active?: Boolean,
+      ?   createdAt?: DateTime,
+      ?   updatedAt?: DateTime
+        }
+      })
+
+Unknown argument `miniStep`. Available options are marked with ?.
+Error creating template: Error [PrismaClientValidationError]: 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.create()` invocation in
+/home/z/my-project/.next/dev/server/chunks/[root-of-the-server]__f59e6f19._.js:161:162
+
+  158     content: typeof content === 'string' ? content : JSON.stringify(content),
+  159     notaMinima: notaMinima != null ? Number(notaMinima) : null
+  160 };
+→ 161 const template = await __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.create({
+        data: {
+          type: "examen",
+          sStep: 3,
+          miniStep: 1,
+          ~~~~~~~~
+          title: "Examen S3 - Seiso",
+          description: null,
+          content: "{\"questions\":[{\"question\":\"¿Cuál es el objetivo principal de Seiso (Limpiar)?\",\"options\":[\"Hacer que todo brille\",\"Inspeccionar mientras se limpia, identificando anomalías y fuentes de suciedad\",\"Pintar las paredes\",\"Comprar productos de limpieza\"],\"correctIndex\":1},{\"question\":\"¿En qué se diferencia Seiso de una limpieza normal?\",\"options\":[\"En que se usa más agua\",\"En que convierte la limpieza en mantenimiento preventivo\",\"En que solo la hace el equipo de limpieza\",\"En que se hace una vez al año\"],\"correctIndex\":1},{\"question\":\"¿Qué tipos de suciedad se deben inventariar en Seiso?\",\"options\":[\"Solo polvo\",\"Polvo, grasa, manchas, residuos, humedad y oxidación\",\"Solo grasa\",\"Solo restos de comida\"],\"correctIndex\":1},{\"question\":\"¿Quién es responsable de la limpieza en Seiso?\",\"options\":[\"Solo el equipo de limpieza\",\"Solo el encargado\",\"Cada persona en su zona de trabajo\",\"El departamento de calidad\"],\"correctIndex\":2},{\"question\":\"¿Qué se debe hacer al detectar una fuga durante la limpieza?\",\"options\":[\"Ignorarla y seguir limpiando\",\"Identificarla como fuente de suciedad y reportarla\",\"Taparla con cinta\",\"Esperar a que se seque sola\"],\"correctIndex\":1},{\"question\":\"¿Qué es un mapa de puntos de suciedad?\",\"options\":[\"Un mapa del mundo\",\"Una representación visual de las zonas con suciedad y sus características\",\"Un plano del edificio\",\"Un calendario de limpieza\"],\"correctIndex\":1},{\"question\":\"¿Qué frecuencia de limpieza se recomienda para zonas de alto tráfico?\",\"options\":[\"Mensual\",\"Diaria o varias veces por semana\",\"Anual\",\"Solo cuando está muy sucio\"],\"correctIndex\":1},{\"question\":\"¿Qué debe contener un kit de limpieza según Seiso?\",\"options\":[\"Solo una escoba\",\"Los productos y herramientas necesarios para la limpieza de la zona\",\"Documentos de calidad\",\"Herramientas de producción\"],\"correctIndex\":1}]}",
+          notaMinima: 80,
+      ?   id?: String,
+      ?   active?: Boolean,
+      ?   createdAt?: DateTime,
+      ?   updatedAt?: DateTime
+        }
+      })
+
+Unknown argument `miniStep`. Available options are marked with ?.
+    at <unknown> (src/app/api/templates/route.ts:47:40)
+    at async POST (src/app/api/templates/route.ts:47:22)
+  45 |     }
+  46 |
+> 47 |     const template = await db.template.create({ data })
+     |                                        ^
+  48 |
+  49 |     return NextResponse.json({ success: true, data: template })
+  50 |   } catch (error) { {
+  clientVersion: '6.19.2'
+}
+ POST /api/templates 500 in 137ms (compile: 1474µs, render: 136ms)
+prisma:error 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.create()` invocation in
+/home/z/my-project/.next/dev/server/chunks/[root-of-the-server]__f59e6f19._.js:161:162
+
+  158     content: typeof content === 'string' ? content : JSON.stringify(content),
+  159     notaMinima: notaMinima != null ? Number(notaMinima) : null
+  160 };
+→ 161 const template = await __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.create({
+        data: {
+          type: "formacion",
+          sStep: 4,
+          miniStep: 1,
+          ~~~~~~~~
+          title: "Formación S4 - Seiketsu",
+          description: null,
+          content: "{\"sections\":[{\"title\":\"¿Qué es Seiketsu (Estandarizar)?\",\"content\":\"Seiketsu es la cuarta de las 5S y significa \\\"estandarizar\\\" o \\\"mantener el estado\\\". Consiste en crear estándares, normas y procedimientos que mantengan los logros obtenidos con las 3S anteriores (Seiri, Seiton, Seiso). Seiketsu asegura que las mejoras no se pierdan con el tiempo y que todos los empleados sigan los mismos criterios de orden, organización y limpieza.\"},{\"title\":\"Objetivos de Seiketsu\",\"content\":\"1. Crear estándares visuales y documentados para mantener los logros de las 3S.\\n2. Establecer procedimientos claros que cualquier persona pueda seguir.\\n3. Prevenir la reaparición de problemas ya resueltos.\\n4. Implantar instrucciones visuales, diagramas y señalización permanente.\\n5. Definir indicadores visuales que permitan detectar desviaciones de forma inmediata.\"},{\"title\":\"Metodología de implementación\",\"content\":\"1. Documentar las mejores prácticas identificadas en las 3S anteriores.\\n2. Crear estándares visuales: fotografías del estado correcto, diagramas de ubicación, etiquetas de identificación.\\n3. Establecer procedimientos de inspección y mantenimiento con frecuencia y responsable.\\n4. Implantar checklist de verificación diaria o semanal.\\n5. Definir indicadores visuales de estado (semáforos, marcas de nivel, contornos).\\n6. Revisar y actualizar los estándares periódicamente.\"},{\"title\":\"Beneficios esperados\",\"content\":\"Los beneficios de Seiketsu incluyen: consolidación de las mejoras de las 3S anteriores, reducción de la variabilidad en los procesos, facilitación de la formación de nuevos empleados, detección rápida de desviaciones, y creación de una base sólida para la mejora continua.\"}]}",
+          notaMinima: 80,
+      ?   id?: String,
+      ?   active?: Boolean,
+      ?   createdAt?: DateTime,
+      ?   updatedAt?: DateTime
+        }
+      })
+
+Unknown argument `miniStep`. Available options are marked with ?.
+Error creating template: Error [PrismaClientValidationError]: 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.create()` invocation in
+/home/z/my-project/.next/dev/server/chunks/[root-of-the-server]__f59e6f19._.js:161:162
+
+  158     content: typeof content === 'string' ? content : JSON.stringify(content),
+  159     notaMinima: notaMinima != null ? Number(notaMinima) : null
+  160 };
+→ 161 const template = await __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.create({
+        data: {
+          type: "formacion",
+          sStep: 4,
+          miniStep: 1,
+          ~~~~~~~~
+          title: "Formación S4 - Seiketsu",
+          description: null,
+          content: "{\"sections\":[{\"title\":\"¿Qué es Seiketsu (Estandarizar)?\",\"content\":\"Seiketsu es la cuarta de las 5S y significa \\\"estandarizar\\\" o \\\"mantener el estado\\\". Consiste en crear estándares, normas y procedimientos que mantengan los logros obtenidos con las 3S anteriores (Seiri, Seiton, Seiso). Seiketsu asegura que las mejoras no se pierdan con el tiempo y que todos los empleados sigan los mismos criterios de orden, organización y limpieza.\"},{\"title\":\"Objetivos de Seiketsu\",\"content\":\"1. Crear estándares visuales y documentados para mantener los logros de las 3S.\\n2. Establecer procedimientos claros que cualquier persona pueda seguir.\\n3. Prevenir la reaparición de problemas ya resueltos.\\n4. Implantar instrucciones visuales, diagramas y señalización permanente.\\n5. Definir indicadores visuales que permitan detectar desviaciones de forma inmediata.\"},{\"title\":\"Metodología de implementación\",\"content\":\"1. Documentar las mejores prácticas identificadas en las 3S anteriores.\\n2. Crear estándares visuales: fotografías del estado correcto, diagramas de ubicación, etiquetas de identificación.\\n3. Establecer procedimientos de inspección y mantenimiento con frecuencia y responsable.\\n4. Implantar checklist de verificación diaria o semanal.\\n5. Definir indicadores visuales de estado (semáforos, marcas de nivel, contornos).\\n6. Revisar y actualizar los estándares periódicamente.\"},{\"title\":\"Beneficios esperados\",\"content\":\"Los beneficios de Seiketsu incluyen: consolidación de las mejoras de las 3S anteriores, reducción de la variabilidad en los procesos, facilitación de la formación de nuevos empleados, detección rápida de desviaciones, y creación de una base sólida para la mejora continua.\"}]}",
+          notaMinima: 80,
+      ?   id?: String,
+      ?   active?: Boolean,
+      ?   createdAt?: DateTime,
+      ?   updatedAt?: DateTime
+        }
+      })
+
+Unknown argument `miniStep`. Available options are marked with ?.
+    at <unknown> (src/app/api/templates/route.ts:47:40)
+    at async POST (src/app/api/templates/route.ts:47:22)
+  45 |     }
+  46 |
+> 47 |     const template = await db.template.create({ data })
+     |                                        ^
+  48 |
+  49 |     return NextResponse.json({ success: true, data: template })
+  50 |   } catch (error) { {
+  clientVersion: '6.19.2'
+}
+ POST /api/templates 500 in 186ms (compile: 2ms, render: 184ms)
+prisma:error 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.create()` invocation in
+/home/z/my-project/.next/dev/server/chunks/[root-of-the-server]__f59e6f19._.js:161:162
+
+  158     content: typeof content === 'string' ? content : JSON.stringify(content),
+  159     notaMinima: notaMinima != null ? Number(notaMinima) : null
+  160 };
+→ 161 const template = await __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.create({
+        data: {
+          type: "examen",
+          sStep: 4,
+          miniStep: 1,
+          ~~~~~~~~
+          title: "Examen S4 - Seiketsu",
+          description: null,
+          content: "{\"questions\":[{\"question\":\"¿Cuál es el objetivo principal de Seiketsu (Estandarizar)?\",\"options\":[\"Limpiar más rápido\",\"Crear estándares que mantengan los logros de las 3S anteriores\",\"Eliminar más innecesarios\",\"Organizar mejor las herramientas\"],\"correctIndex\":1},{\"question\":\"¿Qué tipo de estándares se crean en Seiketsu?\",\"options\":[\"Solo escritos en papel\",\"Visuales y documentados: fotos, diagramas, señalización, procedimientos\",\"Solo verbales\",\"Solo para directivos\"],\"correctIndex\":1},{\"question\":\"¿Para qué sirven los indicadores visuales en Seiketsu?\",\"options\":[\"Para decorar\",\"Para detectar desviaciones del estándar de forma inmediata\",\"Para contar herramientas\",\"Para medir la temperatura\"],\"correctIndex\":1},{\"question\":\"¿Cuál es un ejemplo de estándar visual?\",\"options\":[\"Un correo electrónico\",\"Una fotografía del estado correcto de una zona\",\"Una reunión verbal\",\"Un memorándum interno\"],\"correctIndex\":1},{\"question\":\"¿Qué es un checklist de verificación en Seiketsu?\",\"options\":[\"Una lista de compras\",\"Una lista de comprobación diaria o semanal del cumplimiento de estándares\",\"Un inventario de herramientas\",\"Un parte de trabajo\"],\"correctIndex\":1},{\"question\":\"¿Con qué frecuencia se deben revisar los estándares?\",\"options\":[\"Nunca, una vez creados son fijos\",\"Periódicamente para actualizarlos y mejorarlos\",\"Solo cuando hay auditoría\",\"Solo si hay queja del cliente\"],\"correctIndex\":1},{\"question\":\"¿Qué S anteriores sostiene Seiketsu?\",\"options\":[\"Solo Seiri\",\"Solo Seiton\",\"Seiri, Seiton y Seiso (las 3S anteriores)\",\"Ninguna\"],\"correctIndex\":2},{\"question\":\"¿Por qué es importante documentar las mejores prácticas?\",\"options\":[\"Por requisito legal\",\"Para que los nuevos empleados puedan seguirlas y no se pierdan las mejoras\",\"Para tener más papeleo\",\"Porque lo dice el jefe\"],\"correctIndex\":1}]}",
+          notaMinima: 80,
+      ?   id?: String,
+      ?   active?: Boolean,
+      ?   createdAt?: DateTime,
+      ?   updatedAt?: DateTime
+        }
+      })
+
+Unknown argument `miniStep`. Available options are marked with ?.
+Error creating template: Error [PrismaClientValidationError]: 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.create()` invocation in
+/home/z/my-project/.next/dev/server/chunks/[root-of-the-server]__f59e6f19._.js:161:162
+
+  158     content: typeof content === 'string' ? content : JSON.stringify(content),
+  159     notaMinima: notaMinima != null ? Number(notaMinima) : null
+  160 };
+→ 161 const template = await __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.create({
+        data: {
+          type: "examen",
+          sStep: 4,
+          miniStep: 1,
+          ~~~~~~~~
+          title: "Examen S4 - Seiketsu",
+          description: null,
+          content: "{\"questions\":[{\"question\":\"¿Cuál es el objetivo principal de Seiketsu (Estandarizar)?\",\"options\":[\"Limpiar más rápido\",\"Crear estándares que mantengan los logros de las 3S anteriores\",\"Eliminar más innecesarios\",\"Organizar mejor las herramientas\"],\"correctIndex\":1},{\"question\":\"¿Qué tipo de estándares se crean en Seiketsu?\",\"options\":[\"Solo escritos en papel\",\"Visuales y documentados: fotos, diagramas, señalización, procedimientos\",\"Solo verbales\",\"Solo para directivos\"],\"correctIndex\":1},{\"question\":\"¿Para qué sirven los indicadores visuales en Seiketsu?\",\"options\":[\"Para decorar\",\"Para detectar desviaciones del estándar de forma inmediata\",\"Para contar herramientas\",\"Para medir la temperatura\"],\"correctIndex\":1},{\"question\":\"¿Cuál es un ejemplo de estándar visual?\",\"options\":[\"Un correo electrónico\",\"Una fotografía del estado correcto de una zona\",\"Una reunión verbal\",\"Un memorándum interno\"],\"correctIndex\":1},{\"question\":\"¿Qué es un checklist de verificación en Seiketsu?\",\"options\":[\"Una lista de compras\",\"Una lista de comprobación diaria o semanal del cumplimiento de estándares\",\"Un inventario de herramientas\",\"Un parte de trabajo\"],\"correctIndex\":1},{\"question\":\"¿Con qué frecuencia se deben revisar los estándares?\",\"options\":[\"Nunca, una vez creados son fijos\",\"Periódicamente para actualizarlos y mejorarlos\",\"Solo cuando hay auditoría\",\"Solo si hay queja del cliente\"],\"correctIndex\":1},{\"question\":\"¿Qué S anteriores sostiene Seiketsu?\",\"options\":[\"Solo Seiri\",\"Solo Seiton\",\"Seiri, Seiton y Seiso (las 3S anteriores)\",\"Ninguna\"],\"correctIndex\":2},{\"question\":\"¿Por qué es importante documentar las mejores prácticas?\",\"options\":[\"Por requisito legal\",\"Para que los nuevos empleados puedan seguirlas y no se pierdan las mejoras\",\"Para tener más papeleo\",\"Porque lo dice el jefe\"],\"correctIndex\":1}]}",
+          notaMinima: 80,
+      ?   id?: String,
+      ?   active?: Boolean,
+      ?   createdAt?: DateTime,
+      ?   updatedAt?: DateTime
+        }
+      })
+
+Unknown argument `miniStep`. Available options are marked with ?.
+    at <unknown> (src/app/api/templates/route.ts:47:40)
+    at async POST (src/app/api/templates/route.ts:47:22)
+  45 |     }
+  46 |
+> 47 |     const template = await db.template.create({ data })
+     |                                        ^
+  48 |
+  49 |     return NextResponse.json({ success: true, data: template })
+  50 |   } catch (error) { {
+  clientVersion: '6.19.2'
+}
+ POST /api/templates 500 in 183ms (compile: 2ms, render: 181ms)
+prisma:error 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.create()` invocation in
+/home/z/my-project/.next/dev/server/chunks/[root-of-the-server]__f59e6f19._.js:161:162
+
+  158     content: typeof content === 'string' ? content : JSON.stringify(content),
+  159     notaMinima: notaMinima != null ? Number(notaMinima) : null
+  160 };
+→ 161 const template = await __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.create({
+        data: {
+          type: "formacion",
+          sStep: 5,
+          miniStep: 1,
+          ~~~~~~~~
+          title: "Formación S5 - Shitsuke",
+          description: null,
+          content: "{\"sections\":[{\"title\":\"¿Qué es Shitsuke (Disciplina)?\",\"content\":\"Shitsuke es la quinta y última de las 5S y significa \\\"disciplina\\\" o \\\"sostener\\\". Consiste en crear el hábito de respetar y cumplir los estándares establecidos en las 4S anteriores, de forma voluntaria y constante. Shitsuke transforma las normas en costumbres, asegurando que el orden, la organización, la limpieza y la estandarización se mantengan en el tiempo sin necesidad de supervisión constante.\"},{\"title\":\"Objetivos de Shitsuke\",\"content\":\"1. Convertir el cumplimiento de los estándares en un hábito diario.\\n2. Fomentar la autodisciplina y el compromiso personal con las 5S.\\n3. Establecer mecanismos de seguimiento: auditorías internas y externas.\\n4. Gestionar las anomalías detectadas y resolverlas de forma sistemática.\\n5. Promover la mejora continua como filosofía de trabajo.\"},{\"title\":\"Metodología de implementación\",\"content\":\"1. Realizar auditorías internas (autoevaluación) periódicas para verificar el cumplimiento de los estándares.\\n2. Realizar auditorías externas con evaluadores independientes para objetividad.\\n3. Registrar y gestionar las anomalías detectadas durante las auditorías.\\n4. Establecer planes de acción correctiva con responsable y fecha límite.\\n5. Comunicar los resultados de las auditorías a todo el equipo.\\n6. Reconocer y premiar a los equipos que mantienen altos niveles de cumplimiento.\"},{\"title\":\"Beneficios esperados\",\"content\":\"Aplicar Shitsuke genera beneficios como: mantenimiento sostenido de las 5S en el tiempo, mejora continua de los procesos, mayor compromiso y motivación del personal, reducción de recaídas y problemas recurrentes, y una cultura de calidad que se extiende a todos los niveles de la organización.\"}]}",
+          notaMinima: 80,
+      ?   id?: String,
+      ?   active?: Boolean,
+      ?   createdAt?: DateTime,
+      ?   updatedAt?: DateTime
+        }
+      })
+
+Unknown argument `miniStep`. Available options are marked with ?.
+Error creating template: Error [PrismaClientValidationError]: 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.create()` invocation in
+/home/z/my-project/.next/dev/server/chunks/[root-of-the-server]__f59e6f19._.js:161:162
+
+  158     content: typeof content === 'string' ? content : JSON.stringify(content),
+  159     notaMinima: notaMinima != null ? Number(notaMinima) : null
+  160 };
+→ 161 const template = await __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.create({
+        data: {
+          type: "formacion",
+          sStep: 5,
+          miniStep: 1,
+          ~~~~~~~~
+          title: "Formación S5 - Shitsuke",
+          description: null,
+          content: "{\"sections\":[{\"title\":\"¿Qué es Shitsuke (Disciplina)?\",\"content\":\"Shitsuke es la quinta y última de las 5S y significa \\\"disciplina\\\" o \\\"sostener\\\". Consiste en crear el hábito de respetar y cumplir los estándares establecidos en las 4S anteriores, de forma voluntaria y constante. Shitsuke transforma las normas en costumbres, asegurando que el orden, la organización, la limpieza y la estandarización se mantengan en el tiempo sin necesidad de supervisión constante.\"},{\"title\":\"Objetivos de Shitsuke\",\"content\":\"1. Convertir el cumplimiento de los estándares en un hábito diario.\\n2. Fomentar la autodisciplina y el compromiso personal con las 5S.\\n3. Establecer mecanismos de seguimiento: auditorías internas y externas.\\n4. Gestionar las anomalías detectadas y resolverlas de forma sistemática.\\n5. Promover la mejora continua como filosofía de trabajo.\"},{\"title\":\"Metodología de implementación\",\"content\":\"1. Realizar auditorías internas (autoevaluación) periódicas para verificar el cumplimiento de los estándares.\\n2. Realizar auditorías externas con evaluadores independientes para objetividad.\\n3. Registrar y gestionar las anomalías detectadas durante las auditorías.\\n4. Establecer planes de acción correctiva con responsable y fecha límite.\\n5. Comunicar los resultados de las auditorías a todo el equipo.\\n6. Reconocer y premiar a los equipos que mantienen altos niveles de cumplimiento.\"},{\"title\":\"Beneficios esperados\",\"content\":\"Aplicar Shitsuke genera beneficios como: mantenimiento sostenido de las 5S en el tiempo, mejora continua de los procesos, mayor compromiso y motivación del personal, reducción de recaídas y problemas recurrentes, y una cultura de calidad que se extiende a todos los niveles de la organización.\"}]}",
+          notaMinima: 80,
+      ?   id?: String,
+      ?   active?: Boolean,
+      ?   createdAt?: DateTime,
+      ?   updatedAt?: DateTime
+        }
+      })
+
+Unknown argument `miniStep`. Available options are marked with ?.
+    at <unknown> (src/app/api/templates/route.ts:47:40)
+    at async POST (src/app/api/templates/route.ts:47:22)
+  45 |     }
+  46 |
+> 47 |     const template = await db.template.create({ data })
+     |                                        ^
+  48 |
+  49 |     return NextResponse.json({ success: true, data: template })
+  50 |   } catch (error) { {
+  clientVersion: '6.19.2'
+}
+ POST /api/templates 500 in 106ms (compile: 1987µs, render: 104ms)
+prisma:error 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.create()` invocation in
+/home/z/my-project/.next/dev/server/chunks/[root-of-the-server]__f59e6f19._.js:161:162
+
+  158     content: typeof content === 'string' ? content : JSON.stringify(content),
+  159     notaMinima: notaMinima != null ? Number(notaMinima) : null
+  160 };
+→ 161 const template = await __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.create({
+        data: {
+          type: "examen",
+          sStep: 5,
+          miniStep: 1,
+          ~~~~~~~~
+          title: "Examen S5 - Shitsuke",
+          description: null,
+          content: "{\"questions\":[{\"question\":\"¿Cuál es el objetivo principal de Shitsuke (Disciplina)?\",\"options\":[\"Crear más normas\",\"Crear el hábito de respetar los estándares de forma voluntaria y constante\",\"Poner multas a los empleados\",\"Hacer auditorías puntuales\"],\"correctIndex\":1},{\"question\":\"¿Qué tipo de auditorías se realizan en Shitsuke?\",\"options\":[\"Solo financieras\",\"Internas (autoevaluación) y externas (evaluadores independientes)\",\"Solo de producto\",\"Solo de seguridad\"],\"correctIndex\":1},{\"question\":\"¿Qué se debe hacer al detectar una anomalía en una auditoría?\",\"options\":[\"Ignorarla\",\"Registrarla y crear un plan de acción correctiva con responsable y fecha\",\"Esperar a la próxima auditoría\",\"Solo informar verbalmente\"],\"correctIndex\":1},{\"question\":\"¿Qué convierte Shitsuke en hábito?\",\"options\":[\"La supervisión constante\",\"El cumplimiento voluntario y constante de los estándares\",\"Las sanciones económicas\",\"Los castigos\"],\"correctIndex\":1},{\"question\":\"¿Por qué es importante comunicar los resultados de las auditorías?\",\"options\":[\"Para señalar culpables\",\"Para que todo el equipo conozca el estado y participe en la mejora\",\"Para archivarlos\",\"Porque es obligatorio legalmente\"],\"correctIndex\":1},{\"question\":\"¿Cuál es la última etapa del ciclo de mejora continua en 5S?\",\"options\":[\"Seiri\",\"Shitsuke (que a su vez reinicia el ciclo)\",\"Seiton\",\"Seiso\"],\"correctIndex\":1},{\"question\":\"¿Qué papel tiene el reconocimiento en Shitsuke?\",\"options\":[\"No tiene ningún papel\",\"Motiva al equipo a mantener altos niveles de cumplimiento\",\"Genera competencia negativa\",\"Solo es para directivos\"],\"correctIndex\":1},{\"question\":\"¿Qué sucede si no se aplica Shitsuke correctamente?\",\"options\":[\"Nada, las 4S se mantienen solas\",\"Las mejoras de las 4S anteriores se pierden con el tiempo\",\"Se ahorra tiempo\",\"Se reducen costes\"],\"correctIndex\":1}]}",
+          notaMinima: 80,
+      ?   id?: String,
+      ?   active?: Boolean,
+      ?   createdAt?: DateTime,
+      ?   updatedAt?: DateTime
+        }
+      })
+
+Unknown argument `miniStep`. Available options are marked with ?.
+Error creating template: Error [PrismaClientValidationError]: 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.create()` invocation in
+/home/z/my-project/.next/dev/server/chunks/[root-of-the-server]__f59e6f19._.js:161:162
+
+  158     content: typeof content === 'string' ? content : JSON.stringify(content),
+  159     notaMinima: notaMinima != null ? Number(notaMinima) : null
+  160 };
+→ 161 const template = await __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.create({
+        data: {
+          type: "examen",
+          sStep: 5,
+          miniStep: 1,
+          ~~~~~~~~
+          title: "Examen S5 - Shitsuke",
+          description: null,
+          content: "{\"questions\":[{\"question\":\"¿Cuál es el objetivo principal de Shitsuke (Disciplina)?\",\"options\":[\"Crear más normas\",\"Crear el hábito de respetar los estándares de forma voluntaria y constante\",\"Poner multas a los empleados\",\"Hacer auditorías puntuales\"],\"correctIndex\":1},{\"question\":\"¿Qué tipo de auditorías se realizan en Shitsuke?\",\"options\":[\"Solo financieras\",\"Internas (autoevaluación) y externas (evaluadores independientes)\",\"Solo de producto\",\"Solo de seguridad\"],\"correctIndex\":1},{\"question\":\"¿Qué se debe hacer al detectar una anomalía en una auditoría?\",\"options\":[\"Ignorarla\",\"Registrarla y crear un plan de acción correctiva con responsable y fecha\",\"Esperar a la próxima auditoría\",\"Solo informar verbalmente\"],\"correctIndex\":1},{\"question\":\"¿Qué convierte Shitsuke en hábito?\",\"options\":[\"La supervisión constante\",\"El cumplimiento voluntario y constante de los estándares\",\"Las sanciones económicas\",\"Los castigos\"],\"correctIndex\":1},{\"question\":\"¿Por qué es importante comunicar los resultados de las auditorías?\",\"options\":[\"Para señalar culpables\",\"Para que todo el equipo conozca el estado y participe en la mejora\",\"Para archivarlos\",\"Porque es obligatorio legalmente\"],\"correctIndex\":1},{\"question\":\"¿Cuál es la última etapa del ciclo de mejora continua en 5S?\",\"options\":[\"Seiri\",\"Shitsuke (que a su vez reinicia el ciclo)\",\"Seiton\",\"Seiso\"],\"correctIndex\":1},{\"question\":\"¿Qué papel tiene el reconocimiento en Shitsuke?\",\"options\":[\"No tiene ningún papel\",\"Motiva al equipo a mantener altos niveles de cumplimiento\",\"Genera competencia negativa\",\"Solo es para directivos\"],\"correctIndex\":1},{\"question\":\"¿Qué sucede si no se aplica Shitsuke correctamente?\",\"options\":[\"Nada, las 4S se mantienen solas\",\"Las mejoras de las 4S anteriores se pierden con el tiempo\",\"Se ahorra tiempo\",\"Se reducen costes\"],\"correctIndex\":1}]}",
+          notaMinima: 80,
+      ?   id?: String,
+      ?   active?: Boolean,
+      ?   createdAt?: DateTime,
+      ?   updatedAt?: DateTime
+        }
+      })
+
+Unknown argument `miniStep`. Available options are marked with ?.
+    at <unknown> (src/app/api/templates/route.ts:47:40)
+    at async POST (src/app/api/templates/route.ts:47:22)
+  45 |     }
+  46 |
+> 47 |     const template = await db.template.create({ data })
+     |                                        ^
+  48 |
+  49 |     return NextResponse.json({ success: true, data: template })
+  50 |   } catch (error) { {
+  clientVersion: '6.19.2'
+}
+ POST /api/templates 500 in 143ms (compile: 1697µs, render: 141ms)
+prisma:error 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.findMany()` invocation in
+/home/z/my-project/.next/dev/server/chunks/[root-of-the-server]__f59e6f19._.js:112:163
+
+  109 if (type) where.type = type;
+  110 if (sStep) where.sStep = parseInt(sStep);
+  111 if (miniStep) where.miniStep = parseInt(miniStep);
+→ 112 const templates = await __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.findMany({
+        where: {
+          type: "formacion"
+        },
+        orderBy: [
+          {
+            sStep: "asc"
+          },
+          {
+            miniStep: "asc"
+          },
+          {
+            createdAt: "desc"
+          }
+        ]
+      })
+
+Unknown argument `miniStep`. Available options are marked with ?.
+Error fetching templates: Error [PrismaClientValidationError]: 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.findMany()` invocation in
+/home/z/my-project/.next/dev/server/chunks/[root-of-the-server]__f59e6f19._.js:112:163
+
+  109 if (type) where.type = type;
+  110 if (sStep) where.sStep = parseInt(sStep);
+  111 if (miniStep) where.miniStep = parseInt(miniStep);
+→ 112 const templates = await __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.findMany({
+        where: {
+          type: "formacion"
+        },
+        orderBy: [
+          {
+            sStep: "asc"
+          },
+          {
+            miniStep: "asc"
+          },
+          {
+            createdAt: "desc"
+          }
+        ]
+      })
+
+Unknown argument `miniStep`. Available options are marked with ?.
+    at <unknown> (src/app/api/templates/route.ts:19:41)
+    at async GET (src/app/api/templates/route.ts:19:23)
+  17 |     if (miniStep) where.miniStep = parseInt(miniStep)
+  18 |
+> 19 |     const templates = await db.template.findMany({ where, orderBy: [{ sStep: 'asc' }, { miniStep: 'asc' }, { createdAt: 'desc' }] })
+     |                                         ^
+  20 |     return NextResponse.json({ success: true, data: templates })
+  21 |   } catch (error) {
+  22 |     console.error('Error fetching templates:', error) {
+  clientVersion: '6.19.2'
+}
+ GET /api/templates?type=formacion&includeInactive=true 500 in 119ms (compile: 2ms, render: 117ms)
+prisma:error 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.findMany()` invocation in
+/home/z/my-project/.next/dev/server/chunks/[root-of-the-server]__f59e6f19._.js:112:163
+
+  109 if (type) where.type = type;
+  110 if (sStep) where.sStep = parseInt(sStep);
+  111 if (miniStep) where.miniStep = parseInt(miniStep);
+→ 112 const templates = await __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.findMany({
+        where: {
+          type: "examen"
+        },
+        orderBy: [
+          {
+            sStep: "asc"
+          },
+          {
+            miniStep: "asc"
+          },
+          {
+            createdAt: "desc"
+          }
+        ]
+      })
+
+Unknown argument `miniStep`. Available options are marked with ?.
+Error fetching templates: Error [PrismaClientValidationError]: 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.findMany()` invocation in
+/home/z/my-project/.next/dev/server/chunks/[root-of-the-server]__f59e6f19._.js:112:163
+
+  109 if (type) where.type = type;
+  110 if (sStep) where.sStep = parseInt(sStep);
+  111 if (miniStep) where.miniStep = parseInt(miniStep);
+→ 112 const templates = await __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.findMany({
+        where: {
+          type: "examen"
+        },
+        orderBy: [
+          {
+            sStep: "asc"
+          },
+          {
+            miniStep: "asc"
+          },
+          {
+            createdAt: "desc"
+          }
+        ]
+      })
+
+Unknown argument `miniStep`. Available options are marked with ?.
+    at <unknown> (src/app/api/templates/route.ts:19:41)
+    at async GET (src/app/api/templates/route.ts:19:23)
+  17 |     if (miniStep) where.miniStep = parseInt(miniStep)
+  18 |
+> 19 |     const templates = await db.template.findMany({ where, orderBy: [{ sStep: 'asc' }, { miniStep: 'asc' }, { createdAt: 'desc' }] })
+     |                                         ^
+  20 |     return NextResponse.json({ success: true, data: templates })
+  21 |   } catch (error) {
+  22 |     console.error('Error fetching templates:', error) {
+  clientVersion: '6.19.2'
+}
+ GET /api/templates?type=examen&includeInactive=true 500 in 125ms (compile: 1988µs, render: 123ms)
+ GET /api/notifications?userId=cmpo4w07k0000mg034fx4pt72&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 6ms (compile: 1735µs, render: 4ms)
+✓ Compiled in 177ms
+prisma:error 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.findMany()` invocation in
+/home/z/my-project/.next/dev/server/chunks/[root-of-the-server]__f59e6f19._.js:112:163
+
+  109 if (type) where.type = type;
+  110 if (sStep) where.sStep = parseInt(sStep);
+  111 if (miniStep) where.miniStep = parseInt(miniStep);
+→ 112 const templates = await __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.findMany({
+        where: {
+          type: "formacion"
+        },
+        orderBy: [
+          {
+            sStep: "asc"
+          },
+          {
+            miniStep: "asc"
+          },
+          {
+            createdAt: "desc"
+          }
+        ]
+      })
+
+Unknown argument `miniStep`. Available options are marked with ?.
+Error fetching templates: Error [PrismaClientValidationError]: 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.findMany()` invocation in
+/home/z/my-project/.next/dev/server/chunks/[root-of-the-server]__f59e6f19._.js:112:163
+
+  109 if (type) where.type = type;
+  110 if (sStep) where.sStep = parseInt(sStep);
+  111 if (miniStep) where.miniStep = parseInt(miniStep);
+→ 112 const templates = await __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.findMany({
+        where: {
+          type: "formacion"
+        },
+        orderBy: [
+          {
+            sStep: "asc"
+          },
+          {
+            miniStep: "asc"
+          },
+          {
+            createdAt: "desc"
+          }
+        ]
+      })
+
+Unknown argument `miniStep`. Available options are marked with ?.
+    at <unknown> (src/app/api/templates/route.ts:19:41)
+    at async GET (src/app/api/templates/route.ts:19:23)
+  17 |     if (miniStep) where.miniStep = parseInt(miniStep)
+  18 |
+> 19 |     const templates = await db.template.findMany({ where, orderBy: [{ sStep: 'asc' }, { miniStep: 'asc' }, { createdAt: 'desc' }] })
+     |                                         ^
+  20 |     return NextResponse.json({ success: true, data: templates })
+  21 |   } catch (error) {
+  22 |     console.error('Error fetching templates:', error) {
+  clientVersion: '6.19.2'
+}
+ GET /api/templates?type=formacion&includeInactive=true 500 in 156ms (compile: 2ms, render: 154ms)
+prisma:error 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.findMany()` invocation in
+/home/z/my-project/.next/dev/server/chunks/[root-of-the-server]__f59e6f19._.js:112:163
+
+  109 if (type) where.type = type;
+  110 if (sStep) where.sStep = parseInt(sStep);
+  111 if (miniStep) where.miniStep = parseInt(miniStep);
+→ 112 const templates = await __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.findMany({
+        where: {
+          type: "examen"
+        },
+        orderBy: [
+          {
+            sStep: "asc"
+          },
+          {
+            miniStep: "asc"
+          },
+          {
+            createdAt: "desc"
+          }
+        ]
+      })
+
+Unknown argument `miniStep`. Available options are marked with ?.
+Error fetching templates: Error [PrismaClientValidationError]: 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.findMany()` invocation in
+/home/z/my-project/.next/dev/server/chunks/[root-of-the-server]__f59e6f19._.js:112:163
+
+  109 if (type) where.type = type;
+  110 if (sStep) where.sStep = parseInt(sStep);
+  111 if (miniStep) where.miniStep = parseInt(miniStep);
+→ 112 const templates = await __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.findMany({
+        where: {
+          type: "examen"
+        },
+        orderBy: [
+          {
+            sStep: "asc"
+          },
+          {
+            miniStep: "asc"
+          },
+          {
+            createdAt: "desc"
+          }
+        ]
+      })
+
+Unknown argument `miniStep`. Available options are marked with ?.
+    at <unknown> (src/app/api/templates/route.ts:19:41)
+    at async GET (src/app/api/templates/route.ts:19:23)
+  17 |     if (miniStep) where.miniStep = parseInt(miniStep)
+  18 |
+> 19 |     const templates = await db.template.findMany({ where, orderBy: [{ sStep: 'asc' }, { miniStep: 'asc' }, { createdAt: 'desc' }] })
+     |                                         ^
+  20 |     return NextResponse.json({ success: true, data: templates })
+  21 |   } catch (error) {
+  22 |     console.error('Error fetching templates:', error) {
+  clientVersion: '6.19.2'
+}
+ GET /api/templates?type=examen&includeInactive=true 500 in 116ms (compile: 1856µs, render: 114ms)
+ GET /api/notifications?userId=cmpo4w07k0000mg034fx4pt72&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 6ms (compile: 1853µs, render: 5ms)
+ GET /api/notifications?userId=cmpo4w07k0000mg034fx4pt72&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 7ms (compile: 3ms, render: 5ms)
