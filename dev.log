@@ -4092,3 +4092,73 @@ Unknown argument `miniStep`. Available options are marked with ?.
  GET /api/templates?type=examen&includeInactive=true 500 in 116ms (compile: 1856µs, render: 114ms)
  GET /api/notifications?userId=cmpo4w07k0000mg034fx4pt72&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 6ms (compile: 1853µs, render: 5ms)
  GET /api/notifications?userId=cmpo4w07k0000mg034fx4pt72&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 7ms (compile: 3ms, render: 5ms)
+ GET / 200 in 331ms (compile: 53ms, render: 277ms)
+ GET / 200 in 25ms (compile: 3ms, render: 22ms)
+ GET /api/notifications?userId=cmpo4w07k0000mg034fx4pt72&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 6ms (compile: 1749µs, render: 5ms)
+ GET / 200 in 25ms (compile: 2ms, render: 23ms)
+ GET /api/auth 200 in 6ms (compile: 1434µs, render: 4ms)
+ GET /api/notifications?userId=cmpo4w07k0000mg034fx4pt72&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 6ms (compile: 1727µs, render: 4ms)
+prisma:error 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.findMany()` invocation in
+/home/z/my-project/.next/dev/server/chunks/[root-of-the-server]__f59e6f19._.js:112:163
+
+  109 if (type) where.type = type;
+  110 if (sStep) where.sStep = parseInt(sStep);
+  111 if (miniStep) where.miniStep = parseInt(miniStep);
+→ 112 const templates = await __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.findMany({
+        where: {
+          type: "inventario"
+        },
+        orderBy: [
+          {
+            sStep: "asc"
+          },
+          {
+            miniStep: "asc"
+          },
+          {
+            createdAt: "desc"
+          }
+        ]
+      })
+
+Unknown argument `miniStep`. Available options are marked with ?.
+Error fetching templates: Error [PrismaClientValidationError]: 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.findMany()` invocation in
+/home/z/my-project/.next/dev/server/chunks/[root-of-the-server]__f59e6f19._.js:112:163
+
+  109 if (type) where.type = type;
+  110 if (sStep) where.sStep = parseInt(sStep);
+  111 if (miniStep) where.miniStep = parseInt(miniStep);
+→ 112 const templates = await __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.findMany({
+        where: {
+          type: "inventario"
+        },
+        orderBy: [
+          {
+            sStep: "asc"
+          },
+          {
+            miniStep: "asc"
+          },
+          {
+            createdAt: "desc"
+          }
+        ]
+      })
+
+Unknown argument `miniStep`. Available options are marked with ?.
+    at <unknown> (src/app/api/templates/route.ts:19:41)
+    at async GET (src/app/api/templates/route.ts:19:23)
+  17 |     if (miniStep) where.miniStep = parseInt(miniStep)
+  18 |
+> 19 |     const templates = await db.template.findMany({ where, orderBy: [{ sStep: 'asc' }, { miniStep: 'asc' }, { createdAt: 'desc' }] })
+     |                                         ^
+  20 |     return NextResponse.json({ success: true, data: templates })
+  21 |   } catch (error) {
+  22 |     console.error('Error fetching templates:', error) {
+  clientVersion: '6.19.2'
+}
+ GET /api/templates?type=inventario&includeInactive=true 500 in 118ms (compile: 1748µs, render: 116ms)
+ GET /api/notifications?userId=cmpo4w07k0000mg034fx4pt72&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 6ms (compile: 2ms, render: 4ms)
+ GET / 200 in 30ms (compile: 2ms, render: 27ms)
