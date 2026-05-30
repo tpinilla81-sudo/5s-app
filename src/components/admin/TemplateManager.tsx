@@ -15,7 +15,7 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
 } from '@/components/ui/dialog'
 import {
-  Plus, Trash2, Edit3, Save, Loader2, BookOpen, FileCheck, ClipboardCheck,
+  Plus, Trash2, Edit3, Save, Loader2, BookOpen, FileCheck, ClipboardCheck, Camera,
   ChevronDown, ChevronUp, AlertTriangle, Copy, RotateCcw,
   Eye, Code, GripVertical, Download, Upload, ClipboardList, Award,
   Maximize2, Minimize2,
@@ -39,10 +39,11 @@ interface TemplateData {
   updatedAt: string
 }
 
-type TemplateTab = 'formacion' | 'inventarios' | 'estandares' | 'auditoria_interna' | 'auditoria_externa'
+type TemplateTab = 'formacion' | 'fotos' | 'inventarios' | 'estandares' | 'auditoria_interna' | 'auditoria_externa'
 
 const TEMPLATE_TABS: { key: TemplateTab; label: string; icon: React.ComponentType<{ className?: string }>; types: string[] }[] = [
   { key: 'formacion', label: 'Formación y Exámenes', icon: BookOpen, types: ['formacion', 'examen'] },
+  { key: 'fotos', label: 'Fotografías (Paso 2)', icon: Camera, types: ['fotos'] },
   { key: 'inventarios', label: 'Inventarios (Paso 3)', icon: ClipboardList, types: ['inventario'] },
   { key: 'estandares', label: 'Estándares (Paso 3)', icon: Award, types: ['estandar'] },
   { key: 'auditoria_interna', label: 'Auditorías Internas (Paso 4)', icon: ClipboardCheck, types: ['autoevaluacion'] },
@@ -210,6 +211,34 @@ function getDefaultStandardContent() {
       { key: 'responsable', label: 'Quién lo ha hecho', type: 'text', required: true },
       { key: 'contacto', label: 'Contacto', type: 'text', required: true },
       { key: 'mejoraTipo', label: 'Tipo de Mejora', type: 'select', options: ['Seguridad', 'Calidad', 'Proceso', 'Logística'], required: true },
+    ],
+  }
+}
+
+function getDefaultFotosContent(sStep: number) {
+  const descriptions: Record<number, string> = {
+    1: 'Fotografía la zona para ver qué elementos innecesarios hay antes de clasificar',
+    2: 'Fotografía la zona para ver cómo está organizada antes de reordenar',
+    3: 'Fotografía la zona para documentar los puntos de suciedad antes de limpiar',
+    4: 'Fotografía la zona para documentar el estado actual antes de estandarizar',
+    5: 'Fotografía la zona para documentar el nivel de cumplimiento de los estándares',
+  }
+  return {
+    sections: [
+      {
+        title: 'Fotografías Antes',
+        description: descriptions[sStep] || 'Documenta el estado actual con fotografías',
+        minPhotos: 3,
+        photoTypes: ['antes'],
+        instructions: 'Toma un mínimo de 3 fotografías del estado actual de la zona. Incluye vistas generales y detalles de los problemas detectados.',
+      },
+      {
+        title: 'Fotografías Después',
+        description: 'Fotografía el resultado tras aplicar las mejoras',
+        minPhotos: 3,
+        photoTypes: ['despues'],
+        instructions: 'Toma fotografías desde los mismos ángulos que las fotos "antes" para poder comparar el antes y el después.',
+      },
     ],
   }
 }
@@ -1062,6 +1091,8 @@ export default function TemplateManager() {
       setFormContent(JSON.stringify(getDefaultFormationContent(sStep), null, 2))
     } else if (type === 'examen') {
       setFormContent(JSON.stringify(getDefaultExamContent(sStep), null, 2))
+    } else if (type === 'fotos') {
+      setFormContent(JSON.stringify(getDefaultFotosContent(sStep), null, 2))
     } else if (type === 'inventario') {
       setFormContent(JSON.stringify(getDefaultInventoryContent(sStep), null, 2))
     } else if (type === 'estandar') {
@@ -1170,6 +1201,11 @@ export default function TemplateManager() {
               title = `Inventario S${s.id} - ${s.japaneseName}`
               nota = 0
               miniStep = 3
+            } else if (type === 'fotos') {
+              content = JSON.stringify(getDefaultFotosContent(s.id))
+              title = `Fotos S${s.id} - ${s.japaneseName}`
+              nota = 0
+              miniStep = 2
             } else if (type === 'estandar') {
               content = JSON.stringify(getDefaultStandardContent())
               title = `Estándar S${s.id} - ${s.japaneseName}`

@@ -53,10 +53,12 @@ import {
   ShieldCheck,
   Save,
   BookOpen,
+  LayoutGrid,
 } from 'lucide-react'
 import { Checkbox } from '@/components/ui/checkbox'
 import { S_STEPS } from '@/lib/5s-constants'
 import TemplateManager from './TemplateManager'
+import Tablero5S from './Tablero5S'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -129,7 +131,7 @@ interface AdminPanelProps {
 
 export default function AdminPanel({ embedded }: AdminPanelProps = {}) {
   const { setCurrentView, fetchProjects, fetchCompanies, projects, setCurrentProject, currentProject } = use5SStore()
-  const [activeTab, setActiveTab] = useState<'companies' | 'users' | 'projects' | 'plantillas'>('companies')
+  const [activeTab, setActiveTab] = useState<'companies' | 'users' | 'projects' | 'plantillas' | 'tablero5s'>('companies')
 
   // ─── Projects state ──────────────────────────────────────────────────────
   const [allProjects, setAllProjects] = useState<ProjectData[]>([])
@@ -811,11 +813,23 @@ export default function AdminPanel({ embedded }: AdminPanelProps = {}) {
             <BookOpen className="h-4 w-4" />
             Plantillas
           </button>
+
+          <button
+            onClick={() => { setActiveTab('tablero5s'); setSelectedProjectId(null) }}
+            className={`flex items-center gap-2 px-5 py-3 text-sm font-medium border-b-2 transition-colors ${
+              activeTab === 'tablero5s'
+                ? 'border-indigo-500 text-indigo-600'
+                : 'border-transparent text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            <LayoutGrid className="h-4 w-4" />
+            Tablero 5S
+          </button>
         </div>
       </div>
 
       {/* Content */}
-      <main className={`flex-1 w-full px-4 py-6 ${embedded ? '' : 'max-w-5xl mx-auto'}`}>
+      <main className={`flex-1 w-full px-4 py-6 ${activeTab === 'tablero5s' ? 'max-w-7xl mx-auto' : embedded ? '' : 'max-w-5xl mx-auto'}`}>
         <AnimatePresence mode="wait">
           {/* ═══ PROJECTS TAB ═══ */}
           {activeTab === 'projects' && (
@@ -1985,6 +1999,13 @@ export default function AdminPanel({ embedded }: AdminPanelProps = {}) {
           {activeTab === 'plantillas' && (
             <motion.div key="plantillas" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
               <TemplateManager />
+            </motion.div>
+          )}
+
+          {/* ═══ TABLERO 5S TAB ═══ */}
+          {activeTab === 'tablero5s' && (
+            <motion.div key="tablero5s" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+              <Tablero5S />
             </motion.div>
           )}
         </AnimatePresence>
