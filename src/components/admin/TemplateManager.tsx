@@ -1450,7 +1450,7 @@ export default function TemplateManager() {
       {/* EDIT / CREATE DIALOG */}
       {/* ═══════════════════════════════════════════════════════ */}
       <Dialog open={isCreating} onOpenChange={(open) => { if (!open) resetForm() }}>
-        <DialogContent className={`${isFullscreen ? 'max-w-[98vw] max-h-[96vh] w-[98vw] h-[96vh] rounded-lg p-6 gap-4' : 'max-w-[95vw] max-h-[95vh]'} !flex flex-col overflow-hidden transition-all duration-200`}>
+        <DialogContent className={`${isFullscreen ? 'max-w-[98vw] max-h-[96vh] w-[98vw] h-[96vh] rounded-lg p-6 gap-4' : 'max-w-[90vw] min-w-[80vw] max-h-[90vh] w-[85vw]'} !flex flex-col overflow-hidden transition-all duration-200`}>
           <DialogHeader className="shrink-0">
             <DialogTitle className="flex items-center gap-3 text-lg">
               {editingTemplate ? <Edit3 className="h-5 w-5 text-blue-500" /> : <Plus className="h-5 w-5 text-green-500" />}
