@@ -1,20 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 
-// GET /api/templates?type=xxx&sStep=1&includeInactive=true
+// GET /api/templates?type=xxx&sStep=1&miniStep=3&includeInactive=true
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
     const type = searchParams.get('type')
     const sStep = searchParams.get('sStep')
+    const miniStep = searchParams.get('miniStep')
     const includeInactive = searchParams.get('includeInactive') === 'true'
 
     const where: Record<string, unknown> = {}
     if (!includeInactive) where.active = true
     if (type) where.type = type
     if (sStep) where.sStep = parseInt(sStep)
+    if (miniStep) where.miniStep = parseInt(miniStep)
 
-    const templates = await db.template.findMany({ where, orderBy: [{ sStep: 'asc' }, { createdAt: 'desc' }] })
+    const templates = await db.template.findMany({ where, orderBy: [{ sStep: 'asc' }, { miniStep: 'asc' }, { createdAt: 'desc' }] })
     return NextResponse.json({ success: true, data: templates })
   } catch (error) {
     console.error('Error fetching templates:', error)
@@ -26,16 +28,16 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { type, sStep, title, description, content, notaMinima, projectId } = body
+    const { type, sStep, miniStep, title, description, content, notaMinima, projectId } = body
 
     if (!type || sStep == null || !title || !content) {
       return NextResponse.json({ success: false, error: 'Faltan campos obligatorios: type, sStep, title, content' }, { status: 400 })
     }
 
-    // If projectId is provided, this template is project-specific
     const data: Record<string, unknown> = {
       type,
       sStep: Number(sStep),
+      miniStep: miniStep != null ? Number(miniStep) : 3,
       title,
       description: description || null,
       content: typeof content === 'string' ? content : JSON.stringify(content),
@@ -55,7 +57,7 @@ export async function POST(request: NextRequest) {
 export async function PUT(request: NextRequest) {
   try {
     const body = await request.json()
-    const { id, type, sStep, title, description, content, active, notaMinima } = body
+    const { id, type, sStep, miniStep, title, description, content, active, notaMinima } = body
 
     if (!id) {
       return NextResponse.json({ success: false, error: 'Se requiere el id de la plantilla' }, { status: 400 })
@@ -64,6 +66,7 @@ export async function PUT(request: NextRequest) {
     const data: Record<string, unknown> = {}
     if (type !== undefined) data.type = type
     if (sStep !== undefined) data.sStep = Number(sStep)
+    if (miniStep !== undefined) data.miniStep = Number(miniStep)
     if (title !== undefined) data.title = title
     if (description !== undefined) data.description = description
     if (content !== undefined) data.content = typeof content === 'string' ? content : JSON.stringify(content)

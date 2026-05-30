@@ -29,6 +29,7 @@ interface TemplateData {
   id: string
   type: string
   sStep: number
+  miniStep: number
   title: string
   description: string | null
   content: string
@@ -48,6 +49,14 @@ const TEMPLATE_TABS: { key: TemplateTab; label: string; icon: React.ComponentTyp
 ]
 
 const S_COLORS: Record<number, string> = { 1: '#8B5CF6', 2: '#EAB308', 3: '#3B82F6', 4: '#F43F5E', 5: '#22C55E' }
+
+const MINI_STEPS_LABELS: Record<number, string> = {
+  1: 'Formación y Exámenes',
+  2: 'Plan de Acción',
+  3: 'Inventario / Estándar',
+  4: 'Autoevaluación',
+  5: 'Auditoría',
+}
 
 // ═══════════════════════════════════════════════════════
 // DEFAULT CONTENT GENERATORS
@@ -909,6 +918,7 @@ export default function TemplateManager() {
   // Form state
   const [formType, setFormType] = useState<string>('formacion')
   const [formSStep, setFormSStep] = useState<number>(1)
+  const [formMiniStep, setFormMiniStep] = useState<number>(3)
   const [formTitle, setFormTitle] = useState('')
   const [formDescription, setFormDescription] = useState('')
   const [formContent, setFormContent] = useState('')
@@ -937,6 +947,7 @@ export default function TemplateManager() {
   const resetForm = () => {
     setFormType(tabConfig.types[0])
     setFormSStep(1)
+    setFormMiniStep(3)
     setFormTitle('')
     setFormDescription('')
     setFormContent('')
@@ -948,10 +959,11 @@ export default function TemplateManager() {
     setIsFullscreen(false)
   }
 
-  const startCreate = (sStep: number, type: string) => {
+  const startCreate = (sStep: number, type: string, miniStep: number = 3) => {
     setIsCreating(true)
     setFormType(type)
     setFormSStep(sStep)
+    setFormMiniStep(miniStep)
     setFormTitle(`S${sStep} - ${S_STEPS.find(s => s.id === sStep)?.japaneseName || ''}`)
     setFormDescription('')
     setFormNotaMinima(type === 'formacion' || type === 'examen' ? EXAM_PASS_THRESHOLD : type === 'autoevaluacion' ? SELF_EVAL_THRESHOLD : type === 'inventario' || type === 'estandar' ? 0 : AUDIT_PASS_THRESHOLD)
@@ -975,6 +987,7 @@ export default function TemplateManager() {
     setEditingTemplate(template)
     setFormType(template.type)
     setFormSStep(template.sStep)
+    setFormMiniStep(template.miniStep || 3)
     setFormTitle(template.title)
     setFormDescription(template.description || '')
     setFormContent(typeof template.content === 'string' ? template.content : JSON.stringify(template.content, null, 2))
@@ -993,6 +1006,7 @@ export default function TemplateManager() {
       const payload = {
         type: formType,
         sStep: formSStep,
+        miniStep: formMiniStep,
         title: formTitle,
         description: formDescription || null,
         content: formContent,
@@ -1043,26 +1057,31 @@ export default function TemplateManager() {
             let content = '{}'
             let title = ''
             let nota = EXAM_PASS_THRESHOLD
+            let miniStep = 1
             if (type === 'formacion') {
               content = JSON.stringify(getDefaultFormationContent(s.id))
               title = `Formación S${s.id} - ${s.japaneseName}`
+              miniStep = 1
             } else if (type === 'examen') {
               content = JSON.stringify(getDefaultExamContent(s.id))
               title = `Examen S${s.id} - ${s.japaneseName}`
               nota = EXAM_PASS_THRESHOLD
+              miniStep = 1
             } else if (type === 'autoevaluacion') {
               content = JSON.stringify(getDefaultChecklistContent(s.id))
               title = `Autoevaluación S${s.id} - ${s.japaneseName}`
               nota = SELF_EVAL_THRESHOLD
+              miniStep = 4
             } else if (type === 'auditoria') {
               content = JSON.stringify(getDefaultChecklistContent(s.id))
               title = `Auditoría S${s.id} - ${s.japaneseName}`
               nota = AUDIT_PASS_THRESHOLD
+              miniStep = 5
             }
             await fetch('/api/templates', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ type, sStep: s.id, title, content, notaMinima: nota }),
+              body: JSON.stringify({ type, sStep: s.id, miniStep, title, content, notaMinima: nota }),
             })
           }
         }
@@ -1204,14 +1223,16 @@ export default function TemplateManager() {
                       <div className="p-4 space-y-3">
                         {/* Create buttons */}
                         <div className="flex gap-2 mb-3">
-                          {tabConfig.types.map(type => (
+                          {tabConfig.types.map(type => {
+                            const defaultMiniStep = type === 'formacion' || type === 'examen' ? 1 : type === 'autoevaluacion' ? 4 : type === 'auditoria' ? 5 : 3
+                            return (
                             <Button key={type} variant="outline" size="sm"
                               className="gap-1 text-xs"
-                              onClick={() => startCreate(s.id, type)}>
+                              onClick={() => startCreate(s.id, type, defaultMiniStep)}>
                               <Plus className="h-3.5 w-3.5" />
                               Nueva {type === 'formacion' ? 'Formación' : type === 'examen' ? 'Examen' : type === 'autoevaluacion' ? 'Autoevaluación' : type === 'auditoria' ? 'Auditoría Externa' : type === 'inventario' ? 'Config. Inventario' : 'Formato Estándar'}
                             </Button>
-                          ))}
+                          )})}
                         </div>
 
                         {/* Template list */}
@@ -1223,7 +1244,20 @@ export default function TemplateManager() {
                           <div className="space-y-2">
                             {sTemplates.map(tpl => (
                               <div key={tpl.id}
-                                className={`flex items-center justify-between p-3 rounded-lg border ${tpl.active ? 'bg-white border-gray-200' : 'bg-gray-50 border-gray-300 opacity-60'}`}>
+                                className={`p-3 rounded-lg border ${tpl.active ? 'bg-white border-gray-200' : 'bg-gray-50 border-gray-300 opacity-60'}`}>
+                                {/* S / Paso indicator */}
+                                <div className="flex items-center gap-2 mb-2 px-1">
+                                  <div className="flex items-center gap-1.5 px-2 py-0.5 rounded text-xs font-bold text-white"
+                                    style={{ backgroundColor: S_COLORS[tpl.sStep] || '#666' }}>
+                                    S{tpl.sStep}
+                                  </div>
+                                  <span className="text-xs text-muted-foreground">Paso {tpl.miniStep || 3}</span>
+                                  <span className="text-xs text-muted-foreground">·</span>
+                                  <span className="text-xs font-medium" style={{ color: S_COLORS[tpl.sStep] || '#666' }}>
+                                    {MINI_STEPS_LABELS[tpl.miniStep || 3]}
+                                  </span>
+                                </div>
+                                <div className="flex items-center justify-between">
                                 <div className="flex items-center gap-3 flex-1 min-w-0">
                                   <Badge className="shrink-0" style={{
                                     backgroundColor: tpl.type === 'formacion' ? '#DBEAFE' : tpl.type === 'examen' ? '#FEF3C7' : tpl.type === 'autoevaluacion' ? '#D1FAE5' : tpl.type === 'auditoria' ? '#FED7AA' : tpl.type === 'inventario' ? '#FFEDD5' : '#EDE9FE',
@@ -1263,6 +1297,7 @@ export default function TemplateManager() {
                                     <Trash2 className="h-3.5 w-3.5" />
                                   </Button>
                                 </div>
+                                </div>
                               </div>
                             ))}
                           </div>
@@ -1297,8 +1332,29 @@ export default function TemplateManager() {
           </DialogHeader>
 
           <div className="space-y-4 mt-4">
-            {/* Row 1: Type + S-Step */}
-            <div className="grid grid-cols-2 gap-4">
+            {/* S / Paso indicator box */}
+            <div className="flex items-center gap-3 p-3 rounded-lg border-2"
+              style={{ backgroundColor: S_COLORS[formSStep] + '10', borderColor: S_COLORS[formSStep] + '40' }}>
+              <div className="w-12 h-12 rounded-lg flex items-center justify-center text-white font-black text-lg"
+                style={{ backgroundColor: S_COLORS[formSStep] }}>
+                S{formSStep}
+              </div>
+              <div>
+                <p className="font-bold" style={{ color: S_COLORS[formSStep] }}>
+                  {S_STEPS.find(s => s.id === formSStep)?.japaneseName} — {S_STEPS.find(s => s.id === formSStep)?.spanishName}
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  Paso {formMiniStep}: {MINI_STEPS_LABELS[formMiniStep] || `Paso ${formMiniStep}`}
+                </p>
+              </div>
+              <Badge style={{ backgroundColor: S_COLORS[formSStep] + '20', color: S_COLORS[formSStep] }}
+                className="ml-auto text-sm px-3 py-1 border-0 font-semibold">
+                S{formSStep} · Paso {formMiniStep}
+              </Badge>
+            </div>
+
+            {/* Row 1: Type + S-Step + MiniStep */}
+            <div className="grid grid-cols-3 gap-4">
               <div>
                 <Label className="text-sm font-semibold">Tipo</Label>
                 <Select value={formType} onValueChange={setFormType}>
@@ -1316,7 +1372,7 @@ export default function TemplateManager() {
                 </Select>
               </div>
               <div>
-                <Label className="text-sm font-semibold">S-Step</Label>
+                <Label className="text-sm font-semibold">S (Fase)</Label>
                 <Select value={String(formSStep)} onValueChange={(v) => setFormSStep(Number(v))}>
                   <SelectTrigger className="mt-1">
                     <SelectValue />
@@ -1325,6 +1381,21 @@ export default function TemplateManager() {
                     {S_STEPS.map(s => (
                       <SelectItem key={s.id} value={String(s.id)}>
                         S{s.id} - {s.japaneseName} ({s.spanishName})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label className="text-sm font-semibold">Paso</Label>
+                <Select value={String(formMiniStep)} onValueChange={(v) => setFormMiniStep(Number(v))}>
+                  <SelectTrigger className="mt-1">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {[1, 2, 3, 4, 5].map(step => (
+                      <SelectItem key={step} value={String(step)}>
+                        Paso {step} — {MINI_STEPS_LABELS[step]}
                       </SelectItem>
                     ))}
                   </SelectContent>

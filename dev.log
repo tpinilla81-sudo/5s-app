@@ -70,3 +70,441 @@ https://nextjs.org/telemetry
  GET /api/templates?type=inventario&includeInactive=true 200 in 10ms (compile: 3ms, render: 8ms)
  GET /api/notifications?userId=cmpo4w07k0000mg034fx4pt72&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 8ms (compile: 3ms, render: 5ms)
  GET /api/notifications?userId=cmpo4w07k0000mg034fx4pt72&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 8ms (compile: 2ms, render: 6ms)
+ GET / 200 in 437ms (compile: 66ms, render: 371ms)
+ GET / 200 in 31ms (compile: 5ms, render: 26ms)
+ GET /api/notifications?userId=cmpo4w07k0000mg034fx4pt72&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 12ms (compile: 3ms, render: 9ms)
+ GET /api/notifications?userId=cmpo4w07k0000mg034fx4pt72&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 8ms (compile: 3ms, render: 5ms)
+ GET /api/notifications?userId=cmpo4w07k0000mg034fx4pt72&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 7ms (compile: 1971µs, render: 5ms)
+ GET /api/notifications?userId=cmpo4w07k0000mg034fx4pt72&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 7ms (compile: 1748µs, render: 5ms)
+ GET /api/notifications?userId=cmpo4w07k0000mg034fx4pt72&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 6ms (compile: 1764µs, render: 5ms)
+ GET /api/notifications?userId=cmpo4w07k0000mg034fx4pt72&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 7ms (compile: 2ms, render: 5ms)
+ GET /api/notifications?userId=cmpo4w07k0000mg034fx4pt72&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 6ms (compile: 1895µs, render: 4ms)
+ GET /api/notifications?userId=cmpo4w07k0000mg034fx4pt72&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 6ms (compile: 1843µs, render: 5ms)
+ GET /api/notifications?userId=cmpo4w07k0000mg034fx4pt72&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 6ms (compile: 1848µs, render: 4ms)
+ GET /api/notifications?userId=cmpo4w07k0000mg034fx4pt72&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 7ms (compile: 3ms, render: 5ms)
+ GET /api/notifications?userId=cmpo4w07k0000mg034fx4pt72&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 6ms (compile: 1921µs, render: 4ms)
+ GET /api/notifications?userId=cmpo4w07k0000mg034fx4pt72&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 6ms (compile: 1724µs, render: 5ms)
+ GET /api/notifications?userId=cmpo4w07k0000mg034fx4pt72&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 7ms (compile: 1790µs, render: 5ms)
+ GET /api/notifications?userId=cmpo4w07k0000mg034fx4pt72&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 7ms (compile: 2ms, render: 5ms)
+ GET /api/notifications?userId=cmpo4w07k0000mg034fx4pt72&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 7ms (compile: 1831µs, render: 5ms)
+ GET /api/notifications?userId=cmpo4w07k0000mg034fx4pt72&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 7ms (compile: 2ms, render: 5ms)
+ GET /api/notifications?userId=cmpo4w07k0000mg034fx4pt72&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 8ms (compile: 2ms, render: 5ms)
+ GET /api/notifications?userId=cmpo4w07k0000mg034fx4pt72&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 6ms (compile: 1935µs, render: 4ms)
+ GET /api/notifications?userId=cmpo4w07k0000mg034fx4pt72&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 7ms (compile: 1863µs, render: 5ms)
+ GET /api/notifications?userId=cmpo4w07k0000mg034fx4pt72&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 7ms (compile: 2ms, render: 5ms)
+ GET /api/notifications?userId=cmpo4w07k0000mg034fx4pt72&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 7ms (compile: 2ms, render: 5ms)
+ PUT /api/templates 200 in 10ms (compile: 2ms, render: 8ms)
+ GET /api/templates?type=inventario&includeInactive=true 200 in 7ms (compile: 2ms, render: 5ms)
+ GET /api/inventory?sStep=1&projectId=cmpok8xii00rjmgfj1nn1hiuh&zoneId=cmpok8xii00rkmgfjvv2ri8f8 200 in 7ms (compile: 2ms, render: 5ms)
+ GET /api/templates?type=inventario&sStep=1 200 in 7ms (compile: 2ms, render: 5ms)
+ GET /api/notifications?userId=cmpo4w07k0000mg034fx4pt72&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 7ms (compile: 1757µs, render: 6ms)
+ GET /api/templates?type=inventario&sStep=1 200 in 8ms (compile: 2ms, render: 6ms)
+ GET /api/notifications?userId=cmpo4w07k0000mg034fx4pt72&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 9ms (compile: 4ms, render: 6ms)
+ GET /api/notifications?userId=cmpo4w07k0000mg034fx4pt72&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 6ms (compile: 1747µs, render: 4ms)
+ GET /api/notifications?userId=cmpo4w07k0000mg034fx4pt72&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 6ms (compile: 1943µs, render: 4ms)
+ GET /api/notifications?userId=cmpo4w07k0000mg034fx4pt72&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 9ms (compile: 2ms, render: 6ms)
+ GET /api/projects 200 in 8ms (compile: 1731µs, render: 6ms)
+ GET /api/users 200 in 8ms (compile: 1968µs, render: 6ms)
+ GET /api/companies 200 in 7ms (compile: 1843µs, render: 5ms)
+ GET /api/templates?type=formacion&includeInactive=true 200 in 8ms (compile: 2ms, render: 6ms)
+ GET /api/templates?type=examen&includeInactive=true 200 in 8ms (compile: 2ms, render: 6ms)
+ GET /api/notifications?userId=cmpo4w07k0000mg034fx4pt72&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 10ms (compile: 2ms, render: 7ms)
+ GET /api/templates?type=inventario&includeInactive=true 200 in 7ms (compile: 1965µs, render: 5ms)
+ GET /api/notifications?userId=cmpo4w07k0000mg034fx4pt72&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 6ms (compile: 1699µs, render: 5ms)
+ GET /api/notifications?userId=cmpo4w07k0000mg034fx4pt72&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 7ms (compile: 1757µs, render: 5ms)
+ GET /api/notifications?userId=cmpo4w07k0000mg034fx4pt72&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 6ms (compile: 1937µs, render: 4ms)
+ GET /api/notifications?userId=cmpo4w07k0000mg034fx4pt72&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 6ms (compile: 1878µs, render: 4ms)
+ GET /api/notifications?userId=cmpo4w07k0000mg034fx4pt72&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 6ms (compile: 1796µs, render: 4ms)
+✓ Compiled in 195ms
+prisma:error 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.findMany()` invocation in
+/home/z/my-project/.next/dev/server/chunks/[root-of-the-server]__f59e6f19._.js:112:163
+
+  109 if (type) where.type = type;
+  110 if (sStep) where.sStep = parseInt(sStep);
+  111 if (miniStep) where.miniStep = parseInt(miniStep);
+→ 112 const templates = await __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.findMany({
+        where: {
+          type: "inventario"
+        },
+        orderBy: [
+          {
+            sStep: "asc"
+          },
+          {
+            miniStep: "asc"
+          },
+          {
+            createdAt: "desc"
+          }
+        ]
+      })
+
+Unknown argument `miniStep`. Available options are marked with ?.
+Error fetching templates: Error [PrismaClientValidationError]: 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.findMany()` invocation in
+/home/z/my-project/.next/dev/server/chunks/[root-of-the-server]__f59e6f19._.js:112:163
+
+  109 if (type) where.type = type;
+  110 if (sStep) where.sStep = parseInt(sStep);
+  111 if (miniStep) where.miniStep = parseInt(miniStep);
+→ 112 const templates = await __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.findMany({
+        where: {
+          type: "inventario"
+        },
+        orderBy: [
+          {
+            sStep: "asc"
+          },
+          {
+            miniStep: "asc"
+          },
+          {
+            createdAt: "desc"
+          }
+        ]
+      })
+
+Unknown argument `miniStep`. Available options are marked with ?.
+    at <unknown> (src/app/api/templates/route.ts:19:41)
+    at async GET (src/app/api/templates/route.ts:19:23)
+  17 |     if (miniStep) where.miniStep = parseInt(miniStep)
+  18 |
+> 19 |     const templates = await db.template.findMany({ where, orderBy: [{ sStep: 'asc' }, { miniStep: 'asc' }, { createdAt: 'desc' }] })
+     |                                         ^
+  20 |     return NextResponse.json({ success: true, data: templates })
+  21 |   } catch (error) {
+  22 |     console.error('Error fetching templates:', error) {
+  clientVersion: '6.19.2'
+}
+ GET /api/templates?type=inventario&includeInactive=true 500 in 325ms (compile: 40ms, render: 284ms)
+ GET /api/notifications?userId=cmpo4w07k0000mg034fx4pt72&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 12ms (compile: 2ms, render: 10ms)
+✓ Compiled in 180ms
+prisma:error 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.findMany()` invocation in
+/home/z/my-project/.next/dev/server/chunks/[root-of-the-server]__f59e6f19._.js:112:163
+
+  109 if (type) where.type = type;
+  110 if (sStep) where.sStep = parseInt(sStep);
+  111 if (miniStep) where.miniStep = parseInt(miniStep);
+→ 112 const templates = await __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.findMany({
+        where: {
+          type: "formacion"
+        },
+        orderBy: [
+          {
+            sStep: "asc"
+          },
+          {
+            miniStep: "asc"
+          },
+          {
+            createdAt: "desc"
+          }
+        ]
+      })
+
+Unknown argument `miniStep`. Available options are marked with ?.
+Error fetching templates: Error [PrismaClientValidationError]: 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.findMany()` invocation in
+/home/z/my-project/.next/dev/server/chunks/[root-of-the-server]__f59e6f19._.js:112:163
+
+  109 if (type) where.type = type;
+  110 if (sStep) where.sStep = parseInt(sStep);
+  111 if (miniStep) where.miniStep = parseInt(miniStep);
+→ 112 const templates = await __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.findMany({
+        where: {
+          type: "formacion"
+        },
+        orderBy: [
+          {
+            sStep: "asc"
+          },
+          {
+            miniStep: "asc"
+          },
+          {
+            createdAt: "desc"
+          }
+        ]
+      })
+
+Unknown argument `miniStep`. Available options are marked with ?.
+    at <unknown> (src/app/api/templates/route.ts:19:41)
+    at async GET (src/app/api/templates/route.ts:19:23)
+  17 |     if (miniStep) where.miniStep = parseInt(miniStep)
+  18 |
+> 19 |     const templates = await db.template.findMany({ where, orderBy: [{ sStep: 'asc' }, { miniStep: 'asc' }, { createdAt: 'desc' }] })
+     |                                         ^
+  20 |     return NextResponse.json({ success: true, data: templates })
+  21 |   } catch (error) {
+  22 |     console.error('Error fetching templates:', error) {
+  clientVersion: '6.19.2'
+}
+ GET /api/templates?type=formacion&includeInactive=true 500 in 192ms (compile: 2ms, render: 190ms)
+prisma:error 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.findMany()` invocation in
+/home/z/my-project/.next/dev/server/chunks/[root-of-the-server]__f59e6f19._.js:112:163
+
+  109 if (type) where.type = type;
+  110 if (sStep) where.sStep = parseInt(sStep);
+  111 if (miniStep) where.miniStep = parseInt(miniStep);
+→ 112 const templates = await __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.findMany({
+        where: {
+          type: "examen"
+        },
+        orderBy: [
+          {
+            sStep: "asc"
+          },
+          {
+            miniStep: "asc"
+          },
+          {
+            createdAt: "desc"
+          }
+        ]
+      })
+
+Unknown argument `miniStep`. Available options are marked with ?.
+Error fetching templates: Error [PrismaClientValidationError]: 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.findMany()` invocation in
+/home/z/my-project/.next/dev/server/chunks/[root-of-the-server]__f59e6f19._.js:112:163
+
+  109 if (type) where.type = type;
+  110 if (sStep) where.sStep = parseInt(sStep);
+  111 if (miniStep) where.miniStep = parseInt(miniStep);
+→ 112 const templates = await __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.findMany({
+        where: {
+          type: "examen"
+        },
+        orderBy: [
+          {
+            sStep: "asc"
+          },
+          {
+            miniStep: "asc"
+          },
+          {
+            createdAt: "desc"
+          }
+        ]
+      })
+
+Unknown argument `miniStep`. Available options are marked with ?.
+    at <unknown> (src/app/api/templates/route.ts:19:41)
+    at async GET (src/app/api/templates/route.ts:19:23)
+  17 |     if (miniStep) where.miniStep = parseInt(miniStep)
+  18 |
+> 19 |     const templates = await db.template.findMany({ where, orderBy: [{ sStep: 'asc' }, { miniStep: 'asc' }, { createdAt: 'desc' }] })
+     |                                         ^
+  20 |     return NextResponse.json({ success: true, data: templates })
+  21 |   } catch (error) {
+  22 |     console.error('Error fetching templates:', error) {
+  clientVersion: '6.19.2'
+}
+ GET /api/templates?type=examen&includeInactive=true 500 in 169ms (compile: 1855µs, render: 167ms)
+prisma:error 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.findMany()` invocation in
+/home/z/my-project/.next/dev/server/chunks/[root-of-the-server]__f59e6f19._.js:112:163
+
+  109 if (type) where.type = type;
+  110 if (sStep) where.sStep = parseInt(sStep);
+  111 if (miniStep) where.miniStep = parseInt(miniStep);
+→ 112 const templates = await __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.findMany({
+        where: {
+          type: "inventario"
+        },
+        orderBy: [
+          {
+            sStep: "asc"
+          },
+          {
+            miniStep: "asc"
+          },
+          {
+            createdAt: "desc"
+          }
+        ]
+      })
+
+Unknown argument `miniStep`. Available options are marked with ?.
+Error fetching templates: Error [PrismaClientValidationError]: 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.findMany()` invocation in
+/home/z/my-project/.next/dev/server/chunks/[root-of-the-server]__f59e6f19._.js:112:163
+
+  109 if (type) where.type = type;
+  110 if (sStep) where.sStep = parseInt(sStep);
+  111 if (miniStep) where.miniStep = parseInt(miniStep);
+→ 112 const templates = await __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.findMany({
+        where: {
+          type: "inventario"
+        },
+        orderBy: [
+          {
+            sStep: "asc"
+          },
+          {
+            miniStep: "asc"
+          },
+          {
+            createdAt: "desc"
+          }
+        ]
+      })
+
+Unknown argument `miniStep`. Available options are marked with ?.
+    at <unknown> (src/app/api/templates/route.ts:19:41)
+    at async GET (src/app/api/templates/route.ts:19:23)
+  17 |     if (miniStep) where.miniStep = parseInt(miniStep)
+  18 |
+> 19 |     const templates = await db.template.findMany({ where, orderBy: [{ sStep: 'asc' }, { miniStep: 'asc' }, { createdAt: 'desc' }] })
+     |                                         ^
+  20 |     return NextResponse.json({ success: true, data: templates })
+  21 |   } catch (error) {
+  22 |     console.error('Error fetching templates:', error) {
+  clientVersion: '6.19.2'
+}
+ GET /api/templates?type=inventario&includeInactive=true 500 in 136ms (compile: 2ms, render: 134ms)
+✓ Compiled in 193ms
+prisma:error 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.findMany()` invocation in
+/home/z/my-project/.next/dev/server/chunks/[root-of-the-server]__f59e6f19._.js:112:163
+
+  109 if (type) where.type = type;
+  110 if (sStep) where.sStep = parseInt(sStep);
+  111 if (miniStep) where.miniStep = parseInt(miniStep);
+→ 112 const templates = await __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.findMany({
+        where: {
+          type: "inventario"
+        },
+        orderBy: [
+          {
+            sStep: "asc"
+          },
+          {
+            miniStep: "asc"
+          },
+          {
+            createdAt: "desc"
+          }
+        ]
+      })
+
+Unknown argument `miniStep`. Available options are marked with ?.
+Error fetching templates: Error [PrismaClientValidationError]: 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.findMany()` invocation in
+/home/z/my-project/.next/dev/server/chunks/[root-of-the-server]__f59e6f19._.js:112:163
+
+  109 if (type) where.type = type;
+  110 if (sStep) where.sStep = parseInt(sStep);
+  111 if (miniStep) where.miniStep = parseInt(miniStep);
+→ 112 const templates = await __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.findMany({
+        where: {
+          type: "inventario"
+        },
+        orderBy: [
+          {
+            sStep: "asc"
+          },
+          {
+            miniStep: "asc"
+          },
+          {
+            createdAt: "desc"
+          }
+        ]
+      })
+
+Unknown argument `miniStep`. Available options are marked with ?.
+    at <unknown> (src/app/api/templates/route.ts:19:41)
+    at async GET (src/app/api/templates/route.ts:19:23)
+  17 |     if (miniStep) where.miniStep = parseInt(miniStep)
+  18 |
+> 19 |     const templates = await db.template.findMany({ where, orderBy: [{ sStep: 'asc' }, { miniStep: 'asc' }, { createdAt: 'desc' }] })
+     |                                         ^
+  20 |     return NextResponse.json({ success: true, data: templates })
+  21 |   } catch (error) {
+  22 |     console.error('Error fetching templates:', error) {
+  clientVersion: '6.19.2'
+}
+ GET /api/templates?type=inventario&includeInactive=true 500 in 199ms (compile: 3ms, render: 196ms)
+✓ Compiled in 193ms
+ GET /api/inventory?sStep=1&projectId=cmpok8xii00rjmgfj1nn1hiuh&zoneId=cmpok8xii00rkmgfjvv2ri8f8 200 in 8ms (compile: 2ms, render: 6ms)
+prisma:error 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.findMany()` invocation in
+/home/z/my-project/.next/dev/server/chunks/[root-of-the-server]__f59e6f19._.js:112:163
+
+  109 if (type) where.type = type;
+  110 if (sStep) where.sStep = parseInt(sStep);
+  111 if (miniStep) where.miniStep = parseInt(miniStep);
+→ 112 const templates = await __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.findMany({
+        where: {
+          active: true,
+          type: "inventario",
+          sStep: 1
+        },
+        orderBy: [
+          {
+            sStep: "asc"
+          },
+          {
+            miniStep: "asc"
+          },
+          {
+            createdAt: "desc"
+          }
+        ]
+      })
+
+Unknown argument `miniStep`. Available options are marked with ?.
+Error fetching templates: Error [PrismaClientValidationError]: 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.findMany()` invocation in
+/home/z/my-project/.next/dev/server/chunks/[root-of-the-server]__f59e6f19._.js:112:163
+
+  109 if (type) where.type = type;
+  110 if (sStep) where.sStep = parseInt(sStep);
+  111 if (miniStep) where.miniStep = parseInt(miniStep);
+→ 112 const templates = await __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.findMany({
+        where: {
+          active: true,
+          type: "inventario",
+          sStep: 1
+        },
+        orderBy: [
+          {
+            sStep: "asc"
+          },
+          {
+            miniStep: "asc"
+          },
+          {
+            createdAt: "desc"
+          }
+        ]
+      })
+
+Unknown argument `miniStep`. Available options are marked with ?.
+    at <unknown> (src/app/api/templates/route.ts:19:41)
+    at async GET (src/app/api/templates/route.ts:19:23)
+  17 |     if (miniStep) where.miniStep = parseInt(miniStep)
+  18 |
+> 19 |     const templates = await db.template.findMany({ where, orderBy: [{ sStep: 'asc' }, { miniStep: 'asc' }, { createdAt: 'desc' }] })
+     |                                         ^
+  20 |     return NextResponse.json({ success: true, data: templates })
+  21 |   } catch (error) {
+  22 |     console.error('Error fetching templates:', error) {
+  clientVersion: '6.19.2'
+}
+ GET /api/templates?type=inventario&sStep=1 500 in 170ms (compile: 1289µs, render: 169ms)
+ GET /api/notifications?userId=cmpo4w07k0000mg034fx4pt72&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 8ms (compile: 2ms, render: 6ms)
+✓ Compiled in 157ms
+✓ Compiled in 142ms
+✓ Compiled in 160ms
+ GET /api/notifications?userId=cmpo4w07k0000mg034fx4pt72&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 5ms (compile: 1702µs, render: 4ms)
+ GET / 200 in 89ms (compile: 59ms, render: 30ms)
+ GET / 200 in 21ms (compile: 3ms, render: 18ms)
+✓ Compiled in 187ms
+✓ Compiled in 158ms
+ GET /api/notifications?userId=cmpo4w07k0000mg034fx4pt72&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 8ms (compile: 2ms, render: 5ms)
+ GET / 200 in 335ms (compile: 62ms, render: 273ms)
