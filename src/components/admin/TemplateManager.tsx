@@ -18,6 +18,7 @@ import {
   Plus, Trash2, Edit3, Save, Loader2, BookOpen, FileCheck, ClipboardCheck,
   ChevronDown, ChevronUp, AlertTriangle, Copy, RotateCcw,
   Eye, Code, GripVertical, Download, Upload, ClipboardList, Award,
+  Maximize2, Minimize2,
 } from 'lucide-react'
 import { S_STEPS, AUDIT_CHECKLISTS, EXAM_PASS_THRESHOLD, SELF_EVAL_THRESHOLD, AUDIT_PASS_THRESHOLD, INVENTORY_CONFIGS } from '@/lib/5s-constants'
 
@@ -903,6 +904,7 @@ export default function TemplateManager() {
   const [isSaving, setIsSaving] = useState(false)
   const [expandedS, setExpandedS] = useState<number | null>(null)
   const [editorMode, setEditorMode] = useState<'visual' | 'json'>('visual')
+  const [isFullscreen, setIsFullscreen] = useState(false)
 
   // Form state
   const [formType, setFormType] = useState<string>('formacion')
@@ -943,6 +945,7 @@ export default function TemplateManager() {
     setEditingTemplate(null)
     setIsCreating(false)
     setEditorMode('visual')
+    setIsFullscreen(false)
   }
 
   const startCreate = (sStep: number, type: string) => {
@@ -1278,11 +1281,18 @@ export default function TemplateManager() {
       {/* EDIT / CREATE DIALOG */}
       {/* ═══════════════════════════════════════════════════════ */}
       <Dialog open={isCreating} onOpenChange={(open) => { if (!open) resetForm() }}>
-        <DialogContent className="max-w-[95vw] max-h-[95vh] overflow-auto">
+        <DialogContent className={`${isFullscreen ? 'max-w-full max-h-full w-screen h-screen rounded-none' : 'max-w-[95vw] max-h-[95vh]'} overflow-auto transition-all duration-200`}>
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               {editingTemplate ? <Edit3 className="h-5 w-5 text-blue-500" /> : <Plus className="h-5 w-5 text-green-500" />}
               {editingTemplate ? 'Editar Plantilla' : 'Nueva Plantilla'}
+              <button
+                onClick={() => setIsFullscreen(!isFullscreen)}
+                className="ml-auto p-1.5 rounded-md hover:bg-gray-100 transition-colors text-gray-500 hover:text-gray-700"
+                title={isFullscreen ? 'Salir de pantalla completa' : 'Pantalla completa'}
+              >
+                {isFullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+              </button>
             </DialogTitle>
           </DialogHeader>
 
@@ -1425,7 +1435,7 @@ export default function TemplateManager() {
 
               {/* Editor content */}
               {editorMode === 'visual' ? (
-                <div className="border rounded-lg p-3 min-h-[400px] max-h-[65vh] overflow-y-auto bg-gray-50">
+                <div className={`border rounded-lg p-3 min-h-[400px] overflow-y-auto bg-gray-50 ${isFullscreen ? 'max-h-[calc(100vh-320px)]' : 'max-h-[65vh]'}`}>
                   {(formType === 'autoevaluacion' || formType === 'auditoria') && (
                     <ChecklistEditor content={formContent} onChange={setFormContent} />
                   )}
@@ -1446,7 +1456,7 @@ export default function TemplateManager() {
                 <textarea
                   value={formContent}
                   onChange={(e) => setFormContent(e.target.value)}
-                  className="w-full h-[65vh] p-3 border rounded-lg font-mono text-sm bg-gray-50 focus:ring-2 focus:ring-green-300 focus:border-green-400"
+                  className={`w-full p-3 border rounded-lg font-mono text-sm bg-gray-50 focus:ring-2 focus:ring-green-300 focus:border-green-400 ${isFullscreen ? 'h-[calc(100vh-320px)]' : 'h-[65vh]'}`}
                   spellCheck={false}
                 />
               )}
