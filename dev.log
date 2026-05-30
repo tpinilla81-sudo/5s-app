@@ -4162,3 +4162,7 @@ Unknown argument `miniStep`. Available options are marked with ?.
  GET /api/templates?type=inventario&includeInactive=true 500 in 118ms (compile: 1748µs, render: 116ms)
  GET /api/notifications?userId=cmpo4w07k0000mg034fx4pt72&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 6ms (compile: 2ms, render: 4ms)
  GET / 200 in 30ms (compile: 2ms, render: 27ms)
+ GET / 200 in 25ms (compile: 2ms, render: 22ms)
+ GET /api/notifications?userId=cmpo4w07k0000mg034fx4pt72&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 6ms (compile: 1850µs, render: 4ms)
+ GET /api/notifications?userId=cmpo4w07k0000mg034fx4pt72&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 6ms (compile: 1524µs, render: 4ms)
+ GET / 200 in 28ms (compile: 3ms, render: 25ms)
