@@ -1039,7 +1039,8 @@ export default function TemplateManager() {
   const [formTitle, setFormTitle] = useState('')
   const [formDescription, setFormDescription] = useState('')
   const [formContent, setFormContent] = useState('')
-  const [formNotaMinima, setFormNotaMinima] = useState<number>(70)
+  const [formNotaMinima, setFormNotaMinima] = useState<number | null>(null)
+  const [notaMinimaAplica, setNotaMinimaAplica] = useState(true)
   const [formActive, setFormActive] = useState(true)
 
   const tabConfig = TEMPLATE_TABS.find(t => t.key === activeTab)!
@@ -1083,7 +1084,9 @@ export default function TemplateManager() {
     setFormMiniStep(miniStep)
     setFormTitle(`S${sStep} - ${S_STEPS.find(s => s.id === sStep)?.japaneseName || ''}`)
     setFormDescription('')
-    setFormNotaMinima(type === 'formacion' || type === 'examen' ? EXAM_PASS_THRESHOLD : type === 'autoevaluacion' ? SELF_EVAL_THRESHOLD : type === 'inventario' || type === 'estandar' ? 0 : AUDIT_PASS_THRESHOLD)
+    const aplicaNota = type === 'examen' || type === 'autoevaluacion' || type === 'auditoria'
+    setNotaMinimaAplica(aplicaNota)
+    setFormNotaMinima(aplicaNota ? (type === 'examen' ? EXAM_PASS_THRESHOLD : type === 'autoevaluacion' ? SELF_EVAL_THRESHOLD : AUDIT_PASS_THRESHOLD) : null)
     setFormActive(true)
     setEditorMode('visual')
 
@@ -1110,7 +1113,9 @@ export default function TemplateManager() {
     setFormTitle(template.title)
     setFormDescription(template.description || '')
     setFormContent(typeof template.content === 'string' ? template.content : JSON.stringify(template.content, null, 2))
-    setFormNotaMinima(template.notaMinima ?? (template.type === 'autoevaluacion' ? SELF_EVAL_THRESHOLD : template.type === 'auditoria' ? AUDIT_PASS_THRESHOLD : EXAM_PASS_THRESHOLD))
+    const aplicaNota = template.type === 'examen' || template.type === 'autoevaluacion' || template.type === 'auditoria'
+    setNotaMinimaAplica(aplicaNota)
+    setFormNotaMinima(template.notaMinima != null ? template.notaMinima : (aplicaNota ? (template.type === 'examen' ? EXAM_PASS_THRESHOLD : template.type === 'autoevaluacion' ? SELF_EVAL_THRESHOLD : AUDIT_PASS_THRESHOLD) : null))
     setFormActive(template.active)
     setIsCreating(true)
     setEditorMode('visual')
@@ -1129,7 +1134,7 @@ export default function TemplateManager() {
         title: formTitle,
         description: formDescription || null,
         content: formContent,
-        notaMinima: formNotaMinima,
+        notaMinima: notaMinimaAplica ? formNotaMinima : null,
         active: formActive,
       }
 
@@ -1408,9 +1413,13 @@ export default function TemplateManager() {
                                       {getTemplateSummary(tpl)}
                                     </Badge>
                                   )}
-                                  {tpl.notaMinima != null && (
+                                  {tpl.notaMinima != null ? (
                                     <Badge variant="outline" className="shrink-0 text-xs">
                                       Nota mín: {tpl.notaMinima}%
+                                    </Badge>
+                                  ) : (
+                                    <Badge variant="outline" className="shrink-0 text-xs text-gray-400 border-gray-200">
+                                      Sin nota mín
                                     </Badge>
                                   )}
                                   {!tpl.active && (
@@ -1537,10 +1546,29 @@ export default function TemplateManager() {
               </div>
               <div>
                 <Label className="text-sm font-semibold">Nota mínima (pasa/no pasa)</Label>
-                <div className="flex items-center gap-2 mt-1">
-                  <Input type="number" value={formNotaMinima} onChange={(e) => setFormNotaMinima(Number(e.target.value))}
-                    min={0} max={100} className="h-10 w-20" />
-                  <span className="text-sm text-muted-foreground">%</span>
+                <div className="flex items-center gap-3 mt-1">
+                  <label className="flex items-center gap-1.5 cursor-pointer text-sm">
+                    <input
+                      type="checkbox"
+                      checked={notaMinimaAplica}
+                      onChange={(e) => {
+                        setNotaMinimaAplica(e.target.checked)
+                        if (!e.target.checked) setFormNotaMinima(null)
+                        else setFormNotaMinima(formType === 'examen' ? EXAM_PASS_THRESHOLD : formType === 'autoevaluacion' ? SELF_EVAL_THRESHOLD : AUDIT_PASS_THRESHOLD)
+                      }}
+                      className="rounded border-gray-300 h-4 w-4"
+                    />
+                    <span className="text-muted-foreground">Aplica</span>
+                  </label>
+                  {notaMinimaAplica ? (
+                    <div className="flex items-center gap-1">
+                      <Input type="number" value={formNotaMinima ?? 0} onChange={(e) => setFormNotaMinima(Number(e.target.value))}
+                        min={0} max={100} className="h-10 w-20" />
+                      <span className="text-sm text-muted-foreground">%</span>
+                    </div>
+                  ) : (
+                    <span className="text-sm text-gray-400 italic">No aplica</span>
+                  )}
                 </div>
               </div>
             </div>
