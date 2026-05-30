@@ -1001,7 +1001,7 @@ export default function TemplateManager() {
   const [isSaving, setIsSaving] = useState(false)
   const [expandedS, setExpandedS] = useState<number | null>(null)
   const [editorMode, setEditorMode] = useState<'visual' | 'json'>('visual')
-  const [isFullscreen, setIsFullscreen] = useState(false)
+  const [isFullscreen, setIsFullscreen] = useState(true)
 
   // Form state
   const [formType, setFormType] = useState<string>('formacion')
@@ -1414,8 +1414,8 @@ export default function TemplateManager() {
       {/* EDIT / CREATE DIALOG */}
       {/* ═══════════════════════════════════════════════════════ */}
       <Dialog open={isCreating} onOpenChange={(open) => { if (!open) resetForm() }}>
-        <DialogContent className={`${isFullscreen ? 'max-w-full max-h-full w-screen h-screen rounded-none' : 'max-w-[95vw] max-h-[95vh]'} overflow-auto transition-all duration-200`}>
-          <DialogHeader>
+        <DialogContent className={`${isFullscreen ? 'max-w-full max-h-full w-screen h-screen rounded-none p-4 gap-2' : 'max-w-[95vw] max-h-[95vh]'} !flex flex-col overflow-hidden transition-all duration-200`}>
+          <DialogHeader className="shrink-0">
             <DialogTitle className="flex items-center gap-2">
               {editingTemplate ? <Edit3 className="h-5 w-5 text-blue-500" /> : <Plus className="h-5 w-5 text-green-500" />}
               {editingTemplate ? 'Editar Plantilla' : 'Nueva Plantilla'}
@@ -1429,34 +1429,34 @@ export default function TemplateManager() {
             </DialogTitle>
           </DialogHeader>
 
-          <div className="space-y-4 mt-4">
+          <div className="flex flex-col flex-1 min-h-0 space-y-3 mt-2">
             {/* S / Paso indicator box */}
-            <div className="flex items-center gap-3 p-3 rounded-lg border-2"
+            <div className="shrink-0 flex items-center gap-3 p-2 rounded-lg border-2"
               style={{ backgroundColor: S_COLORS[formSStep] + '10', borderColor: S_COLORS[formSStep] + '40' }}>
-              <div className="w-12 h-12 rounded-lg flex items-center justify-center text-white font-black text-lg"
+              <div className="w-8 h-8 rounded-lg flex items-center justify-center text-white font-black text-sm"
                 style={{ backgroundColor: S_COLORS[formSStep] }}>
                 S{formSStep}
               </div>
               <div>
-                <p className="font-bold" style={{ color: S_COLORS[formSStep] }}>
+                <p className="text-sm font-bold" style={{ color: S_COLORS[formSStep] }}>
                   {S_STEPS.find(s => s.id === formSStep)?.japaneseName} — {S_STEPS.find(s => s.id === formSStep)?.spanishName}
                 </p>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-xs text-muted-foreground">
                   Paso {formMiniStep}: {MINI_STEPS_LABELS[formMiniStep] || `Paso ${formMiniStep}`}
                 </p>
               </div>
               <Badge style={{ backgroundColor: S_COLORS[formSStep] + '20', color: S_COLORS[formSStep] }}
-                className="ml-auto text-sm px-3 py-1 border-0 font-semibold">
+                className="ml-auto text-xs px-2 py-0.5 border-0 font-semibold">
                 S{formSStep} · Paso {formMiniStep}
               </Badge>
             </div>
 
-            {/* Row 1: Type + S-Step + MiniStep */}
-            <div className="grid grid-cols-3 gap-4">
+            {/* Compact config row */}
+            <div className="shrink-0 grid grid-cols-6 gap-3 items-end">
               <div>
-                <Label className="text-sm font-semibold">Tipo</Label>
+                <Label className="text-xs font-semibold">Tipo</Label>
                 <Select value={formType} onValueChange={setFormType}>
-                  <SelectTrigger className="mt-1">
+                  <SelectTrigger className="mt-0.5 h-8 text-xs">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -1470,24 +1470,24 @@ export default function TemplateManager() {
                 </Select>
               </div>
               <div>
-                <Label className="text-sm font-semibold">S (Fase)</Label>
+                <Label className="text-xs font-semibold">S (Fase)</Label>
                 <Select value={String(formSStep)} onValueChange={(v) => setFormSStep(Number(v))}>
-                  <SelectTrigger className="mt-1">
+                  <SelectTrigger className="mt-0.5 h-8 text-xs">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
                     {S_STEPS.map(s => (
                       <SelectItem key={s.id} value={String(s.id)}>
-                        S{s.id} - {s.japaneseName} ({s.spanishName})
+                        S{s.id} - {s.japaneseName}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
               <div>
-                <Label className="text-sm font-semibold">Paso</Label>
+                <Label className="text-xs font-semibold">Paso</Label>
                 <Select value={String(formMiniStep)} onValueChange={(v) => setFormMiniStep(Number(v))}>
-                  <SelectTrigger className="mt-1">
+                  <SelectTrigger className="mt-0.5 h-8 text-xs">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -1499,43 +1499,32 @@ export default function TemplateManager() {
                   </SelectContent>
                 </Select>
               </div>
-            </div>
-
-            {/* Row 2: Title + Nota Mínima */}
-            <div className="grid grid-cols-3 gap-4">
-              <div className="col-span-2">
-                <Label className="text-sm font-semibold">Título</Label>
+              <div>
+                <Label className="text-xs font-semibold">Título</Label>
                 <Input value={formTitle} onChange={(e) => setFormTitle(e.target.value)}
-                  className="mt-1" placeholder="Título de la plantilla" />
+                  className="mt-0.5 h-8 text-xs" placeholder="Título" />
               </div>
               <div>
-                <Label className="text-sm font-semibold">Nota mínima (pasa/no pasa)</Label>
-                <div className="flex items-center gap-2 mt-1">
+                <Label className="text-xs font-semibold">Nota mín.</Label>
+                <div className="flex items-center gap-1 mt-0.5">
                   <Input type="number" value={formNotaMinima} onChange={(e) => setFormNotaMinima(Number(e.target.value))}
-                    min={0} max={100} className="w-24" />
-                  <span className="text-sm text-muted-foreground">%</span>
+                    min={0} max={100} className="h-8 w-16 text-xs" />
+                  <span className="text-xs text-muted-foreground">%</span>
                 </div>
               </div>
-            </div>
-
-            {/* Description */}
-            <div>
-              <Label className="text-sm font-semibold">Descripción</Label>
-              <Input value={formDescription} onChange={(e) => setFormDescription(e.target.value)}
-                className="mt-1" placeholder="Descripción opcional" />
-            </div>
-
-            {/* Active toggle */}
-            <div className="flex items-center gap-2">
-              <input type="checkbox" checked={formActive} onChange={(e) => setFormActive(e.target.checked)}
-                className="rounded border-gray-300" />
-              <Label className="text-sm">Plantilla activa</Label>
+              <div className="flex items-center gap-3 h-8">
+                <label className="flex items-center gap-1.5 text-xs cursor-pointer">
+                  <input type="checkbox" checked={formActive} onChange={(e) => setFormActive(e.target.checked)}
+                    className="rounded border-gray-300 h-3.5 w-3.5" />
+                  Activa
+                </label>
+              </div>
             </div>
 
             {/* ═══════════ Content Editor ═══════════ */}
-            <div>
-              <div className="flex items-center justify-between mb-1">
-                <Label className="text-sm font-semibold">Contenido</Label>
+            <div className="flex flex-col flex-1 min-h-0">
+              <div className="flex items-center justify-between mb-1 shrink-0">
+                <Label className="text-xs font-semibold">Contenido</Label>
                 <div className="flex items-center gap-2">
                   {/* Default data buttons */}
                   {(formType === 'autoevaluacion' || formType === 'auditoria') && (
@@ -1604,7 +1593,7 @@ export default function TemplateManager() {
 
               {/* Editor content */}
               {editorMode === 'visual' ? (
-                <div className={`border rounded-lg p-3 min-h-[400px] overflow-y-auto bg-gray-50 ${isFullscreen ? 'max-h-[calc(100vh-320px)]' : 'max-h-[65vh]'}`}>
+                <div className="border rounded-lg p-3 flex-1 min-h-0 overflow-y-auto bg-gray-50">
                   {(formType === 'autoevaluacion' || formType === 'auditoria') && (
                     <ChecklistEditor content={formContent} onChange={setFormContent} />
                   )}
@@ -1625,7 +1614,7 @@ export default function TemplateManager() {
                 <textarea
                   value={formContent}
                   onChange={(e) => setFormContent(e.target.value)}
-                  className={`w-full p-3 border rounded-lg font-mono text-sm bg-gray-50 focus:ring-2 focus:ring-green-300 focus:border-green-400 ${isFullscreen ? 'h-[calc(100vh-320px)]' : 'h-[65vh]'}`}
+                  className="w-full flex-1 min-h-0 p-3 border rounded-lg font-mono text-sm bg-gray-50 focus:ring-2 focus:ring-green-300 focus:border-green-400 resize-none"
                   spellCheck={false}
                 />
               )}
@@ -1650,7 +1639,7 @@ export default function TemplateManager() {
             </div>
 
             {/* Save / Cancel */}
-            <div className="flex gap-2 justify-end pt-2 border-t">
+            <div className="shrink-0 flex gap-2 justify-end pt-2 border-t">
               <Button variant="outline" onClick={resetForm}>Cancelar</Button>
               <Button onClick={handleSave} disabled={isSaving || !formTitle || !formContent}
                 className="bg-gradient-to-r from-green-500 to-emerald-600 text-white gap-1">
