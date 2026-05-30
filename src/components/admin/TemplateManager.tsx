@@ -1414,49 +1414,49 @@ export default function TemplateManager() {
       {/* EDIT / CREATE DIALOG */}
       {/* ═══════════════════════════════════════════════════════ */}
       <Dialog open={isCreating} onOpenChange={(open) => { if (!open) resetForm() }}>
-        <DialogContent className={`${isFullscreen ? 'max-w-full max-h-full w-screen h-screen rounded-none p-4 gap-2' : 'max-w-[95vw] max-h-[95vh]'} !flex flex-col overflow-hidden transition-all duration-200`}>
+        <DialogContent className={`${isFullscreen ? 'max-w-[98vw] max-h-[96vh] w-[98vw] h-[96vh] rounded-lg p-6 gap-4' : 'max-w-[95vw] max-h-[95vh]'} !flex flex-col overflow-hidden transition-all duration-200`}>
           <DialogHeader className="shrink-0">
-            <DialogTitle className="flex items-center gap-2">
+            <DialogTitle className="flex items-center gap-3 text-lg">
               {editingTemplate ? <Edit3 className="h-5 w-5 text-blue-500" /> : <Plus className="h-5 w-5 text-green-500" />}
               {editingTemplate ? 'Editar Plantilla' : 'Nueva Plantilla'}
               <button
                 onClick={() => setIsFullscreen(!isFullscreen)}
-                className="ml-auto p-1.5 rounded-md hover:bg-gray-100 transition-colors text-gray-500 hover:text-gray-700"
+                className="ml-auto p-2 rounded-md hover:bg-gray-100 transition-colors text-gray-500 hover:text-gray-700"
                 title={isFullscreen ? 'Salir de pantalla completa' : 'Pantalla completa'}
               >
-                {isFullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+                {isFullscreen ? <Minimize2 className="h-5 w-5" /> : <Maximize2 className="h-5 w-5" />}
               </button>
             </DialogTitle>
           </DialogHeader>
 
-          <div className="flex flex-col flex-1 min-h-0 space-y-3 mt-2">
+          <div className="flex flex-col flex-1 min-h-0 space-y-4 mt-1">
             {/* S / Paso indicator box */}
-            <div className="shrink-0 flex items-center gap-3 p-2 rounded-lg border-2"
+            <div className="shrink-0 flex items-center gap-4 p-3 rounded-lg border-2"
               style={{ backgroundColor: S_COLORS[formSStep] + '10', borderColor: S_COLORS[formSStep] + '40' }}>
-              <div className="w-8 h-8 rounded-lg flex items-center justify-center text-white font-black text-sm"
+              <div className="w-10 h-10 rounded-lg flex items-center justify-center text-white font-black text-base"
                 style={{ backgroundColor: S_COLORS[formSStep] }}>
                 S{formSStep}
               </div>
               <div>
-                <p className="text-sm font-bold" style={{ color: S_COLORS[formSStep] }}>
+                <p className="font-bold text-base" style={{ color: S_COLORS[formSStep] }}>
                   {S_STEPS.find(s => s.id === formSStep)?.japaneseName} — {S_STEPS.find(s => s.id === formSStep)?.spanishName}
                 </p>
-                <p className="text-xs text-muted-foreground">
+                <p className="text-sm text-muted-foreground">
                   Paso {formMiniStep}: {MINI_STEPS_LABELS[formMiniStep] || `Paso ${formMiniStep}`}
                 </p>
               </div>
               <Badge style={{ backgroundColor: S_COLORS[formSStep] + '20', color: S_COLORS[formSStep] }}
-                className="ml-auto text-xs px-2 py-0.5 border-0 font-semibold">
+                className="ml-auto text-sm px-3 py-1 border-0 font-semibold">
                 S{formSStep} · Paso {formMiniStep}
               </Badge>
             </div>
 
-            {/* Compact config row */}
-            <div className="shrink-0 grid grid-cols-6 gap-3 items-end">
+            {/* Config rows - 2 rows, normal size */}
+            <div className="shrink-0 grid grid-cols-4 gap-4">
               <div>
-                <Label className="text-xs font-semibold">Tipo</Label>
+                <Label className="text-sm font-semibold">Tipo</Label>
                 <Select value={formType} onValueChange={setFormType}>
-                  <SelectTrigger className="mt-0.5 h-8 text-xs">
+                  <SelectTrigger className="mt-1 h-10">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -1470,24 +1470,24 @@ export default function TemplateManager() {
                 </Select>
               </div>
               <div>
-                <Label className="text-xs font-semibold">S (Fase)</Label>
+                <Label className="text-sm font-semibold">S (Fase)</Label>
                 <Select value={String(formSStep)} onValueChange={(v) => setFormSStep(Number(v))}>
-                  <SelectTrigger className="mt-0.5 h-8 text-xs">
+                  <SelectTrigger className="mt-1 h-10">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
                     {S_STEPS.map(s => (
                       <SelectItem key={s.id} value={String(s.id)}>
-                        S{s.id} - {s.japaneseName}
+                        S{s.id} - {s.japaneseName} ({s.spanishName})
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
               <div>
-                <Label className="text-xs font-semibold">Paso</Label>
+                <Label className="text-sm font-semibold">Paso</Label>
                 <Select value={String(formMiniStep)} onValueChange={(v) => setFormMiniStep(Number(v))}>
-                  <SelectTrigger className="mt-0.5 h-8 text-xs">
+                  <SelectTrigger className="mt-1 h-10">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -1500,72 +1500,80 @@ export default function TemplateManager() {
                 </Select>
               </div>
               <div>
-                <Label className="text-xs font-semibold">Título</Label>
-                <Input value={formTitle} onChange={(e) => setFormTitle(e.target.value)}
-                  className="mt-0.5 h-8 text-xs" placeholder="Título" />
-              </div>
-              <div>
-                <Label className="text-xs font-semibold">Nota mín.</Label>
-                <div className="flex items-center gap-1 mt-0.5">
+                <Label className="text-sm font-semibold">Nota mínima (pasa/no pasa)</Label>
+                <div className="flex items-center gap-2 mt-1">
                   <Input type="number" value={formNotaMinima} onChange={(e) => setFormNotaMinima(Number(e.target.value))}
-                    min={0} max={100} className="h-8 w-16 text-xs" />
-                  <span className="text-xs text-muted-foreground">%</span>
+                    min={0} max={100} className="h-10 w-20" />
+                  <span className="text-sm text-muted-foreground">%</span>
                 </div>
               </div>
-              <div className="flex items-center gap-3 h-8">
-                <label className="flex items-center gap-1.5 text-xs cursor-pointer">
+            </div>
+
+            <div className="shrink-0 grid grid-cols-4 gap-4">
+              <div className="col-span-2">
+                <Label className="text-sm font-semibold">Título</Label>
+                <Input value={formTitle} onChange={(e) => setFormTitle(e.target.value)}
+                  className="mt-1 h-10" placeholder="Título de la plantilla" />
+              </div>
+              <div className="col-span-1">
+                <Label className="text-sm font-semibold">Descripción</Label>
+                <Input value={formDescription} onChange={(e) => setFormDescription(e.target.value)}
+                  className="mt-1 h-10" placeholder="Descripción opcional" />
+              </div>
+              <div className="flex items-center gap-3 pt-6">
+                <label className="flex items-center gap-2 text-sm cursor-pointer">
                   <input type="checkbox" checked={formActive} onChange={(e) => setFormActive(e.target.checked)}
-                    className="rounded border-gray-300 h-3.5 w-3.5" />
-                  Activa
+                    className="rounded border-gray-300 h-4 w-4" />
+                  Plantilla activa
                 </label>
               </div>
             </div>
 
             {/* ═══════════ Content Editor ═══════════ */}
             <div className="flex flex-col flex-1 min-h-0">
-              <div className="flex items-center justify-between mb-1 shrink-0">
-                <Label className="text-xs font-semibold">Contenido</Label>
+              <div className="flex items-center justify-between mb-2 shrink-0">
+                <Label className="text-sm font-semibold">Contenido</Label>
                 <div className="flex items-center gap-2">
                   {/* Default data buttons */}
                   {(formType === 'autoevaluacion' || formType === 'auditoria') && (
-                    <Button variant="outline" size="sm" className="text-xs h-6"
+                    <Button variant="outline" size="sm" className="text-xs"
                       onClick={() => setFormContent(JSON.stringify(getDefaultChecklistContent(formSStep), null, 2))}>
-                      <RotateCcw className="h-3 w-3 mr-1" />
+                      <RotateCcw className="h-3.5 w-3.5 mr-1" />
                       Cargar checklist por defecto
                     </Button>
                   )}
                   {formType === 'formacion' && (
-                    <Button variant="outline" size="sm" className="text-xs h-6"
+                    <Button variant="outline" size="sm" className="text-xs"
                       onClick={() => setFormContent(JSON.stringify(getDefaultFormationContent(formSStep), null, 2))}>
-                      <RotateCcw className="h-3 w-3 mr-1" />
+                      <RotateCcw className="h-3.5 w-3.5 mr-1" />
                       Cargar formación por defecto
                     </Button>
                   )}
                   {formType === 'examen' && (
-                    <Button variant="outline" size="sm" className="text-xs h-6"
+                    <Button variant="outline" size="sm" className="text-xs"
                       onClick={() => setFormContent(JSON.stringify(getDefaultExamContent(formSStep), null, 2))}>
-                      <RotateCcw className="h-3 w-3 mr-1" />
+                      <RotateCcw className="h-3.5 w-3.5 mr-1" />
                       Cargar examen por defecto
                     </Button>
                   )}
                   {formType === 'inventario' && (
-                    <Button variant="outline" size="sm" className="text-xs h-6"
+                    <Button variant="outline" size="sm" className="text-xs"
                       onClick={() => setFormContent(JSON.stringify(getDefaultInventoryContent(formSStep), null, 2))}>
-                      <RotateCcw className="h-3 w-3 mr-1" />
+                      <RotateCcw className="h-3.5 w-3.5 mr-1" />
                       Cargar inventario por defecto
                     </Button>
                   )}
                   {formType === 'estandar' && (
-                    <Button variant="outline" size="sm" className="text-xs h-6"
+                    <Button variant="outline" size="sm" className="text-xs"
                       onClick={() => setFormContent(JSON.stringify(getDefaultStandardContent(), null, 2))}>
-                      <RotateCcw className="h-3 w-3 mr-1" />
+                      <RotateCcw className="h-3.5 w-3.5 mr-1" />
                       Cargar estándar por defecto
                     </Button>
                   )}
 
                   {/* Upload JSON */}
-                  <Button variant="outline" size="sm" className="text-xs h-6" onClick={handleUploadJson}>
-                    <Upload className="h-3 w-3 mr-1" />
+                  <Button variant="outline" size="sm" className="text-xs" onClick={handleUploadJson}>
+                    <Upload className="h-3.5 w-3.5 mr-1" />
                     Subir JSON
                   </Button>
 
@@ -1573,18 +1581,18 @@ export default function TemplateManager() {
                   <div className="flex rounded-md border overflow-hidden">
                     <button
                       onClick={() => setEditorMode('visual')}
-                      className={`flex items-center gap-1 px-2.5 py-1 text-xs font-medium transition-colors ${
+                      className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium transition-colors ${
                         editorMode === 'visual' ? 'bg-green-100 text-green-700' : 'bg-white text-gray-500 hover:bg-gray-50'
                       }`}>
-                      <Eye className="h-3 w-3" />
+                      <Eye className="h-3.5 w-3.5" />
                       Visual
                     </button>
                     <button
                       onClick={() => setEditorMode('json')}
-                      className={`flex items-center gap-1 px-2.5 py-1 text-xs font-medium transition-colors ${
+                      className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium transition-colors ${
                         editorMode === 'json' ? 'bg-gray-800 text-white' : 'bg-white text-gray-500 hover:bg-gray-50'
                       }`}>
-                      <Code className="h-3 w-3" />
+                      <Code className="h-3.5 w-3.5" />
                       JSON
                     </button>
                   </div>
@@ -1593,7 +1601,7 @@ export default function TemplateManager() {
 
               {/* Editor content */}
               {editorMode === 'visual' ? (
-                <div className="border rounded-lg p-3 flex-1 min-h-0 overflow-y-auto bg-gray-50">
+                <div className="border rounded-lg p-4 flex-1 min-h-0 overflow-y-auto bg-gray-50">
                   {(formType === 'autoevaluacion' || formType === 'auditoria') && (
                     <ChecklistEditor content={formContent} onChange={setFormContent} />
                   )}
@@ -1614,7 +1622,7 @@ export default function TemplateManager() {
                 <textarea
                   value={formContent}
                   onChange={(e) => setFormContent(e.target.value)}
-                  className="w-full flex-1 min-h-0 p-3 border rounded-lg font-mono text-sm bg-gray-50 focus:ring-2 focus:ring-green-300 focus:border-green-400 resize-none"
+                  className="w-full flex-1 min-h-0 p-4 border rounded-lg font-mono text-sm bg-gray-50 focus:ring-2 focus:ring-green-300 focus:border-green-400 resize-none"
                   spellCheck={false}
                 />
               )}
@@ -1639,10 +1647,10 @@ export default function TemplateManager() {
             </div>
 
             {/* Save / Cancel */}
-            <div className="shrink-0 flex gap-2 justify-end pt-2 border-t">
-              <Button variant="outline" onClick={resetForm}>Cancelar</Button>
+            <div className="shrink-0 flex gap-3 justify-end pt-3 mt-2 border-t">
+              <Button variant="outline" className="h-10 px-6" onClick={resetForm}>Cancelar</Button>
               <Button onClick={handleSave} disabled={isSaving || !formTitle || !formContent}
-                className="bg-gradient-to-r from-green-500 to-emerald-600 text-white gap-1">
+                className="h-10 px-6 bg-gradient-to-r from-green-500 to-emerald-600 text-white gap-2">
                 {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
                 {editingTemplate ? 'Guardar Cambios' : 'Crear Plantilla'}
               </Button>

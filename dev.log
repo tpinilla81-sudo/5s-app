@@ -4735,3 +4735,321 @@ Unknown argument `miniStep`. Available options are marked with ?.
  GET /api/templates?type=inventario&includeInactive=true 500 in 165ms (compile: 3ms, render: 162ms)
  GET /api/notifications?userId=cmpo4w07k0000mg034fx4pt72&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 6ms (compile: 1696µs, render: 4ms)
  GET / 200 in 354ms (compile: 57ms, render: 297ms)
+ GET / 200 in 26ms (compile: 2ms, render: 24ms)
+ GET /api/notifications?userId=cmpo4w07k0000mg034fx4pt72&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 6ms (compile: 1763µs, render: 4ms)
+ GET /api/notifications?userId=cmpo4w07k0000mg034fx4pt72&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 10ms (compile: 3ms, render: 7ms)
+ GET /api/notifications?userId=cmpo4w07k0000mg034fx4pt72&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 8ms (compile: 2ms, render: 5ms)
+prisma:error 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.findMany()` invocation in
+/home/z/my-project/.next/dev/server/chunks/[root-of-the-server]__f59e6f19._.js:112:163
+
+  109 if (type) where.type = type;
+  110 if (sStep) where.sStep = parseInt(sStep);
+  111 if (miniStep) where.miniStep = parseInt(miniStep);
+→ 112 const templates = await __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.findMany({
+        where: {
+          type: "formacion"
+        },
+        orderBy: [
+          {
+            sStep: "asc"
+          },
+          {
+            miniStep: "asc"
+          },
+          {
+            createdAt: "desc"
+          }
+        ]
+      })
+
+Unknown argument `miniStep`. Available options are marked with ?.
+Error fetching templates: Error [PrismaClientValidationError]: 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.findMany()` invocation in
+/home/z/my-project/.next/dev/server/chunks/[root-of-the-server]__f59e6f19._.js:112:163
+
+  109 if (type) where.type = type;
+  110 if (sStep) where.sStep = parseInt(sStep);
+  111 if (miniStep) where.miniStep = parseInt(miniStep);
+→ 112 const templates = await __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.findMany({
+        where: {
+          type: "formacion"
+        },
+        orderBy: [
+          {
+            sStep: "asc"
+          },
+          {
+            miniStep: "asc"
+          },
+          {
+            createdAt: "desc"
+          }
+        ]
+      })
+
+Unknown argument `miniStep`. Available options are marked with ?.
+    at <unknown> (src/app/api/templates/route.ts:19:41)
+    at async GET (src/app/api/templates/route.ts:19:23)
+  17 |     if (miniStep) where.miniStep = parseInt(miniStep)
+  18 |
+> 19 |     const templates = await db.template.findMany({ where, orderBy: [{ sStep: 'asc' }, { miniStep: 'asc' }, { createdAt: 'desc' }] })
+     |                                         ^
+  20 |     return NextResponse.json({ success: true, data: templates })
+  21 |   } catch (error) {
+  22 |     console.error('Error fetching templates:', error) {
+  clientVersion: '6.19.2'
+}
+ GET /api/templates?type=formacion&includeInactive=true 500 in 184ms (compile: 1687µs, render: 183ms)
+prisma:error 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.findMany()` invocation in
+/home/z/my-project/.next/dev/server/chunks/[root-of-the-server]__f59e6f19._.js:112:163
+
+  109 if (type) where.type = type;
+  110 if (sStep) where.sStep = parseInt(sStep);
+  111 if (miniStep) where.miniStep = parseInt(miniStep);
+→ 112 const templates = await __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.findMany({
+        where: {
+          type: "examen"
+        },
+        orderBy: [
+          {
+            sStep: "asc"
+          },
+          {
+            miniStep: "asc"
+          },
+          {
+            createdAt: "desc"
+          }
+        ]
+      })
+
+Unknown argument `miniStep`. Available options are marked with ?.
+Error fetching templates: Error [PrismaClientValidationError]: 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.findMany()` invocation in
+/home/z/my-project/.next/dev/server/chunks/[root-of-the-server]__f59e6f19._.js:112:163
+
+  109 if (type) where.type = type;
+  110 if (sStep) where.sStep = parseInt(sStep);
+  111 if (miniStep) where.miniStep = parseInt(miniStep);
+→ 112 const templates = await __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.findMany({
+        where: {
+          type: "examen"
+        },
+        orderBy: [
+          {
+            sStep: "asc"
+          },
+          {
+            miniStep: "asc"
+          },
+          {
+            createdAt: "desc"
+          }
+        ]
+      })
+
+Unknown argument `miniStep`. Available options are marked with ?.
+    at <unknown> (src/app/api/templates/route.ts:19:41)
+    at async GET (src/app/api/templates/route.ts:19:23)
+  17 |     if (miniStep) where.miniStep = parseInt(miniStep)
+  18 |
+> 19 |     const templates = await db.template.findMany({ where, orderBy: [{ sStep: 'asc' }, { miniStep: 'asc' }, { createdAt: 'desc' }] })
+     |                                         ^
+  20 |     return NextResponse.json({ success: true, data: templates })
+  21 |   } catch (error) {
+  22 |     console.error('Error fetching templates:', error) {
+  clientVersion: '6.19.2'
+}
+ GET /api/templates?type=examen&includeInactive=true 500 in 172ms (compile: 1578µs, render: 170ms)
+prisma:error 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.findMany()` invocation in
+/home/z/my-project/.next/dev/server/chunks/[root-of-the-server]__f59e6f19._.js:112:163
+
+  109 if (type) where.type = type;
+  110 if (sStep) where.sStep = parseInt(sStep);
+  111 if (miniStep) where.miniStep = parseInt(miniStep);
+→ 112 const templates = await __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.findMany({
+        where: {
+          type: "inventario"
+        },
+        orderBy: [
+          {
+            sStep: "asc"
+          },
+          {
+            miniStep: "asc"
+          },
+          {
+            createdAt: "desc"
+          }
+        ]
+      })
+
+Unknown argument `miniStep`. Available options are marked with ?.
+Error fetching templates: Error [PrismaClientValidationError]: 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.findMany()` invocation in
+/home/z/my-project/.next/dev/server/chunks/[root-of-the-server]__f59e6f19._.js:112:163
+
+  109 if (type) where.type = type;
+  110 if (sStep) where.sStep = parseInt(sStep);
+  111 if (miniStep) where.miniStep = parseInt(miniStep);
+→ 112 const templates = await __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.findMany({
+        where: {
+          type: "inventario"
+        },
+        orderBy: [
+          {
+            sStep: "asc"
+          },
+          {
+            miniStep: "asc"
+          },
+          {
+            createdAt: "desc"
+          }
+        ]
+      })
+
+Unknown argument `miniStep`. Available options are marked with ?.
+    at <unknown> (src/app/api/templates/route.ts:19:41)
+    at async GET (src/app/api/templates/route.ts:19:23)
+  17 |     if (miniStep) where.miniStep = parseInt(miniStep)
+  18 |
+> 19 |     const templates = await db.template.findMany({ where, orderBy: [{ sStep: 'asc' }, { miniStep: 'asc' }, { createdAt: 'desc' }] })
+     |                                         ^
+  20 |     return NextResponse.json({ success: true, data: templates })
+  21 |   } catch (error) {
+  22 |     console.error('Error fetching templates:', error) {
+  clientVersion: '6.19.2'
+}
+ GET /api/templates?type=inventario&includeInactive=true 500 in 135ms (compile: 1789µs, render: 133ms)
+ GET /api/notifications?userId=cmpo4w07k0000mg034fx4pt72&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 7ms (compile: 1650µs, render: 6ms)
+✓ Compiled in 291ms
+prisma:error 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.findMany()` invocation in
+/home/z/my-project/.next/dev/server/chunks/[root-of-the-server]__f59e6f19._.js:112:163
+
+  109 if (type) where.type = type;
+  110 if (sStep) where.sStep = parseInt(sStep);
+  111 if (miniStep) where.miniStep = parseInt(miniStep);
+→ 112 const templates = await __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.findMany({
+        where: {
+          type: "inventario"
+        },
+        orderBy: [
+          {
+            sStep: "asc"
+          },
+          {
+            miniStep: "asc"
+          },
+          {
+            createdAt: "desc"
+          }
+        ]
+      })
+
+Unknown argument `miniStep`. Available options are marked with ?.
+Error fetching templates: Error [PrismaClientValidationError]: 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.findMany()` invocation in
+/home/z/my-project/.next/dev/server/chunks/[root-of-the-server]__f59e6f19._.js:112:163
+
+  109 if (type) where.type = type;
+  110 if (sStep) where.sStep = parseInt(sStep);
+  111 if (miniStep) where.miniStep = parseInt(miniStep);
+→ 112 const templates = await __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.findMany({
+        where: {
+          type: "inventario"
+        },
+        orderBy: [
+          {
+            sStep: "asc"
+          },
+          {
+            miniStep: "asc"
+          },
+          {
+            createdAt: "desc"
+          }
+        ]
+      })
+
+Unknown argument `miniStep`. Available options are marked with ?.
+    at <unknown> (src/app/api/templates/route.ts:19:41)
+    at async GET (src/app/api/templates/route.ts:19:23)
+  17 |     if (miniStep) where.miniStep = parseInt(miniStep)
+  18 |
+> 19 |     const templates = await db.template.findMany({ where, orderBy: [{ sStep: 'asc' }, { miniStep: 'asc' }, { createdAt: 'desc' }] })
+     |                                         ^
+  20 |     return NextResponse.json({ success: true, data: templates })
+  21 |   } catch (error) {
+  22 |     console.error('Error fetching templates:', error) {
+  clientVersion: '6.19.2'
+}
+ GET /api/templates?type=inventario&includeInactive=true 500 in 192ms (compile: 2ms, render: 190ms)
+✓ Compiled in 237ms
+prisma:error 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.findMany()` invocation in
+/home/z/my-project/.next/dev/server/chunks/[root-of-the-server]__f59e6f19._.js:112:163
+
+  109 if (type) where.type = type;
+  110 if (sStep) where.sStep = parseInt(sStep);
+  111 if (miniStep) where.miniStep = parseInt(miniStep);
+→ 112 const templates = await __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.findMany({
+        where: {
+          type: "inventario"
+        },
+        orderBy: [
+          {
+            sStep: "asc"
+          },
+          {
+            miniStep: "asc"
+          },
+          {
+            createdAt: "desc"
+          }
+        ]
+      })
+
+Unknown argument `miniStep`. Available options are marked with ?.
+Error fetching templates: Error [PrismaClientValidationError]: 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.findMany()` invocation in
+/home/z/my-project/.next/dev/server/chunks/[root-of-the-server]__f59e6f19._.js:112:163
+
+  109 if (type) where.type = type;
+  110 if (sStep) where.sStep = parseInt(sStep);
+  111 if (miniStep) where.miniStep = parseInt(miniStep);
+→ 112 const templates = await __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].template.findMany({
+        where: {
+          type: "inventario"
+        },
+        orderBy: [
+          {
+            sStep: "asc"
+          },
+          {
+            miniStep: "asc"
+          },
+          {
+            createdAt: "desc"
+          }
+        ]
+      })
+
+Unknown argument `miniStep`. Available options are marked with ?.
+    at <unknown> (src/app/api/templates/route.ts:19:41)
+    at async GET (src/app/api/templates/route.ts:19:23)
+  17 |     if (miniStep) where.miniStep = parseInt(miniStep)
+  18 |
+> 19 |     const templates = await db.template.findMany({ where, orderBy: [{ sStep: 'asc' }, { miniStep: 'asc' }, { createdAt: 'desc' }] })
+     |                                         ^
+  20 |     return NextResponse.json({ success: true, data: templates })
+  21 |   } catch (error) {
+  22 |     console.error('Error fetching templates:', error) {
+  clientVersion: '6.19.2'
+}
+ GET /api/templates?type=inventario&includeInactive=true 500 in 112ms (compile: 2ms, render: 110ms)
+ GET /api/notifications?userId=cmpo4w07k0000mg034fx4pt72&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 7ms (compile: 2ms, render: 5ms)
