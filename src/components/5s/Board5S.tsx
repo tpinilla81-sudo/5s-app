@@ -286,22 +286,7 @@ export default function Board5S({ onSStepClick }: Board5SProps) {
             style={{ pointerEvents: 'none' }}
           />
 
-          {/* Outer S labels */}
-          {S_STEPS.map((s, i) => (
-            <text
-              key={`olabel-${i}`}
-              x={cx + (outerR + 24) * Math.cos(((i + 0.5) * sliceAngle - 90) * (Math.PI / 180))}
-              y={cy + (outerR + 24) * Math.sin(((i + 0.5) * sliceAngle - 90) * (Math.PI / 180))}
-              textAnchor="middle"
-              dominantBaseline="middle"
-              fill={s.color}
-              fontSize="13"
-              fontWeight="bold"
-              style={{ pointerEvents: 'none', fontFamily: 'system-ui' }}
-            >
-              S{i + 1}
-            </text>
-          ))}
+
         </svg>
       </motion.div>
     </div>
