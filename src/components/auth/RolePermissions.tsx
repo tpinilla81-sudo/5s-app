@@ -85,6 +85,7 @@ const GENERAL_PERMS = [
   { id: 'manage_templates', name: 'Gestionar plantillas', desc: 'Crear, editar y eliminar plantillas', icon: Pencil },
   { id: 'notify_audit', name: 'Solicitar auditoría', desc: 'Puede activar el aviso de auditoría en el paso 5', icon: Bell },
   { id: 'accept_audit_meeting', name: 'Aceptar reunión auditoría', desc: 'Puede aceptar la reunión de auditoría para apagar el aviso', icon: CheckCircle2 },
+  { id: 'skip_steps', name: 'Saltar pasos', desc: 'Permite navegar libremente entre pasos sin seguir el orden de desbloqueo', icon: Lock },
 ]
 
 // All permission IDs
