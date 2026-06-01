@@ -289,6 +289,63 @@ export default function Board5S({ onSStepClick }: Board5SProps) {
           />
 
 
+          {/* Bottom colored circles with S numbers and names */}
+          {S_STEPS.map((s, i) => {
+            const spacing = 140;
+            const startX = cx - (spacing * 2);
+            const bx = startX + i * spacing;
+            const by = 758;
+            const earned = isQuesitoEarned(s.id);
+            return (
+              <g
+                key={`bottom-circle-${i}`}
+                style={{ cursor: 'pointer' }}
+                onClick={() => onSStepClick(s.id)}
+              >
+                {/* Glow for earned */}
+                {earned && (
+                  <circle cx={bx} cy={by} r="32" fill={s.color} opacity="0.25" />
+                )}
+                {/* Main circle */}
+                <circle
+                  cx={bx}
+                  cy={by}
+                  r="28"
+                  fill={s.color}
+                  stroke={earned ? '#16a34a' : 'white'}
+                  strokeWidth={earned ? '3.5' : '3'}
+                  filter="url(#shadow1)"
+                  opacity="0.95"
+                />
+                {/* S number */}
+                <text
+                  x={bx}
+                  y={by - 2}
+                  textAnchor="middle"
+                  dominantBaseline="middle"
+                  fill="white"
+                  fontSize="20"
+                  fontWeight="bold"
+                  style={{ pointerEvents: 'none', fontFamily: 'system-ui' }}
+                >
+                  S{s.id}
+                </text>
+                {/* S name below circle */}
+                <text
+                  x={bx}
+                  y={by + 26}
+                  textAnchor="middle"
+                  dominantBaseline="middle"
+                  fill={s.color}
+                  fontSize="11"
+                  fontWeight="bold"
+                  style={{ pointerEvents: 'none', fontFamily: 'system-ui' }}
+                >
+                  {s.name}
+                </text>
+              </g>
+            );
+          })}
         </svg>
       </motion.div>
     </div>
