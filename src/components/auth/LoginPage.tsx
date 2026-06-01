@@ -72,9 +72,9 @@ export default function LoginPage() {
             initial={{ scale: 0 }}
             animate={{ scale: 1 }}
             transition={{ type: 'spring', stiffness: 200, delay: 0.1 }}
-            className="w-20 h-20 rounded-full bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center text-white font-bold text-2xl shadow-lg shadow-green-200 mb-4"
+            className="w-24 h-24 rounded-2xl shadow-lg shadow-green-200 mb-4 overflow-hidden"
           >
-            5S
+            <img src="/5s-logo.png" alt="5S Logo" className="w-full h-full object-contain" />
           </motion.div>
           <h1 className="text-2xl font-bold text-gray-900">Metodología 5S</h1>
           <p className="text-sm text-muted-foreground mt-1">Implementación</p>
