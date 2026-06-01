@@ -641,25 +641,7 @@ export default function HomePage() {
                         </div>
                       );
                     })()}
-                    {/* Quesitos row below the board - only show when zone selected */}
-                    {currentZone && (
-                    <div className="flex gap-3 mt-2">
-                      {S_STEPS.map(s => {
-                        const earned = isQuesitoEarned(s.id);
-                        return (
-                          <div key={s.id} className="flex flex-col items-center" title={`${s.name}: ${earned ? 'Conseguido' : 'Pendiente'}`}>
-                            <div className={`w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold border-2 transition-all duration-300 ${earned ? 'text-white shadow-lg shadow-green-200 scale-110' : 'bg-white text-gray-400 border-gray-200'}`}
-                              style={earned ? { backgroundColor: '#22c55e', borderColor: '#16a34a' } : undefined}>
-                              {earned ? '★' : s.id}
-                            </div>
-                            <span className={`text-[9px] mt-0.5 font-bold ${earned ? 'text-green-600' : 'text-gray-400'}`}>
-                              S{s.id}
-                            </span>
-                          </div>
-                        );
-                      })}
-                    </div>
-                    )}
+
                     {/* Mejora Continua button */}
                     {currentZone && is5SCompleted() && (
                       <Button onClick={() => setActiveTab('maintenance')}
