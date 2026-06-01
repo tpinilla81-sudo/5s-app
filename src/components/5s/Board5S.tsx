@@ -50,7 +50,10 @@ export default function Board5S({ onSStepClick }: Board5SProps) {
   };
 
   const getDotPos = (si: number, mi: number) => {
-    const angle = (si * sliceAngle + (mi + 0.5) * (sliceAngle / 5) - 90) * (Math.PI / 180);
+    // Reduce angular spread so dots 1 & 5 don't overflow slice edges
+    const pad = sliceAngle * 0.17; // ~12.2° margin on each side
+    const spread = sliceAngle - 2 * pad;
+    const angle = (si * sliceAngle + pad + mi * (spread / 4) - 90) * (Math.PI / 180);
     return { x: cx + stepR * Math.cos(angle), y: cy + stepR * Math.sin(angle) };
   };
 
