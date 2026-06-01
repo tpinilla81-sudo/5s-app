@@ -78,6 +78,7 @@ export default function LoginPage() {
           </motion.div>
           <h1 className="text-2xl font-bold text-gray-900">Metodología 5S</h1>
           <p className="text-sm text-muted-foreground mt-1">Implementación</p>
+          <p className="text-[10px] text-gray-300 mt-1">v2.0-jun2026</p>
         </div>
 
         <Card className="border-0 shadow-xl shadow-green-100/50">
