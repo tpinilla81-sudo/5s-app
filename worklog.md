@@ -64,3 +64,23 @@ Stage Summary:
 - /fresh route available as emergency URL to force browser reload
 - User needs to clear browser cache or use incognito window to see new version
 - All data intact in database
+---
+Task ID: pentagon-logo-fix
+Agent: main
+Task: Fix board shape from circle to pentagon + update logo
+
+Work Log:
+- Analyzed Board5S.tsx and found it was using circular arc paths (A oR oR) instead of straight-line pentagon paths
+- Rewrote getPentagonSlice() to use straight lines between 5 vertices instead of circular arcs
+- Added getPentagonOutline() for pentagon-shaped backgrounds and center
+- Changed center from circle to pentagon shape
+- Updated logo from CSS circle with "5S" text to professional image (5s-logo.png)
+- Updated logo in LoginPage, main page header, loading screen, and no-projects view
+- Generated professional 5S logo using z-ai-generate
+- Rebuilt and restarted server
+- Verified with Playwright + VLM that the board is now a PENTAGON with straight edges
+
+Stage Summary:
+- Board is now a proper pentagon (5 straight sides) instead of circle
+- Logo updated to professional image
+- All changes verified visually with VLM analysis

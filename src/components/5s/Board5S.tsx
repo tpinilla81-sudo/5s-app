@@ -13,24 +13,44 @@ export default function Board5S({ onSStepClick }: Board5SProps) {
 
   const cx = 300;
   const cy = 300;
-  const outerR = 250;
-  const innerR = 78;
+  const outerR = 240;
+  const innerR = 72;
   const midR = (outerR + innerR) / 2;
-  const stepR = 190;
+  const stepR = 170;
   const sliceAngle = 360 / 5;
 
-  const getPath = (index: number, oR: number, iR: number): string => {
-    const start = (index * sliceAngle - 90) * (Math.PI / 180);
-    const end = ((index + 1) * sliceAngle - 90) * (Math.PI / 180);
-    const osx = cx + oR * Math.cos(start);
-    const osy = cy + oR * Math.sin(start);
-    const oex = cx + oR * Math.cos(end);
-    const oey = cy + oR * Math.sin(end);
-    const isx = cx + iR * Math.cos(end);
-    const isy = cy + iR * Math.sin(end);
-    const iex = cx + iR * Math.cos(start);
-    const iey = cy + iR * Math.sin(start);
-    return `M ${osx} ${osy} A ${oR} ${oR} 0 0 1 ${oex} ${oey} L ${isx} ${isy} A ${iR} ${iR} 0 0 0 ${iex} ${iey} Z`;
+  // Pentagon vertex at a given angle
+  const pentagonVertex = (angle: number, radius: number) => ({
+    x: cx + radius * Math.cos(angle),
+    y: cy + radius * Math.sin(angle),
+  });
+
+  // Get the path for a pentagon "slice" (triangular section from center to two vertices)
+  const getPentagonSlice = (index: number, oR: number, iR: number): string => {
+    const startAngle = (index * sliceAngle - 90) * (Math.PI / 180);
+    const endAngle = ((index + 1) * sliceAngle - 90) * (Math.PI / 180);
+    const midAngle = ((index + 0.5) * sliceAngle - 90) * (Math.PI / 180);
+
+    // Outer edge: straight line between two pentagon vertices at oR
+    const oStart = pentagonVertex(startAngle, oR);
+    const oEnd = pentagonVertex(endAngle, oR);
+
+    // Inner edge: straight line between two pentagon vertices at iR
+    const iStart = pentagonVertex(startAngle, iR);
+    const iEnd = pentagonVertex(endAngle, iR);
+
+    return `M ${oStart.x} ${oStart.y} L ${oEnd.x} ${oEnd.y} L ${iEnd.x} ${iEnd.y} L ${iStart.x} ${iStart.y} Z`;
+  };
+
+  // Pentagon outline path (5 vertices connected)
+  const getPentagonOutline = (r: number): string => {
+    const points = [];
+    for (let i = 0; i < 5; i++) {
+      const angle = (i * sliceAngle - 90) * (Math.PI / 180);
+      const p = pentagonVertex(angle, r);
+      points.push(`${p.x},${p.y}`);
+    }
+    return `M ${points.join(' L ')} Z`;
   };
 
   const getDotPos = (si: number, mi: number) => {
@@ -40,23 +60,19 @@ export default function Board5S({ onSStepClick }: Board5SProps) {
 
   const getLabelPos = (i: number) => {
     const angle = (i * sliceAngle + sliceAngle / 2 - 90) * (Math.PI / 180);
-    return { x: cx + midR * 0.78 * Math.cos(angle), y: cy + midR * 0.78 * Math.sin(angle) };
+    return { x: cx + midR * 0.85 * Math.cos(angle), y: cy + midR * 0.85 * Math.sin(angle) };
   };
 
   const getWedgePath = (index: number): string => {
     const wIn = 14;
-    const wOut = 55;
-    const start = (index * sliceAngle - 90) * (Math.PI / 180) + 0.04;
-    const end = ((index + 1) * sliceAngle - 90) * (Math.PI / 180) - 0.04;
-    const osx = cx + wOut * Math.cos(start);
-    const osy = cy + wOut * Math.sin(start);
-    const oex = cx + wOut * Math.cos(end);
-    const oey = cy + wOut * Math.sin(end);
-    const isx = cx + wIn * Math.cos(end);
-    const isy = cy + wIn * Math.sin(end);
-    const iex = cx + wIn * Math.cos(start);
-    const iey = cy + wIn * Math.sin(start);
-    return `M ${osx} ${osy} A ${wOut} ${wOut} 0 0 1 ${oex} ${oey} L ${isx} ${isy} A ${wIn} ${wIn} 0 0 0 ${iex} ${iey} Z`;
+    const wOut = 50;
+    const start = (index * sliceAngle - 90) * (Math.PI / 180) + 0.06;
+    const end = ((index + 1) * sliceAngle - 90) * (Math.PI / 180) - 0.06;
+    const os = pentagonVertex(start, wOut);
+    const oe = pentagonVertex(end, wOut);
+    const ie = pentagonVertex(end, wIn);
+    const is_ = pentagonVertex(start, wIn);
+    return `M ${os.x} ${os.y} L ${oe.x} ${oe.y} L ${ie.x} ${ie.y} L ${is_.x} ${is_.y} Z`;
   };
 
   return (
@@ -94,48 +110,47 @@ export default function Board5S({ onSStepClick }: Board5SProps) {
             </radialGradient>
           </defs>
 
-          {/* Outer glow ring */}
-          <circle cx={cx} cy={cy} r={outerR + 15} fill="none" stroke="#e5e7eb" strokeWidth="1" opacity="0.5" />
-          <circle cx={cx} cy={cy} r={outerR + 8} fill="none" stroke="#d1d5db" strokeWidth="2" opacity="0.3" />
+          {/* Outer glow - pentagon shape */}
+          <path d={getPentagonOutline(outerR + 14)} fill="none" stroke="#e5e7eb" strokeWidth="1" opacity="0.5" />
+          <path d={getPentagonOutline(outerR + 7)} fill="none" stroke="#d1d5db" strokeWidth="2" opacity="0.3" />
 
-          {/* Background circle */}
-          <circle cx={cx} cy={cy} r={outerR + 2} fill="#f9fafb" filter="url(#shadow2)" />
+          {/* Background pentagon */}
+          <path d={getPentagonOutline(outerR + 2)} fill="#f9fafb" filter="url(#shadow2)" />
 
-          {/* Pie slices */}
+          {/* Pentagon slices */}
           {S_STEPS.map((s, i) => {
             const earned = isQuesitoEarned(s.id);
 
-            // Count completed mini-steps using getMiniStepStatus (consistent with dot display)
             let completedMiniSteps = 0;
             for (let ms = 1; ms <= 5; ms++) {
               const st = getMiniStepStatus(s.id, ms);
               if (st === 'completed' || st === 'completed_viewonly') completedMiniSteps++;
             }
             const pct = Math.min(Math.round((completedMiniSteps / 5) * 100), 100);
-            const allCompleted = earned; // 5/5 mini-steps completed
+            const allCompleted = earned;
+
             return (
               <g key={`slice-${i}`}>
                 {/* Green glow ring for completed S-steps */}
                 {allCompleted && (
                   <path
-                    d={getPath(i, outerR + 6, outerR - 2)}
+                    d={getPentagonSlice(i, outerR + 6, outerR - 2)}
                     fill="#22c55e"
                     opacity="0.35"
                     style={{ pointerEvents: 'none' }}
                   />
                 )}
-                {/* Green outer arc for completed S-steps */}
                 {allCompleted && (
                   <path
-                    d={getPath(i, outerR + 3, outerR)}
+                    d={getPentagonSlice(i, outerR + 3, outerR)}
                     fill="#16a34a"
                     opacity="0.9"
                     style={{ pointerEvents: 'none' }}
                   />
                 )}
-                {/* Slice background (hover target) */}
+                {/* Slice background (pentagon section) */}
                 <path
-                  d={getPath(i, outerR, innerR)}
+                  d={getPentagonSlice(i, outerR, innerR)}
                   fill={`url(#sg${i})`}
                   stroke={allCompleted ? '#16a34a' : 'white'}
                   strokeWidth={allCompleted ? '3' : '2.5'}
@@ -149,16 +164,16 @@ export default function Board5S({ onSStepClick }: Board5SProps) {
                 {/* Green overlay for completed slices */}
                 {allCompleted && (
                   <path
-                    d={getPath(i, outerR, innerR)}
+                    d={getPentagonSlice(i, outerR, innerR)}
                     fill="#22c55e"
                     opacity="0.2"
                     style={{ pointerEvents: 'none' }}
                   />
                 )}
 
-                {/* Inner highlight line */}
+                {/* Inner highlight */}
                 <path
-                  d={getPath(i, outerR - 35, innerR + 5)}
+                  d={getPentagonSlice(i, outerR - 35, innerR + 5)}
                   fill="white"
                   opacity="0.08"
                   style={{ pointerEvents: 'none' }}
@@ -189,7 +204,7 @@ export default function Board5S({ onSStepClick }: Board5SProps) {
                 >
                   {s.japaneseName}
                 </text>
-                {/* Completed counter under japanese name */}
+                {/* Completed counter */}
                 <text
                   x={getLabelPos(i).x}
                   y={getLabelPos(i).y + 22}
@@ -211,25 +226,11 @@ export default function Board5S({ onSStepClick }: Board5SProps) {
                   const isAvailable = status === 'available';
                   return (
                     <g key={`dot-${i}-${j}`}>
-                      {/* Pulse ring for available steps */}
                       {isAvailable && !isCompleted && (
-                        <circle
-                          cx={pos.x}
-                          cy={pos.y}
-                          r="16"
-                          fill={s.color}
-                          opacity="0.15"
-                        />
+                        <circle cx={pos.x} cy={pos.y} r="16" fill={s.color} opacity="0.15" />
                       )}
-                      {/* Green glow for completed dots */}
                       {isCompleted && (
-                        <circle
-                          cx={pos.x}
-                          cy={pos.y}
-                          r="15"
-                          fill="#22c55e"
-                          opacity="0.2"
-                        />
+                        <circle cx={pos.x} cy={pos.y} r="15" fill="#22c55e" opacity="0.2" />
                       )}
                       <circle
                         cx={pos.x}
@@ -256,7 +257,7 @@ export default function Board5S({ onSStepClick }: Board5SProps) {
                   );
                 })}
 
-                {/* Earned quesito star indicator — now with green ring */}
+                {/* Earned quesito star indicator */}
                 {earned && (
                   <g style={{ pointerEvents: 'none' }}>
                     <circle
@@ -293,8 +294,8 @@ export default function Board5S({ onSStepClick }: Board5SProps) {
             );
           })}
 
-          {/* Center circle */}
-          <circle cx={cx} cy={cy} r={innerR} fill="url(#centerGrad)" stroke="#16a34a" strokeWidth="3.5" filter="url(#shadow1)" />
+          {/* Center pentagon */}
+          <path d={getPentagonOutline(innerR)} fill="url(#centerGrad)" stroke="#16a34a" strokeWidth="3.5" filter="url(#shadow1)" />
 
           {/* Quesito wedges in center */}
           {S_STEPS.map((s, i) => {
