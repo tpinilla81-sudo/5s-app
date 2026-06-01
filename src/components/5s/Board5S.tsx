@@ -179,44 +179,7 @@ export default function Board5S({ onSStepClick }: Board5SProps) {
                   style={{ pointerEvents: 'none' }}
                 />
 
-                {/* S Name */}
-                <text
-                  x={getLabelPos(i).x}
-                  y={getLabelPos(i).y - 10}
-                  textAnchor="middle"
-                  dominantBaseline="middle"
-                  fill="white"
-                  fontSize="14"
-                  fontWeight="bold"
-                  style={{ pointerEvents: 'none', textShadow: '0 2px 4px rgba(0,0,0,0.4)', fontFamily: 'system-ui' }}
-                >
-                  {s.name}
-                </text>
-                <text
-                  x={getLabelPos(i).x}
-                  y={getLabelPos(i).y + 8}
-                  textAnchor="middle"
-                  dominantBaseline="middle"
-                  fill="white"
-                  fontSize="9.5"
-                  opacity="0.85"
-                  style={{ pointerEvents: 'none', textShadow: '0 1px 3px rgba(0,0,0,0.3)', fontFamily: 'system-ui' }}
-                >
-                  {s.japaneseName}
-                </text>
-                {/* Completed counter */}
-                <text
-                  x={getLabelPos(i).x}
-                  y={getLabelPos(i).y + 22}
-                  textAnchor="middle"
-                  dominantBaseline="middle"
-                  fill={allCompleted ? '#86efac' : 'rgba(255,255,255,0.5)'}
-                  fontSize="9"
-                  fontWeight="bold"
-                  style={{ pointerEvents: 'none', fontFamily: 'system-ui' }}
-                >
-                  {allCompleted ? 'COMPLETADO' : `${completedMiniSteps}/5`}
-                </text>
+
 
                 {/* Mini-step dots */}
                 {MINI_STEPS.map((m, j) => {
