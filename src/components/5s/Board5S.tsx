@@ -313,32 +313,15 @@ export default function Board5S({ onSStepClick }: Board5SProps) {
             );
           })}
 
-          {/* Center text */}
-          <text
-            x={cx}
-            y={cy - 5}
-            textAnchor="middle"
-            dominantBaseline="middle"
-            fill="#16a34a"
-            fontSize="30"
-            fontWeight="bold"
-            style={{ pointerEvents: 'none', fontFamily: 'system-ui' }}
-          >
-            5S
-          </text>
-          <text
-            x={cx}
-            y={cy + 17}
-            textAnchor="middle"
-            dominantBaseline="middle"
-            fill="#16a34a"
-            fontSize="7.5"
-            fontWeight="medium"
-            opacity="0.7"
-            style={{ pointerEvents: 'none', fontFamily: 'system-ui' }}
-          >
-            METODOLOGÍA
-          </text>
+          {/* Center logo image */}
+          <image
+            href="/5s-logo.png"
+            x={cx - 55}
+            y={cy - 55}
+            width={110}
+            height={110}
+            style={{ pointerEvents: 'none' }}
+          />
 
           {/* Outer S labels */}
           {S_STEPS.map((s, i) => (
