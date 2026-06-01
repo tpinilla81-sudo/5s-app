@@ -11,12 +11,12 @@ interface Board5SProps {
 export default function Board5S({ onSStepClick }: Board5SProps) {
   const { getMiniStepStatus, isQuesitoEarned } = use5SStore();
 
-  const cx = 300;
-  const cy = 300;
-  const outerR = 240;
-  const innerR = 72;
+  const cx = 400;
+  const cy = 400;
+  const outerR = 320;
+  const innerR = 96;
   const midR = (outerR + innerR) / 2;
-  const stepR = 170;
+  const stepR = 227;
   const sliceAngle = 360 / 5;
 
   // Pentagon vertex at a given angle
@@ -61,8 +61,8 @@ export default function Board5S({ onSStepClick }: Board5SProps) {
 
   // Circular wedge path for center circle quesitos
   const getCircleWedgePath = (index: number): string => {
-    const wIn = 14;
-    const wOut = 50;
+    const wIn = 18;
+    const wOut = 66;
     const gap = 0.06;
     const startAngle = (index * sliceAngle - 90) * (Math.PI / 180) + gap;
     const endAngle = ((index + 1) * sliceAngle - 90) * (Math.PI / 180) - gap;
@@ -81,9 +81,9 @@ export default function Board5S({ onSStepClick }: Board5SProps) {
         initial={{ scale: 0.7, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
-        className="w-full max-w-[560px] max-h-full aspect-square mx-auto"
+        className="w-full max-w-[750px] max-h-full aspect-square mx-auto"
       >
-        <svg viewBox="0 0 600 600" className="w-full h-full" xmlns="http://www.w3.org/2000/svg">
+        <svg viewBox="0 0 800 800" className="w-full h-full" xmlns="http://www.w3.org/2000/svg">
           <defs>
             {S_STEPS.map((s, i) => (
               <linearGradient key={`grad-${i}`} id={`sg${i}`} x1="0%" y1="0%" x2="100%" y2="100%">
@@ -173,7 +173,7 @@ export default function Board5S({ onSStepClick }: Board5SProps) {
 
                 {/* Inner highlight */}
                 <path
-                  d={getPentagonSlice(i, outerR - 35, innerR + 5)}
+                  d={getPentagonSlice(i, outerR - 47, innerR + 7)}
                   fill="white"
                   opacity="0.08"
                   style={{ pointerEvents: 'none' }}
@@ -187,18 +187,18 @@ export default function Board5S({ onSStepClick }: Board5SProps) {
                   return (
                     <g key={`dot-${i}-${j}`}>
                       {isAvailable && !isCompleted && (
-                        <circle cx={pos.x} cy={pos.y} r="16" fill={s.color} opacity="0.15" />
+                        <circle cx={pos.x} cy={pos.y} r="21" fill={s.color} opacity="0.15" />
                       )}
                       {isCompleted && (
-                        <circle cx={pos.x} cy={pos.y} r="15" fill="#22c55e" opacity="0.2" />
+                        <circle cx={pos.x} cy={pos.y} r="20" fill="#22c55e" opacity="0.2" />
                       )}
                       <circle
                         cx={pos.x}
                         cy={pos.y}
-                        r={isCompleted ? 12 : isAvailable ? 11 : 10}
+                        r={isCompleted ? 16 : isAvailable ? 15 : 13}
                         fill={isCompleted ? '#22c55e' : isAvailable ? 'white' : 'rgba(255,255,255,0.25)'}
                         stroke={isCompleted ? '#16a34a' : isAvailable ? s.color : 'rgba(255,255,255,0.6)'}
-                        strokeWidth={isCompleted ? '2.5' : isAvailable ? '2.5' : '1.5'}
+                        strokeWidth={isCompleted ? '3' : isAvailable ? '3' : '2'}
                         style={{ pointerEvents: 'none' }}
                       />
                       <text
@@ -207,7 +207,7 @@ export default function Board5S({ onSStepClick }: Board5SProps) {
                         textAnchor="middle"
                         dominantBaseline="middle"
                         fill={isCompleted ? 'white' : isAvailable ? s.color : 'rgba(255,255,255,0.4)'}
-                        fontSize={isCompleted ? '12' : '10'}
+                        fontSize={isCompleted ? '16' : '13'}
                         fontWeight="bold"
                         style={{ pointerEvents: 'none', fontFamily: 'system-ui' }}
                       >
@@ -221,28 +221,28 @@ export default function Board5S({ onSStepClick }: Board5SProps) {
                 {earned && (
                   <g style={{ pointerEvents: 'none' }}>
                     <circle
-                      cx={cx + (outerR - 22) * Math.cos(((i + 0.5) * sliceAngle - 90) * (Math.PI / 180))}
-                      cy={cy + (outerR - 22) * Math.sin(((i + 0.5) * sliceAngle - 90) * (Math.PI / 180))}
-                      r="18"
+                      cx={cx + (outerR - 30) * Math.cos(((i + 0.5) * sliceAngle - 90) * (Math.PI / 180))}
+                      cy={cy + (outerR - 30) * Math.sin(((i + 0.5) * sliceAngle - 90) * (Math.PI / 180))}
+                      r="24"
                       fill="#22c55e"
                       opacity="0.3"
                     />
                     <circle
-                      cx={cx + (outerR - 22) * Math.cos(((i + 0.5) * sliceAngle - 90) * (Math.PI / 180))}
-                      cy={cy + (outerR - 22) * Math.sin(((i + 0.5) * sliceAngle - 90) * (Math.PI / 180))}
-                      r="16"
+                      cx={cx + (outerR - 30) * Math.cos(((i + 0.5) * sliceAngle - 90) * (Math.PI / 180))}
+                      cy={cy + (outerR - 30) * Math.sin(((i + 0.5) * sliceAngle - 90) * (Math.PI / 180))}
+                      r="21"
                       fill="#fbbf24"
                       stroke="#16a34a"
-                      strokeWidth="3"
+                      strokeWidth="4"
                       filter="url(#glow)"
                     />
                     <text
-                      x={cx + (outerR - 22) * Math.cos(((i + 0.5) * sliceAngle - 90) * (Math.PI / 180))}
-                      y={cy + (outerR - 22) * Math.sin(((i + 0.5) * sliceAngle - 90) * (Math.PI / 180)) + 1}
+                      x={cx + (outerR - 30) * Math.cos(((i + 0.5) * sliceAngle - 90) * (Math.PI / 180))}
+                      y={cy + (outerR - 30) * Math.sin(((i + 0.5) * sliceAngle - 90) * (Math.PI / 180)) + 1}
                       textAnchor="middle"
                       dominantBaseline="middle"
                       fill="white"
-                      fontSize="12"
+                      fontSize="16"
                       fontWeight="bold"
                       style={{ fontFamily: 'system-ui' }}
                     >
@@ -276,10 +276,10 @@ export default function Board5S({ onSStepClick }: Board5SProps) {
           {/* Center logo image */}
           <image
             href="/5s-logo.png"
-            x={cx - 55}
-            y={cy - 55}
-            width={110}
-            height={110}
+            x={cx - 73}
+            y={cy - 73}
+            width={146}
+            height={146}
             style={{ pointerEvents: 'none' }}
           />
 
