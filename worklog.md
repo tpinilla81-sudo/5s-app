@@ -39,3 +39,28 @@ Stage Summary:
 - Cover HTML: /home/z/my-project/download/cover_manual_5s.html
 - Manual now includes detailed configuration instructions for beginners, step-by-step workflows, tips and warnings
 - Key new sections: Tableros por sector y empresa (4.3), Flujo de notificacion de auditoria (10.3), Gestion de Permisos (15), Panel de Administracion (16)
+---
+Task ID: cache-fix-nuclear
+Agent: main
+Task: Fix browser cache issue - user keeps seeing old version despite multiple fixes
+
+Work Log:
+- Verified server was serving correct content with curl (Metodología, Seiri present)
+- Identified root cause: Next.js ISR cache (x-nextjs-cache: HIT) + ETag were serving pre-rendered HTML
+- Page was marked as Static (○) with pre-rendered HTML in .next/server/app/
+- Stopped PM2, deleted .next completely
+- Added generateBuildId to next.config.ts for unique build IDs
+- Added force-dynamic and revalidate=0 to layout.tsx to prevent ISR caching
+- Page is now Dynamic (ƒ) instead of Static (○)
+- ETag no longer present in response headers
+- x-nextjs-cache no longer present
+- Created /fresh redirect route in middleware for emergency cache-busting
+- Rebuilt app completely and restarted PM2
+- Verified server serves correct content with proper no-cache headers
+
+Stage Summary:
+- Server is confirmed serving the CORRECT new version
+- No more ISR cache, no more ETag, no more x-nextjs-cache: HIT
+- /fresh route available as emergency URL to force browser reload
+- User needs to clear browser cache or use incognito window to see new version
+- All data intact in database

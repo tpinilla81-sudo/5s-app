@@ -3,6 +3,11 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "@/components/ui/sonner";
 
+// Force dynamic rendering — prevent Next.js from caching this layout
+export const dynamic = 'force-dynamic';
+// Set revalidation to 0 — never use stale cache
+export const revalidate = 0;
+
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],

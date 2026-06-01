@@ -6,6 +6,10 @@ const nextConfig: NextConfig = {
     ignoreBuildErrors: true,
   },
   reactStrictMode: false,
+  // Generate a unique build ID every time to bust all caches
+  generateBuildId: async () => {
+    return 'build-' + Date.now()
+  },
   // Disable ISR cache — always serve fresh pages
   // This prevents the "stale HTML with old JS chunks" problem
   headers: async () => [
