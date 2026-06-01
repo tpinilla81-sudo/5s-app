@@ -273,14 +273,19 @@ export default function Board5S({ onSStepClick }: Board5SProps) {
             );
           })}
 
-          {/* Center logo image */}
+          {/* Center logo image - fitted to inner circle */}
+          <clipPath id="circleClip">
+            <circle cx={cx} cy={cy} r={innerR - 4} />
+          </clipPath>
           <image
             href="/5s-logo.png"
-            x={cx - 73}
-            y={cy - 73}
-            width={146}
-            height={146}
+            x={cx - innerR + 4}
+            y={cy - innerR + 4}
+            width={(innerR - 4) * 2}
+            height={(innerR - 4) * 2}
+            clipPath="url(#circleClip)"
             style={{ pointerEvents: 'none' }}
+            preserveAspectRatio="xMidYMid meet"
           />
 
 
