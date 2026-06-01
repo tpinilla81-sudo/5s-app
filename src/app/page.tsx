@@ -652,10 +652,10 @@ export default function HomePage() {
                     )}
                   </div>
 
-                  {/* BOTTOM: S-Step Cards — Compact horizontal row (only when zone selected) */}
+                  {/* BOTTOM: S-Step Cards — Prominent horizontal row (only when zone selected) */}
                   {currentZone && (
-                  <div className="shrink-0 border-t bg-white/80 backdrop-blur-sm px-2 py-2">
-                    <div className="grid grid-cols-5 gap-2 max-w-5xl mx-auto">
+                  <div className="shrink-0 border-t bg-white/80 backdrop-blur-sm px-3 py-3">
+                    <div className="grid grid-cols-5 gap-3 max-w-5xl mx-auto">
                       {S_STEPS.map(s => {
                         const earned = isQuesitoEarned(s.id);
                         const zoneId = currentZone?.id;
@@ -672,29 +672,29 @@ export default function HomePage() {
                         return (
                           <div
                             key={s.id}
-                            className={`rounded-xl border-2 overflow-hidden transition-all duration-300 cursor-pointer hover:shadow-md ${
+                            className={`rounded-2xl border-2 overflow-hidden transition-all duration-300 cursor-pointer hover:shadow-lg hover:scale-[1.02] ${
                               earned
-                                ? 'border-green-500 bg-gradient-to-b from-green-50 to-emerald-50 shadow-md shadow-green-100'
-                                : 'border-gray-200 bg-white'
+                                ? 'border-green-500 bg-gradient-to-b from-green-50 to-emerald-50 shadow-lg shadow-green-200'
+                                : 'border-gray-200 bg-white shadow-sm'
                             }`}
                             onClick={() => handleSStepClick(s.id)}
                           >
                             {/* S Label header */}
                             <div
-                              className={`flex items-center justify-center gap-1.5 py-1.5 ${earned ? 'bg-green-500' : ''}`}
-                              style={!earned ? { backgroundColor: `${s.color}20` } : undefined}
+                              className={`flex items-center justify-center gap-2 py-2.5 ${earned ? 'bg-green-500' : ''}`}
+                              style={!earned ? { backgroundColor: s.color + '18' } : undefined}
                             >
-                              <div className={`w-6 h-6 rounded-lg flex items-center justify-center text-white text-xs font-black ${earned ? 'bg-green-600 ring-1 ring-yellow-400' : ''}`}
+                              <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-white text-sm font-black ${earned ? 'bg-green-600 ring-2 ring-yellow-400' : ''}`}
                                 style={!earned ? { backgroundColor: s.color } : undefined}>
                                 {earned ? '★' : s.id}
                               </div>
-                              <span className={`text-[10px] font-bold ${earned ? 'text-white' : ''}`} style={!earned ? { color: s.color } : undefined}>
+                              <span className={`text-sm font-extrabold tracking-wide ${earned ? 'text-white' : ''}`} style={!earned ? { color: s.color } : undefined}>
                                 {s.name}
                               </span>
                             </div>
 
                             {/* Mini-step dots */}
-                            <div className="flex items-center justify-center gap-1 py-1.5 px-1">
+                            <div className="flex items-center justify-center gap-1.5 py-2 px-1.5">
                               {MINI_STEPS.map(ms => {
                                 const status = getMiniStepStatus(s.id, ms.id);
                                 const effectiveStatus = status;
@@ -740,7 +740,7 @@ export default function HomePage() {
                                   <div key={ms.id} className="flex flex-col items-center">
                                     {/* Score badge above step 4 and 5 dots */}
                                     {(ms.id === 4 || ms.id === 5) && stepScore != null && (
-                                      <span className={`text-[7px] font-bold ${stepScore >= 70 ? 'text-green-600' : 'text-red-500'} leading-none mb-0.5`}>
+                                      <span className={`text-[8px] font-bold ${stepScore >= 70 ? 'text-green-600' : 'text-red-500'} leading-none mb-0.5`}>
                                         {stepScore}%
                                       </span>
                                     )}
@@ -851,13 +851,13 @@ export default function HomePage() {
                                     <div className="relative">
                                       <button
                                         className={`
-                                          w-8 h-8 rounded-full flex items-center justify-center text-[10px] font-bold transition-all
+                                          w-10 h-10 rounded-full flex items-center justify-center text-xs font-bold transition-all
                                           ${effectiveStatus === 'completed'
                                             ? 'bg-green-500 text-white shadow-sm shadow-green-200 ring-2 ring-green-300'
                                             : effectiveStatus === 'completed_viewonly'
                                               ? 'bg-green-500 text-white shadow-sm shadow-green-200 ring-2 ring-green-300 cursor-default'
                                             : effectiveStatus === 'available'
-                                              ? 'text-white hover:scale-110 hover:shadow-md cursor-pointer'
+                                              ? 'text-white hover:scale-110 hover:shadow-lg cursor-pointer'
                                               : 'bg-gray-100 text-gray-300 cursor-not-allowed'}
                                         `}
                                         style={effectiveStatus === 'available' ? { backgroundColor: s.color } : undefined}
@@ -875,7 +875,7 @@ export default function HomePage() {
                                       {/* Admin reset button: only shown when admin with lock open and step is completed */}
                                       {canSkipSteps && adminFreeNavigation && effectiveStatus === 'completed' && (
                                         <button
-                                          className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-red-500 text-white flex items-center justify-center text-[8px] font-bold hover:bg-red-600 transition-colors z-10"
+                                          className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-red-500 text-white flex items-center justify-center text-[9px] font-bold hover:bg-red-600 transition-colors z-10"
                                           onClick={async (e) => {
                                             e.stopPropagation();
                                             if (!confirm(`¿Restablecer paso ${ms.id} de S${s.id}? Esto eliminará el progreso guardado.`)) return;
@@ -906,18 +906,18 @@ export default function HomePage() {
                             </div>
 
                             {/* Progress bar */}
-                            <div className="px-2 pb-1.5">
-                              <div className="h-1.5 rounded-full overflow-hidden bg-gray-100">
+                            <div className="px-2.5 pb-2">
+                              <div className="h-2 rounded-full overflow-hidden bg-gray-100">
                                 <div
                                   className="h-full rounded-full transition-all duration-500"
                                   style={{ width: `${pct}%`, backgroundColor: earned ? '#22c55e' : s.color }}
                                 />
                               </div>
                               <div className="flex items-center justify-between mt-0.5">
-                                <span className={`text-[8px] font-bold ${earned ? 'text-green-600' : 'text-muted-foreground'}`}>
+                                <span className={`text-[9px] font-bold ${earned ? 'text-green-600' : 'text-muted-foreground'}`}>
                                   {earned ? 'COMPLETADO' : `${completedMiniSteps}/5`}
                                 </span>
-                                <span className={`text-[8px] font-bold ${earned ? 'text-green-600' : 'text-muted-foreground'}`}>
+                                <span className={`text-[9px] font-bold ${earned ? 'text-green-600' : 'text-muted-foreground'}`}>
                                   {pct}%
                                 </span>
                               </div>
