@@ -1,15 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 
-// GET /api/board-slots?projectId=xxx
+// GET /api/board-slots?boardId=xxx&projectId=xxx
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
+    const boardId = searchParams.get('boardId') || undefined
     const projectId = searchParams.get('projectId') || undefined
 
     const where: Record<string, unknown> = {}
-    if (projectId) where.projectId = projectId
-    else where.projectId = null
+    if (boardId) where.boardId = boardId
+    else if (projectId) where.projectId = projectId
+    else where.boardId = null
 
     const slots = await db.boardSlot.findMany({
       where,
@@ -31,12 +33,43 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { sStep, miniStep, templateId, standardId, projectId } = body
+    const { sStep, miniStep, templateId, standardId, boardId, projectId } = body
 
     if (sStep == null || miniStep == null) {
       return NextResponse.json({ success: false, error: 'Faltan campos obligatorios: sStep, miniStep' }, { status: 400 })
     }
 
+    // Use boardId-based upsert if boardId is provided
+    if (boardId) {
+      const slot = await db.boardSlot.upsert({
+        where: {
+          sStep_miniStep_boardId: {
+            sStep: Number(sStep),
+            miniStep: Number(miniStep),
+            boardId: boardId,
+          },
+        },
+        create: {
+          sStep: Number(sStep),
+          miniStep: Number(miniStep),
+          templateId: templateId || null,
+          standardId: standardId || null,
+          boardId: boardId,
+          projectId: projectId || null,
+        },
+        update: {
+          templateId: templateId || null,
+          standardId: standardId || null,
+        },
+        include: {
+          template: { select: { id: true, type: true, title: true, sStep: true, miniStep: true } },
+          standard: { select: { id: true, title: true, sStep: true, category: true } },
+        },
+      })
+      return NextResponse.json({ success: true, data: slot })
+    }
+
+    // Legacy: projectId-based upsert
     const slot = await db.boardSlot.upsert({
       where: {
         sStep_miniStep_projectId: {

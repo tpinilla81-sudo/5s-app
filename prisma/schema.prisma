@@ -62,11 +62,13 @@ model Zone {
   color         String   @default("#3B82F6")
   projectId     String
   responsableId String? // The responsable user for this zone
+  boardId       String? // Which board configuration to use for this zone (null = default board)
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
   project          Project            @relation(fields: [projectId], references: [id], onDelete: Cascade)
   responsable      User?              @relation(fields: [responsableId], references: [id], onDelete: SetNull)
+  board            Board?             @relation(fields: [boardId], references: [id], onDelete: SetNull)
   memberZones      MemberZone[]
   actionItems      ActionItem[]
   progress         Progress[]
@@ -79,6 +81,7 @@ model Zone {
   @@unique([name, projectId])
   @@index([projectId])
   @@index([responsableId])
+  @@index([boardId])
 }
 
 model ProjectMember {
@@ -394,20 +397,38 @@ model Standard {
   @@index([category])
 }
 
+model Board {
+  id          String   @id @default(cuid())
+  name        String   // e.g. "Genérico", "Tablero Taller", "Tablero Oficina"
+  description String?  // Optional description
+  isDefault   Boolean  @default(false) // True = generic board used when zone has no board assigned
+  companyId   String?  // null = global (available to all companies), or company-specific
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  slots       BoardSlot[]
+  zones       Zone[]
+
+  @@index([companyId])
+}
+
 model BoardSlot {
   id           String   @id @default(cuid())
   sStep        Int      // 1-5 (which S)
   miniStep     Int      // 1-5 (which paso within the S)
   templateId   String?  // Assigned template (null = no template)
   standardId   String?  // Assigned standard (null = no standard)
-  projectId    String?  // null = global config (all projects)
+  boardId      String?  // Which board this slot belongs to
+  projectId    String?  // Legacy field - null = global config (all projects)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
   template     Template?  @relation(fields: [templateId], references: [id], onDelete: SetNull)
   standard     Standard?  @relation(fields: [standardId], references: [id], onDelete: SetNull)
+  board        Board?     @relation(fields: [boardId], references: [id], onDelete: Cascade)
 
-  @@unique([sStep, miniStep, projectId])
+  @@unique([sStep, miniStep, boardId])
+  @@index([boardId])
   @@index([projectId])
 }
 

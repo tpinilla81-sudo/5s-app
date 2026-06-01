@@ -56,7 +56,15 @@ interface ZoneData {
   name: string
   description: string | null
   color: string
+  boardId?: string | null
+  boardName?: string
   memberCount?: number
+}
+
+interface BoardOption {
+  id: string
+  name: string
+  isDefault: boolean
 }
 
 interface MemberData {
@@ -91,7 +99,9 @@ export default function TeamManagement({ open, onClose }: TeamManagementProps) {
   const [newZoneName, setNewZoneName] = useState('')
   const [newZoneDesc, setNewZoneDesc] = useState('')
   const [newZoneColor, setNewZoneColor] = useState(PRESET_COLORS[0])
+  const [newZoneBoardId, setNewZoneBoardId] = useState<string | null>(null)
   const [isLoadingZones, setIsLoadingZones] = useState(false)
+  const [availableBoards, setAvailableBoards] = useState<BoardOption[]>([])
 
   // Members state
   const [members, setMembers] = useState<MemberData[]>([])
@@ -129,12 +139,22 @@ export default function TeamManagement({ open, onClose }: TeamManagementProps) {
     }
   }, [currentProject])
 
+  // Load available boards
+  const fetchBoards = useCallback(async () => {
+    try {
+      const res = await fetch('/api/boards')
+      const data = await res.json()
+      if (data.success) setAvailableBoards((data.data || []).map((b: any) => ({ id: b.id, name: b.name, isDefault: b.isDefault })))
+    } catch (error) { console.error('Error fetching boards:', error) }
+  }, [])
+
   useEffect(() => {
     if (open && currentProject) {
       fetchZones()
       fetchMembers()
+      fetchBoards()
     }
-  }, [open, currentProject, fetchZones, fetchMembers])
+  }, [open, currentProject, fetchZones, fetchMembers, fetchBoards])
 
   const handleAddZone = async () => {
     if (!currentProject || !newZoneName.trim()) return
@@ -146,12 +166,14 @@ export default function TeamManagement({ open, onClose }: TeamManagementProps) {
           name: newZoneName,
           description: newZoneDesc || undefined,
           color: newZoneColor,
+          boardId: newZoneBoardId || undefined,
         }),
       })
       if (res.ok) {
         setNewZoneName('')
         setNewZoneDesc('')
         setNewZoneColor(PRESET_COLORS[zones.length % PRESET_COLORS.length])
+        setNewZoneBoardId(null)
         await fetchZones()
       }
     } catch (error) {
@@ -366,6 +388,18 @@ export default function TeamManagement({ open, onClose }: TeamManagementProps) {
                           />
                         ))}
                       </div>
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs">Tablero asociado</Label>
+                      <Select value={newZoneBoardId || '__default__'} onValueChange={(v) => setNewZoneBoardId(v === '__default__' ? null : v)}>
+                        <SelectTrigger className="h-9 text-sm"><SelectValue placeholder="Tablero por defecto" /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="__default__"><span className="text-gray-500">Genérico (por defecto)</span></SelectItem>
+                          {availableBoards.filter(b => !b.isDefault).map(b => (
+                            <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
                     <Button
                       onClick={handleAddZone}
