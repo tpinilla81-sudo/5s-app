@@ -273,7 +273,7 @@ export default function HomePage() {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-green-50 via-white to-emerald-50 gap-4">
         <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: 'spring', stiffness: 200 }}
-          className="w-16 h-16 rounded-xl shadow-lg overflow-hidden">
+          className="w-16 h-16 overflow-hidden">
           <img src="/5s-logo.png" alt="5S" className="w-full h-full object-contain" />
         </motion.div>
         <Loader2 className="h-6 w-6 text-green-500 animate-spin" />
@@ -288,7 +288,7 @@ export default function HomePage() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-green-50 via-white to-emerald-50 p-4">
         <div className="w-full max-w-md text-center">
-          <div className="w-20 h-20 rounded-2xl shadow-lg shadow-green-200 mx-auto mb-6 overflow-hidden"><img src="/5s-logo.png" alt="5S" className="w-full h-full object-contain" /></div>
+          <div className="w-20 h-20 mx-auto mb-6 overflow-hidden"><img src="/5s-logo.png" alt="5S" className="w-full h-full object-contain" /></div>
           <h1 className="text-2xl font-bold text-gray-900 mb-3">Bienvenido, {currentUser?.name || 'Usuario'}</h1>
           <p className="text-muted-foreground mb-6">Tu cuenta ha sido creada correctamente. Aún no tienes ningún proyecto asignado.</p>
           <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-6">
@@ -309,12 +309,11 @@ export default function HomePage() {
       <header className="border-b bg-white/90 backdrop-blur-sm shrink-0 z-20">
         <div className="px-4 py-2 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg shadow-md overflow-hidden"><img src="/5s-logo.png" alt="5S" className="w-full h-full object-contain" /></div>
+            <div className="w-8 h-8 overflow-hidden"><img src="/5s-logo.png" alt="5S" className="w-full h-full object-contain" /></div>
             <div>
-              <h1 className="text-sm font-bold text-gray-900 leading-tight">Metodología 5S</h1>
+              <h1 className="text-sm font-bold text-green-600 leading-tight">método</h1>
               <div className="flex items-center gap-1">
-                <span className="text-[10px] text-muted-foreground">Implementación</span>
-                {currentProject && <span className="text-[10px] text-muted-foreground">· {currentProject.name}</span>}
+                {currentProject && <span className="text-[10px] text-muted-foreground">{currentProject.name}</span>}
                 {currentZone && <span className="text-[10px] font-medium" style={{ color: currentZone.color || '#3B82F6' }}>· {currentZone.name}</span>}
               </div>
             </div>
