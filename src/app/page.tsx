@@ -1,5 +1,8 @@
 'use client';
 
+// Force dynamic rendering — never cache this page in ISR
+export const dynamic = 'force-dynamic';
+
 import { useEffect, useState, useMemo } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { use5SStore } from '@/lib/store';
