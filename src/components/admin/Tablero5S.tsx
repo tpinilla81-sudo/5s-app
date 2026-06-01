@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
@@ -23,9 +23,21 @@ interface StandardOption {
   id: string; title: string; sStep: number; category: string
 }
 
+interface SlotTemplateData {
+  id: string; boardSlotId: string; templateId: string; sortOrder: number
+  template: TemplateOption
+}
+
+interface SlotStandardData {
+  id: string; boardSlotId: string; standardId: string; sortOrder: number
+  standard: StandardOption
+}
+
 interface BoardSlotData {
   id: string; sStep: number; miniStep: number; templateId: string | null; standardId: string | null; boardId: string | null
   template: TemplateOption | null; standard: StandardOption | null
+  slotTemplates: SlotTemplateData[]
+  slotStandards: SlotStandardData[]
 }
 
 interface BoardData {
@@ -86,7 +98,6 @@ export default function Tablero5S() {
       if (data.success) {
         const boardsData = data.data || []
         setBoards(boardsData)
-        // Auto-select default board if none selected
         if (!selectedBoardId && boardsData.length > 0) {
           const defaultBoard = boardsData.find((b: BoardData) => b.isDefault) || boardsData[0]
           setSelectedBoardId(defaultBoard.id)
@@ -177,32 +188,134 @@ export default function Tablero5S() {
   }
   const getStandardsForS = (sStep: number) => standards.filter(s => s.sStep === sStep)
 
-  // ─── Save slot ────────────────────────────────────────────────────────
-  const handleSaveSlot = async (sStep: number, miniStep: number, templateId: string | null, standardId: string | null) => {
-    const key = `${sStep}-${miniStep}`
-    setSavingSlot(key)
+  // ─── Ensure slot exists (create if needed) ─────────────────────────────
+  const ensureSlot = async (sStep: number, miniStep: number): Promise<BoardSlotData | null> => {
+    const existing = getSlot(sStep, miniStep)
+    if (existing) return existing
+
+    // Create the slot
     try {
       const res = await fetch('/api/board-slots', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sStep, miniStep, templateId, standardId, boardId: selectedBoardId }),
+        body: JSON.stringify({ sStep, miniStep, templateId: null, standardId: null, boardId: selectedBoardId }),
       })
       if (res.ok) {
         const data = await res.json()
         if (data.success) {
-          setSlots(prev => {
-            const existing = prev.findIndex(s => s.sStep === sStep && s.miniStep === miniStep)
-            if (existing >= 0) { const updated = [...prev]; updated[existing] = data.data; return updated }
-            return [...prev, data.data]
-          })
+          const newSlot = data.data
+          setSlots(prev => [...prev, newSlot])
+          return newSlot
         }
       }
-    } catch (error) { console.error('Error saving board slot:', error) }
+    } catch (error) { console.error('Error creating slot:', error) }
+    return null
+  }
+
+  // ─── Add template to slot ──────────────────────────────────────────────
+  const handleAddTemplate = async (sStep: number, miniStep: number, templateId: string) => {
+    const key = `${sStep}-${miniStep}`
+    setSavingSlot(key)
+    try {
+      const slot = await ensureSlot(sStep, miniStep)
+      if (!slot) return
+
+      const res = await fetch(`/api/board-slots/${slot.id}/templates`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ templateId }),
+      })
+      if (res.ok) {
+        const data = await res.json()
+        if (data.success) {
+          // Update slots locally
+          setSlots(prev => prev.map(s => {
+            if (s.id === slot.id) {
+              return { ...s, slotTemplates: [...s.slotTemplates, data.data] }
+            }
+            return s
+          }))
+        }
+      }
+    } catch (error) { console.error('Error adding template:', error) }
     finally { setSavingSlot(null) }
   }
 
+  // ─── Remove template from slot ─────────────────────────────────────────
+  const handleRemoveTemplate = async (sStep: number, miniStep: number, templateId: string) => {
+    const slot = getSlot(sStep, miniStep)
+    if (!slot) return
+    try {
+      await fetch(`/api/board-slots/${slot.id}/templates?templateId=${templateId}`, { method: 'DELETE' })
+      setSlots(prev => prev.map(s => {
+        if (s.id === slot.id) {
+          return { ...s, slotTemplates: s.slotTemplates.filter(st => st.templateId !== templateId) }
+        }
+        return s
+      }))
+    } catch (error) { console.error('Error removing template:', error) }
+  }
+
+  // ─── Add standard to slot ──────────────────────────────────────────────
+  const handleAddStandard = async (sStep: number, miniStep: number, standardId: string) => {
+    const key = `${sStep}-${miniStep}`
+    setSavingSlot(key)
+    try {
+      const slot = await ensureSlot(sStep, miniStep)
+      if (!slot) return
+
+      const res = await fetch(`/api/board-slots/${slot.id}/standards`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ standardId }),
+      })
+      if (res.ok) {
+        const data = await res.json()
+        if (data.success) {
+          setSlots(prev => prev.map(s => {
+            if (s.id === slot.id) {
+              return { ...s, slotStandards: [...s.slotStandards, data.data] }
+            }
+            return s
+          }))
+        }
+      }
+    } catch (error) { console.error('Error adding standard:', error) }
+    finally { setSavingSlot(null) }
+  }
+
+  // ─── Remove standard from slot ─────────────────────────────────────────
+  const handleRemoveStandard = async (sStep: number, miniStep: number, standardId: string) => {
+    const slot = getSlot(sStep, miniStep)
+    if (!slot) return
+    try {
+      await fetch(`/api/board-slots/${slot.id}/standards?standardId=${standardId}`, { method: 'DELETE' })
+      setSlots(prev => prev.map(s => {
+        if (s.id === slot.id) {
+          return { ...s, slotStandards: s.slotStandards.filter(ss => ss.standardId !== standardId) }
+        }
+        return s
+      }))
+    } catch (error) { console.error('Error removing standard:', error) }
+  }
+
+  // ─── Clear entire slot ──────────────────────────────────────────────────
   const handleClearSlot = async (sStep: number, miniStep: number) => {
-    await handleSaveSlot(sStep, miniStep, null, null)
+    const slot = getSlot(sStep, miniStep)
+    if (!slot) return
+    // Remove all templates and standards
+    for (const st of slot.slotTemplates) {
+      await fetch(`/api/board-slots/${slot.id}/templates?templateId=${st.templateId}`, { method: 'DELETE' })
+    }
+    for (const ss of slot.slotStandards) {
+      await fetch(`/api/board-slots/${slot.id}/standards?standardId=${ss.standardId}`, { method: 'DELETE' })
+    }
+    setSlots(prev => prev.map(s => {
+      if (s.id === slot.id) {
+        return { ...s, slotTemplates: [], slotStandards: [] }
+      }
+      return s
+    }))
   }
 
   const selectedBoard = boards.find(b => b.id === selectedBoardId)
@@ -273,7 +386,7 @@ export default function Tablero5S() {
                   {selectedBoard.isDefault && <span className="ml-2 text-yellow-600 font-medium">(Tablero por defecto)</span>}
                 </p>
                 <p className="text-xs text-muted-foreground mt-1">
-                  {slots.filter(s => s.templateId || s.standardId).length} de 25 posiciones asignadas
+                  {slots.filter(s => s.slotTemplates?.length > 0 || s.slotStandards?.length > 0).length} de 25 posiciones con asignaciones
                 </p>
               </div>
               {!selectedBoard.isDefault && (
@@ -329,7 +442,7 @@ export default function Tablero5S() {
         </Card>
       )}
 
-      {/* Column headers */}
+      {/* Grid */}
       {selectedBoardId && (
         <div className="overflow-x-auto">
           <div className="min-w-[900px]">
@@ -361,69 +474,100 @@ export default function Tablero5S() {
                     const pasoStandards = getStandardsForS(s.id)
                     const savingKey = `${s.id}-${paso}`
                     const isSaving = savingSlot === savingKey
-                    const assignedTemplate = slot?.template
-                    const assignedStandard = slot?.standard
+                    const assignedTemplates = slot?.slotTemplates || []
+                    const assignedStandards = slot?.slotStandards || []
+
+                    // Filter out already-assigned templates/standards from the dropdown
+                    const availableTemplates = pasoTemplates.filter(t => !assignedTemplates.some(at => at.templateId === t.id))
+                    const availableStandards = pasoStandards.filter(std => !assignedStandards.some(as_ => as_.standardId === std.id))
 
                     return (
                       <Card key={`${s.id}-${paso}`} className={`border ${S_BG_COLORS[s.id]} border-l-4 ${S_BORDER_COLORS[s.id]} transition-shadow hover:shadow-md`}>
                         <CardContent className="p-3 space-y-2">
-                          {/* Plantilla selector */}
+                          {/* Plantillas list */}
                           <div className="space-y-1">
                             <label className="text-[10px] font-semibold text-gray-500 uppercase flex items-center gap-1">
-                              <FileText className="h-3 w-3" /> Plantilla
+                              <FileText className="h-3 w-3" /> Plantillas ({assignedTemplates.length})
                             </label>
-                            <Select
-                              value={slot?.templateId || '__none__'}
-                              onValueChange={(val) => handleSaveSlot(s.id, paso, val === '__none__' ? null : val, slot?.standardId || null)}
-                              disabled={isSaving}
-                            >
-                              <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Sin plantilla" /></SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="__none__"><span className="text-gray-400">— Sin plantilla —</span></SelectItem>
-                                {pasoTemplates.map(t => (
-                                  <SelectItem key={t.id} value={t.id}>
-                                    <div className="flex items-center gap-1.5">
-                                      <Badge className={`text-[9px] px-1 py-0 ${TYPE_COLORS[t.type] || 'bg-gray-100 text-gray-700'}`}>{TYPE_LABELS[t.type] || t.type}</Badge>
-                                      <span className="truncate max-w-[150px]">{t.title}</span>
-                                    </div>
-                                  </SelectItem>
-                                ))}
-                                {pasoTemplates.length === 0 && <div className="px-2 py-1.5 text-xs text-gray-400 italic">No hay plantillas para S{s.id}</div>}
-                              </SelectContent>
-                            </Select>
-                            {assignedTemplate && (
-                              <div className="flex items-center gap-1">
-                                <Badge className={`text-[9px] px-1 py-0 ${TYPE_COLORS[assignedTemplate.type] || 'bg-gray-100 text-gray-700'}`}>{TYPE_LABELS[assignedTemplate.type] || assignedTemplate.type}</Badge>
-                                <span className="text-[10px] text-gray-600 truncate max-w-[120px]" title={assignedTemplate.title}>{assignedTemplate.title}</span>
+                            {/* Assigned templates */}
+                            {assignedTemplates.map(at => (
+                              <div key={at.templateId} className="flex items-center gap-1 bg-white/80 rounded px-1.5 py-0.5">
+                                <Badge className={`text-[9px] px-1 py-0 shrink-0 ${TYPE_COLORS[at.template?.type] || 'bg-gray-100 text-gray-700'}`}>{TYPE_LABELS[at.template?.type] || at.template?.type}</Badge>
+                                <span className="text-[10px] text-gray-700 truncate flex-1" title={at.template?.title}>{at.template?.title}</span>
+                                <button
+                                  onClick={() => handleRemoveTemplate(s.id, paso, at.templateId)}
+                                  className="text-red-400 hover:text-red-600 shrink-0"
+                                  title="Quitar plantilla"
+                                >
+                                  <X className="h-3 w-3" />
+                                </button>
                               </div>
+                            ))}
+                            {/* Add template dropdown */}
+                            {availableTemplates.length > 0 && (
+                              <Select
+                                value="__select__"
+                                onValueChange={(val) => { if (val && val !== '__none__') handleAddTemplate(s.id, paso, val) }}
+                                disabled={isSaving}
+                              >
+                                <SelectTrigger className="h-7 text-[10px]">
+                                  <SelectValue placeholder="+ Añadir plantilla" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {availableTemplates.map(t => (
+                                    <SelectItem key={t.id} value={t.id}>
+                                      <div className="flex items-center gap-1.5">
+                                        <Badge className={`text-[9px] px-1 py-0 ${TYPE_COLORS[t.type] || 'bg-gray-100 text-gray-700'}`}>{TYPE_LABELS[t.type] || t.type}</Badge>
+                                        <span className="truncate max-w-[150px]">{t.title}</span>
+                                      </div>
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
                             )}
+                            {pasoTemplates.length === 0 && <div className="text-[9px] text-gray-400 italic">No hay plantillas para S{s.id}</div>}
                           </div>
 
-                          {/* Estándar selector */}
+                          {/* Estándares list */}
                           <div className="space-y-1">
                             <label className="text-[10px] font-semibold text-gray-500 uppercase flex items-center gap-1">
-                              <Award className="h-3 w-3" /> Estándar
+                              <Award className="h-3 w-3" /> Estándares ({assignedStandards.length})
                             </label>
-                            <Select
-                              value={slot?.standardId || '__none__'}
-                              onValueChange={(val) => handleSaveSlot(s.id, paso, slot?.templateId || null, val === '__none__' ? null : val)}
-                              disabled={isSaving}
-                            >
-                              <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Sin estándar" /></SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="__none__"><span className="text-gray-400">— Sin estándar —</span></SelectItem>
-                                {pasoStandards.map(std => (
-                                  <SelectItem key={std.id} value={std.id}>
-                                    <div className="flex items-center gap-1.5">
-                                      <Badge className="text-[9px] px-1 py-0 bg-gray-100 text-gray-700">{std.category}</Badge>
-                                      <span className="truncate max-w-[150px]">{std.title}</span>
-                                    </div>
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                            {assignedStandard && (
-                              <span className="text-[10px] text-gray-600 truncate max-w-[160px] block" title={assignedStandard.title}>{assignedStandard.title}</span>
+                            {/* Assigned standards */}
+                            {assignedStandards.map(as_ => (
+                              <div key={as_.standardId} className="flex items-center gap-1 bg-white/80 rounded px-1.5 py-0.5">
+                                <Badge className="text-[9px] px-1 py-0 bg-gray-100 text-gray-700 shrink-0">{as_.standard?.category}</Badge>
+                                <span className="text-[10px] text-gray-700 truncate flex-1" title={as_.standard?.title}>{as_.standard?.title}</span>
+                                <button
+                                  onClick={() => handleRemoveStandard(s.id, paso, as_.standardId)}
+                                  className="text-red-400 hover:text-red-600 shrink-0"
+                                  title="Quitar estándar"
+                                >
+                                  <X className="h-3 w-3" />
+                                </button>
+                              </div>
+                            ))}
+                            {/* Add standard dropdown */}
+                            {availableStandards.length > 0 && (
+                              <Select
+                                value="__select__"
+                                onValueChange={(val) => { if (val && val !== '__none__') handleAddStandard(s.id, paso, val) }}
+                                disabled={isSaving}
+                              >
+                                <SelectTrigger className="h-7 text-[10px]">
+                                  <SelectValue placeholder="+ Añadir estándar" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {availableStandards.map(std => (
+                                    <SelectItem key={std.id} value={std.id}>
+                                      <div className="flex items-center gap-1.5">
+                                        <Badge className="text-[9px] px-1 py-0 bg-gray-100 text-gray-700">{std.category}</Badge>
+                                        <span className="truncate max-w-[150px]">{std.title}</span>
+                                      </div>
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
                             )}
                           </div>
 
@@ -434,9 +578,9 @@ export default function Tablero5S() {
                             </div>
                           )}
 
-                          {(assignedTemplate || assignedStandard) && !isSaving && (
+                          {(assignedTemplates.length > 0 || assignedStandards.length > 0) && !isSaving && (
                             <Button variant="ghost" size="sm" onClick={() => handleClearSlot(s.id, paso)} className="h-6 w-full text-[10px] text-red-400 hover:text-red-600 hover:bg-red-50 p-0 mt-1">
-                              <X className="h-3 w-3 mr-0.5" /> Limpiar
+                              <X className="h-3 w-3 mr-0.5" /> Limpiar todo
                             </Button>
                           )}
                         </CardContent>
@@ -454,7 +598,7 @@ export default function Tablero5S() {
       {selectedBoardId && (
         <div className="flex items-center justify-between border-t pt-4">
           <div className="text-sm text-muted-foreground">
-            <span className="font-semibold">{slots.filter(s => s.templateId || s.standardId).length}</span> de <span className="font-semibold">25</span> posiciones asignadas
+            <span className="font-semibold">{slots.filter(s => s.slotTemplates?.length > 0 || s.slotStandards?.length > 0).length}</span> de <span className="font-semibold">25</span> posiciones con asignaciones
           </div>
           <div className="flex items-center gap-2 flex-wrap">
             {Object.entries(TYPE_LABELS).map(([type, label]) => (

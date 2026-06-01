@@ -18,6 +18,14 @@ export async function GET(request: NextRequest) {
       include: {
         template: { select: { id: true, type: true, title: true, sStep: true, miniStep: true } },
         standard: { select: { id: true, title: true, sStep: true, category: true } },
+        slotTemplates: {
+          include: { template: { select: { id: true, type: true, title: true, sStep: true, miniStep: true } } },
+          orderBy: { sortOrder: 'asc' },
+        },
+        slotStandards: {
+          include: { standard: { select: { id: true, title: true, sStep: true, category: true } } },
+          orderBy: { sortOrder: 'asc' },
+        },
       },
       orderBy: [{ sStep: 'asc' }, { miniStep: 'asc' }],
     })
@@ -64,6 +72,14 @@ export async function POST(request: NextRequest) {
         include: {
           template: { select: { id: true, type: true, title: true, sStep: true, miniStep: true } },
           standard: { select: { id: true, title: true, sStep: true, category: true } },
+          slotTemplates: {
+            include: { template: { select: { id: true, type: true, title: true, sStep: true, miniStep: true } } },
+            orderBy: { sortOrder: 'asc' },
+          },
+          slotStandards: {
+            include: { standard: { select: { id: true, title: true, sStep: true, category: true } } },
+            orderBy: { sortOrder: 'asc' },
+          },
         },
       })
       return NextResponse.json({ success: true, data: slot })
@@ -92,6 +108,14 @@ export async function POST(request: NextRequest) {
       include: {
         template: { select: { id: true, type: true, title: true, sStep: true, miniStep: true } },
         standard: { select: { id: true, title: true, sStep: true, category: true } },
+        slotTemplates: {
+          include: { template: { select: { id: true, type: true, title: true, sStep: true, miniStep: true } } },
+          orderBy: { sortOrder: 'asc' },
+        },
+        slotStandards: {
+          include: { standard: { select: { id: true, title: true, sStep: true, category: true } } },
+          orderBy: { sortOrder: 'asc' },
+        },
       },
     })
 

@@ -1,6 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 
+const slotInclude = {
+  template: { select: { id: true, type: true, title: true, sStep: true, miniStep: true } },
+  standard: { select: { id: true, title: true, sStep: true, category: true } },
+  slotTemplates: {
+    include: { template: { select: { id: true, type: true, title: true, sStep: true, miniStep: true } } },
+    orderBy: { sortOrder: 'asc' },
+  },
+  slotStandards: {
+    include: { standard: { select: { id: true, title: true, sStep: true, category: true } } },
+    orderBy: { sortOrder: 'asc' },
+  },
+}
+
 // GET /api/boards?companyId=xxx
 export async function GET(request: NextRequest) {
   try {
@@ -19,10 +32,7 @@ export async function GET(request: NextRequest) {
       where,
       include: {
         slots: {
-          include: {
-            template: { select: { id: true, type: true, title: true, sStep: true, miniStep: true } },
-            standard: { select: { id: true, title: true, sStep: true, category: true } },
-          },
+          include: slotInclude,
           orderBy: [{ sStep: 'asc' }, { miniStep: 'asc' }],
         },
         _count: { select: { zones: true } },
@@ -64,21 +74,46 @@ export async function POST(request: NextRequest) {
       },
     })
 
-    // If copying from another board, clone all slots
+    // If copying from another board, clone all slots including junction tables
     if (copyFromBoardId) {
       const sourceSlots = await db.boardSlot.findMany({
         where: { boardId: copyFromBoardId },
+        include: {
+          slotTemplates: true,
+          slotStandards: true,
+        },
       })
       if (sourceSlots.length > 0) {
-        await db.boardSlot.createMany({
-          data: sourceSlots.map(slot => ({
-            sStep: slot.sStep,
-            miniStep: slot.miniStep,
-            templateId: slot.templateId,
-            standardId: slot.standardId,
-            boardId: board.id,
-          })),
-        })
+        for (const slot of sourceSlots) {
+          const newSlot = await db.boardSlot.create({
+            data: {
+              sStep: slot.sStep,
+              miniStep: slot.miniStep,
+              templateId: slot.templateId,
+              standardId: slot.standardId,
+              boardId: board.id,
+            },
+          })
+          // Clone junction tables
+          if (slot.slotTemplates.length > 0) {
+            await db.boardSlotTemplate.createMany({
+              data: slot.slotTemplates.map(st => ({
+                boardSlotId: newSlot.id,
+                templateId: st.templateId,
+                sortOrder: st.sortOrder,
+              })),
+            })
+          }
+          if (slot.slotStandards.length > 0) {
+            await db.boardSlotStandard.createMany({
+              data: slot.slotStandards.map(ss => ({
+                boardSlotId: newSlot.id,
+                standardId: ss.standardId,
+                sortOrder: ss.sortOrder,
+              })),
+            })
+          }
+        }
       }
     }
 
@@ -87,10 +122,7 @@ export async function POST(request: NextRequest) {
       where: { id: board.id },
       include: {
         slots: {
-          include: {
-            template: { select: { id: true, type: true, title: true } },
-            standard: { select: { id: true, title: true } },
-          },
+          include: slotInclude,
         },
       },
     })

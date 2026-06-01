@@ -171,7 +171,8 @@ model Template {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  boardSlots  BoardSlot[]
+  boardSlots        BoardSlot[]
+  slotTemplates     BoardSlotTemplate[]
 }
 
 model ExamAnswer {
@@ -391,6 +392,7 @@ model Standard {
   zone    Zone?   @relation(fields: [zoneId], references: [id], onDelete: SetNull)
 
   boardSlots BoardSlot[]
+  slotStandards BoardSlotStandard[]
 
   @@index([projectId])
   @@index([sStep, projectId])
@@ -427,9 +429,40 @@ model BoardSlot {
   standard     Standard?  @relation(fields: [standardId], references: [id], onDelete: SetNull)
   board        Board?     @relation(fields: [boardId], references: [id], onDelete: Cascade)
 
+  slotTemplates  BoardSlotTemplate[]
+  slotStandards  BoardSlotStandard[]
+
   @@unique([sStep, miniStep, boardId])
   @@index([boardId])
   @@index([projectId])
+}
+
+model BoardSlotTemplate {
+  id          String @id @default(cuid())
+  boardSlotId String
+  templateId  String
+  sortOrder   Int    @default(0)
+  createdAt   DateTime @default(now())
+
+  boardSlot BoardSlot @relation(fields: [boardSlotId], references: [id], onDelete: Cascade)
+  template  Template  @relation(fields: [templateId], references: [id], onDelete: Cascade)
+
+  @@unique([boardSlotId, templateId])
+  @@index([boardSlotId])
+}
+
+model BoardSlotStandard {
+  id          String @id @default(cuid())
+  boardSlotId String
+  standardId  String
+  sortOrder   Int    @default(0)
+  createdAt   DateTime @default(now())
+
+  boardSlot BoardSlot @relation(fields: [boardSlotId], references: [id], onDelete: Cascade)
+  standard  Standard  @relation(fields: [standardId], references: [id], onDelete: Cascade)
+
+  @@unique([boardSlotId, standardId])
+  @@index([boardSlotId])
 }
 
 model PhotoLibrary {
