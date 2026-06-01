@@ -1,7 +1,7 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { S_STEPS } from '@/lib/5s-constants';
+import { S_STEPS, MINI_STEPS } from '@/lib/5s-constants';
 import { use5SStore } from '@/lib/store';
 
 interface Board5SProps {
@@ -9,13 +9,14 @@ interface Board5SProps {
 }
 
 export default function Board5S({ onSStepClick }: Board5SProps) {
-  const { isQuesitoEarned } = use5SStore();
+  const { getMiniStepStatus, isQuesitoEarned } = use5SStore();
 
-  // 1/3 bigger: outerR from 240 -> 320, viewBox expanded to 800x800
-  const cx = 400;
-  const cy = 400;
-  const outerR = 320;
-  const innerR = 96; // circle radius (was pentagon 72, scaled up)
+  const cx = 300;
+  const cy = 300;
+  const outerR = 240;
+  const innerR = 72;
+  const midR = (outerR + innerR) / 2;
+  const stepR = 170;
   const sliceAngle = 360 / 5;
 
   // Pentagon vertex at a given angle
@@ -24,7 +25,7 @@ export default function Board5S({ onSStepClick }: Board5SProps) {
     y: cy + radius * Math.sin(angle),
   });
 
-  // Pentagon slice path (straight edges)
+  // Get the path for a pentagon "slice" (triangular section from center to two vertices)
   const getPentagonSlice = (index: number, oR: number, iR: number): string => {
     const startAngle = (index * sliceAngle - 90) * (Math.PI / 180);
     const endAngle = ((index + 1) * sliceAngle - 90) * (Math.PI / 180);
@@ -37,7 +38,7 @@ export default function Board5S({ onSStepClick }: Board5SProps) {
     return `M ${oStart.x} ${oStart.y} L ${oEnd.x} ${oEnd.y} L ${iEnd.x} ${iEnd.y} L ${iStart.x} ${iStart.y} Z`;
   };
 
-  // Pentagon outline path
+  // Pentagon outline path (5 vertices connected)
   const getPentagonOutline = (r: number): string => {
     const points = [];
     for (let i = 0; i < 5; i++) {
@@ -48,18 +49,21 @@ export default function Board5S({ onSStepClick }: Board5SProps) {
     return `M ${points.join(' L ')} Z`;
   };
 
-  // Label position for each slice (where the number goes)
+  const getDotPos = (si: number, mi: number) => {
+    const angle = (si * sliceAngle + (mi + 0.5) * (sliceAngle / 5) - 90) * (Math.PI / 180);
+    return { x: cx + stepR * Math.cos(angle), y: cy + stepR * Math.sin(angle) };
+  };
+
   const getLabelPos = (i: number) => {
     const angle = (i * sliceAngle + sliceAngle / 2 - 90) * (Math.PI / 180);
-    const midR = (outerR + innerR) / 2;
-    return { x: cx + midR * 0.78 * Math.cos(angle), y: cy + midR * 0.78 * Math.sin(angle) };
+    return { x: cx + midR * 0.85 * Math.cos(angle), y: cy + midR * 0.85 * Math.sin(angle) };
   };
 
   // Circular wedge path for center circle quesitos
   const getCircleWedgePath = (index: number): string => {
-    const wIn = 18;
-    const wOut = 68;
-    const gap = 0.06; // small gap between wedges
+    const wIn = 14;
+    const wOut = 50;
+    const gap = 0.06;
     const startAngle = (index * sliceAngle - 90) * (Math.PI / 180) + gap;
     const endAngle = ((index + 1) * sliceAngle - 90) * (Math.PI / 180) - gap;
 
@@ -68,7 +72,6 @@ export default function Board5S({ onSStepClick }: Board5SProps) {
     const ie = { x: cx + wIn * Math.cos(endAngle), y: cy + wIn * Math.sin(endAngle) };
     const is_ = { x: cx + wIn * Math.cos(startAngle), y: cy + wIn * Math.sin(startAngle) };
 
-    // Large arc flag = 0 since each wedge is less than 180 degrees
     return `M ${os.x} ${os.y} A ${wOut} ${wOut} 0 0 1 ${oe.x} ${oe.y} L ${ie.x} ${ie.y} A ${wIn} ${wIn} 0 0 0 ${is_.x} ${is_.y} Z`;
   };
 
@@ -78,9 +81,9 @@ export default function Board5S({ onSStepClick }: Board5SProps) {
         initial={{ scale: 0.7, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
-        className="w-full max-w-[640px] max-h-full aspect-square mx-auto"
+        className="w-full max-w-[560px] max-h-full aspect-square mx-auto"
       >
-        <svg viewBox="0 0 800 800" className="w-full h-full" xmlns="http://www.w3.org/2000/svg">
+        <svg viewBox="0 0 600 600" className="w-full h-full" xmlns="http://www.w3.org/2000/svg">
           <defs>
             {S_STEPS.map((s, i) => (
               <linearGradient key={`grad-${i}`} id={`sg${i}`} x1="0%" y1="0%" x2="100%" y2="100%">
@@ -108,41 +111,49 @@ export default function Board5S({ onSStepClick }: Board5SProps) {
           </defs>
 
           {/* Outer glow - pentagon shape */}
-          <path d={getPentagonOutline(outerR + 18)} fill="none" stroke="#e5e7eb" strokeWidth="1" opacity="0.5" />
-          <path d={getPentagonOutline(outerR + 9)} fill="none" stroke="#d1d5db" strokeWidth="2" opacity="0.3" />
+          <path d={getPentagonOutline(outerR + 14)} fill="none" stroke="#e5e7eb" strokeWidth="1" opacity="0.5" />
+          <path d={getPentagonOutline(outerR + 7)} fill="none" stroke="#d1d5db" strokeWidth="2" opacity="0.3" />
 
           {/* Background pentagon */}
-          <path d={getPentagonOutline(outerR + 3)} fill="#f9fafb" filter="url(#shadow2)" />
+          <path d={getPentagonOutline(outerR + 2)} fill="#f9fafb" filter="url(#shadow2)" />
 
           {/* Pentagon slices */}
           {S_STEPS.map((s, i) => {
             const earned = isQuesitoEarned(s.id);
 
+            let completedMiniSteps = 0;
+            for (let ms = 1; ms <= 5; ms++) {
+              const st = getMiniStepStatus(s.id, ms);
+              if (st === 'completed' || st === 'completed_viewonly') completedMiniSteps++;
+            }
+            const pct = Math.min(Math.round((completedMiniSteps / 5) * 100), 100);
+            const allCompleted = earned;
+
             return (
               <g key={`slice-${i}`}>
                 {/* Green glow ring for completed S-steps */}
-                {earned && (
+                {allCompleted && (
                   <path
-                    d={getPentagonSlice(i, outerR + 8, outerR - 2)}
+                    d={getPentagonSlice(i, outerR + 6, outerR - 2)}
                     fill="#22c55e"
                     opacity="0.35"
                     style={{ pointerEvents: 'none' }}
                   />
                 )}
-                {earned && (
+                {allCompleted && (
                   <path
-                    d={getPentagonSlice(i, outerR + 4, outerR)}
+                    d={getPentagonSlice(i, outerR + 3, outerR)}
                     fill="#16a34a"
                     opacity="0.9"
                     style={{ pointerEvents: 'none' }}
                   />
                 )}
-                {/* Slice background */}
+                {/* Slice background (pentagon section) */}
                 <path
                   d={getPentagonSlice(i, outerR, innerR)}
                   fill={`url(#sg${i})`}
-                  stroke={earned ? '#16a34a' : 'white'}
-                  strokeWidth={earned ? '3' : '2.5'}
+                  stroke={allCompleted ? '#16a34a' : 'white'}
+                  strokeWidth={allCompleted ? '3' : '2.5'}
                   filter="url(#shadow1)"
                   style={{ cursor: 'pointer', transition: 'opacity 0.2s' }}
                   onClick={() => onSStepClick(s.id)}
@@ -151,7 +162,7 @@ export default function Board5S({ onSStepClick }: Board5SProps) {
                 />
 
                 {/* Green overlay for completed slices */}
-                {earned && (
+                {allCompleted && (
                   <path
                     d={getPentagonSlice(i, outerR, innerR)}
                     fill="#22c55e"
@@ -162,52 +173,116 @@ export default function Board5S({ onSStepClick }: Board5SProps) {
 
                 {/* Inner highlight */}
                 <path
-                  d={getPentagonSlice(i, outerR - 45, innerR + 8)}
+                  d={getPentagonSlice(i, outerR - 35, innerR + 5)}
                   fill="white"
                   opacity="0.08"
                   style={{ pointerEvents: 'none' }}
                 />
 
-                {/* Number label - just 1,2,3,4,5 in white */}
+                {/* S Name */}
                 <text
                   x={getLabelPos(i).x}
-                  y={getLabelPos(i).y}
+                  y={getLabelPos(i).y - 10}
                   textAnchor="middle"
                   dominantBaseline="middle"
                   fill="white"
-                  fontSize="18"
+                  fontSize="14"
                   fontWeight="bold"
                   style={{ pointerEvents: 'none', textShadow: '0 2px 4px rgba(0,0,0,0.4)', fontFamily: 'system-ui' }}
                 >
-                  {i + 1}
+                  {s.name}
+                </text>
+                <text
+                  x={getLabelPos(i).x}
+                  y={getLabelPos(i).y + 8}
+                  textAnchor="middle"
+                  dominantBaseline="middle"
+                  fill="white"
+                  fontSize="9.5"
+                  opacity="0.85"
+                  style={{ pointerEvents: 'none', textShadow: '0 1px 3px rgba(0,0,0,0.3)', fontFamily: 'system-ui' }}
+                >
+                  {s.japaneseName}
+                </text>
+                {/* Completed counter */}
+                <text
+                  x={getLabelPos(i).x}
+                  y={getLabelPos(i).y + 22}
+                  textAnchor="middle"
+                  dominantBaseline="middle"
+                  fill={allCompleted ? '#86efac' : 'rgba(255,255,255,0.5)'}
+                  fontSize="9"
+                  fontWeight="bold"
+                  style={{ pointerEvents: 'none', fontFamily: 'system-ui' }}
+                >
+                  {allCompleted ? 'COMPLETADO' : `${completedMiniSteps}/5`}
                 </text>
 
-                {/* Earned star indicator */}
+                {/* Mini-step dots */}
+                {MINI_STEPS.map((m, j) => {
+                  const pos = getDotPos(i, j);
+                  const status = getMiniStepStatus(s.id, m.id);
+                  const isCompleted = status === 'completed' || status === 'completed_viewonly';
+                  const isAvailable = status === 'available';
+                  return (
+                    <g key={`dot-${i}-${j}`}>
+                      {isAvailable && !isCompleted && (
+                        <circle cx={pos.x} cy={pos.y} r="16" fill={s.color} opacity="0.15" />
+                      )}
+                      {isCompleted && (
+                        <circle cx={pos.x} cy={pos.y} r="15" fill="#22c55e" opacity="0.2" />
+                      )}
+                      <circle
+                        cx={pos.x}
+                        cy={pos.y}
+                        r={isCompleted ? 12 : isAvailable ? 11 : 10}
+                        fill={isCompleted ? '#22c55e' : isAvailable ? 'white' : 'rgba(255,255,255,0.25)'}
+                        stroke={isCompleted ? '#16a34a' : isAvailable ? s.color : 'rgba(255,255,255,0.6)'}
+                        strokeWidth={isCompleted ? '2.5' : isAvailable ? '2.5' : '1.5'}
+                        style={{ pointerEvents: 'none' }}
+                      />
+                      <text
+                        x={pos.x}
+                        y={pos.y + 1}
+                        textAnchor="middle"
+                        dominantBaseline="middle"
+                        fill={isCompleted ? 'white' : isAvailable ? s.color : 'rgba(255,255,255,0.4)'}
+                        fontSize={isCompleted ? '12' : '10'}
+                        fontWeight="bold"
+                        style={{ pointerEvents: 'none', fontFamily: 'system-ui' }}
+                      >
+                        {isCompleted ? '✓' : m.id}
+                      </text>
+                    </g>
+                  );
+                })}
+
+                {/* Earned quesito star indicator */}
                 {earned && (
                   <g style={{ pointerEvents: 'none' }}>
                     <circle
-                      cx={cx + (outerR - 28) * Math.cos(((i + 0.5) * sliceAngle - 90) * (Math.PI / 180))}
-                      cy={cy + (outerR - 28) * Math.sin(((i + 0.5) * sliceAngle - 90) * (Math.PI / 180))}
-                      r="22"
+                      cx={cx + (outerR - 22) * Math.cos(((i + 0.5) * sliceAngle - 90) * (Math.PI / 180))}
+                      cy={cy + (outerR - 22) * Math.sin(((i + 0.5) * sliceAngle - 90) * (Math.PI / 180))}
+                      r="18"
                       fill="#22c55e"
                       opacity="0.3"
                     />
                     <circle
-                      cx={cx + (outerR - 28) * Math.cos(((i + 0.5) * sliceAngle - 90) * (Math.PI / 180))}
-                      cy={cy + (outerR - 28) * Math.sin(((i + 0.5) * sliceAngle - 90) * (Math.PI / 180))}
-                      r="20"
+                      cx={cx + (outerR - 22) * Math.cos(((i + 0.5) * sliceAngle - 90) * (Math.PI / 180))}
+                      cy={cy + (outerR - 22) * Math.sin(((i + 0.5) * sliceAngle - 90) * (Math.PI / 180))}
+                      r="16"
                       fill="#fbbf24"
                       stroke="#16a34a"
                       strokeWidth="3"
                       filter="url(#glow)"
                     />
                     <text
-                      x={cx + (outerR - 28) * Math.cos(((i + 0.5) * sliceAngle - 90) * (Math.PI / 180))}
-                      y={cy + (outerR - 28) * Math.sin(((i + 0.5) * sliceAngle - 90) * (Math.PI / 180)) + 1}
+                      x={cx + (outerR - 22) * Math.cos(((i + 0.5) * sliceAngle - 90) * (Math.PI / 180))}
+                      y={cy + (outerR - 22) * Math.sin(((i + 0.5) * sliceAngle - 90) * (Math.PI / 180)) + 1}
                       textAnchor="middle"
                       dominantBaseline="middle"
                       fill="white"
-                      fontSize="15"
+                      fontSize="12"
                       fontWeight="bold"
                       style={{ fontFamily: 'system-ui' }}
                     >
@@ -241,12 +316,29 @@ export default function Board5S({ onSStepClick }: Board5SProps) {
           {/* Center logo image */}
           <image
             href="/5s-logo.png"
-            x={cx - 75}
-            y={cy - 75}
-            width={150}
-            height={150}
+            x={cx - 55}
+            y={cy - 55}
+            width={110}
+            height={110}
             style={{ pointerEvents: 'none' }}
           />
+
+          {/* Outer S labels */}
+          {S_STEPS.map((s, i) => (
+            <text
+              key={`olabel-${i}`}
+              x={cx + (outerR + 24) * Math.cos(((i + 0.5) * sliceAngle - 90) * (Math.PI / 180))}
+              y={cy + (outerR + 24) * Math.sin(((i + 0.5) * sliceAngle - 90) * (Math.PI / 180))}
+              textAnchor="middle"
+              dominantBaseline="middle"
+              fill={s.color}
+              fontSize="13"
+              fontWeight="bold"
+              style={{ pointerEvents: 'none', fontFamily: 'system-ui' }}
+            >
+              S{i + 1}
+            </text>
+          ))}
         </svg>
       </motion.div>
     </div>
