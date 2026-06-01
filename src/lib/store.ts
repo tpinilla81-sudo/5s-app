@@ -738,7 +738,7 @@ export const use5SStore = create<FiveSState>((set, get) => ({
         // Only admin can create projects via setup wizard
         // Non-admin users see a waiting screen
         const { currentUser } = get()
-        if (currentUser?.role === 'admin') {
+        if (currentUser?.role === 'admin' || currentUser?.role === 'constructor') {
           set({ authView: 'setup' })
         } else {
           set({ authView: 'no_projects' })
@@ -835,7 +835,7 @@ export const use5SStore = create<FiveSState>((set, get) => ({
         } else {
           // Only admin can create projects via setup wizard
           const { currentUser } = get()
-          if (currentUser?.role === 'admin') {
+          if (currentUser?.role === 'admin' || currentUser?.role === 'constructor') {
             set({ authView: 'setup' })
           } else {
             set({ authView: 'no_projects' })

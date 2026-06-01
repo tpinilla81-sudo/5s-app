@@ -15,7 +15,7 @@ model User {
   email     String   @unique
   name      String
   password  String
-  role      String   @default("empleado") // "admin", "gerente", "responsable", "empleado", "auditor"
+  role      String   @default("empleado") // "constructor", "admin", "gerente", "responsable", "empleado", "auditor"
   avatar    String?
   active    Boolean  @default(true)
   createdAt DateTime @default(now())
@@ -88,7 +88,7 @@ model ProjectMember {
   id        String   @id @default(cuid())
   userId    String
   projectId String
-  role      String // "admin", "gerente", "responsable", "empleado", "auditor"
+  role      String // "constructor", "admin", "gerente", "responsable", "empleado", "auditor"
   joinedAt  DateTime @default(now())
 
   user    User         @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -331,7 +331,7 @@ model AuditTarget {
 
 model RolePermissionConfig {
   id         String   @id @default(cuid())
-  role       String // "admin", "responsable", "empleado", "auditor"
+  role       String // "constructor", "admin", "gerente", "responsable", "empleado", "auditor"
   permission String // e.g. "view_board", "complete_steps", etc.
   allowed    Boolean  @default(false)
   createdAt  DateTime @default(now())

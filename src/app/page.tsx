@@ -248,7 +248,7 @@ export default function HomePage() {
   const canManageTeam = currentUser && hasPermission('add_members');
   const canSkipSteps = hasPermission('skip_steps');
   // Admin tab: only users who can manage the system (admin role for system config)
-  const isAdmin = currentUser?.role === 'admin';
+  const isAdmin = currentUser?.role === 'admin' || currentUser?.role === 'constructor';
   const canSeeGerentePanel = hasPermission('view_progress') || hasPermission('edit_project');
 
   const isGlobalModal = activeModal === 'globalActionPlan' || activeModal === 'globalInventory';

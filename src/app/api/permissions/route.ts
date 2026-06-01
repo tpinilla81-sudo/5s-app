@@ -35,12 +35,13 @@ const GENERAL_PERMISSIONS = [
 ]
 
 const ALL_PERMISSIONS = [...PER_S_PERMISSIONS, ...GENERAL_PERMISSIONS]
-const ALL_ROLES = ['admin', 'gerente', 'responsable', 'empleado', 'auditor']
+const ALL_ROLES = ['constructor', 'admin', 'gerente', 'responsable', 'empleado', 'auditor']
 
 // ═══════════════════════════════════════════════════════
 // DEFAULT PERMISSIONS
 // ═══════════════════════════════════════════════════════
 const DEFAULT_PERMISSIONS: Record<string, string[]> = {
+  constructor: ALL_PERMISSIONS, // Constructor (app creator) has everything
   admin: ALL_PERMISSIONS, // Admin has everything
 
   gerente: [
@@ -223,6 +224,9 @@ export async function POST() {
 
     const configs = await db.rolePermissionConfig.findMany()
     const result: Record<string, Record<string, boolean>> = {}
+    for (const role of ALL_ROLES) {
+      result[role] = {}
+    }
     for (const config of configs) {
       if (!result[config.role]) result[config.role] = {}
       result[config.role][config.permission] = config.allowed

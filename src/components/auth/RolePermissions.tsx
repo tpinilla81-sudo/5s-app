@@ -20,7 +20,7 @@ import {
   Lock, Unlock, Crown, UserCheck, HardHat, ClipboardCheck, BookOpen,
   Camera, ListChecks, FileCheck, Building2, BarChart3, UserPlus,
   UserMinus, KeyRound, RotateCcw, Save, Loader2, AlertTriangle,
-  ArrowLeft, X, GraduationCap, MapPin, Target, Bell,
+  ArrowLeft, X, GraduationCap, MapPin, Target, Bell, Wrench,
 } from 'lucide-react'
 
 interface RolePermissionsProps {
@@ -92,11 +92,13 @@ const ALL_PERM_IDS = [...PERM_ID_MAP.map(p => p.id), ...GENERAL_PERMS.map(p => p
 
 // Locked permissions per role (always ON)
 const LOCKED_PERMISSIONS: Record<string, string[]> = {
+  constructor: ALL_PERM_IDS, // Constructor has ALL permissions locked ON
   admin: ['view_board', 'view_project', 'view_team'],
 }
 
 // Default permissions per role
 const DEFAULT_PERMISSIONS: Record<string, string[]> = {
+  constructor: ALL_PERM_IDS, // Constructor has everything
   admin: ALL_PERM_IDS, // Admin has everything
   gerente: [
     'view_board', 'view_progress', 'view_project', 'view_team',
@@ -133,6 +135,7 @@ const DEFAULT_PERMISSIONS: Record<string, string[]> = {
 
 // Role definitions
 const ROLES = [
+  { id: 'constructor', name: 'Constructor', desc: 'Creador de la app', color: '#1E293B', icon: Wrench },
   { id: 'admin', name: 'Administrador', desc: 'Control total', color: '#8B5CF6', icon: Crown },
   { id: 'gerente', name: 'Gerente', desc: 'Supervisión global', color: '#6366F1', icon: Building2 },
   { id: 'responsable', name: 'Responsable', desc: 'Gestión de equipo y zonas', color: '#3B82F6', icon: UserCheck },
@@ -167,7 +170,7 @@ export default function RolePermissions({ open, onClose }: RolePermissionsProps)
   const [isSaving, setIsSaving] = useState(false)
   const [hasChanges, setHasChanges] = useState(false)
 
-  const isAdmin = currentUser?.role === 'admin'
+  const isAdmin = currentUser?.role === 'admin' || currentUser?.role === 'constructor'
 
   const fetchPermissions = useCallback(async () => {
     setIsLoading(true)
@@ -631,7 +634,7 @@ export default function RolePermissions({ open, onClose }: RolePermissionsProps)
         ) : (
           <div className="space-y-6">
             {/* Role summary bar */}
-            <div className="grid grid-cols-5 gap-3">
+            <div className="grid grid-cols-6 gap-3">
               {ROLES.map(role => {
                 const RoleIcon = role.icon
                 const total = countPermsForRole(role.id)
@@ -683,7 +686,7 @@ export default function RolePermissions({ open, onClose }: RolePermissionsProps)
             {/* Totals footer */}
             <div className="rounded-xl bg-gray-50 border p-5">
               <h3 className="text-sm font-bold text-gray-600 mb-3">Resumen Total de Permisos</h3>
-              <div className="grid grid-cols-5 gap-4">
+              <div className="grid grid-cols-6 gap-4">
                 {ROLES.map(role => {
                   const total = countPermsForRole(role.id)
                   const max = ALL_PERM_IDS.length

@@ -18,7 +18,7 @@ export async function GET(
       return NextResponse.json({ success: false, error: 'No autenticado' }, { status: 401 })
     }
 
-    const isAdmin = user.role === 'admin'
+    const isAdmin = user.role === 'admin' || user.role === 'constructor'
     const isMember = !isAdmin ? await db.companyMember.findFirst({
       where: { companyId, userId: user.id },
     }) : true
@@ -100,7 +100,7 @@ export async function PUT(
     }
 
     const user = await db.user.findUnique({ where: { id: sessionId } })
-    if (!user || user.role !== 'admin') {
+    if (!user || (user.role !== 'admin' && user.role !== 'constructor')) {
       return NextResponse.json({ success: false, error: 'Solo administradores pueden editar empresas' }, { status: 403 })
     }
 
@@ -162,7 +162,7 @@ export async function DELETE(
     }
 
     const user = await db.user.findUnique({ where: { id: sessionId } })
-    if (!user || user.role !== 'admin') {
+    if (!user || (user.role !== 'admin' && user.role !== 'constructor')) {
       return NextResponse.json({ success: false, error: 'Solo administradores pueden eliminar empresas' }, { status: 403 })
     }
 

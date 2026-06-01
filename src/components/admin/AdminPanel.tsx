@@ -106,6 +106,7 @@ interface MemberData {
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 const ROLE_LABELS: Record<string, string> = {
+  constructor: 'Constructor',
   admin: 'Administrador',
   gerente: 'Gerente',
   responsable: 'Responsable',
@@ -114,6 +115,7 @@ const ROLE_LABELS: Record<string, string> = {
 }
 
 const ROLE_COLORS: Record<string, string> = {
+  constructor: 'bg-slate-100 text-slate-700 border-slate-200',
   admin: 'bg-purple-100 text-purple-700 border-purple-200',
   gerente: 'bg-indigo-100 text-indigo-700 border-indigo-200',
   responsable: 'bg-blue-100 text-blue-700 border-blue-200',
@@ -1141,6 +1143,7 @@ export default function AdminPanel({ embedded }: AdminPanelProps = {}) {
                                                 <Select value={newMemberRole} onValueChange={setNewMemberRole}>
                                                   <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
                                                   <SelectContent>
+                                                    <SelectItem value="constructor">Constructor</SelectItem>
                                                     <SelectItem value="admin">Administrador</SelectItem>
                                                     <SelectItem value="gerente">Gerente</SelectItem>
                                                     <SelectItem value="responsable">Responsable</SelectItem>
@@ -1187,6 +1190,7 @@ export default function AdminPanel({ embedded }: AdminPanelProps = {}) {
                                                 <Select value={newMemberRole} onValueChange={setNewMemberRole}>
                                                   <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
                                                   <SelectContent>
+                                                    <SelectItem value="constructor">Constructor</SelectItem>
                                                     <SelectItem value="admin">Administrador</SelectItem>
                                                     <SelectItem value="gerente">Gerente</SelectItem>
                                                     <SelectItem value="responsable">Responsable</SelectItem>
@@ -1347,6 +1351,7 @@ export default function AdminPanel({ embedded }: AdminPanelProps = {}) {
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
+                            <SelectItem value="constructor">Constructor</SelectItem>
                             <SelectItem value="admin">Administrador</SelectItem>
                             <SelectItem value="gerente">Gerente</SelectItem>
                             <SelectItem value="responsable">Responsable</SelectItem>
@@ -1409,6 +1414,7 @@ export default function AdminPanel({ embedded }: AdminPanelProps = {}) {
                               <Select value={editUserData.role} onValueChange={v => setEditUserData(d => ({ ...d, role: v }))}>
                                 <SelectTrigger className="h-7 text-xs"><SelectValue /></SelectTrigger>
                                 <SelectContent>
+                                  <SelectItem value="constructor">Constructor</SelectItem>
                                   <SelectItem value="admin">Administrador</SelectItem>
                                   <SelectItem value="gerente">Gerente</SelectItem>
                                   <SelectItem value="responsable">Responsable</SelectItem>
