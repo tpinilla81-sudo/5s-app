@@ -187,27 +187,27 @@ export default function Board5S({ onSStepClick }: Board5SProps) {
                   return (
                     <g key={`dot-${i}-${j}`}>
                       {isAvailable && !isCompleted && (
-                        <circle cx={pos.x} cy={pos.y} r="21" fill={s.color} opacity="0.15" />
+                        <circle cx={pos.x} cy={pos.y} r="15" fill={s.color} opacity="0.15" />
                       )}
                       {isCompleted && (
-                        <circle cx={pos.x} cy={pos.y} r="20" fill="#22c55e" opacity="0.2" />
+                        <circle cx={pos.x} cy={pos.y} r="14" fill="#22c55e" opacity="0.2" />
                       )}
                       <circle
                         cx={pos.x}
                         cy={pos.y}
-                        r={isCompleted ? 16 : isAvailable ? 15 : 13}
+                        r={isCompleted ? 11 : isAvailable ? 10 : 9}
                         fill={isCompleted ? '#22c55e' : isAvailable ? 'white' : 'rgba(255,255,255,0.25)'}
                         stroke={isCompleted ? '#16a34a' : isAvailable ? s.color : 'rgba(255,255,255,0.6)'}
-                        strokeWidth={isCompleted ? '3' : isAvailable ? '3' : '2'}
+                        strokeWidth={isCompleted ? '2' : isAvailable ? '2' : '1.5'}
                         style={{ pointerEvents: 'none' }}
                       />
                       <text
                         x={pos.x}
-                        y={pos.y + 1}
+                        y={pos.y + 0.5}
                         textAnchor="middle"
                         dominantBaseline="middle"
                         fill={isCompleted ? 'white' : isAvailable ? s.color : 'rgba(255,255,255,0.4)'}
-                        fontSize={isCompleted ? '16' : '13'}
+                        fontSize={isCompleted ? '11' : '10'}
                         fontWeight="bold"
                         style={{ pointerEvents: 'none', fontFamily: 'system-ui' }}
                       >
