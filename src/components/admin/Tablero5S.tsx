@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Loader2, X, FileText, Award, LayoutGrid, Plus, Trash2, Copy, Star, Settings } from 'lucide-react'
 import { S_STEPS } from '@/lib/5s-constants'
+import { use5SStore } from '@/lib/store'
 
 // ═══════════════════════════════════════════════════════
 // TYPES
@@ -89,6 +90,7 @@ export default function Tablero5S() {
   const [newBoardName, setNewBoardName] = useState('')
   const [newBoardDesc, setNewBoardDesc] = useState('')
   const [copyFromBoard, setCopyFromBoard] = useState<string | null>(null)
+  const { currentProject } = use5SStore()
 
   // ─── Data loading ────────────────────────────────────────────────────────
   const loadBoards = useCallback(async () => {
@@ -117,14 +119,19 @@ export default function Tablero5S() {
 
   const loadStandards = useCallback(async () => {
     try {
-      const res = await fetch('/api/standards')
+      const params = new URLSearchParams()
+      if (currentProject?.id) params.set('projectId', currentProject.id)
+      const res = await fetch(`/api/standards?${params.toString()}`)
       const data = await res.json()
-      const list = data.standards || (Array.isArray(data) ? data : [])
+      const list = data.success ? (data.data || []) : (data.standards || (Array.isArray(data) ? data : []))
       setStandards(list.map((s: any) => ({ id: s.id, title: s.title, sStep: s.sStep, category: s.category })))
     } catch (error) { console.error('Error loading standards:', error) }
-  }, [])
+  }, [currentProject?.id])
 
   useEffect(() => { loadBoards(); loadTemplates(); loadStandards() }, [loadBoards, loadTemplates, loadStandards])
+
+  // Reload standards when project changes
+  useEffect(() => { loadStandards() }, [currentProject?.id, loadStandards])
 
   // ─── Board selection ─────────────────────────────────────────────────────
   const handleSelectBoard = (boardId: string) => {
@@ -569,6 +576,7 @@ export default function Tablero5S() {
                                 </SelectContent>
                               </Select>
                             )}
+                            {pasoStandards.length === 0 && <div className="text-[9px] text-gray-400 italic">No hay estándares para S{s.id}</div>}
                           </div>
 
                           {isSaving && (
