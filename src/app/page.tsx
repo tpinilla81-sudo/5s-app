@@ -694,7 +694,7 @@ export default function HomePage() {
                             </div>
 
                             {/* Mini-step dots */}
-                            <div className="flex items-center justify-center gap-1.5 py-2 px-1.5">
+                            <div className="flex items-center justify-center gap-1 py-1.5 px-1">
                               {MINI_STEPS.map(ms => {
                                 const status = getMiniStepStatus(s.id, ms.id);
                                 const effectiveStatus = status;
@@ -851,7 +851,7 @@ export default function HomePage() {
                                     <div className="relative">
                                       <button
                                         className={`
-                                          w-10 h-10 rounded-full flex items-center justify-center text-xs font-bold transition-all
+                                          w-8 h-8 rounded-full flex items-center justify-center text-[10px] font-bold transition-all
                                           ${effectiveStatus === 'completed'
                                             ? 'bg-green-500 text-white shadow-sm shadow-green-200 ring-2 ring-green-300'
                                             : effectiveStatus === 'completed_viewonly'
@@ -870,12 +870,12 @@ export default function HomePage() {
                                         disabled={!canOpenModal}
                                         title={`${ms.name}${lockReason ? ` (${lockReason})` : ''}`}
                                       >
-                                        {isCompleted ? '✓' : effectiveStatus === 'locked' ? <LockIcon className="h-2.5 w-2.5" /> : ms.id}
+                                        {isCompleted ? '✓' : effectiveStatus === 'locked' ? <LockIcon className="h-2 w-2" /> : ms.id}
                                       </button>
                                       {/* Admin reset button: only shown when admin with lock open and step is completed */}
                                       {canSkipSteps && adminFreeNavigation && effectiveStatus === 'completed' && (
                                         <button
-                                          className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-red-500 text-white flex items-center justify-center text-[9px] font-bold hover:bg-red-600 transition-colors z-10"
+                                          className="absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full bg-red-500 text-white flex items-center justify-center text-[8px] font-bold hover:bg-red-600 transition-colors z-10"
                                           onClick={async (e) => {
                                             e.stopPropagation();
                                             if (!confirm(`¿Restablecer paso ${ms.id} de S${s.id}? Esto eliminará el progreso guardado.`)) return;
