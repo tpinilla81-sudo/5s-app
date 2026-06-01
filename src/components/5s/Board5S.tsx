@@ -178,10 +178,44 @@ export default function Board5S({ onSStepClick }: Board5SProps) {
                   opacity="0.08"
                   style={{ pointerEvents: 'none' }}
                 />
-
-
-
-
+                {/* Mini-step dots */}
+                {MINI_STEPS.map((m, j) => {
+                  const pos = getDotPos(i, j);
+                  const status = getMiniStepStatus(s.id, m.id);
+                  const isCompleted = status === 'completed' || status === 'completed_viewonly';
+                  const isAvailable = status === 'available';
+                  return (
+                    <g key={`dot-${i}-${j}`}>
+                      {isAvailable && !isCompleted && (
+                        <circle cx={pos.x} cy={pos.y} r="16" fill={s.color} opacity="0.15" />
+                      )}
+                      {isCompleted && (
+                        <circle cx={pos.x} cy={pos.y} r="15" fill="#22c55e" opacity="0.2" />
+                      )}
+                      <circle
+                        cx={pos.x}
+                        cy={pos.y}
+                        r={isCompleted ? 12 : isAvailable ? 11 : 10}
+                        fill={isCompleted ? '#22c55e' : isAvailable ? 'white' : 'rgba(255,255,255,0.25)'}
+                        stroke={isCompleted ? '#16a34a' : isAvailable ? s.color : 'rgba(255,255,255,0.6)'}
+                        strokeWidth={isCompleted ? '2.5' : isAvailable ? '2.5' : '1.5'}
+                        style={{ pointerEvents: 'none' }}
+                      />
+                      <text
+                        x={pos.x}
+                        y={pos.y + 1}
+                        textAnchor="middle"
+                        dominantBaseline="middle"
+                        fill={isCompleted ? 'white' : isAvailable ? s.color : 'rgba(255,255,255,0.4)'}
+                        fontSize={isCompleted ? '12' : '10'}
+                        fontWeight="bold"
+                        style={{ pointerEvents: 'none', fontFamily: 'system-ui' }}
+                      >
+                        {isCompleted ? '✓' : m.id}
+                      </text>
+                    </g>
+                  );
+                })}
 
                 {/* Earned quesito star indicator */}
                 {earned && (
