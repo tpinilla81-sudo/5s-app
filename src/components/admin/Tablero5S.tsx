@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef, useLayoutEffect } from 'react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -116,6 +116,8 @@ const TYPE_COLORS: Record<string, string> = {
   auditoria: 'bg-red-100 text-red-700',
 }
 
+const REFERENCE_WIDTH = 1100
+
 // ═══════════════════════════════════════════════════════
 // COMPONENT
 // ═══════════════════════════════════════════════════════
@@ -129,6 +131,36 @@ export default function Tablero5S() {
   const [isLoading, setIsLoading] = useState(false)
   const [savingSlot, setSavingSlot] = useState<string | null>(null)
   const [expandedCell, setExpandedCell] = useState<string | null>(null)
+
+  // ─── Responsive scaling ───────────────────────────────────────────────
+  const boardContainerRef = useRef<HTMLDivElement>(null)
+  const boardInnerRef = useRef<HTMLDivElement>(null)
+  const [scale, setScale] = useState(1)
+  const [scaledHeight, setScaledHeight] = useState<number | undefined>(undefined)
+
+  const boardVisible = !!(selectedConfigId && configs.length > 0 && !isLoading)
+
+  useLayoutEffect(() => {
+    const container = boardContainerRef.current
+    const inner = boardInnerRef.current
+    if (!container || !inner) return
+
+    const update = () => {
+      const containerWidth = container.clientWidth
+      if (containerWidth === 0) return
+      const newScale = containerWidth / REFERENCE_WIDTH
+      setScale(newScale)
+      setScaledHeight(inner.offsetHeight * newScale)
+    }
+
+    update()
+
+    const ro = new ResizeObserver(update)
+    ro.observe(container)
+    ro.observe(inner)
+
+    return () => ro.disconnect()
+  }, [boardVisible])
 
   // Config edit dialog
   const [showConfigDialog, setShowConfigDialog] = useState(false)
@@ -454,8 +486,20 @@ export default function Tablero5S() {
             <Loader2 className="h-8 w-8 text-purple-500 animate-spin" />
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <div className="min-w-[900px]">
+          <div
+            ref={boardContainerRef}
+            className="w-full overflow-hidden"
+            style={scaledHeight !== undefined ? { height: scaledHeight } : undefined}
+          >
+            <div
+              ref={boardInnerRef}
+              style={{
+                width: REFERENCE_WIDTH,
+                transform: `scale(${scale})`,
+                transformOrigin: 'top left',
+                willChange: 'transform',
+              }}
+            >
               {/* Column headers */}
               <div className="grid grid-cols-[180px_repeat(5,1fr)] gap-2 mb-2">
                 <div />
