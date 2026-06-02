@@ -130,12 +130,19 @@ export const MINI_STEPS: MiniStep[] = [
  * Inventory configuration per S-step.
  * Each S has its own set of categories, extra fields, and template name.
  */
+export interface HierarchicalDropdown {
+  prefijo_codigo: string;
+  subcategorias: string[];
+}
+
 export interface InventoryConfig {
   title: string;
   subtitle: string;
   categories: { value: string; label: string; color: string }[];
   extraFields: { key: string; label: string; type: 'select' | 'text' | 'number'; options?: string[] }[];
   templateName: string;
+  /** Hierarchical category→subcategory mapping (optional, from custom templates) */
+  desplegables_jerarquicos?: Record<string, HierarchicalDropdown>;
 }
 
 export const INVENTORY_CONFIGS: Record<number, InventoryConfig> = {

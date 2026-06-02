@@ -41,8 +41,8 @@ const ALL_ROLES = ['constructor', 'admin', 'gerente', 'responsable', 'empleado',
 // DEFAULT PERMISSIONS
 // ═══════════════════════════════════════════════════════
 const DEFAULT_PERMISSIONS: Record<string, string[]> = {
-  constructor: ALL_PERMISSIONS, // Constructor (app creator) has everything
-  admin: ALL_PERMISSIONS, // Admin has everything
+  constructor: ALL_PERMISSIONS, // Constructor (app owner) has everything
+  admin: ALL_PERMISSIONS, // Admin (license holder) has everything
 
   gerente: [
     'view_board', 'view_progress', 'view_project', 'view_team',
@@ -138,6 +138,17 @@ export async function GET() {
     }
 
     // Group by role
+    // Also clean up stale roles not in ALL_ROLES
+    const validRoles = new Set(ALL_ROLES)
+    const staleRoles = configs.filter(c => !validRoles.has(c.role))
+    if (staleRoles.length > 0) {
+      const staleRoleNames = [...new Set(staleRoles.map(c => c.role))]
+      for (const role of staleRoleNames) {
+        await db.rolePermissionConfig.deleteMany({ where: { role } })
+      }
+      configs = await db.rolePermissionConfig.findMany()
+    }
+
     const result: Record<string, Record<string, boolean>> = {}
     for (const role of ALL_ROLES) {
       result[role] = {}
@@ -224,9 +235,6 @@ export async function POST() {
 
     const configs = await db.rolePermissionConfig.findMany()
     const result: Record<string, Record<string, boolean>> = {}
-    for (const role of ALL_ROLES) {
-      result[role] = {}
-    }
     for (const config of configs) {
       if (!result[config.role]) result[config.role] = {}
       result[config.role][config.permission] = config.allowed

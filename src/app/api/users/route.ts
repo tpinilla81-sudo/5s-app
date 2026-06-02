@@ -172,8 +172,8 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ success: false, error: 'Usuario no encontrado' }, { status: 404 })
     }
 
-    if (user.role === 'admin' || user.role === 'constructor') {
-      const adminCount = await db.user.count({ where: { role: { in: ['admin', 'constructor'] }, active: true } })
+    if (user.role === 'admin') {
+      const adminCount = await db.user.count({ where: { role: 'admin', active: true } })
       if (adminCount <= 1) {
         return NextResponse.json({ success: false, error: 'No se puede eliminar el último administrador' }, { status: 400 })
       }

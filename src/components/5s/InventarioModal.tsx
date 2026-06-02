@@ -110,26 +110,65 @@ export default function InventarioModal({ open, onClose, sStep, miniStep }: Inve
 
   const loadCustomInventoryConfig = async () => {
     try {
-      const res = await fetch(`/api/templates?type=inventario&sStep=${sStep}&miniStep=3`);
-      const json = await res.json();
-      if (json.success && json.data && json.data.length > 0) {
-        const content = JSON.parse(json.data[0].content);
-        if (content.categories && content.extraFields) {
-          setCustomConfig({
-            title: content.title || defaultConfig.title,
-            subtitle: content.subtitle || defaultConfig.subtitle,
-            templateName: content.templateName || defaultConfig.templateName,
-            categories: content.categories,
-            extraFields: content.extraFields,
-          });
-          setHasTemplate(true);
+      // If the zone has a board config, fetch inventory template from that config
+      if (currentZone?.boardConfigId) {
+        const slotsRes = await fetch(`/api/board-slots?boardConfigId=${currentZone.boardConfigId}&sStep=${sStep}&miniStep=3`);
+        const slotsJson = await slotsRes.json();
+        if (slotsJson.success && slotsJson.data.length > 0) {
+          const slot = slotsJson.data[0];
+          const inventarioTemplates = (slot.templates || []).filter(
+            (t: any) => t.template?.type === 'inventario'
+          );
+          if (inventarioTemplates.length > 0) {
+            const content = JSON.parse(inventarioTemplates[0].template.content);
+            if (content.categories && content.extraFields) {
+              setCustomConfig({
+                title: content.title || defaultConfig.title,
+                subtitle: content.subtitle || defaultConfig.subtitle,
+                templateName: content.templateName || defaultConfig.templateName,
+                categories: content.categories,
+                extraFields: content.extraFields,
+                ...(content.desplegables_jerarquicos ? { desplegables_jerarquicos: content.desplegables_jerarquicos } : {}),
+              });
+              setHasTemplate(true);
+            } else {
+              setCustomConfig(null);
+              setHasTemplate(false);
+            }
+          } else {
+            // No inventario template assigned in this board slot
+            setCustomConfig(null);
+            setHasTemplate(false);
+          }
         } else {
+          // No slot configured for this step
           setCustomConfig(null);
           setHasTemplate(false);
         }
       } else {
-        setCustomConfig(null);
-        setHasTemplate(false);
+        // Fallback: load global template
+        const res = await fetch(`/api/templates?type=inventario&sStep=${sStep}&miniStep=3`);
+        const json = await res.json();
+        if (json.success && json.data && json.data.length > 0) {
+          const content = JSON.parse(json.data[0].content);
+          if (content.categories && content.extraFields) {
+            setCustomConfig({
+              title: content.title || defaultConfig.title,
+              subtitle: content.subtitle || defaultConfig.subtitle,
+              templateName: content.templateName || defaultConfig.templateName,
+              categories: content.categories,
+              extraFields: content.extraFields,
+              ...(content.desplegables_jerarquicos ? { desplegables_jerarquicos: content.desplegables_jerarquicos } : {}),
+            });
+            setHasTemplate(true);
+          } else {
+            setCustomConfig(null);
+            setHasTemplate(false);
+          }
+        } else {
+          setCustomConfig(null);
+          setHasTemplate(false);
+        }
       }
     } catch (e) {
       console.error('Error loading custom inventory config:', e);
@@ -341,42 +380,64 @@ export default function InventarioModal({ open, onClose, sStep, miniStep }: Inve
       return;
     }
     try {
-      const res = await fetch(`/api/templates?type=inventario&sStep=${sStep}`);
-      const json = await res.json();
-      if (json.success && json.data.length > 0) {
-        const content = JSON.parse(json.data[0].content);
-        const templateItems = content.items || [];
+      let templateItems: any[] = [];
 
-        const importRes = await fetch('/api/inventory', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(
-            templateItems.map((item: any) => ({
-              sStep,
-              projectId: currentProject.id,
-              zoneId: currentZone?.id || null,
-              name: item.name,
-              location: item.location || '',
-              category: item.category,
-              quantity: item.quantity || 1,
-              quantityNeeded: item.quantityNeeded || 0,
-              quantityUnneeded: item.quantityUnneeded || 0,
-              price: item.price ?? null,
-              action: item.action || '',
-              extra: item.extra || {},
-            }))
-          ),
-        });
-
-        const importJson = await importRes.json();
-        if (importJson.success) {
-          toast.success('Plantilla importada correctamente');
-          await loadInventory();
-        } else {
-          toast.error(`Error al importar plantilla: ${importJson.error || 'Error desconocido'}`);
+      if (currentZone?.boardConfigId) {
+        // Fetch from board config
+        const slotsRes = await fetch(`/api/board-slots?boardConfigId=${currentZone.boardConfigId}&sStep=${sStep}&miniStep=3`);
+        const slotsJson = await slotsRes.json();
+        if (slotsJson.success && slotsJson.data.length > 0) {
+          const slot = slotsJson.data[0];
+          const inventarioTemplates = (slot.templates || []).filter(
+            (t: any) => t.template?.type === 'inventario'
+          );
+          if (inventarioTemplates.length > 0) {
+            const content = JSON.parse(inventarioTemplates[0].template.content);
+            templateItems = content.items || [];
+          }
         }
       } else {
+        // Fallback: global template
+        const res = await fetch(`/api/templates?type=inventario&sStep=${sStep}`);
+        const json = await res.json();
+        if (json.success && json.data.length > 0) {
+          const content = JSON.parse(json.data[0].content);
+          templateItems = content.items || [];
+        }
+      }
+
+      if (templateItems.length === 0) {
         toast.error('No se encontró plantilla para este paso');
+        return;
+      }
+
+      const importRes = await fetch('/api/inventory', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(
+          templateItems.map((item: any) => ({
+            sStep,
+            projectId: currentProject.id,
+            zoneId: currentZone?.id || null,
+            name: item.name,
+            location: item.location || '',
+            category: item.category,
+            quantity: item.quantity || 1,
+            quantityNeeded: item.quantityNeeded || 0,
+            quantityUnneeded: item.quantityUnneeded || 0,
+            price: item.price ?? null,
+            action: item.action || '',
+            extra: item.extra || {},
+          }))
+        ),
+      });
+
+      const importJson = await importRes.json();
+      if (importJson.success) {
+        toast.success('Plantilla importada correctamente');
+        await loadInventory();
+      } else {
+        toast.error(`Error al importar plantilla: ${importJson.error || 'Error desconocido'}`);
       }
     } catch (error) {
       console.error('Error importing template:', error);
@@ -1247,7 +1308,7 @@ export default function InventarioModal({ open, onClose, sStep, miniStep }: Inve
                         <label className="text-xs font-medium">Categoría *</label>
                         <Select
                           value={newItem.category || undefined}
-                          onValueChange={val => setNewItem(prev => ({ ...prev, category: val }))}
+                          onValueChange={val => setNewItem(prev => ({ ...prev, category: val, extra: { ...(prev.extra || {}), subcategoria: undefined } }))}
                         >
                           <SelectTrigger>
                             <SelectValue placeholder="Categoría" />
@@ -1289,10 +1350,31 @@ export default function InventarioModal({ open, onClose, sStep, miniStep }: Inve
                   {/* Row 2: Extra fields specific to this S */}
                   {config.extraFields.length > 0 && (
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 items-end">
-                      {config.extraFields.map(field => (
+                      {config.extraFields.map(field => {
+                        // Dynamic subcategoria: filter options based on selected category
+                        let effectiveOptions = field.type === 'select' ? field.options : undefined;
+                        if (field.key === 'subcategoria' && config.desplegables_jerarquicos) {
+                          const selectedCat = newItem.category;
+                          if (selectedCat) {
+                            // Find the matching hierarchical entry by category value or label
+                            const catLabel = config.categories.find(c => c.value === selectedCat)?.label;
+                            const hierEntry = catLabel && config.desplegables_jerarquicos[catLabel]
+                              ? config.desplegables_jerarquicos[catLabel]
+                              : config.desplegables_jerarquicos[selectedCat];
+                            if (hierEntry) {
+                              effectiveOptions = hierEntry.subcategorias;
+                            } else {
+                              effectiveOptions = []; // No matching category → empty subcategories
+                            }
+                          } else {
+                            // No category selected yet → show all options
+                            effectiveOptions = Object.values(config.desplegables_jerarquicos).flatMap(h => h.subcategorias);
+                          }
+                        }
+                        return (
                         <div key={field.key}>
                           <label className="text-xs font-medium">{field.label}</label>
-                          {field.type === 'select' && field.options ? (
+                          {field.type === 'select' && effectiveOptions ? (
                             <Select
                               value={newItem.extra?.[field.key] ? String(newItem.extra[field.key]) : undefined}
                               onValueChange={val =>
@@ -1306,7 +1388,7 @@ export default function InventarioModal({ open, onClose, sStep, miniStep }: Inve
                                 <SelectValue placeholder={field.label} />
                               </SelectTrigger>
                               <SelectContent>
-                                {field.options.map(opt => (
+                                {effectiveOptions.map(opt => (
                                   <SelectItem key={opt} value={opt}>
                                     {opt}
                                   </SelectItem>
@@ -1340,7 +1422,8 @@ export default function InventarioModal({ open, onClose, sStep, miniStep }: Inve
                             />
                           )}
                         </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   )}
 

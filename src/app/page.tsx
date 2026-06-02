@@ -1,8 +1,5 @@
 'use client';
 
-// Force dynamic rendering — never cache this page in ISR
-export const dynamic = 'force-dynamic';
-
 import { useEffect, useState, useMemo } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { use5SStore } from '@/lib/store';
@@ -191,7 +188,7 @@ export default function HomePage() {
 
   const getRoleLabel = (role: string) => {
     const map: Record<string, string> = {
-      admin: 'Administrador', gerente: 'Gerente', responsable: 'Responsable',
+      constructor: 'Constructor', admin: 'Administrador', gerente: 'Gerente', responsable: 'Responsable',
       empleado: 'Empleado', auditor: 'Auditor',
     };
     return map[role] || role;
@@ -199,6 +196,7 @@ export default function HomePage() {
 
   const getRoleBadgeColor = (role: string) => {
     const map: Record<string, string> = {
+      constructor: 'bg-red-100 text-red-700 border-red-200',
       admin: 'bg-purple-100 text-purple-700 border-purple-200',
       gerente: 'bg-indigo-100 text-indigo-700 border-indigo-200',
       responsable: 'bg-blue-100 text-blue-700 border-blue-200',
@@ -249,6 +247,7 @@ export default function HomePage() {
   const canSkipSteps = hasPermission('skip_steps');
   // Admin tab: only users who can manage the system (admin role for system config)
   const isAdmin = currentUser?.role === 'admin' || currentUser?.role === 'constructor';
+  const isConstructor = currentUser?.role === 'constructor';
   const canSeeGerentePanel = hasPermission('view_progress') || hasPermission('edit_project');
 
   const isGlobalModal = activeModal === 'globalActionPlan' || activeModal === 'globalInventory';
@@ -273,7 +272,7 @@ export default function HomePage() {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-green-50 via-white to-emerald-50 gap-4">
         <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: 'spring', stiffness: 200 }}
-          className="w-16 h-16 overflow-hidden">
+          className="w-16 h-16">
           <img src="/5s-logo.png" alt="5S" className="w-full h-full object-contain" />
         </motion.div>
         <Loader2 className="h-6 w-6 text-green-500 animate-spin" />
@@ -288,7 +287,9 @@ export default function HomePage() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-green-50 via-white to-emerald-50 p-4">
         <div className="w-full max-w-md text-center">
-          <div className="w-20 h-20 mx-auto mb-6 overflow-hidden"><img src="/5s-logo.png" alt="5S" className="w-full h-full object-contain" /></div>
+          <div className="w-20 h-20 mx-auto mb-6">
+            <img src="/5s-logo.png" alt="5S" className="w-full h-full object-contain" />
+          </div>
           <h1 className="text-2xl font-bold text-gray-900 mb-3">Bienvenido, {currentUser?.name || 'Usuario'}</h1>
           <p className="text-muted-foreground mb-6">Tu cuenta ha sido creada correctamente. Aún no tienes ningún proyecto asignado.</p>
           <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-6">
@@ -309,11 +310,14 @@ export default function HomePage() {
       <header className="border-b bg-white/90 backdrop-blur-sm shrink-0 z-20">
         <div className="px-4 py-2 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 overflow-hidden"><img src="/5s-logo.png" alt="5S" className="w-full h-full object-contain" /></div>
+            <div className="w-8 h-8">
+              <img src="/5s-logo.png" alt="5S" className="w-full h-full object-contain" />
+            </div>
             <div>
-              <h1 className="text-sm font-bold text-green-600 leading-tight">método</h1>
+              <h1 className="text-sm font-bold text-gray-900 leading-tight">Método 5S</h1>
               <div className="flex items-center gap-1">
-                {currentProject && <span className="text-[10px] text-muted-foreground">{currentProject.name}</span>}
+                <span className="text-[10px] text-muted-foreground">Implementación</span>
+                {currentProject && <span className="text-[10px] text-muted-foreground">· {currentProject.name}</span>}
                 {currentZone && <span className="text-[10px] font-medium" style={{ color: currentZone.color || '#3B82F6' }}>· {currentZone.name}</span>}
               </div>
             </div>
@@ -396,7 +400,7 @@ export default function HomePage() {
                 </Button>
               </>
             )}
-            {isAdmin && (
+            {(isAdmin || canSkipSteps) && (
               <Button variant={adminFreeNavigation ? 'default' : 'outline'} size="sm"
                 onClick={() => setAdminFreeNavigation(!adminFreeNavigation)}
                 className={`gap-1 text-[10px] h-7 ${adminFreeNavigation ? 'bg-amber-500 hover:bg-amber-600 text-white border-amber-500' : 'text-amber-600 border-amber-300 hover:bg-amber-50'}`}
@@ -602,7 +606,7 @@ export default function HomePage() {
                       </div>
                     )}
                     {currentZone && (
-                      <div className="w-full max-w-[680px] mx-auto flex-shrink-0">
+                      <div className="w-full max-w-[480px] mx-auto flex-shrink-0">
                         <Board5S onSStepClick={handleSStepClick} />
                       </div>
                     )}
@@ -652,10 +656,10 @@ export default function HomePage() {
                     )}
                   </div>
 
-                  {/* BOTTOM: S-Step Cards — Prominent horizontal row (only when zone selected) */}
+                  {/* BOTTOM: S-Step Cards — Compact horizontal row (only when zone selected) */}
                   {currentZone && (
-                  <div className="shrink-0 border-t bg-white/80 backdrop-blur-sm px-3 py-3">
-                    <div className="grid grid-cols-5 gap-3 max-w-5xl mx-auto">
+                  <div className="shrink-0 border-t bg-white/80 backdrop-blur-sm px-2 py-2">
+                    <div className="grid grid-cols-5 gap-2 max-w-5xl mx-auto">
                       {S_STEPS.map(s => {
                         const earned = isQuesitoEarned(s.id);
                         const zoneId = currentZone?.id;
@@ -672,23 +676,23 @@ export default function HomePage() {
                         return (
                           <div
                             key={s.id}
-                            className={`rounded-2xl border-2 overflow-hidden transition-all duration-300 cursor-pointer hover:shadow-lg hover:scale-[1.02] ${
+                            className={`rounded-xl border-2 overflow-hidden transition-all duration-300 cursor-pointer hover:shadow-md ${
                               earned
-                                ? 'border-green-500 bg-gradient-to-b from-green-50 to-emerald-50 shadow-lg shadow-green-200'
-                                : 'border-gray-200 bg-white shadow-sm'
+                                ? 'border-green-500 bg-gradient-to-b from-green-50 to-emerald-50 shadow-md shadow-green-100'
+                                : 'border-gray-200 bg-white'
                             }`}
                             onClick={() => handleSStepClick(s.id)}
                           >
                             {/* S Label header */}
                             <div
-                              className={`flex items-center justify-center gap-2 py-2.5 ${earned ? 'bg-green-500' : ''}`}
-                              style={!earned ? { backgroundColor: s.color + '18' } : undefined}
+                              className={`flex items-center justify-center gap-1.5 py-1.5 ${earned ? 'bg-green-500' : ''}`}
+                              style={!earned ? { backgroundColor: `${s.color}20` } : undefined}
                             >
-                              <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-white text-sm font-black ${earned ? 'bg-green-600 ring-2 ring-yellow-400' : ''}`}
+                              <div className={`w-6 h-6 rounded-lg flex items-center justify-center text-white text-xs font-black ${earned ? 'bg-green-600 ring-1 ring-yellow-400' : ''}`}
                                 style={!earned ? { backgroundColor: s.color } : undefined}>
                                 {earned ? '★' : s.id}
                               </div>
-                              <span className={`text-sm font-extrabold tracking-wide ${earned ? 'text-white' : ''}`} style={!earned ? { color: s.color } : undefined}>
+                              <span className={`text-[10px] font-bold ${earned ? 'text-white' : ''}`} style={!earned ? { color: s.color } : undefined}>
                                 {s.name}
                               </span>
                             </div>
@@ -740,7 +744,7 @@ export default function HomePage() {
                                   <div key={ms.id} className="flex flex-col items-center">
                                     {/* Score badge above step 4 and 5 dots */}
                                     {(ms.id === 4 || ms.id === 5) && stepScore != null && (
-                                      <span className={`text-[8px] font-bold ${stepScore >= 70 ? 'text-green-600' : 'text-red-500'} leading-none mb-0.5`}>
+                                      <span className={`text-[7px] font-bold ${stepScore >= 70 ? 'text-green-600' : 'text-red-500'} leading-none mb-0.5`}>
                                         {stepScore}%
                                       </span>
                                     )}
@@ -857,7 +861,7 @@ export default function HomePage() {
                                             : effectiveStatus === 'completed_viewonly'
                                               ? 'bg-green-500 text-white shadow-sm shadow-green-200 ring-2 ring-green-300 cursor-default'
                                             : effectiveStatus === 'available'
-                                              ? 'text-white hover:scale-110 hover:shadow-lg cursor-pointer'
+                                              ? 'text-white hover:scale-110 hover:shadow-md cursor-pointer'
                                               : 'bg-gray-100 text-gray-300 cursor-not-allowed'}
                                         `}
                                         style={effectiveStatus === 'available' ? { backgroundColor: s.color } : undefined}
@@ -870,12 +874,12 @@ export default function HomePage() {
                                         disabled={!canOpenModal}
                                         title={`${ms.name}${lockReason ? ` (${lockReason})` : ''}`}
                                       >
-                                        {isCompleted ? '✓' : effectiveStatus === 'locked' ? <LockIcon className="h-2 w-2" /> : ms.id}
+                                        {isCompleted ? '✓' : effectiveStatus === 'locked' ? <LockIcon className="h-2.5 w-2.5" /> : ms.id}
                                       </button>
                                       {/* Admin reset button: only shown when admin with lock open and step is completed */}
                                       {canSkipSteps && adminFreeNavigation && effectiveStatus === 'completed' && (
                                         <button
-                                          className="absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full bg-red-500 text-white flex items-center justify-center text-[8px] font-bold hover:bg-red-600 transition-colors z-10"
+                                          className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-red-500 text-white flex items-center justify-center text-[8px] font-bold hover:bg-red-600 transition-colors z-10"
                                           onClick={async (e) => {
                                             e.stopPropagation();
                                             if (!confirm(`¿Restablecer paso ${ms.id} de S${s.id}? Esto eliminará el progreso guardado.`)) return;
@@ -906,18 +910,18 @@ export default function HomePage() {
                             </div>
 
                             {/* Progress bar */}
-                            <div className="px-2.5 pb-2">
-                              <div className="h-2 rounded-full overflow-hidden bg-gray-100">
+                            <div className="px-2 pb-1.5">
+                              <div className="h-1.5 rounded-full overflow-hidden bg-gray-100">
                                 <div
                                   className="h-full rounded-full transition-all duration-500"
                                   style={{ width: `${pct}%`, backgroundColor: earned ? '#22c55e' : s.color }}
                                 />
                               </div>
                               <div className="flex items-center justify-between mt-0.5">
-                                <span className={`text-[9px] font-bold ${earned ? 'text-green-600' : 'text-muted-foreground'}`}>
+                                <span className={`text-[8px] font-bold ${earned ? 'text-green-600' : 'text-muted-foreground'}`}>
                                   {earned ? 'COMPLETADO' : `${completedMiniSteps}/5`}
                                 </span>
-                                <span className={`text-[9px] font-bold ${earned ? 'text-green-600' : 'text-muted-foreground'}`}>
+                                <span className={`text-[8px] font-bold ${earned ? 'text-green-600' : 'text-muted-foreground'}`}>
                                   {pct}%
                                 </span>
                               </div>

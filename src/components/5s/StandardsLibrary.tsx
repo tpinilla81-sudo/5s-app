@@ -153,6 +153,29 @@ export default function StandardsLibrary({ open, onClose }: StandardsLibraryProp
   // Load the estandar template for the current S step to determine required fields
   const loadStandardTemplate = useCallback(async (sStep: number) => {
     try {
+      // If the zone has a board config, fetch from that config
+      if (currentZone?.boardConfigId) {
+        const slotsRes = await fetch(`/api/board-slots?boardConfigId=${currentZone.boardConfigId}&sStep=${sStep}&miniStep=4`)
+        const slotsJson = await slotsRes.json()
+        if (slotsJson.success && slotsJson.data.length > 0) {
+          const slot = slotsJson.data[0]
+          const estandarTemplates = (slot.templates || []).filter(
+            (t: any) => t.template?.type === 'estandar'
+          )
+          if (estandarTemplates.length > 0) {
+            const content = typeof estandarTemplates[0].template.content === 'string'
+              ? JSON.parse(estandarTemplates[0].template.content)
+              : estandarTemplates[0].template.content
+            if (content.fields && Array.isArray(content.fields)) {
+              setTemplateFields(content.fields)
+              setTemplateLoaded(true)
+              return
+            }
+          }
+        }
+      }
+
+      // Fallback: global template
       const res = await fetch(`/api/templates?type=estandar&sStep=${sStep}`)
       const json = await res.json()
       if (json.success && json.data && json.data.length > 0) {
@@ -177,7 +200,7 @@ export default function StandardsLibrary({ open, onClose }: StandardsLibraryProp
       { key: 'mejoraTipo', label: 'Tipo de Mejora', type: 'select', options: ['seguridad', 'calidad', 'proceso', 'logistica'], required: true },
     ])
     setTemplateLoaded(true)
-  }, [])
+  }, [currentZone?.boardConfigId])
 
   useEffect(() => {
     if (open) loadStandards()

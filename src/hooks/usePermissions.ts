@@ -46,7 +46,7 @@ export function usePermissions() {
 
   const canEditPermissions = useCallback((): boolean => {
     if (!currentUser) return false
-    return currentUser.role === 'admin' || currentUser.role === 'constructor'
+    return currentUser.role === 'admin'
   }, [currentUser])
 
   return {

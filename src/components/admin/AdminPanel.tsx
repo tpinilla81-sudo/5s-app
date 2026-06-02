@@ -54,11 +54,14 @@ import {
   Save,
   BookOpen,
   LayoutGrid,
+  Sparkles,
 } from 'lucide-react'
 import { Checkbox } from '@/components/ui/checkbox'
 import { S_STEPS } from '@/lib/5s-constants'
 import TemplateManager from './TemplateManager'
 import Tablero5S from './Tablero5S'
+import MejoraContinuaAdmin from './MejoraContinuaAdmin'
+
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -94,6 +97,8 @@ interface ZoneData {
   name: string
   description: string | null
   color: string
+  boardConfigId: string | null
+  boardConfig?: { id: string; name: string } | null
 }
 
 interface MemberData {
@@ -106,7 +111,6 @@ interface MemberData {
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 const ROLE_LABELS: Record<string, string> = {
-  constructor: 'Constructor',
   admin: 'Administrador',
   gerente: 'Gerente',
   responsable: 'Responsable',
@@ -115,7 +119,6 @@ const ROLE_LABELS: Record<string, string> = {
 }
 
 const ROLE_COLORS: Record<string, string> = {
-  constructor: 'bg-slate-100 text-slate-700 border-slate-200',
   admin: 'bg-purple-100 text-purple-700 border-purple-200',
   gerente: 'bg-indigo-100 text-indigo-700 border-indigo-200',
   responsable: 'bg-blue-100 text-blue-700 border-blue-200',
@@ -133,7 +136,7 @@ interface AdminPanelProps {
 
 export default function AdminPanel({ embedded }: AdminPanelProps = {}) {
   const { setCurrentView, fetchProjects, fetchCompanies, projects, setCurrentProject, currentProject } = use5SStore()
-  const [activeTab, setActiveTab] = useState<'companies' | 'users' | 'projects' | 'plantillas' | 'tablero5s'>('companies')
+  const [activeTab, setActiveTab] = useState<'companies' | 'users' | 'projects' | 'plantillas' | 'tablero5s' | 'mejora'>('companies')
 
   // ─── Projects state ──────────────────────────────────────────────────────
   const [allProjects, setAllProjects] = useState<ProjectData[]>([])
@@ -158,6 +161,7 @@ export default function AdminPanel({ embedded }: AdminPanelProps = {}) {
   const [isLoadingDetail, setIsLoadingDetail] = useState(false)
   const [newZoneName, setNewZoneName] = useState('')
   const [newZoneColor, setNewZoneColor] = useState(PRESET_COLORS[0])
+  const [boardConfigs, setBoardConfigs] = useState<Array<{ id: string; name: string; isDefault: boolean }>>([])
   const [newMemberName, setNewMemberName] = useState('')
   const [newMemberEmail, setNewMemberEmail] = useState('')
   const [newMemberRole, setNewMemberRole] = useState('empleado')
@@ -264,14 +268,19 @@ export default function AdminPanel({ embedded }: AdminPanelProps = {}) {
   const loadProjectDetail = useCallback(async (projectId: string) => {
     setIsLoadingDetail(true)
     try {
-      const [zonesRes, membersRes] = await Promise.all([
+      const [zonesRes, membersRes, configsRes] = await Promise.all([
         fetch(`/api/projects/${projectId}/zones`),
         fetch(`/api/projects/${projectId}/members`),
+        fetch('/api/board-configs'),
       ])
       const zonesData = await zonesRes.json()
       const membersData = await membersRes.json()
+      const configsData = await configsRes.json()
       setProjectZones(zonesData.zones || [])
       setProjectMembers(membersData.members || [])
+      if (configsData.success) {
+        setBoardConfigs((configsData.data || []).map((c: any) => ({ id: c.id, name: c.name, isDefault: c.isDefault })))
+      }
     } catch (error) {
       console.error('Error loading project detail:', error)
     } finally {
@@ -457,6 +466,29 @@ export default function AdminPanel({ embedded }: AdminPanelProps = {}) {
       }
     } catch (error) {
       console.error('Error deleting zone:', error)
+    }
+  }
+
+  const handleZoneBoardConfig = async (zoneId: string, boardConfigId: string) => {
+    if (!selectedProjectId) return
+    try {
+      const res = await fetch(`/api/projects/${selectedProjectId}/zones`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ zoneId, boardConfigId }),
+      })
+      if (res.ok) {
+        // Update local state
+        setProjectZones(prev => prev.map(z => {
+          if (z.id === zoneId) {
+            const config = boardConfigs.find(c => c.id === boardConfigId)
+            return { ...z, boardConfigId: boardConfigId || null, boardConfig: config ? { id: config.id, name: config.name } : null }
+          }
+          return z
+        }))
+      }
+    } catch (error) {
+      console.error('Error updating zone board config:', error)
     }
   }
 
@@ -825,13 +857,25 @@ export default function AdminPanel({ embedded }: AdminPanelProps = {}) {
             }`}
           >
             <LayoutGrid className="h-4 w-4" />
-            Tablero 5S
+            Configuración de Tableros
+          </button>
+
+          <button
+            onClick={() => { setActiveTab('mejora'); setSelectedProjectId(null) }}
+            className={`flex items-center gap-2 px-5 py-3 text-sm font-medium border-b-2 transition-colors ${
+              activeTab === 'mejora'
+                ? 'border-amber-500 text-amber-600'
+                : 'border-transparent text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            <Sparkles className="h-4 w-4" />
+            Mejora Continua
           </button>
         </div>
       </div>
 
       {/* Content */}
-      <main className={`flex-1 w-full px-4 py-6 ${activeTab === 'tablero5s' ? 'max-w-7xl mx-auto' : embedded ? '' : 'max-w-5xl mx-auto'}`}>
+      <main className={`flex-1 w-full px-4 py-6 ${activeTab === 'tablero5s' || activeTab === 'mejora' ? 'max-w-7xl mx-auto' : embedded ? '' : 'max-w-5xl mx-auto'}`}>
         <AnimatePresence mode="wait">
           {/* ═══ PROJECTS TAB ═══ */}
           {activeTab === 'projects' && (
@@ -1054,9 +1098,27 @@ export default function AdminPanel({ embedded }: AdminPanelProps = {}) {
                                       </h4>
                                       <div className="flex flex-wrap gap-2 mb-2">
                                         {projectZones.map(zone => (
-                                          <div key={zone.id} className="flex items-center gap-1.5 px-2.5 py-1 rounded-full border bg-white text-xs">
-                                            <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: zone.color }} />
+                                          <div key={zone.id} className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border bg-white text-xs">
+                                            <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: zone.color }} />
                                             <span className="font-medium">{zone.name}</span>
+                                            {/* Board config selector */}
+                                            <select
+                                              value={zone.boardConfigId || ''}
+                                              onChange={e => handleZoneBoardConfig(zone.id, e.target.value)}
+                                              className="h-6 text-[10px] border rounded px-1 bg-gray-50 ml-1"
+                                            >
+                                              <option value="">— Sin tablero —</option>
+                                              {boardConfigs.map(bc => (
+                                                <option key={bc.id} value={bc.id}>
+                                                  {bc.name}{bc.isDefault ? ' ★' : ''}
+                                                </option>
+                                              ))}
+                                            </select>
+                                            {zone.boardConfig && (
+                                              <Badge className="text-[9px] px-1 py-0 bg-indigo-100 text-indigo-700 border-0">
+                                                {zone.boardConfig.name}
+                                              </Badge>
+                                            )}
                                             <button onClick={() => handleDeleteZone(zone.id, zone.name)} className="text-red-400 hover:text-red-600 ml-1" title="Eliminar zona"><Trash2 className="h-3 w-3" /></button>
                                           </div>
                                         ))}
@@ -1143,7 +1205,6 @@ export default function AdminPanel({ embedded }: AdminPanelProps = {}) {
                                                 <Select value={newMemberRole} onValueChange={setNewMemberRole}>
                                                   <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
                                                   <SelectContent>
-                                                    <SelectItem value="constructor">Constructor</SelectItem>
                                                     <SelectItem value="admin">Administrador</SelectItem>
                                                     <SelectItem value="gerente">Gerente</SelectItem>
                                                     <SelectItem value="responsable">Responsable</SelectItem>
@@ -1190,7 +1251,6 @@ export default function AdminPanel({ embedded }: AdminPanelProps = {}) {
                                                 <Select value={newMemberRole} onValueChange={setNewMemberRole}>
                                                   <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
                                                   <SelectContent>
-                                                    <SelectItem value="constructor">Constructor</SelectItem>
                                                     <SelectItem value="admin">Administrador</SelectItem>
                                                     <SelectItem value="gerente">Gerente</SelectItem>
                                                     <SelectItem value="responsable">Responsable</SelectItem>
@@ -1351,7 +1411,6 @@ export default function AdminPanel({ embedded }: AdminPanelProps = {}) {
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="constructor">Constructor</SelectItem>
                             <SelectItem value="admin">Administrador</SelectItem>
                             <SelectItem value="gerente">Gerente</SelectItem>
                             <SelectItem value="responsable">Responsable</SelectItem>
@@ -1414,7 +1473,6 @@ export default function AdminPanel({ embedded }: AdminPanelProps = {}) {
                               <Select value={editUserData.role} onValueChange={v => setEditUserData(d => ({ ...d, role: v }))}>
                                 <SelectTrigger className="h-7 text-xs"><SelectValue /></SelectTrigger>
                                 <SelectContent>
-                                  <SelectItem value="constructor">Constructor</SelectItem>
                                   <SelectItem value="admin">Administrador</SelectItem>
                                   <SelectItem value="gerente">Gerente</SelectItem>
                                   <SelectItem value="responsable">Responsable</SelectItem>
@@ -2008,10 +2066,17 @@ export default function AdminPanel({ embedded }: AdminPanelProps = {}) {
             </motion.div>
           )}
 
-          {/* ═══ TABLERO 5S TAB ═══ */}
+          {/* ═══ CONFIGURACIÓN DE TABLEROS TAB ═══ */}
           {activeTab === 'tablero5s' && (
             <motion.div key="tablero5s" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
               <Tablero5S />
+            </motion.div>
+          )}
+
+          {/* ═══ MEJORA CONTINUA TAB ═══ */}
+          {activeTab === 'mejora' && (
+            <motion.div key="mejora" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+              <MejoraContinuaAdmin />
             </motion.div>
           )}
         </AnimatePresence>

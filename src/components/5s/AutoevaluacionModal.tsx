@@ -49,8 +49,8 @@ export default function AutoevaluacionModal({ open, onClose, sStep, miniStep }: 
   const [finalScore, setFinalScore] = useState(0);
   const [notaMinima, setNotaMinima] = useState(70);
 
-  // Load template from API
-  const { sections, isLoading: isLoadingTemplate, notaMinima: templateNotaMinima } = useChecklistTemplate('autoevaluacion', sStep, open);
+  // Load template from API (uses board config if zone has one)
+  const { sections, isLoading: isLoadingTemplate, notaMinima: templateNotaMinima } = useChecklistTemplate('autoevaluacion', sStep, open, currentZone?.boardConfigId);
 
   // Apply template notaMinima when loaded
   useEffect(() => {

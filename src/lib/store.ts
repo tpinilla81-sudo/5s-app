@@ -41,6 +41,7 @@ export interface Zone {
   color: string
   projectId: string
   responsableId: string | null
+  boardConfigId: string | null
 }
 
 export interface Company {
@@ -78,6 +79,7 @@ export interface UserZoneAssignment {
   color: string
   projectId: string
   responsableId: string | null
+  boardConfigId: string | null
 }
 
 // Permission map: { [role]: { [permissionId]: boolean } }
@@ -265,7 +267,7 @@ export const use5SStore = create<FiveSState>((set, get) => ({
         const z = zones[0]
         // Find matching zone in current project
         const projectZone = currentProject?.zones.find(pz => pz.id === z.id) || {
-          id: z.id, name: z.name, description: z.description, color: z.color, projectId: z.projectId, responsableId: z.responsableId
+          id: z.id, name: z.name, description: z.description, color: z.color, projectId: z.projectId, responsableId: z.responsableId, boardConfigId: z.boardConfigId || null
         }
         set({ currentZone: projectZone as Zone })
         if (currentProject) {
@@ -738,7 +740,7 @@ export const use5SStore = create<FiveSState>((set, get) => ({
         // Only admin can create projects via setup wizard
         // Non-admin users see a waiting screen
         const { currentUser } = get()
-        if (currentUser?.role === 'admin' || currentUser?.role === 'constructor') {
+        if (currentUser?.role === 'admin') {
           set({ authView: 'setup' })
         } else {
           set({ authView: 'no_projects' })
@@ -835,7 +837,7 @@ export const use5SStore = create<FiveSState>((set, get) => ({
         } else {
           // Only admin can create projects via setup wizard
           const { currentUser } = get()
-          if (currentUser?.role === 'admin' || currentUser?.role === 'constructor') {
+          if (currentUser?.role === 'admin') {
             set({ authView: 'setup' })
           } else {
             set({ authView: 'no_projects' })

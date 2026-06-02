@@ -366,20 +366,6 @@ const AUDIT_TEMPLATES: Record<number, { criteria: Array<{ criterion: string; wei
 
 export async function POST() {
   try {
-    // Create constructor user if not exists
-    const existingConstructor = await db.user.findUnique({ where: { email: 'constructor@5s.com' } })
-    if (!existingConstructor) {
-      await db.user.create({
-        data: {
-          email: 'constructor@5s.com',
-          name: 'Constructor',
-          password: hashPassword('constructor123'),
-          role: 'constructor',
-          active: true,
-        },
-      })
-    }
-
     // Create admin user if not exists
     const existingAdmin = await db.user.findUnique({ where: { email: 'admin@5s.com' } })
     if (!existingAdmin) {
@@ -574,7 +560,6 @@ export async function POST() {
         progressRecords: progressCount,
         users: userCount,
         projects: projectCount,
-        constructorCredentials: 'constructor@5s.com / constructor123',
         adminCredentials: 'admin@5s.com / admin123',
       },
     })

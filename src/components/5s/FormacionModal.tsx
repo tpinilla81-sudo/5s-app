@@ -70,28 +70,66 @@ export default function FormacionModal({ open, onClose, sStep, miniStep }: Forma
       setAnswers({});
       setExamResult(null);
     }
-  }, [open, sStep]);
+  }, [open, sStep, miniStep, currentZone?.boardConfigId]);
 
   const loadTemplate = async () => {
     setIsLoading(true);
     try {
-      // Load formation content
-      const formRes = await fetch(`/api/templates?type=formacion&sStep=${sStep}`);
-      const formJson = await formRes.json();
-      if (formJson.success && formJson.data.length > 0) {
-        const content = JSON.parse(formJson.data[0].content);
-        setFormationContent(content.sections || []);
-      }
+      // If the zone has a board config, fetch templates from that config
+      // Otherwise fall back to global templates
+      if (currentZone?.boardConfigId) {
+        // Fetch board slots for this sStep + miniStep from the zone's board config
+        const slotsRes = await fetch(`/api/board-slots?boardConfigId=${currentZone.boardConfigId}&sStep=${sStep}&miniStep=${miniStep}`);
+        const slotsJson = await slotsRes.json();
 
-      // Load exam questions
-      const examRes = await fetch(`/api/templates?type=examen&sStep=${sStep}`);
-      const examJson = await examRes.json();
-      if (examJson.success && examJson.data.length > 0) {
-        const content = JSON.parse(examJson.data[0].content);
-        setExamQuestions(content.questions || []);
-        // Use nota mínima from template if available
-        if (examJson.data[0].notaMinima != null) {
-          setExamNotaMinima(examJson.data[0].notaMinima);
+        if (slotsJson.success && slotsJson.data.length > 0) {
+          const slot = slotsJson.data[0];
+          // Load formation templates from board config
+          const formacionTemplates = (slot.templates || []).filter(
+            (t: any) => t.template?.type === 'formacion'
+          );
+          if (formacionTemplates.length > 0) {
+            const content = JSON.parse(formacionTemplates[0].template.content);
+            setFormationContent(content.sections || []);
+          } else {
+            setFormationContent([]);
+          }
+
+          // Load exam templates from board config
+          const examTemplates = (slot.templates || []).filter(
+            (t: any) => t.template?.type === 'examen'
+          );
+          if (examTemplates.length > 0) {
+            const content = JSON.parse(examTemplates[0].template.content);
+            setExamQuestions(content.questions || []);
+            if (examTemplates[0].template.notaMinima != null) {
+              setExamNotaMinima(examTemplates[0].template.notaMinima);
+            }
+          } else {
+            setExamQuestions([]);
+          }
+        } else {
+          // No slot configured for this step — show empty
+          setFormationContent([]);
+          setExamQuestions([]);
+        }
+      } else {
+        // Fallback: load global templates (no board config assigned)
+        const formRes = await fetch(`/api/templates?type=formacion&sStep=${sStep}`);
+        const formJson = await formRes.json();
+        if (formJson.success && formJson.data.length > 0) {
+          const content = JSON.parse(formJson.data[0].content);
+          setFormationContent(content.sections || []);
+        }
+
+        const examRes = await fetch(`/api/templates?type=examen&sStep=${sStep}`);
+        const examJson = await examRes.json();
+        if (examJson.success && examJson.data.length > 0) {
+          const content = JSON.parse(examJson.data[0].content);
+          setExamQuestions(content.questions || []);
+          if (examJson.data[0].notaMinima != null) {
+            setExamNotaMinima(examJson.data[0].notaMinima);
+          }
         }
       }
     } catch (error) {

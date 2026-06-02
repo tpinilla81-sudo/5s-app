@@ -15,6 +15,7 @@ export async function GET(
         _count: {
           select: { memberZones: true },
         },
+        boardConfig: { select: { id: true, name: true } },
       },
       orderBy: { createdAt: 'asc' },
     })
@@ -25,6 +26,8 @@ export async function GET(
       description: zone.description,
       color: zone.color,
       projectId: zone.projectId,
+      boardConfigId: zone.boardConfigId,
+      boardConfig: zone.boardConfig,
       memberCount: zone._count.memberZones,
     }))
 
@@ -98,6 +101,41 @@ export async function POST(
     console.error('Add zone error:', error)
     return NextResponse.json(
       { error: 'Error al agregar zona' },
+      { status: 500 }
+    )
+  }
+}
+
+// PATCH /api/projects/[projectId]/zones - Update a zone's board config
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: Promise<{ projectId: string }> }
+) {
+  try {
+    const { projectId } = await params
+    const body = await request.json()
+    const { zoneId, boardConfigId } = body
+
+    if (!zoneId) {
+      return NextResponse.json(
+        { error: 'ID de zona es requerido' },
+        { status: 400 }
+      )
+    }
+
+    const zone = await db.zone.update({
+      where: { id: zoneId },
+      data: { boardConfigId: boardConfigId || null },
+      include: {
+        boardConfig: { select: { id: true, name: true } },
+      },
+    })
+
+    return NextResponse.json({ zone }, { status: 200 })
+  } catch (error) {
+    console.error('Update zone error:', error)
+    return NextResponse.json(
+      { error: 'Error al actualizar zona' },
       { status: 500 }
     )
   }

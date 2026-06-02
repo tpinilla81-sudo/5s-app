@@ -44,6 +44,7 @@ export async function GET(request: NextRequest) {
           color: true,
           projectId: true,
           responsableId: true,
+          boardConfigId: true,
         },
         orderBy: { createdAt: 'asc' },
       })
@@ -67,6 +68,7 @@ export async function GET(request: NextRequest) {
               color: true,
               projectId: true,
               responsableId: true,
+              boardConfigId: true,
             },
           },
         },
@@ -86,6 +88,7 @@ export async function GET(request: NextRequest) {
             color: true,
             projectId: true,
             responsableId: true,
+            boardConfigId: true,
           },
           orderBy: { createdAt: 'asc' },
         })
@@ -111,6 +114,7 @@ export async function GET(request: NextRequest) {
             color: true,
             projectId: true,
             responsableId: true,
+            boardConfigId: true,
           },
         },
       },

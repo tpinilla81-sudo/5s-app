@@ -12,13 +12,10 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select'
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle,
-} from '@/components/ui/dialog'
-import {
   Plus, Trash2, Edit3, Save, Loader2, BookOpen, FileCheck, ClipboardCheck, Camera,
   ChevronDown, ChevronUp, AlertTriangle, Copy, RotateCcw,
   Eye, Code, GripVertical, Download, Upload, ClipboardList, Award,
-  Maximize2, Minimize2,
+
 } from 'lucide-react'
 import { S_STEPS, AUDIT_CHECKLISTS, EXAM_PASS_THRESHOLD, SELF_EVAL_THRESHOLD, AUDIT_PASS_THRESHOLD, INVENTORY_CONFIGS } from '@/lib/5s-constants'
 
@@ -1030,7 +1027,6 @@ export default function TemplateManager() {
   const [isSaving, setIsSaving] = useState(false)
   const [expandedS, setExpandedS] = useState<number | null>(null)
   const [editorMode, setEditorMode] = useState<'visual' | 'json'>('visual')
-  const [isFullscreen, setIsFullscreen] = useState(true)
 
   // Form state
   const [formType, setFormType] = useState<string>('formacion')
@@ -1456,262 +1452,260 @@ export default function TemplateManager() {
       )}
 
       {/* ═══════════════════════════════════════════════════════ */}
-      {/* EDIT / CREATE DIALOG */}
+      {/* EDIT / CREATE — FULL-SCREEN OVERLAY */}
       {/* ═══════════════════════════════════════════════════════ */}
-      <Dialog open={isCreating} onOpenChange={(open) => { if (!open) resetForm() }}>
-        <DialogContent className={`${isFullscreen ? 'max-w-[98vw] max-h-[96vh] w-[98vw] h-[96vh] rounded-lg p-6 gap-4' : 'max-w-[90vw] min-w-[80vw] max-h-[90vh] w-[85vw]'} !flex flex-col overflow-hidden transition-all duration-200`}>
-          <DialogHeader className="shrink-0">
-            <DialogTitle className="flex items-center gap-3 text-lg">
-              {editingTemplate ? <Edit3 className="h-5 w-5 text-blue-500" /> : <Plus className="h-5 w-5 text-green-500" />}
-              {editingTemplate ? 'Editar Plantilla' : 'Nueva Plantilla'}
-              <button
-                onClick={() => setIsFullscreen(!isFullscreen)}
-                className="ml-auto p-2 rounded-md hover:bg-gray-100 transition-colors text-gray-500 hover:text-gray-700"
-                title={isFullscreen ? 'Salir de pantalla completa' : 'Pantalla completa'}
-              >
-                {isFullscreen ? <Minimize2 className="h-5 w-5" /> : <Maximize2 className="h-5 w-5" />}
-              </button>
-            </DialogTitle>
-          </DialogHeader>
-
-          <div className="flex flex-col flex-1 min-h-0 space-y-4 mt-1">
-            {/* S / Paso indicator box */}
-            <div className="shrink-0 flex items-center gap-4 p-3 rounded-lg border-2"
-              style={{ backgroundColor: S_COLORS[formSStep] + '10', borderColor: S_COLORS[formSStep] + '40' }}>
-              <div className="w-10 h-10 rounded-lg flex items-center justify-center text-white font-black text-base"
-                style={{ backgroundColor: S_COLORS[formSStep] }}>
-                S{formSStep}
+      {isCreating && (
+        <div className="fixed inset-0 z-50 bg-gray-900/60 flex items-center justify-center">
+          <div className="bg-white w-[98vw] h-[96vh] rounded-xl shadow-2xl flex flex-col overflow-hidden">
+            {/* Header bar */}
+            <div className="shrink-0 flex items-center justify-between px-6 py-3 border-b bg-gradient-to-r from-gray-50 to-white">
+              <div className="flex items-center gap-3">
+                {editingTemplate ? <Edit3 className="h-5 w-5 text-blue-500" /> : <Plus className="h-5 w-5 text-green-500" />}
+                <h2 className="text-lg font-bold">
+                  {editingTemplate ? 'Editar Plantilla' : 'Nueva Plantilla'}
+                </h2>
+                {/* S / Paso indicator inline */}
+                <div className="flex items-center gap-2 ml-4 px-3 py-1.5 rounded-lg border-2"
+                  style={{ backgroundColor: S_COLORS[formSStep] + '10', borderColor: S_COLORS[formSStep] + '40' }}>
+                  <div className="w-7 h-7 rounded flex items-center justify-center text-white font-black text-xs"
+                    style={{ backgroundColor: S_COLORS[formSStep] }}>
+                    S{formSStep}
+                  </div>
+                  <span className="text-sm font-semibold" style={{ color: S_COLORS[formSStep] }}>
+                    {S_STEPS.find(s => s.id === formSStep)?.japaneseName}
+                  </span>
+                  <Badge style={{ backgroundColor: S_COLORS[formSStep] + '20', color: S_COLORS[formSStep] }}
+                    className="text-xs px-2 py-0.5 border-0 font-semibold">
+                    Paso {formMiniStep}: {MINI_STEPS_LABELS[formMiniStep] || `Paso ${formMiniStep}`}
+                  </Badge>
+                </div>
               </div>
-              <div>
-                <p className="font-bold text-base" style={{ color: S_COLORS[formSStep] }}>
-                  {S_STEPS.find(s => s.id === formSStep)?.japaneseName} — {S_STEPS.find(s => s.id === formSStep)?.spanishName}
-                </p>
-                <p className="text-sm text-muted-foreground">
-                  Paso {formMiniStep}: {MINI_STEPS_LABELS[formMiniStep] || `Paso ${formMiniStep}`}
-                </p>
-              </div>
-              <Badge style={{ backgroundColor: S_COLORS[formSStep] + '20', color: S_COLORS[formSStep] }}
-                className="ml-auto text-sm px-3 py-1 border-0 font-semibold">
-                S{formSStep} · Paso {formMiniStep}
-              </Badge>
+              <Button variant="ghost" size="sm" onClick={resetForm}
+                className="h-8 w-8 p-0 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-full">
+                <X className="h-5 w-5" />
+              </Button>
             </div>
 
-            {/* Config rows - 2 rows, normal size */}
-            <div className="shrink-0 grid grid-cols-4 gap-4">
-              <div>
-                <Label className="text-sm font-semibold">Tipo</Label>
-                <Select value={formType} onValueChange={setFormType}>
-                  <SelectTrigger className="mt-1 h-10">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="formacion">Formación</SelectItem>
-                    <SelectItem value="examen">Examen</SelectItem>
-                    <SelectItem value="autoevaluacion">Auditoría Interna</SelectItem>
-                    <SelectItem value="auditoria">Auditoría Externa</SelectItem>
-                    <SelectItem value="inventario">Inventario</SelectItem>
-                    <SelectItem value="estandar">Estándar</SelectItem>
-                  </SelectContent>
-                </Select>
+            {/* Content area — scrollable */}
+            <div className="flex-1 min-h-0 overflow-y-auto px-6 py-4 space-y-4">
+              {/* Config rows */}
+              <div className="grid grid-cols-4 gap-4">
+                <div>
+                  <Label className="text-sm font-semibold">Tipo</Label>
+                  <Select value={formType} onValueChange={setFormType}>
+                    <SelectTrigger className="mt-1 h-10">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="formacion">Formación</SelectItem>
+                      <SelectItem value="examen">Examen</SelectItem>
+                      <SelectItem value="autoevaluacion">Auditoría Interna</SelectItem>
+                      <SelectItem value="auditoria">Auditoría Externa</SelectItem>
+                      <SelectItem value="inventario">Inventario</SelectItem>
+                      <SelectItem value="estandar">Estándar</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label className="text-sm font-semibold">S (Fase)</Label>
+                  <Select value={String(formSStep)} onValueChange={(v) => setFormSStep(Number(v))}>
+                    <SelectTrigger className="mt-1 h-10">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {S_STEPS.map(s => (
+                        <SelectItem key={s.id} value={String(s.id)}>
+                          S{s.id} - {s.japaneseName} ({s.spanishName})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label className="text-sm font-semibold">Paso</Label>
+                  <Select value={String(formMiniStep)} onValueChange={(v) => setFormMiniStep(Number(v))}>
+                    <SelectTrigger className="mt-1 h-10">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {[1, 2, 3, 4, 5].map(step => (
+                        <SelectItem key={step} value={String(step)}>
+                          Paso {step} — {MINI_STEPS_LABELS[step]}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label className="text-sm font-semibold">Nota mínima (pasa/no pasa)</Label>
+                  <div className="flex items-center gap-3 mt-1">
+                    <label className="flex items-center gap-1.5 cursor-pointer text-sm">
+                      <input
+                        type="checkbox"
+                        checked={notaMinimaAplica}
+                        onChange={(e) => {
+                          setNotaMinimaAplica(e.target.checked)
+                          if (!e.target.checked) setFormNotaMinima(null)
+                          else setFormNotaMinima(formType === 'examen' ? EXAM_PASS_THRESHOLD : formType === 'autoevaluacion' ? SELF_EVAL_THRESHOLD : AUDIT_PASS_THRESHOLD)
+                        }}
+                        className="rounded border-gray-300 h-4 w-4"
+                      />
+                      <span className="text-muted-foreground">Aplica</span>
+                    </label>
+                    {notaMinimaAplica ? (
+                      <div className="flex items-center gap-1">
+                        <Input type="number" value={formNotaMinima ?? 0} onChange={(e) => setFormNotaMinima(Number(e.target.value))}
+                          min={0} max={100} className="h-10 w-20" />
+                        <span className="text-sm text-muted-foreground">%</span>
+                      </div>
+                    ) : (
+                      <span className="text-sm text-gray-400 italic">No aplica</span>
+                    )}
+                  </div>
+                </div>
               </div>
-              <div>
-                <Label className="text-sm font-semibold">S (Fase)</Label>
-                <Select value={String(formSStep)} onValueChange={(v) => setFormSStep(Number(v))}>
-                  <SelectTrigger className="mt-1 h-10">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {S_STEPS.map(s => (
-                      <SelectItem key={s.id} value={String(s.id)}>
-                        S{s.id} - {s.japaneseName} ({s.spanishName})
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label className="text-sm font-semibold">Paso</Label>
-                <Select value={String(formMiniStep)} onValueChange={(v) => setFormMiniStep(Number(v))}>
-                  <SelectTrigger className="mt-1 h-10">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {[1, 2, 3, 4, 5].map(step => (
-                      <SelectItem key={step} value={String(step)}>
-                        Paso {step} — {MINI_STEPS_LABELS[step]}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label className="text-sm font-semibold">Nota mínima (pasa/no pasa)</Label>
-                <div className="flex items-center gap-3 mt-1">
-                  <label className="flex items-center gap-1.5 cursor-pointer text-sm">
-                    <input
-                      type="checkbox"
-                      checked={notaMinimaAplica}
-                      onChange={(e) => {
-                        setNotaMinimaAplica(e.target.checked)
-                        if (!e.target.checked) setFormNotaMinima(null)
-                        else setFormNotaMinima(formType === 'examen' ? EXAM_PASS_THRESHOLD : formType === 'autoevaluacion' ? SELF_EVAL_THRESHOLD : AUDIT_PASS_THRESHOLD)
-                      }}
-                      className="rounded border-gray-300 h-4 w-4"
-                    />
-                    <span className="text-muted-foreground">Aplica</span>
+
+              <div className="grid grid-cols-4 gap-4">
+                <div className="col-span-2">
+                  <Label className="text-sm font-semibold">Título</Label>
+                  <Input value={formTitle} onChange={(e) => setFormTitle(e.target.value)}
+                    className="mt-1 h-10" placeholder="Título de la plantilla" />
+                </div>
+                <div className="col-span-1">
+                  <Label className="text-sm font-semibold">Descripción</Label>
+                  <Input value={formDescription} onChange={(e) => setFormDescription(e.target.value)}
+                    className="mt-1 h-10" placeholder="Descripción opcional" />
+                </div>
+                <div className="flex items-center gap-3 pt-6">
+                  <label className="flex items-center gap-2 text-sm cursor-pointer">
+                    <input type="checkbox" checked={formActive} onChange={(e) => setFormActive(e.target.checked)}
+                      className="rounded border-gray-300 h-4 w-4" />
+                    Plantilla activa
                   </label>
-                  {notaMinimaAplica ? (
-                    <div className="flex items-center gap-1">
-                      <Input type="number" value={formNotaMinima ?? 0} onChange={(e) => setFormNotaMinima(Number(e.target.value))}
-                        min={0} max={100} className="h-10 w-20" />
-                      <span className="text-sm text-muted-foreground">%</span>
-                    </div>
-                  ) : (
-                    <span className="text-sm text-gray-400 italic">No aplica</span>
-                  )}
                 </div>
               </div>
-            </div>
 
-            <div className="shrink-0 grid grid-cols-4 gap-4">
-              <div className="col-span-2">
-                <Label className="text-sm font-semibold">Título</Label>
-                <Input value={formTitle} onChange={(e) => setFormTitle(e.target.value)}
-                  className="mt-1 h-10" placeholder="Título de la plantilla" />
-              </div>
-              <div className="col-span-1">
-                <Label className="text-sm font-semibold">Descripción</Label>
-                <Input value={formDescription} onChange={(e) => setFormDescription(e.target.value)}
-                  className="mt-1 h-10" placeholder="Descripción opcional" />
-              </div>
-              <div className="flex items-center gap-3 pt-6">
-                <label className="flex items-center gap-2 text-sm cursor-pointer">
-                  <input type="checkbox" checked={formActive} onChange={(e) => setFormActive(e.target.checked)}
-                    className="rounded border-gray-300 h-4 w-4" />
-                  Plantilla activa
-                </label>
-              </div>
-            </div>
+              {/* ═══════════ Content Editor ═══════════ */}
+              <div className="flex flex-col" style={{ minHeight: 'calc(96vh - 320px)' }}>
+                <div className="flex items-center justify-between mb-2 shrink-0">
+                  <Label className="text-sm font-semibold">Contenido</Label>
+                  <div className="flex items-center gap-2">
+                    {/* Default data buttons */}
+                    {(formType === 'autoevaluacion' || formType === 'auditoria') && (
+                      <Button variant="outline" size="sm" className="text-xs"
+                        onClick={() => setFormContent(JSON.stringify(getDefaultChecklistContent(formSStep), null, 2))}>
+                        <RotateCcw className="h-3.5 w-3.5 mr-1" />
+                        Cargar checklist por defecto
+                      </Button>
+                    )}
+                    {formType === 'formacion' && (
+                      <Button variant="outline" size="sm" className="text-xs"
+                        onClick={() => setFormContent(JSON.stringify(getDefaultFormationContent(formSStep), null, 2))}>
+                        <RotateCcw className="h-3.5 w-3.5 mr-1" />
+                        Cargar formación por defecto
+                      </Button>
+                    )}
+                    {formType === 'examen' && (
+                      <Button variant="outline" size="sm" className="text-xs"
+                        onClick={() => setFormContent(JSON.stringify(getDefaultExamContent(formSStep), null, 2))}>
+                        <RotateCcw className="h-3.5 w-3.5 mr-1" />
+                        Cargar examen por defecto
+                      </Button>
+                    )}
+                    {formType === 'inventario' && (
+                      <Button variant="outline" size="sm" className="text-xs"
+                        onClick={() => setFormContent(JSON.stringify(getDefaultInventoryContent(formSStep), null, 2))}>
+                        <RotateCcw className="h-3.5 w-3.5 mr-1" />
+                        Cargar inventario por defecto
+                      </Button>
+                    )}
+                    {formType === 'estandar' && (
+                      <Button variant="outline" size="sm" className="text-xs"
+                        onClick={() => setFormContent(JSON.stringify(getDefaultStandardContent(), null, 2))}>
+                        <RotateCcw className="h-3.5 w-3.5 mr-1" />
+                        Cargar estándar por defecto
+                      </Button>
+                    )}
 
-            {/* ═══════════ Content Editor ═══════════ */}
-            <div className="flex flex-col flex-1 min-h-0">
-              <div className="flex items-center justify-between mb-2 shrink-0">
-                <Label className="text-sm font-semibold">Contenido</Label>
-                <div className="flex items-center gap-2">
-                  {/* Default data buttons */}
-                  {(formType === 'autoevaluacion' || formType === 'auditoria') && (
-                    <Button variant="outline" size="sm" className="text-xs"
-                      onClick={() => setFormContent(JSON.stringify(getDefaultChecklistContent(formSStep), null, 2))}>
-                      <RotateCcw className="h-3.5 w-3.5 mr-1" />
-                      Cargar checklist por defecto
+                    {/* Upload JSON */}
+                    <Button variant="outline" size="sm" className="text-xs" onClick={handleUploadJson}>
+                      <Upload className="h-3.5 w-3.5 mr-1" />
+                      Subir JSON
                     </Button>
-                  )}
-                  {formType === 'formacion' && (
-                    <Button variant="outline" size="sm" className="text-xs"
-                      onClick={() => setFormContent(JSON.stringify(getDefaultFormationContent(formSStep), null, 2))}>
-                      <RotateCcw className="h-3.5 w-3.5 mr-1" />
-                      Cargar formación por defecto
-                    </Button>
-                  )}
-                  {formType === 'examen' && (
-                    <Button variant="outline" size="sm" className="text-xs"
-                      onClick={() => setFormContent(JSON.stringify(getDefaultExamContent(formSStep), null, 2))}>
-                      <RotateCcw className="h-3.5 w-3.5 mr-1" />
-                      Cargar examen por defecto
-                    </Button>
-                  )}
-                  {formType === 'inventario' && (
-                    <Button variant="outline" size="sm" className="text-xs"
-                      onClick={() => setFormContent(JSON.stringify(getDefaultInventoryContent(formSStep), null, 2))}>
-                      <RotateCcw className="h-3.5 w-3.5 mr-1" />
-                      Cargar inventario por defecto
-                    </Button>
-                  )}
-                  {formType === 'estandar' && (
-                    <Button variant="outline" size="sm" className="text-xs"
-                      onClick={() => setFormContent(JSON.stringify(getDefaultStandardContent(), null, 2))}>
-                      <RotateCcw className="h-3.5 w-3.5 mr-1" />
-                      Cargar estándar por defecto
-                    </Button>
-                  )}
 
-                  {/* Upload JSON */}
-                  <Button variant="outline" size="sm" className="text-xs" onClick={handleUploadJson}>
-                    <Upload className="h-3.5 w-3.5 mr-1" />
-                    Subir JSON
-                  </Button>
-
-                  {/* Visual / JSON toggle */}
-                  <div className="flex rounded-md border overflow-hidden">
-                    <button
-                      onClick={() => setEditorMode('visual')}
-                      className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium transition-colors ${
-                        editorMode === 'visual' ? 'bg-green-100 text-green-700' : 'bg-white text-gray-500 hover:bg-gray-50'
-                      }`}>
-                      <Eye className="h-3.5 w-3.5" />
-                      Visual
-                    </button>
-                    <button
-                      onClick={() => setEditorMode('json')}
-                      className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium transition-colors ${
-                        editorMode === 'json' ? 'bg-gray-800 text-white' : 'bg-white text-gray-500 hover:bg-gray-50'
-                      }`}>
-                      <Code className="h-3.5 w-3.5" />
-                      JSON
-                    </button>
+                    {/* Visual / JSON toggle */}
+                    <div className="flex rounded-md border overflow-hidden">
+                      <button
+                        onClick={() => setEditorMode('visual')}
+                        className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium transition-colors ${
+                          editorMode === 'visual' ? 'bg-green-100 text-green-700' : 'bg-white text-gray-500 hover:bg-gray-50'
+                        }`}>
+                        <Eye className="h-3.5 w-3.5" />
+                        Visual
+                      </button>
+                      <button
+                        onClick={() => setEditorMode('json')}
+                        className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium transition-colors ${
+                          editorMode === 'json' ? 'bg-gray-800 text-white' : 'bg-white text-gray-500 hover:bg-gray-50'
+                        }`}>
+                        <Code className="h-3.5 w-3.5" />
+                        JSON
+                      </button>
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              {/* Editor content */}
-              {editorMode === 'visual' ? (
-                <div className="border rounded-lg p-4 flex-1 min-h-0 overflow-y-auto bg-gray-50">
-                  {(formType === 'autoevaluacion' || formType === 'auditoria') && (
-                    <ChecklistEditor content={formContent} onChange={setFormContent} />
-                  )}
-                  {formType === 'examen' && (
-                    <ExamEditor content={formContent} onChange={setFormContent} />
-                  )}
-                  {formType === 'formacion' && (
-                    <FormationEditor content={formContent} onChange={setFormContent} />
-                  )}
-                  {formType === 'inventario' && (
-                    <InventoryConfigEditor content={formContent} onChange={setFormContent} />
-                  )}
-                  {formType === 'estandar' && (
-                    <StandardTemplateEditor content={formContent} onChange={setFormContent} />
-                  )}
-                </div>
-              ) : (
-                <textarea
-                  value={formContent}
-                  onChange={(e) => setFormContent(e.target.value)}
-                  className="w-full flex-1 min-h-0 p-4 border rounded-lg font-mono text-sm bg-gray-50 focus:ring-2 focus:ring-green-300 focus:border-green-400 resize-none"
-                  spellCheck={false}
-                />
-              )}
-
-              {/* JSON validation preview */}
-              {(() => {
-                try {
-                  JSON.parse(formContent)
-                  return (
-                    <div className="mt-1 flex items-center gap-1 text-xs text-green-600">
-                      <span className="inline-block w-2 h-2 rounded-full bg-green-500" />
-                      JSON válido
-                    </div>
-                  )
-                } catch { return (
-                  <div className="mt-1 flex items-center gap-1 text-xs text-red-600">
-                    <AlertTriangle className="h-3 w-3" />
-                    JSON inválido - revisa el formato
+                {/* Editor content */}
+                {editorMode === 'visual' ? (
+                  <div className="border rounded-lg p-4 flex-1 overflow-y-auto bg-gray-50">
+                    {(formType === 'autoevaluacion' || formType === 'auditoria') && (
+                      <ChecklistEditor content={formContent} onChange={setFormContent} />
+                    )}
+                    {formType === 'examen' && (
+                      <ExamEditor content={formContent} onChange={setFormContent} />
+                    )}
+                    {formType === 'formacion' && (
+                      <FormationEditor content={formContent} onChange={setFormContent} />
+                    )}
+                    {formType === 'inventario' && (
+                      <InventoryConfigEditor content={formContent} onChange={setFormContent} />
+                    )}
+                    {formType === 'estandar' && (
+                      <StandardTemplateEditor content={formContent} onChange={setFormContent} />
+                    )}
                   </div>
+                ) : (
+                  <textarea
+                    value={formContent}
+                    onChange={(e) => setFormContent(e.target.value)}
+                    className="w-full flex-1 p-4 border rounded-lg font-mono text-sm bg-gray-50 focus:ring-2 focus:ring-green-300 focus:border-green-400 resize-none"
+                    style={{ minHeight: 'calc(96vh - 380px)' }}
+                    spellCheck={false}
+                  />
                 )}
-              })()}
+
+                {/* JSON validation preview */}
+                {(() => {
+                  try {
+                    JSON.parse(formContent)
+                    return (
+                      <div className="mt-1 flex items-center gap-1 text-xs text-green-600">
+                        <span className="inline-block w-2 h-2 rounded-full bg-green-500" />
+                        JSON válido
+                      </div>
+                    )
+                  } catch { return (
+                    <div className="mt-1 flex items-center gap-1 text-xs text-red-600">
+                      <AlertTriangle className="h-3 w-3" />
+                      JSON inválido - revisa el formato
+                    </div>
+                  )}
+                })()}
+              </div>
             </div>
 
-            {/* Save / Cancel */}
-            <div className="shrink-0 flex gap-3 justify-end pt-3 mt-2 border-t">
+            {/* Footer — Save / Cancel */}
+            <div className="shrink-0 flex gap-3 justify-end px-6 py-3 border-t bg-gray-50">
               <Button variant="outline" className="h-10 px-6" onClick={resetForm}>Cancelar</Button>
               <Button onClick={handleSave} disabled={isSaving || !formTitle || !formContent}
                 className="h-10 px-6 bg-gradient-to-r from-green-500 to-emerald-600 text-white gap-2">
@@ -1720,8 +1714,8 @@ export default function TemplateManager() {
               </Button>
             </div>
           </div>
-        </DialogContent>
-      </Dialog>
+        </div>
+      )}
     </div>
   )
 }

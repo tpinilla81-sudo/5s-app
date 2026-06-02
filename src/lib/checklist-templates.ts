@@ -25,12 +25,40 @@ export function templateToAuditSections(content: unknown): AuditSection[] {
 
 /**
  * Fetch a checklist template from the API.
+ * If boardConfigId is provided, tries the board config first, then falls back to global.
  * Returns the parsed sections and notaMinima, or null if not found.
  */
 export async function fetchChecklistTemplate(
   type: 'autoevaluacion' | 'auditoria',
-  sStep: number
+  sStep: number,
+  miniStep: number = type === 'autoevaluacion' ? 4 : 5,
+  boardConfigId?: string | null
 ): Promise<{ sections: AuditSection[]; notaMinima: number | null } | null> {
+  // If board config is provided, try it first
+  if (boardConfigId) {
+    try {
+      const slotsRes = await fetch(`/api/board-slots?boardConfigId=${boardConfigId}&sStep=${sStep}&miniStep=${miniStep}`)
+      const slotsJson = await slotsRes.json()
+      if (slotsJson.success && slotsJson.data.length > 0) {
+        const slot = slotsJson.data[0]
+        const matchingTemplates = (slot.templates || []).filter(
+          (t: any) => t.template?.type === type
+        )
+        if (matchingTemplates.length > 0) {
+          const tpl = matchingTemplates[0].template
+          const parsed = typeof tpl.content === 'string' ? JSON.parse(tpl.content) : tpl.content
+          const sections = templateToAuditSections(parsed)
+          if (sections.length > 0) {
+            return { sections, notaMinima: tpl.notaMinima ?? null }
+          }
+        }
+      }
+    } catch (e) {
+      console.error(`Error fetching ${type} template from board config for S${sStep}:`, e)
+    }
+  }
+
+  // Fallback: global template
   try {
     const res = await fetch(`/api/templates?type=${type}&sStep=${sStep}`)
     const json = await res.json()
@@ -94,12 +122,14 @@ export async function fetchItemDescription(sStep: number, itemId: string): Promi
 
 /**
  * React hook to load a checklist template from the API.
+ * If boardConfigId is provided, tries the board config first, then falls back to global.
  * Used by AuditoriaModal and AutoevaluacionModal.
  */
 export function useChecklistTemplate(
   type: 'autoevaluacion' | 'auditoria',
   sStep: number,
-  enabled: boolean = true
+  enabled: boolean = true,
+  boardConfigId?: string | null
 ) {
   const [sections, setSections] = useState<AuditSection[]>([])
   const [notaMinima, setNotaMinima] = useState<number | null>(null)
@@ -108,7 +138,7 @@ export function useChecklistTemplate(
   const load = useCallback(async () => {
     if (!enabled) return
     setIsLoading(true)
-    const result = await fetchChecklistTemplate(type, sStep)
+    const result = await fetchChecklistTemplate(type, sStep, undefined, boardConfigId)
     if (result) {
       setSections(result.sections)
       if (result.notaMinima !== null) setNotaMinima(result.notaMinima)
@@ -117,7 +147,7 @@ export function useChecklistTemplate(
       setNotaMinima(null)
     }
     setIsLoading(false)
-  }, [type, sStep, enabled])
+  }, [type, sStep, enabled, boardConfigId])
 
   useEffect(() => {
     if (enabled) load()

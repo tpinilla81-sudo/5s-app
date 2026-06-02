@@ -61,8 +61,8 @@ export default function AuditoriaModal({ open, onClose, sStep, miniStep }: Audit
   const [fechaAuditoria, setFechaAuditoria] = useState('');
   const [horaAuditoria, setHoraAuditoria] = useState('');
 
-  // Load template from API
-  const { sections, isLoading: isLoadingTemplate, notaMinima: templateNotaMinima } = useChecklistTemplate('auditoria', sStep, open);
+  // Load template from API (uses board config if zone has one)
+  const { sections, isLoading: isLoadingTemplate, notaMinima: templateNotaMinima } = useChecklistTemplate('auditoria', sStep, open, currentZone?.boardConfigId);
 
   // Apply template notaMinima when loaded
   useEffect(() => {

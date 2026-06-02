@@ -25,7 +25,7 @@ export default function Board5S({ onSStepClick }: Board5SProps) {
     y: cy + radius * Math.sin(angle),
   });
 
-  // Get the path for a pentagon "slice" (triangular section from center to two vertices)
+  // Get the path for a pentagon "slice" with circular inner edge
   const getPentagonSlice = (index: number, oR: number, iR: number): string => {
     const startAngle = (index * sliceAngle - 90) * (Math.PI / 180);
     const endAngle = ((index + 1) * sliceAngle - 90) * (Math.PI / 180);
@@ -35,7 +35,8 @@ export default function Board5S({ onSStepClick }: Board5SProps) {
     const iStart = pentagonVertex(startAngle, iR);
     const iEnd = pentagonVertex(endAngle, iR);
 
-    return `M ${oStart.x} ${oStart.y} L ${oEnd.x} ${oEnd.y} L ${iEnd.x} ${iEnd.y} L ${iStart.x} ${iStart.y} Z`;
+    // Inner edge is a circular arc from iEnd to iStart (counterclockwise)
+    return `M ${oStart.x} ${oStart.y} L ${oEnd.x} ${oEnd.y} L ${iEnd.x} ${iEnd.y} A ${iR} ${iR} 0 0 0 ${iStart.x} ${iStart.y} Z`;
   };
 
   // Pentagon outline path (5 vertices connected)
@@ -51,7 +52,7 @@ export default function Board5S({ onSStepClick }: Board5SProps) {
 
   const getDotPos = (si: number, mi: number) => {
     // Reduce angular spread so dots 1 & 5 don't overflow slice edges
-    const pad = sliceAngle * 0.17; // ~12.2° margin on each side
+    const pad = sliceAngle * 0.17;
     const spread = sliceAngle - 2 * pad;
     const angle = (si * sliceAngle + pad + mi * (spread / 4) - 90) * (Math.PI / 180);
     return { x: cx + stepR * Math.cos(angle), y: cy + stepR * Math.sin(angle) };
@@ -129,7 +130,6 @@ export default function Board5S({ onSStepClick }: Board5SProps) {
               const st = getMiniStepStatus(s.id, ms);
               if (st === 'completed' || st === 'completed_viewonly') completedMiniSteps++;
             }
-            const pct = Math.min(Math.round((completedMiniSteps / 5) * 100), 100);
             const allCompleted = earned;
 
             return (
@@ -153,7 +153,7 @@ export default function Board5S({ onSStepClick }: Board5SProps) {
                 )}
                 {/* Slice background (pentagon section) */}
                 <path
-                  d={getPentagonSlice(i, outerR, innerR)}
+                  d={getPentagonSlice(i, outerR, innerR - 3)}
                   fill={`url(#sg${i})`}
                   stroke={allCompleted ? '#16a34a' : 'white'}
                   strokeWidth={allCompleted ? '3' : '2.5'}
@@ -167,7 +167,7 @@ export default function Board5S({ onSStepClick }: Board5SProps) {
                 {/* Green overlay for completed slices */}
                 {allCompleted && (
                   <path
-                    d={getPentagonSlice(i, outerR, innerR)}
+                    d={getPentagonSlice(i, outerR, innerR - 3)}
                     fill="#22c55e"
                     opacity="0.2"
                     style={{ pointerEvents: 'none' }}
@@ -176,7 +176,7 @@ export default function Board5S({ onSStepClick }: Board5SProps) {
 
                 {/* Inner highlight */}
                 <path
-                  d={getPentagonSlice(i, outerR - 47, innerR + 7)}
+                  d={getPentagonSlice(i, outerR - 47, innerR + 4)}
                   fill="white"
                   opacity="0.08"
                   style={{ pointerEvents: 'none' }}
@@ -257,41 +257,23 @@ export default function Board5S({ onSStepClick }: Board5SProps) {
             );
           })}
 
-          {/* Center circle (instead of inner pentagon) */}
-          <circle cx={cx} cy={cy} r={innerR} fill="url(#centerGrad)" stroke="#16a34a" strokeWidth="3.5" filter="url(#shadow1)" />
-
-          {/* Quesito wedges in center circle */}
-          {S_STEPS.map((s, i) => {
-            const earned = isQuesitoEarned(s.id);
-            return (
-              <path
-                key={`wedge-${i}`}
-                d={getCircleWedgePath(i)}
-                fill={earned ? s.color : '#d1d5db'}
-                stroke="white"
-                strokeWidth="1.5"
-                opacity={earned ? 1 : 0.35}
-                style={{ pointerEvents: 'none' }}
-              />
-            );
-          })}
-
-          {/* Center logo image - fitted to inner circle */}
-          <clipPath id="circleClip">
-            <circle cx={cx} cy={cy} r={innerR - 4} />
-          </clipPath>
+          {/* Center circle - logo fills the entire area, overlapping slice inner edges */}
+          <defs>
+            <clipPath id="circleClip">
+              <circle cx={cx} cy={cy} r={innerR + 3} />
+            </clipPath>
+          </defs>
+          {/* Logo image clipped to circle - covers slice inner strokes */}
           <image
             href="/5s-logo.png"
-            x={cx - innerR + 4}
-            y={cy - innerR + 4}
-            width={(innerR - 4) * 2}
-            height={(innerR - 4) * 2}
+            x={cx - innerR - 3}
+            y={cy - innerR - 3}
+            width={(innerR + 3) * 2}
+            height={(innerR + 3) * 2}
             clipPath="url(#circleClip)"
             style={{ pointerEvents: 'none' }}
-            preserveAspectRatio="xMidYMid meet"
+            preserveAspectRatio="xMidYMid slice"
           />
-
-
 
         </svg>
       </motion.div>

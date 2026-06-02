@@ -72,11 +72,15 @@ export default function LoginPage() {
             initial={{ scale: 0 }}
             animate={{ scale: 1 }}
             transition={{ type: 'spring', stiffness: 200, delay: 0.1 }}
-            className="w-28 h-28 mb-4"
+            className="w-28 h-28 mb-2"
           >
-            <img src="/5s-logo.png" alt="5S Logo" className="w-full h-full object-contain" />
+            <img
+              src="/5s-logo.png"
+              alt="5S Logo"
+              className="w-full h-full object-contain"
+            />
           </motion.div>
-          <h1 className="text-4xl font-bold text-green-600 tracking-tight">método</h1>
+          <h1 className="text-2xl font-bold text-green-600">Método</h1>
         </div>
 
         <Card className="border-0 shadow-xl shadow-green-100/50">
@@ -271,8 +275,8 @@ export default function LoginPage() {
           </CardContent>
         </Card>
 
-        <p className="text-center text-xs text-muted-foreground mt-6">
-          método
+        <p className="text-center text-xs text-green-500 mt-6">
+          Método 5S
         </p>
       </motion.div>
     </div>

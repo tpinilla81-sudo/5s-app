@@ -20,7 +20,7 @@ import {
   Lock, Unlock, Crown, UserCheck, HardHat, ClipboardCheck, BookOpen,
   Camera, ListChecks, FileCheck, Building2, BarChart3, UserPlus,
   UserMinus, KeyRound, RotateCcw, Save, Loader2, AlertTriangle,
-  ArrowLeft, X, GraduationCap, MapPin, Target, Bell, Wrench,
+  ArrowLeft, X, GraduationCap, MapPin, Target, Bell,
 } from 'lucide-react'
 
 interface RolePermissionsProps {
@@ -85,7 +85,7 @@ const GENERAL_PERMS = [
   { id: 'manage_templates', name: 'Gestionar plantillas', desc: 'Crear, editar y eliminar plantillas', icon: Pencil },
   { id: 'notify_audit', name: 'Solicitar auditoría', desc: 'Puede activar el aviso de auditoría en el paso 5', icon: Bell },
   { id: 'accept_audit_meeting', name: 'Aceptar reunión auditoría', desc: 'Puede aceptar la reunión de auditoría para apagar el aviso', icon: CheckCircle2 },
-  { id: 'skip_steps', name: 'Saltar pasos', desc: 'Permite navegar libremente entre pasos sin seguir el orden de desbloqueo', icon: Lock },
+  { id: 'skip_steps', name: 'Saltar pasos', desc: 'Puede navegar libremente sin seguir el orden progresivo', icon: Unlock },
 ]
 
 // All permission IDs
@@ -93,14 +93,14 @@ const ALL_PERM_IDS = [...PERM_ID_MAP.map(p => p.id), ...GENERAL_PERMS.map(p => p
 
 // Locked permissions per role (always ON)
 const LOCKED_PERMISSIONS: Record<string, string[]> = {
-  constructor: ALL_PERM_IDS, // Constructor has ALL permissions locked ON
+  constructor: ALL_PERM_IDS, // Constructor permissions are always locked (all ON)
   admin: ['view_board', 'view_project', 'view_team'],
 }
 
 // Default permissions per role
 const DEFAULT_PERMISSIONS: Record<string, string[]> = {
-  constructor: ALL_PERM_IDS, // Constructor has everything
-  admin: ALL_PERM_IDS, // Admin has everything
+  constructor: ALL_PERM_IDS, // Constructor (app owner) has everything
+  admin: ALL_PERM_IDS, // Admin (license holder) has everything
   gerente: [
     'view_board', 'view_progress', 'view_project', 'view_team',
     'accept_audit_meeting',
@@ -136,8 +136,8 @@ const DEFAULT_PERMISSIONS: Record<string, string[]> = {
 
 // Role definitions
 const ROLES = [
-  { id: 'constructor', name: 'Constructor', desc: 'Creador de la app', color: '#1E293B', icon: Wrench },
-  { id: 'admin', name: 'Administrador', desc: 'Control total', color: '#8B5CF6', icon: Crown },
+  { id: 'constructor', name: 'Constructor', desc: 'Dueño de la app', color: '#DC2626', icon: Crown },
+  { id: 'admin', name: 'Administrador', desc: 'Licencia del sistema', color: '#8B5CF6', icon: Shield },
   { id: 'gerente', name: 'Gerente', desc: 'Supervisión global', color: '#6366F1', icon: Building2 },
   { id: 'responsable', name: 'Responsable', desc: 'Gestión de equipo y zonas', color: '#3B82F6', icon: UserCheck },
   { id: 'empleado', name: 'Empleado', desc: 'Ejecuta pasos 5S', color: '#22C55E', icon: HardHat },
@@ -171,7 +171,8 @@ export default function RolePermissions({ open, onClose }: RolePermissionsProps)
   const [isSaving, setIsSaving] = useState(false)
   const [hasChanges, setHasChanges] = useState(false)
 
-  const isAdmin = currentUser?.role === 'admin' || currentUser?.role === 'constructor'
+  const isConstructor = currentUser?.role === 'constructor'
+  const isAdmin = currentUser?.role === 'admin' || isConstructor
 
   const fetchPermissions = useCallback(async () => {
     setIsLoading(true)
