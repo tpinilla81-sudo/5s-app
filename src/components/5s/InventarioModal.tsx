@@ -26,7 +26,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { ClipboardList, Plus, CheckCircle, Download, Upload, FileSpreadsheet, BookOpen, ArrowRight, AlertTriangle, FileUp, Maximize2, Minimize2, File, PenTool, Image as ImageIcon, Eye, Loader2 } from 'lucide-react';
+import { ClipboardList, Plus, CheckCircle, Download, Upload, FileSpreadsheet, BookOpen, ArrowRight, AlertTriangle, FileUp, Maximize2, Minimize2, File, PenTool, Image as ImageIcon, Eye, Loader2, MapPin } from 'lucide-react';
 import { toast } from 'sonner';
 import { use5SStore } from '@/lib/store';
 import { S_STEPS, INVENTORY_CONFIGS, INVENTORY_CLASSIFY_THRESHOLD } from '@/lib/5s-constants';
@@ -95,8 +95,16 @@ export default function InventarioModal({ open, onClose, sStep, miniStep }: Inve
     quantityUnneeded: 0,
     price: null,
     action: '',
+    zonaOrigen: currentZone?.name || null,
     extra: {},
   });
+
+  // Update zonaOrigen when zone changes
+  useEffect(() => {
+    if (currentZone?.name && !newItem.zonaOrigen) {
+      setNewItem(prev => ({ ...prev, zonaOrigen: currentZone.name }));
+    }
+  }, [currentZone?.name]);
 
   useEffect(() => {
     if (open) {
@@ -105,6 +113,8 @@ export default function InventarioModal({ open, onClose, sStep, miniStep }: Inve
       if (sStep === 2 || sStep === 3 || sStep === 4) loadLayouts();
       // Load custom inventory template if available
       loadCustomInventoryConfig();
+      // Reset zonaOrigen to current zone when opening
+      setNewItem(prev => ({ ...prev, zonaOrigen: currentZone?.name || null }));
     }
   }, [open, sStep]);
 
@@ -364,9 +374,9 @@ export default function InventarioModal({ open, onClose, sStep, miniStep }: Inve
           // Auto-set jaula status only for S1 innecesario items; necesario items go to Activos
           jaulaStatus: isInnecesario ? 'en_jaula' : '',
           jaulaFechaEntrada: isInnecesario ? new Date().toISOString() : null,
-          jaulaOrigen: isInnecesario ? currentZone?.name || currentProject.name || '' : null,
-          zonaOrigen: currentZone?.name || null,
-          zonaDestino: currentZone?.name || null,
+          jaulaOrigen: isInnecesario ? newItem.zonaOrigen || currentZone?.name || currentProject.name || '' : null,
+          zonaOrigen: newItem.zonaOrigen || currentZone?.name || null,
+          zonaDestino: newItem.zonaOrigen || currentZone?.name || null,
         }),
       });
 
@@ -374,7 +384,7 @@ export default function InventarioModal({ open, onClose, sStep, miniStep }: Inve
       if (json.success) {
         toast.success('Elemento agregado correctamente');
         await loadInventory();
-        setNewItem({ name: '', location: '', category: undefined as string | undefined, quantity: 1, quantityNeeded: 0, quantityUnneeded: 0, price: null, action: '', extra: {} });
+        setNewItem({ name: '', location: '', category: undefined as string | undefined, quantity: 1, quantityNeeded: 0, quantityUnneeded: 0, price: null, action: '', zonaOrigen: currentZone?.name || null, extra: {} });
       } else {
         toast.error(`Error al agregar: ${json.error || 'Error desconocido'}`);
       }
@@ -533,6 +543,7 @@ export default function InventarioModal({ open, onClose, sStep, miniStep }: Inve
       const colMap = {
         name: findCol(headerRow, 'elemento', 'nombre', 'punto', 'estándar', 'práctica', 'estandar', 'practica'),
         location: findCol(headerRow, 'ubicación', 'ubicacion', 'ámbito', 'ambito', 'proceso'),
+        zona: findCol(headerRow, 'zona', 'zona origen'),
         category: findCol(headerRow, 'categoría', 'categoria', 'clasificación', 'clasificacion', 'tipo'),
         quantity: findCol(headerRow, 'cantidad', 'total exist', 'total'),
         quantityNeeded: findCol(headerRow, 'necesarios', 'nec.'),
@@ -1147,8 +1158,8 @@ export default function InventarioModal({ open, onClose, sStep, miniStep }: Inve
             <Card>
               <CardContent className="p-4">
                 <div className="space-y-3">
-                  {/* Row 1: Name, Location, (Category for non-S1), Quantity, Price */}
-                  <div className="grid grid-cols-1 gap-3 items-end sm:grid-cols-6">
+                  {/* Row 1: Name, Location, Zona, Category, Quantity, Price */}
+                  <div className="grid grid-cols-1 gap-3 items-end sm:grid-cols-7">
                     <div className="sm:col-span-2">
                       <label className="text-xs font-medium">Elemento *</label>
                       <Input
@@ -1164,6 +1175,33 @@ export default function InventarioModal({ open, onClose, sStep, miniStep }: Inve
                         value={newItem.location}
                         onChange={e => setNewItem(prev => ({ ...prev, location: e.target.value }))}
                       />
+                    </div>
+                    <div>
+                      <label className="text-xs font-medium flex items-center gap-1">
+                        <MapPin className="h-3 w-3" />
+                        Zona
+                      </label>
+                      {currentProject?.zones && currentProject.zones.length > 0 ? (
+                        <Select
+                          value={newItem.zonaOrigen || currentZone?.name || undefined}
+                          onValueChange={val => setNewItem(prev => ({ ...prev, zonaOrigen: val }))}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Seleccionar zona" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {currentProject.zones.map(z => (
+                              <SelectItem key={z.id} value={z.name}>{z.name}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      ) : (
+                        <Input
+                          placeholder="Zona"
+                          value={newItem.zonaOrigen || currentZone?.name || ''}
+                          onChange={e => setNewItem(prev => ({ ...prev, zonaOrigen: e.target.value }))}
+                        />
+                      )}
                     </div>
                     <div>
                       <label className="text-xs font-medium">Categoría *</label>
