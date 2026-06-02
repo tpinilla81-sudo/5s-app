@@ -92,3 +92,23 @@ Stage Summary:
 - StandardsLibrary component fully updated to support fotos_antes category
 - All form fields work: photo upload, photographer name, zone, date, observations
 - App rebuilt and running on PM2 (5s-app, port 3000)
+---
+Task ID: 1
+Agent: main
+Task: Fix "error when opening templates from the board" - templates could be assigned to board but crashed when opened
+
+Work Log:
+- Investigated the board view (Board5S.tsx) by testing with browser automation
+- Clicked S1 Paso 3 (Inventario) and got "Algo salió mal" error
+- Checked browser console errors: found `A <Select.Item /> must have a value prop that is not an empty string`
+- Root cause: S1 Inventario template had `["Jaula", "Eliminar", ""]` as decision options - the empty string caused Radix UI SelectItem to crash
+- Also found the Tablero5S board config used `transform: scale()` which broke click events on cells
+- Fixed the template data via API PUT to remove empty string option
+- Added defensive filtering in InventarioModal.tsx to filter out empty SelectItem options (both categories and select fields)
+- Changed Tablero5S scaling from `transform: scale()` to CSS `zoom` property which preserves click interactivity
+- Built, restarted, and tested all board modals successfully
+
+Stage Summary:
+- Fixed the crash by removing empty string from template options and adding defensive filtering
+- Fixed the board config panel click interactivity by using CSS zoom instead of transform scale
+- All board modals (Inventario, Auditoría, Autoevaluación, Formación+Examen) now work correctly

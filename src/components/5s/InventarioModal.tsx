@@ -1306,7 +1306,7 @@ export default function InventarioModal({ open, onClose, sStep, miniStep }: Inve
                           <SelectValue placeholder="Categoría" />
                         </SelectTrigger>
                         <SelectContent>
-                          {config.categories.map(cat => (
+                          {config.categories.filter(cat => cat.value && cat.value.trim() !== '').map(cat => (
                             <SelectItem key={cat.value} value={cat.value}>
                               {cat.label}
                             </SelectItem>
@@ -1379,7 +1379,7 @@ export default function InventarioModal({ open, onClose, sStep, miniStep }: Inve
                                 <SelectValue placeholder={field.label} />
                               </SelectTrigger>
                               <SelectContent>
-                                {effectiveOptions.map(opt => (
+                                {effectiveOptions.filter(opt => opt && opt.trim() !== '').map(opt => (
                                   <SelectItem key={opt} value={opt}>
                                     {opt}
                                   </SelectItem>
