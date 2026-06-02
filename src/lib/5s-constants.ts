@@ -91,7 +91,7 @@ export const MINI_STEPS: MiniStep[] = [
     icon: 'ClipboardList',
     description: 'Registra los elementos correspondientes a esta S',
     descriptionByS: {
-      1: 'Inventaria SOLO los elementos innecesarios. Incluye ubicación, cantidad, precio (€), estado y decisión (Jaula o Eliminar)',
+      1: 'Inventaria SOLO los elementos innecesarios. Incluye ubicación, cantidad, precio (€), estado y decisión (Jaula, Tirar o Eliminar)',
       2: 'Inventaria SOLO los elementos necesarios: ubicación, frecuencia de uso, cercanía y método de identificación',
       3: 'Inventaria los puntos de suciedad: tipo, nivel, fuente y método de limpieza',
       4: 'Inventaria los estándares implantados: tipo, estado, documentación y cumplimiento. Incluye la Biblioteca de Estándares',
@@ -148,7 +148,7 @@ export interface InventoryConfig {
 export const INVENTORY_CONFIGS: Record<number, InventoryConfig> = {
   1: {
     title: 'Inventario de Innecesarios (Clasificación)',
-    subtitle: 'SEIRI — Clasifica los elementos innecesarios y decide su destino (Jaula/Eliminar)',
+    subtitle: 'SEIRI — Clasifica los elementos innecesarios y decide su destino (Jaula/Tirar/Eliminar)',
     categories: [
       { value: 'innecesario', label: 'Innecesario', color: 'bg-red-100 text-red-800' },
     ],
@@ -156,7 +156,7 @@ export const INVENTORY_CONFIGS: Record<number, InventoryConfig> = {
       // === Campos de Innecesario (rojo) ===
       { key: 'estado', label: 'Estado', type: 'select', options: ['Bueno', 'Regular', 'Malo'] },
       { key: 'frecuenciaUso', label: 'Frecuencia uso', type: 'select', options: ['Diario', 'Semanal', 'Quincenal', 'Mensual', 'Trimestral', 'Anual', 'Nunca'] },
-      { key: 'decision', label: 'Decisión', type: 'select', options: ['Jaula', 'Eliminar'] },
+      { key: 'decision', label: 'Decisión', type: 'select', options: ['Jaula', 'Tirar', 'Eliminar'] },
       // === Datos de Etiqueta (naranja) ===
       { key: 'diasCuarentena', label: 'Días cuarentena', type: 'select', options: ['7', '15', '20', '30', '40', '60', '90'] },
     ],

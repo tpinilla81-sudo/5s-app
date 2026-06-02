@@ -348,6 +348,11 @@ export default function InventarioModal({ open, onClose, sStep, miniStep }: Inve
     if (sStep === 1 && isInnecesario && !extra.decision) {
       extra.decision = 'Jaula';
     }
+    // S1: Determine zona destino based on decision
+    const getZonaDestino = (decision: string | undefined): string => {
+      if (decision === 'Tirar') return 'Residuo';
+      return 'Jaula'; // Default for Jaula, Eliminar, or no decision
+    };
     // S1: Keep all fields — user can fill in both necesario and innecesario fields
     // No field deletion since all fields are now visible and editable
 
@@ -373,7 +378,7 @@ export default function InventarioModal({ open, onClose, sStep, miniStep }: Inve
           jaulaFechaEntrada: isInnecesario ? (newItem.jaulaFechaEntrada || new Date().toISOString()) : null,
           jaulaOrigen: isInnecesario ? newItem.zonaOrigen || currentZone?.name || currentProject.name || '' : null,
           zonaOrigen: newItem.zonaOrigen || currentZone?.name || null,
-          zonaDestino: isInnecesario ? 'Jaula' : (newItem.zonaOrigen || currentZone?.name || null),
+          zonaDestino: isInnecesario ? getZonaDestino(extra.decision as string | undefined) : (newItem.zonaOrigen || currentZone?.name || null),
         }),
       });
 
@@ -597,6 +602,8 @@ export default function InventarioModal({ open, onClose, sStep, miniStep }: Inve
             const lower = decisionVal.toLowerCase();
             if (lower.includes('jaula') || lower.includes('red') || lower.includes('etiqueta')) {
               item.extra!['decision'] = 'Jaula';
+            } else if (lower.includes('tirar') || lower.includes('residuo') || lower.includes('basura')) {
+              item.extra!['decision'] = 'Tirar';
             } else if (lower.includes('elimin')) {
               item.extra!['decision'] = 'Eliminar';
             } else {
@@ -680,7 +687,7 @@ export default function InventarioModal({ open, onClose, sStep, miniStep }: Inve
             jaulaFechaEntrada: sStep === 1 && item.category === 'innecesario' ? new Date().toISOString() : null,
             jaulaOrigen: sStep === 1 && item.category === 'innecesario' ? item.zonaOrigen || currentZone?.name || currentProject!.name || '' : null,
             zonaOrigen: item.zonaOrigen || currentZone?.name || null,
-            zonaDestino: sStep === 1 && item.category === 'innecesario' ? 'Jaula' : (item.zonaOrigen || currentZone?.name || null),
+            zonaDestino: sStep === 1 && item.category === 'innecesario' ? (item.extra?.decision === 'Tirar' ? 'Residuo' : 'Jaula') : (item.zonaOrigen || currentZone?.name || null),
           }))
         ),
       });
@@ -1081,7 +1088,7 @@ export default function InventarioModal({ open, onClose, sStep, miniStep }: Inve
               >
                 <FileSpreadsheet className="h-4 w-4 mr-1" /> Descargar Plantilla Excel
               </a>
-              {/* S1: Print label buttons for innecesario items — linked to the S1 Step 3 template */}
+              {/* S1: Print red label button for innecesario items */}
               {sStep === 1 && items.length > 0 && (() => {
                 // Helper: compute revision date = entry date + diasCuarentena (default 40)
                 const withRevision = (i: InventoryItemData) => {
@@ -1096,30 +1103,16 @@ export default function InventarioModal({ open, onClose, sStep, miniStep }: Inve
                   }
                   return fechaRevision;
                 };
-                const naranjaItems = items
-                  .filter(i => i.category === 'innecesario' && (!i.extra?.decision || i.extra.decision === 'Jaula'))
-                  .map(i => ({
-                    nombre: i.name,
-                    ubicacion: i.location,
-                    cantidad: i.quantityUnneeded || i.quantity,
-                    estado: String(i.extra?.estado ?? ''),
-                    frecuenciaUso: String(i.extra?.frecuenciaUso ?? ''),
-                    decision: 'Revisar Jaula',
-                    categoria: String(i.category ?? 'Innecesario'),
-                    fechaEntrada: i.jaulaFechaEntrada,
-                    fechaRevision: withRevision(i),
-                    diasCuarentena: Number(i.extra?.diasCuarentena ?? 40),
-                    zonaOrigen: i.zonaOrigen || i.jaulaOrigen,
-                  }));
+                // All innecesario items get a red tag
                 const rojaItems = items
-                  .filter(i => i.category === 'innecesario' && i.extra?.decision === 'Eliminar')
+                  .filter(i => i.category === 'innecesario')
                   .map(i => ({
                     nombre: i.name,
                     ubicacion: i.location,
                     cantidad: i.quantityUnneeded || i.quantity,
                     estado: String(i.extra?.estado ?? ''),
                     frecuenciaUso: String(i.extra?.frecuenciaUso ?? ''),
-                    decision: 'Eliminar',
+                    decision: i.extra?.decision === 'Tirar' ? 'Tirar (Residuo)' : i.extra?.decision === 'Eliminar' ? 'Eliminar' : 'Jaula',
                     categoria: String(i.category ?? 'Innecesario'),
                     fechaEntrada: i.jaulaFechaEntrada,
                     fechaRevision: withRevision(i),
@@ -1127,11 +1120,8 @@ export default function InventarioModal({ open, onClose, sStep, miniStep }: Inve
                     zonaOrigen: i.zonaOrigen || i.jaulaOrigen,
                   }));
                 return (
-                  <div className="flex items-center gap-2 ml-2 pl-2 border-l border-orange-300">
-                    <span className="text-[10px] text-muted-foreground font-medium">Etiquetas Plantilla:</span>
-                    {naranjaItems.length > 0 && (
-                      <TagPrinter items={naranjaItems} type="naranja" />
-                    )}
+                  <div className="flex items-center gap-2 ml-2 pl-2 border-l border-red-300">
+                    <span className="text-[10px] text-muted-foreground font-medium">Etiquetas:</span>
                     {rojaItems.length > 0 && (
                       <TagPrinter items={rojaItems} type="roja" />
                     )}
@@ -1364,7 +1354,7 @@ export default function InventarioModal({ open, onClose, sStep, miniStep }: Inve
                         })}
                         <div className="col-span-full flex items-center gap-1">
                           <div className="w-2 h-2 rounded-full bg-red-400" />
-                          <span className="text-[9px] text-red-600 font-medium">Innecesarios → van a la Jaula (etiqueta roja/naranja)</span>
+                          <span className="text-[9px] text-red-600 font-medium">Innecesarios → Decisión: Jaula/Tirar/Eliminar (etiqueta roja)</span>
                         </div>
                       </div>
 
@@ -1431,7 +1421,7 @@ export default function InventarioModal({ open, onClose, sStep, miniStep }: Inve
                         <div className="flex items-end">
                           <div className="flex items-center gap-1">
                             <div className="w-2 h-2 rounded-full bg-orange-500" />
-                            <span className="text-[9px] text-orange-600 font-medium">Datos para etiqueta roja/naranja</span>
+                            <span className="text-[9px] text-orange-600 font-medium">Datos para etiqueta roja</span>
                           </div>
                         </div>
                       </div>
@@ -1789,10 +1779,13 @@ export default function InventarioModal({ open, onClose, sStep, miniStep }: Inve
                                   value={item.extra?.decision ? String(item.extra.decision) : undefined}
                                   onValueChange={val => {
                                     handleUpdateExtra(item.id!, 'decision', val);
-                                    // Also update jaula status based on decision
+                                    // Also update jaula status and zona destino based on decision
                                     const isInn = item.category === 'innecesario';
                                     if (isInn) {
                                       handleUpdateField(item.id!, 'action', val);
+                                      // Update zona destino: Tirar → Residuo, otherwise → Jaula
+                                      const newDestino = val === 'Tirar' ? 'Residuo' : 'Jaula';
+                                      handleUpdateField(item.id!, 'zonaDestino', newDestino);
                                     }
                                   }}
                                 >
@@ -1802,12 +1795,13 @@ export default function InventarioModal({ open, onClose, sStep, miniStep }: Inve
                                   <SelectContent>
                                     <SelectItem value="_clear_">—</SelectItem>
                                     <SelectItem value="Jaula">Jaula</SelectItem>
+                                    <SelectItem value="Tirar">Tirar</SelectItem>
                                     <SelectItem value="Eliminar">Eliminar</SelectItem>
                                   </SelectContent>
                                 </Select>
                               ) : (
                                 item.extra?.decision ? (
-                                  <Badge className={item.extra.decision === 'Jaula' ? 'bg-orange-100 text-orange-800' : item.extra.decision === 'Eliminar' ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-800'}>
+                                  <Badge className={item.extra.decision === 'Jaula' ? 'bg-orange-100 text-orange-800' : item.extra.decision === 'Tirar' ? 'bg-yellow-100 text-yellow-800' : item.extra.decision === 'Eliminar' ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-800'}>
                                     {String(item.extra.decision)}
                                   </Badge>
                                 ) : (
@@ -1876,7 +1870,7 @@ export default function InventarioModal({ open, onClose, sStep, miniStep }: Inve
                         {/* Z. Destino */}
                         <TableCell className="text-xs">
                           {sStep === 1 && item.category === 'innecesario' ? (
-                            <span className="text-red-600 font-medium">Jaula</span>
+                            <span className={item.extra?.decision === 'Tirar' ? 'text-yellow-700 font-medium' : 'text-red-600 font-medium'}>{item.extra?.decision === 'Tirar' ? 'Residuo' : 'Jaula'}</span>
                           ) : canEdit ? (
                             <Select
                               value={item.zonaDestino || undefined}

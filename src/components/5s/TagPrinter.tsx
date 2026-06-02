@@ -49,7 +49,7 @@ export default function TagPrinter({ items, type }: TagPrinterProps) {
   const color = isRoja ? '#DC2626' : '#EA580C'
   const bgColor = isRoja ? '#FEF2F2' : '#FFF7ED'
   const borderColor = isRoja ? '#FCA5A5' : '#FDBA74'
-  const footerText = isRoja ? 'Etiqueta Roja — Elemento Innecesario (Eliminar)' : 'Etiqueta Naranja — Revisar en Jaula (Decidir en S2)'
+  const footerText = isRoja ? 'Etiqueta Roja — Elemento Innecesario' : 'Etiqueta Naranja — Revisar en Jaula (Decidir en S2)'
 
   const handlePrint = () => {
     const tagsHtml = items.map(item => {
@@ -129,8 +129,8 @@ export default function TagPrinter({ items, type }: TagPrinterProps) {
             color: #991B1B;
             text-align: center;
           ">
-            Elemento innecesario — Eliminar de la zona.
-            <br/>Si no se elimina antes de la fecha de revisión, se procederá a su baja.
+            Elemento innecesario — ${item.decision === 'Tirar (Residuo)' ? 'Tirar a residuo.' : item.decision === 'Eliminar' ? 'Eliminar de la zona.' : 'Trasladar a la Jaula.'}
+            <br/>Si no se actúa antes de la fecha de revisión, se procederá a su baja.
           </div>
           `}
         </div>
