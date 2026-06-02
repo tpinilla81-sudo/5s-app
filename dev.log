@@ -315,3 +315,8 @@ Read more: https://nextjs.org/docs/app/api-reference/config/next-config-js/allow
  GET / 200 in 364ms (compile: 73ms, proxy.ts: 2ms, render: 289ms)
  GET /api/notifications?userId=cmpo4w07k0000mg034fx4pt72&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 13ms (compile: 3ms, proxy.ts: 4ms, render: 6ms)
  GET / 200 in 46ms (compile: 5ms, proxy.ts: 4ms, render: 37ms)
+ GET / 200 in 44ms (compile: 4ms, proxy.ts: 3ms, render: 37ms)
+ GET /api/notifications?userId=cmpo4w07k0000mg034fx4pt72&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 14ms (compile: 4ms, proxy.ts: 4ms, render: 6ms)
+ GET /api/notifications?userId=cmpo4w07k0000mg034fx4pt72&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 17ms (compile: 3ms, proxy.ts: 6ms, render: 8ms)
+ GET /api/notifications?userId=cmpo4w07k0000mg034fx4pt72&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 9ms (compile: 1847µs, proxy.ts: 2ms, render: 5ms)
+ GET / 200 in 52ms (compile: 4ms, proxy.ts: 3ms, render: 45ms)
