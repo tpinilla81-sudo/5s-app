@@ -606,7 +606,7 @@ export default function HomePage() {
                       </div>
                     )}
                     {currentZone && (
-                      <div className="w-full max-w-[480px] mx-auto flex-shrink-0">
+                      <div className="w-full flex-1 min-h-0 flex items-center justify-center px-2">
                         <Board5S onSStepClick={handleSStepClick} />
                       </div>
                     )}
