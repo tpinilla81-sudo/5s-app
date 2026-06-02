@@ -15,7 +15,7 @@ import {
   Plus, Trash2, Edit3, Save, Loader2, BookOpen, FileCheck, ClipboardCheck, Camera,
   ChevronDown, ChevronUp, AlertTriangle, Copy, RotateCcw, X,
   Eye, Code, GripVertical, Download, Upload, ClipboardList, Award,
-
+  ClipboardPaste, ClipboardCopy, Check,
 } from 'lucide-react'
 import { S_STEPS, AUDIT_CHECKLISTS, EXAM_PASS_THRESHOLD, SELF_EVAL_THRESHOLD, AUDIT_PASS_THRESHOLD, INVENTORY_CONFIGS } from '@/lib/5s-constants'
 
@@ -1226,9 +1226,23 @@ export default function TemplateManager() {
     finally { setIsSaving(false) }
   }
 
+  // Full template export format (includes metadata + content)
+  const exportTemplateData = (template: TemplateData) => ({
+    _5sTemplateExport: true,
+    version: 1,
+    type: template.type,
+    sStep: template.sStep,
+    miniStep: template.miniStep,
+    title: template.title,
+    description: template.description,
+    content: typeof template.content === 'string' ? JSON.parse(template.content) : template.content,
+    notaMinima: template.notaMinima,
+    active: template.active,
+  })
+
   const handleDownload = (template: TemplateData) => {
     try {
-      const data = typeof template.content === 'string' ? JSON.parse(template.content) : template.content
+      const data = exportTemplateData(template)
       const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
@@ -1238,6 +1252,91 @@ export default function TemplateManager() {
       URL.revokeObjectURL(url)
     } catch {
       alert('Error al descargar la plantilla')
+    }
+  }
+
+  const [copiedId, setCopiedId] = useState<string | null>(null)
+
+  const handleCopyTemplate = async (template: TemplateData) => {
+    try {
+      const data = exportTemplateData(template)
+      await navigator.clipboard.writeText(JSON.stringify(data, null, 2))
+      setCopiedId(template.id)
+      setTimeout(() => setCopiedId(null), 2000)
+    } catch {
+      // Fallback: create temporary textarea
+      try {
+        const data = exportTemplateData(template)
+        const text = JSON.stringify(data, null, 2)
+        const textarea = document.createElement('textarea')
+        textarea.value = text
+        textarea.style.position = 'fixed'
+        textarea.style.left = '-9999px'
+        document.body.appendChild(textarea)
+        textarea.select()
+        document.execCommand('copy')
+        document.body.removeChild(textarea)
+        setCopiedId(template.id)
+        setTimeout(() => setCopiedId(null), 2000)
+      } catch {
+        alert('No se pudo copiar al portapapeles')
+      }
+    }
+  }
+
+  const importTemplateData = (data: any) => {
+    // Check if it's a full export with metadata
+    if (data && data._5sTemplateExport) {
+      setFormType(data.type || 'formacion')
+      setFormSStep(data.sStep || 1)
+      setFormMiniStep(data.miniStep || 3)
+      setFormTitle(data.title ? `${data.title} (copia)` : '')
+      setFormDescription(data.description || '')
+      setFormContent(JSON.stringify(data.content, null, 2))
+      const aplicaNota = data.type === 'examen' || data.type === 'autoevaluacion' || data.type === 'auditoria'
+      setNotaMinimaAplica(aplicaNota)
+      setFormNotaMinima(data.notaMinima != null ? data.notaMinima : (aplicaNota ? (data.type === 'examen' ? EXAM_PASS_THRESHOLD : data.type === 'autoevaluacion' ? SELF_EVAL_THRESHOLD : AUDIT_PASS_THRESHOLD) : null))
+      setFormActive(data.active !== false)
+      setIsCreating(true)
+      setEditorMode('visual')
+    } else {
+      // Legacy: just content, only set formContent
+      setFormContent(JSON.stringify(data, null, 2))
+    }
+  }
+
+  const handlePasteTemplate = async () => {
+    try {
+      const text = await navigator.clipboard.readText()
+      const data = JSON.parse(text)
+      importTemplateData(data)
+    } catch {
+      alert('No se pudo leer del portapapeles. Asegúrate de que hay una plantilla copiada (formato JSON válido).')
+    }
+  }
+
+  const handleDuplicateTemplate = async (template: TemplateData) => {
+    try {
+      const payload = {
+        type: template.type,
+        sStep: template.sStep,
+        miniStep: template.miniStep,
+        title: `${template.title} (copia)`,
+        description: template.description,
+        content: template.content,
+        notaMinima: template.notaMinima,
+        active: template.active,
+      }
+      const res = await fetch('/api/templates', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      })
+      const data = await res.json()
+      if (!data.success) { alert('Error: ' + data.error); return }
+      fetchTemplates()
+    } catch {
+      alert('Error al duplicar la plantilla')
     }
   }
 
@@ -1252,7 +1351,7 @@ export default function TemplateManager() {
       reader.onload = (ev) => {
         try {
           const data = JSON.parse(ev.target?.result as string)
-          setFormContent(JSON.stringify(data, null, 2))
+          importTemplateData(data)
         } catch {
           alert('El archivo JSON no es válido')
         }
@@ -1308,11 +1407,18 @@ export default function TemplateManager() {
           {(() => { const Icon = tabConfig.icon; return <Icon className="h-5 w-5 text-green-600" /> })()}
           Plantillas de {tabConfig.label}
         </h2>
-        <Button variant="outline" size="sm" onClick={handleSeedDefaults} disabled={isSaving}
-          className="gap-1 text-xs border-green-300 text-green-600 hover:bg-green-50">
-          <RotateCcw className="h-3.5 w-3.5" />
-          Crear plantillas por defecto
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" onClick={handlePasteTemplate}
+            className="gap-1 text-xs border-purple-300 text-purple-600 hover:bg-purple-50">
+            <ClipboardPaste className="h-3.5 w-3.5" />
+            Pegar plantilla
+          </Button>
+          <Button variant="outline" size="sm" onClick={handleSeedDefaults} disabled={isSaving}
+            className="gap-1 text-xs border-green-300 text-green-600 hover:bg-green-50">
+            <RotateCcw className="h-3.5 w-3.5" />
+            Crear plantillas por defecto
+          </Button>
+        </div>
       </div>
 
       {/* S-Step cards — scrollable */}
@@ -1423,6 +1529,14 @@ export default function TemplateManager() {
                                   )}
                                 </div>
                                 <div className="flex items-center gap-1 shrink-0 ml-2">
+                                  <Button variant="ghost" size="sm" onClick={() => handleCopyTemplate(tpl)}
+                                    className="h-7 w-7 p-0 text-purple-500 hover:text-purple-700 hover:bg-purple-50" title="Copiar al portapapeles">
+                                    {copiedId === tpl.id ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+                                  </Button>
+                                  <Button variant="ghost" size="sm" onClick={() => handleDuplicateTemplate(tpl)}
+                                    className="h-7 w-7 p-0 text-amber-500 hover:text-amber-700 hover:bg-amber-50" title="Duplicar plantilla (crea copia directa)">
+                                    <ClipboardCopy className="h-3.5 w-3.5" />
+                                  </Button>
                                   <Button variant="ghost" size="sm" onClick={() => handleDownload(tpl)}
                                     className="h-7 w-7 p-0 text-gray-500 hover:text-gray-700" title="Descargar JSON">
                                     <Download className="h-3.5 w-3.5" />
