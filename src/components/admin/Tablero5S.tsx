@@ -134,30 +134,25 @@ export default function Tablero5S() {
 
   // ─── Responsive scaling ───────────────────────────────────────────────
   const boardContainerRef = useRef<HTMLDivElement>(null)
-  const boardInnerRef = useRef<HTMLDivElement>(null)
-  const [scale, setScale] = useState(1)
-  const [scaledHeight, setScaledHeight] = useState<number | undefined>(undefined)
+  const [zoom, setZoom] = useState(1)
 
   const boardVisible = !!(selectedConfigId && configs.length > 0 && !isLoading)
 
   useLayoutEffect(() => {
     const container = boardContainerRef.current
-    const inner = boardInnerRef.current
-    if (!container || !inner) return
+    if (!container) return
 
     const update = () => {
       const containerWidth = container.clientWidth
       if (containerWidth === 0) return
-      const newScale = containerWidth / REFERENCE_WIDTH
-      setScale(newScale)
-      setScaledHeight(inner.offsetHeight * newScale)
+      const newZoom = containerWidth / REFERENCE_WIDTH
+      setZoom(newZoom)
     }
 
     update()
 
     const ro = new ResizeObserver(update)
     ro.observe(container)
-    ro.observe(inner)
 
     return () => ro.disconnect()
   }, [boardVisible])
@@ -489,15 +484,12 @@ export default function Tablero5S() {
           <div
             ref={boardContainerRef}
             className="w-full overflow-hidden"
-            style={scaledHeight !== undefined ? { height: scaledHeight } : undefined}
           >
             <div
-              ref={boardInnerRef}
               style={{
+                zoom: zoom,
                 width: REFERENCE_WIDTH,
-                transform: `scale(${scale})`,
                 transformOrigin: 'top left',
-                willChange: 'transform',
               }}
             >
               {/* Column headers */}
