@@ -6,9 +6,9 @@
  * and when a zone loads its tablero, it uses the assigned board's configuration.
  *
  * Architecture:
- * - Board: A named configuration (e.g., "Tablero Genérico", "Tablero Mantenimiento")
- * - BoardSlotTemplate/BoardSlotStandard: Linked to a Board (not directly to project/zone)
- * - Zone.boardId: Each zone is assigned a board
+ * - BoardConfiguration: A named configuration (e.g., "Tablero Genérico", "Tablero Mantenimiento")
+ * - BoardSlotTemplate/BoardSlotStandard: Linked to a BoardConfiguration (not directly to project/zone)
+ * - Zone.boardConfigId: Each zone is assigned a board configuration
  * - Default board: The generic board used by all zones without a specific assignment
  */
 
@@ -17,7 +17,7 @@ export interface SlotTemplateItem {
   sStep: number
   miniStep: number
   templateId: string
-  boardId: string
+  boardConfigId: string
   order: number
   template: {
     id: string
@@ -37,7 +37,7 @@ export interface SlotStandardItem {
   sStep: number
   miniStep: number
   standardId: string
-  boardId: string
+  boardConfigId: string
   order: number
   standard: {
     id: string
@@ -61,7 +61,7 @@ export interface BoardInfo {
   sector: string | null
 }
 
-// In-memory cache keyed by boardId
+// In-memory cache keyed by boardConfigId
 const cacheMap = new Map<string, {
   templates: SlotTemplateItem[]
   standards: SlotStandardItem[]
@@ -70,20 +70,20 @@ const cacheMap = new Map<string, {
 }>()
 const CACHE_TTL = 30_000 // 30 seconds
 
-function getCacheKey(boardId?: string | null, zoneId?: string | null): string {
-  return `board:${boardId || 'none'}-zone:${zoneId || 'none'}`
+function getCacheKey(boardConfigId?: string | null, zoneId?: string | null): string {
+  return `board:${boardConfigId || 'none'}-zone:${zoneId || 'none'}`
 }
 
 /**
  * Fetch board slot assignments from the API.
- * Results are cached for 30 seconds per boardId/zoneId combo.
+ * Results are cached for 30 seconds per boardConfigId/zoneId combo.
  */
-async function fetchAllData(boardId?: string | null, zoneId?: string | null): Promise<{
+async function fetchAllData(boardConfigId?: string | null, zoneId?: string | null): Promise<{
   templates: SlotTemplateItem[]
   standards: SlotStandardItem[]
   boardInfo: BoardInfo | null
 }> {
-  const key = getCacheKey(boardId, zoneId)
+  const key = getCacheKey(boardConfigId, zoneId)
   const now = Date.now()
   const cached = cacheMap.get(key)
   if (cached && now - cached.time < CACHE_TTL) {
@@ -92,7 +92,7 @@ async function fetchAllData(boardId?: string | null, zoneId?: string | null): Pr
 
   try {
     const params = new URLSearchParams()
-    if (boardId) params.set('boardId', boardId)
+    if (boardConfigId) params.set('boardConfigId', boardConfigId)
     if (zoneId) params.set('zoneId', zoneId)
 
     const res = await fetch(`/api/board-slots?${params.toString()}`)
@@ -100,8 +100,8 @@ async function fetchAllData(boardId?: string | null, zoneId?: string | null): Pr
     if (data.success) {
       const templates = data.data?.templates || []
       const standards = data.data?.standards || []
-      const boardInfo: BoardInfo | null = data.data?.boardId ? {
-        id: data.data.boardId,
+      const boardInfo: BoardInfo | null = data.data?.boardConfigId ? {
+        id: data.data.boardConfigId,
         name: data.data.boardName,
         isDefault: data.data.boardIsDefault,
         sector: data.data.boardSector,
@@ -120,8 +120,8 @@ async function fetchAllData(boardId?: string | null, zoneId?: string | null): Pr
 /**
  * Get all assigned template IDs for a specific S×Paso position.
  */
-export async function getAssignedTemplateIds(sStep: number, miniStep: number, boardId?: string | null, zoneId?: string | null): Promise<string[]> {
-  const { templates } = await fetchAllData(boardId, zoneId)
+export async function getAssignedTemplateIds(sStep: number, miniStep: number, boardConfigId?: string | null, zoneId?: string | null): Promise<string[]> {
+  const { templates } = await fetchAllData(boardConfigId, zoneId)
   return templates
     .filter(s => s.sStep === sStep && s.miniStep === miniStep)
     .sort((a, b) => a.order - b.order)
@@ -131,16 +131,16 @@ export async function getAssignedTemplateIds(sStep: number, miniStep: number, bo
 /**
  * Get the first assigned template ID for a specific S×Paso position (backward compat).
  */
-export async function getAssignedTemplateId(sStep: number, miniStep: number, boardId?: string | null, zoneId?: string | null): Promise<string | null> {
-  const ids = await getAssignedTemplateIds(sStep, miniStep, boardId, zoneId)
+export async function getAssignedTemplateId(sStep: number, miniStep: number, boardConfigId?: string | null, zoneId?: string | null): Promise<string | null> {
+  const ids = await getAssignedTemplateIds(sStep, miniStep, boardConfigId, zoneId)
   return ids.length > 0 ? ids[0] : null
 }
 
 /**
  * Get all assigned standard IDs for a specific S×Paso position.
  */
-export async function getAssignedStandardIds(sStep: number, miniStep: number, boardId?: string | null, zoneId?: string | null): Promise<string[]> {
-  const { standards } = await fetchAllData(boardId, zoneId)
+export async function getAssignedStandardIds(sStep: number, miniStep: number, boardConfigId?: string | null, zoneId?: string | null): Promise<string[]> {
+  const { standards } = await fetchAllData(boardConfigId, zoneId)
   return standards
     .filter(s => s.sStep === sStep && s.miniStep === miniStep)
     .map(s => s.standardId)
@@ -149,8 +149,8 @@ export async function getAssignedStandardIds(sStep: number, miniStep: number, bo
 /**
  * Get the full board slot assignment for a specific S×Paso position.
  */
-export async function getBoardSlot(sStep: number, miniStep: number, boardId?: string | null, zoneId?: string | null): Promise<BoardSlotAssignment> {
-  const { templates, standards } = await fetchAllData(boardId, zoneId)
+export async function getBoardSlot(sStep: number, miniStep: number, boardConfigId?: string | null, zoneId?: string | null): Promise<BoardSlotAssignment> {
+  const { templates, standards } = await fetchAllData(boardConfigId, zoneId)
   return {
     sStep,
     miniStep,
@@ -163,8 +163,8 @@ export async function getBoardSlot(sStep: number, miniStep: number, boardId?: st
  * Load the assigned template content for a specific S×Paso position.
  * Returns the FIRST assigned template's content.
  */
-export async function loadAssignedTemplate<T = any>(sStep: number, miniStep: number, boardId?: string | null, zoneId?: string | null): Promise<{ content: T; notaMinima: number | null; templateId: string } | null> {
-  const templateId = await getAssignedTemplateId(sStep, miniStep, boardId, zoneId)
+export async function loadAssignedTemplate<T = any>(sStep: number, miniStep: number, boardConfigId?: string | null, zoneId?: string | null): Promise<{ content: T; notaMinima: number | null; templateId: string } | null> {
+  const templateId = await getAssignedTemplateId(sStep, miniStep, boardConfigId, zoneId)
   if (!templateId) return null
 
   try {
@@ -190,8 +190,8 @@ export async function loadAssignedTemplate<T = any>(sStep: number, miniStep: num
 /**
  * Load ALL assigned template contents for a specific S×Paso position.
  */
-export async function loadAllAssignedTemplates<T = any>(sStep: number, miniStep: number, boardId?: string | null, zoneId?: string | null): Promise<Array<{ content: T; notaMinima: number | null; templateId: string; type: string; title: string }>> {
-  const { templates } = await getBoardSlot(sStep, miniStep, boardId, zoneId)
+export async function loadAllAssignedTemplates<T = any>(sStep: number, miniStep: number, boardConfigId?: string | null, zoneId?: string | null): Promise<Array<{ content: T; notaMinima: number | null; templateId: string; type: string; title: string }>> {
+  const { templates } = await getBoardSlot(sStep, miniStep, boardConfigId, zoneId)
   if (templates.length === 0) return []
 
   try {
@@ -223,16 +223,16 @@ export async function loadAllAssignedTemplates<T = any>(sStep: number, miniStep:
 /**
  * Fetch all board slot assignments (for components that need all data at once).
  */
-export async function fetchBoardSlots(boardId?: string | null, zoneId?: string | null): Promise<{ templates: SlotTemplateItem[]; standards: SlotStandardItem[]; boardInfo: BoardInfo | null }> {
-  return fetchAllData(boardId, zoneId)
+export async function fetchBoardSlots(boardConfigId?: string | null, zoneId?: string | null): Promise<{ templates: SlotTemplateItem[]; standards: SlotStandardItem[]; boardInfo: BoardInfo | null }> {
+  return fetchAllData(boardConfigId, zoneId)
 }
 
 /**
  * Invalidate the cache (e.g., after a slot assignment changes).
  */
-export function invalidateBoardSlotsCache(boardId?: string | null, zoneId?: string | null) {
-  if (boardId || zoneId) {
-    cacheMap.delete(getCacheKey(boardId, zoneId))
+export function invalidateBoardSlotsCache(boardConfigId?: string | null, zoneId?: string | null) {
+  if (boardConfigId || zoneId) {
+    cacheMap.delete(getCacheKey(boardConfigId, zoneId))
   } else {
     cacheMap.clear()
   }

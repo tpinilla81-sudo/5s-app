@@ -2,13 +2,11 @@ import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 
 const slotInclude = {
-  template: { select: { id: true, type: true, title: true, sStep: true, miniStep: true } },
-  standard: { select: { id: true, title: true, sStep: true, category: true } },
-  slotTemplates: {
+  templates: {
     include: { template: { select: { id: true, type: true, title: true, sStep: true, miniStep: true } } },
     orderBy: { sortOrder: 'asc' },
   },
-  slotStandards: {
+  standards: {
     include: { standard: { select: { id: true, title: true, sStep: true, category: true } } },
     orderBy: { sortOrder: 'asc' },
   },
@@ -20,16 +18,8 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     const companyId = searchParams.get('companyId') || undefined
 
-    const where: Record<string, unknown> = {}
-    if (companyId) {
-      where.OR = [
-        { companyId },
-        { companyId: null }, // Include global boards
-      ]
-    }
-
-    const boards = await db.board.findMany({
-      where,
+    // BoardConfiguration doesn't have companyId in current schema, fetch all
+    const boards = await db.boardConfiguration.findMany({
       include: {
         slots: {
           include: slotInclude,
@@ -51,7 +41,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { name, description, isDefault, companyId, copyFromBoardId } = body
+    const { name, description, isDefault, copyFromBoardId } = body
 
     if (!name?.trim()) {
       return NextResponse.json({ success: false, error: 'El nombre es obligatorio' }, { status: 400 })
@@ -59,28 +49,27 @@ export async function POST(request: NextRequest) {
 
     // If this is set as default, unset any other default
     if (isDefault) {
-      await db.board.updateMany({
+      await db.boardConfiguration.updateMany({
         where: { isDefault: true },
         data: { isDefault: false },
       })
     }
 
-    const board = await db.board.create({
+    const board = await db.boardConfiguration.create({
       data: {
         name: name.trim(),
         description: description?.trim() || null,
         isDefault: isDefault || false,
-        companyId: companyId || null,
       },
     })
 
     // If copying from another board, clone all slots including junction tables
     if (copyFromBoardId) {
       const sourceSlots = await db.boardSlot.findMany({
-        where: { boardId: copyFromBoardId },
+        where: { boardConfigId: copyFromBoardId },
         include: {
-          slotTemplates: true,
-          slotStandards: true,
+          templates: true,
+          standards: true,
         },
       })
       if (sourceSlots.length > 0) {
@@ -89,25 +78,23 @@ export async function POST(request: NextRequest) {
             data: {
               sStep: slot.sStep,
               miniStep: slot.miniStep,
-              templateId: slot.templateId,
-              standardId: slot.standardId,
-              boardId: board.id,
+              boardConfigId: board.id,
             },
           })
           // Clone junction tables
-          if (slot.slotTemplates.length > 0) {
+          if (slot.templates.length > 0) {
             await db.boardSlotTemplate.createMany({
-              data: slot.slotTemplates.map(st => ({
-                boardSlotId: newSlot.id,
+              data: slot.templates.map(st => ({
+                slotId: newSlot.id,
                 templateId: st.templateId,
                 sortOrder: st.sortOrder,
               })),
             })
           }
-          if (slot.slotStandards.length > 0) {
+          if (slot.standards.length > 0) {
             await db.boardSlotStandard.createMany({
-              data: slot.slotStandards.map(ss => ({
-                boardSlotId: newSlot.id,
+              data: slot.standards.map(ss => ({
+                slotId: newSlot.id,
                 standardId: ss.standardId,
                 sortOrder: ss.sortOrder,
               })),
@@ -118,7 +105,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Fetch the complete board with slots
-    const fullBoard = await db.board.findUnique({
+    const fullBoard = await db.boardConfiguration.findUnique({
       where: { id: board.id },
       include: {
         slots: {

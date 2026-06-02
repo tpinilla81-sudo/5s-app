@@ -8,13 +8,19 @@ export async function GET(
 ) {
   try {
     const { id } = await params
-    const board = await db.board.findUnique({
+    const board = await db.boardConfiguration.findUnique({
       where: { id },
       include: {
         slots: {
           include: {
-            template: { select: { id: true, type: true, title: true, sStep: true, miniStep: true } },
-            standard: { select: { id: true, title: true, sStep: true, category: true } },
+            templates: {
+              include: { template: { select: { id: true, type: true, title: true, sStep: true, miniStep: true } } },
+              orderBy: { sortOrder: 'asc' },
+            },
+            standards: {
+              include: { standard: { select: { id: true, title: true, sStep: true, category: true } } },
+              orderBy: { sortOrder: 'asc' },
+            },
           },
           orderBy: [{ sStep: 'asc' }, { miniStep: 'asc' }],
         },
@@ -41,22 +47,21 @@ export async function PUT(
   try {
     const { id } = await params
     const body = await request.json()
-    const { name, description, isDefault, companyId } = body
+    const { name, description, isDefault } = body
 
     if (isDefault) {
-      await db.board.updateMany({
+      await db.boardConfiguration.updateMany({
         where: { isDefault: true, id: { not: id } },
         data: { isDefault: false },
       })
     }
 
-    const board = await db.board.update({
+    const board = await db.boardConfiguration.update({
       where: { id },
       data: {
         ...(name !== undefined && { name: name.trim() }),
         ...(description !== undefined && { description: description?.trim() || null }),
         ...(isDefault !== undefined && { isDefault }),
-        ...(companyId !== undefined && { companyId: companyId || null }),
       },
     })
 
@@ -75,7 +80,7 @@ export async function DELETE(
   try {
     const { id } = await params
 
-    const board = await db.board.findUnique({ where: { id } })
+    const board = await db.boardConfiguration.findUnique({ where: { id } })
     if (!board) {
       return NextResponse.json({ success: false, error: 'Tablero no encontrado' }, { status: 404 })
     }
@@ -83,12 +88,13 @@ export async function DELETE(
       return NextResponse.json({ success: false, error: 'No se puede eliminar el tablero por defecto' }, { status: 400 })
     }
 
+    // Unassign zones from this board
     await db.zone.updateMany({
-      where: { boardId: id },
-      data: { boardId: null },
+      where: { boardConfigId: id },
+      data: { boardConfigId: null },
     })
 
-    await db.board.delete({ where: { id } })
+    await db.boardConfiguration.delete({ where: { id } })
 
     return NextResponse.json({ success: true })
   } catch (error) {

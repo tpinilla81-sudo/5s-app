@@ -17,17 +17,17 @@ export async function POST(
 
     // Check if already exists
     const existing = await db.boardSlotTemplate.findUnique({
-      where: { boardSlotId_templateId: { boardSlotId: slotId, templateId } }
+      where: { slotId_templateId: { slotId, templateId } }
     })
     if (existing) {
       return NextResponse.json({ success: true, data: existing, message: 'Ya estaba asignada' })
     }
 
     // Get next sort order
-    const count = await db.boardSlotTemplate.count({ where: { boardSlotId: slotId } })
+    const count = await db.boardSlotTemplate.count({ where: { slotId } })
 
     const slotTemplate = await db.boardSlotTemplate.create({
-      data: { boardSlotId: slotId, templateId, sortOrder: count },
+      data: { slotId, templateId, sortOrder: count },
       include: { template: { select: { id: true, type: true, title: true, sStep: true, miniStep: true } } },
     })
 
@@ -53,7 +53,7 @@ export async function DELETE(
     }
 
     await db.boardSlotTemplate.delete({
-      where: { boardSlotId_templateId: { boardSlotId: slotId, templateId } }
+      where: { slotId_templateId: { slotId, templateId } }
     })
 
     return NextResponse.json({ success: true })
