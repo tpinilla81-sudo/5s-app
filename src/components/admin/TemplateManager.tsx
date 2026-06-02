@@ -1070,7 +1070,7 @@ export default function TemplateManager() {
     setEditingTemplate(null)
     setIsCreating(false)
     setEditorMode('visual')
-    setIsFullscreen(false)
+    // resetForm complete
   }
 
   const startCreate = (sStep: number, type: string, miniStep: number = 3) => {
