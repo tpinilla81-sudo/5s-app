@@ -826,3 +826,152 @@ Read more: https://nextjs.org/docs/app/api-reference/config/next-config-js/allow
  GET /api/notifications?userId=cmpo4w07k0000mg034fx4pt72&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 13ms (compile: 4ms, proxy.ts: 4ms, render: 5ms)
  GET /api/inventory?jaulaOnly=true&projectId=cmpok8xii00rjmgfj1nn1hiuh&zoneId=cmpok8xii00rkmgfjvv2ri8f8 200 in 11ms (compile: 2ms, proxy.ts: 2ms, render: 6ms)
  GET / 200 in 42ms (compile: 5ms, proxy.ts: 3ms, render: 34ms)
+ GET / 200 in 52ms (compile: 6ms, proxy.ts: 4ms, render: 42ms)
+ GET /api/notifications?userId=cmpo4w07k0000mg034fx4pt72&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 10ms (compile: 2ms, proxy.ts: 3ms, render: 5ms)
+ GET /api/notifications?userId=cmpo4w07k0000mg034fx4pt72&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 9ms (compile: 1712µs, proxy.ts: 2ms, render: 5ms)
+ GET /api/notifications?userId=cmpo4w07k0000mg034fx4pt72&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 9ms (compile: 3ms, proxy.ts: 2ms, render: 4ms)
+ GET /api/notifications?userId=cmpo4w07k0000mg034fx4pt72&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 9ms (compile: 1815µs, proxy.ts: 3ms, render: 4ms)
+ GET /api/notifications?userId=cmpo4w07k0000mg034fx4pt72&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 9ms (compile: 1981µs, proxy.ts: 2ms, render: 4ms)
+ GET /api/notifications?userId=cmpo4w07k0000mg034fx4pt72&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 8ms (compile: 3ms, proxy.ts: 2ms, render: 3ms)
+ GET /api/notifications?userId=cmpo4w07k0000mg034fx4pt72&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 11ms (compile: 2ms, proxy.ts: 4ms, render: 5ms)
+ GET /api/notifications?userId=cmpo4w07k0000mg034fx4pt72&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 9ms (compile: 1959µs, proxy.ts: 2ms, render: 5ms)
+ GET /api/notifications?userId=cmpo4w07k0000mg034fx4pt72&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 12ms (compile: 4ms, proxy.ts: 4ms, render: 4ms)
+ GET /api/notifications?userId=cmpo4w07k0000mg034fx4pt72&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 8ms (compile: 1843µs, proxy.ts: 2ms, render: 4ms)
+ GET /api/notifications?userId=cmpo4w07k0000mg034fx4pt72&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 10ms (compile: 3ms, proxy.ts: 2ms, render: 4ms)
+ GET / 200 in 48ms (compile: 4ms, proxy.ts: 4ms, render: 40ms)
+ GET / 200 in 40ms (compile: 4ms, proxy.ts: 2ms, render: 34ms)
+ GET /api/notifications?userId=cmpo4w07k0000mg034fx4pt72&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 14ms (compile: 5ms, proxy.ts: 4ms, render: 5ms)
+ GET /api/auth 200 in 8ms (compile: 2ms, proxy.ts: 2ms, render: 4ms)
+ GET / 200 in 34ms (compile: 3ms, proxy.ts: 3ms, render: 29ms)
+ GET /api/auth 200 in 9ms (compile: 1551µs, proxy.ts: 2ms, render: 5ms)
+ GET /api/permissions 200 in 12ms (compile: 2ms, proxy.ts: 2ms, render: 8ms)
+ GET /api/projects 200 in 10ms (compile: 2ms, proxy.ts: 2ms, render: 5ms)
+ GET /api/auth/zones 200 in 12ms (compile: 1984µs, proxy.ts: 2ms, render: 8ms)
+ GET /api/progress 200 in 11ms (compile: 3ms, proxy.ts: 3ms, render: 5ms)
+ GET /api/notifications?userId=cmpo4w07k0000mg034fx4pt72&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 11ms (compile: 5ms, proxy.ts: 3ms, render: 4ms)
+ GET /api/employee-progress?projectId=cmpok8xii00rjmgfj1nn1hiuh&zoneId=cmpok8xii00rkmgfjvv2ri8f8 200 in 10ms (compile: 1874µs, proxy.ts: 2ms, render: 6ms)
+ GET /api/employee-progress?projectId=cmpok8xii00rjmgfj1nn1hiuh&zoneId=cmpok8xii00rkmgfjvv2ri8f8 200 in 8ms (compile: 1890µs, proxy.ts: 2ms, render: 4ms)
+ POST /api/notifications/auto 200 in 35ms (compile: 6ms, proxy.ts: 3ms, render: 26ms)
+ GET /api/board-slots?boardConfigId=cmpvj5omj0000rycbi3gyhwa3&sStep=1&miniStep=3 200 in 14ms (compile: 6ms, proxy.ts: 3ms, render: 5ms)
+ GET /api/inventory?sStep=1&projectId=cmpok8xii00rjmgfj1nn1hiuh&zoneId=cmpok8xii00rkmgfjvv2ri8f8 200 in 16ms (compile: 10ms, proxy.ts: 3ms, render: 4ms)
+ DELETE /api/inventory?id=cmpwzcl0c001fnamcmr0pukag 200 in 9ms (compile: 1799µs, proxy.ts: 3ms, render: 4ms)
+prisma:error 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].inventoryItem.delete()` invocation in
+/home/z/my-project/.next/dev/server/chunks/[root-of-the-server]__1d68f162._.js:344:156
+
+  341         status: 400
+  342     });
+  343 }
+→ 344 await __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].inventoryItem.delete(
+An operation failed because it depends on one or more records that were required but not found. No record was found for a delete.
+Error deleting inventory item: Error [PrismaClientKnownRequestError]: 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].inventoryItem.delete()` invocation in
+/home/z/my-project/.next/dev/server/chunks/[root-of-the-server]__1d68f162._.js:344:156
+
+  341         status: 400
+  342     });
+  343 }
+→ 344 await __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$db$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["db"].inventoryItem.delete(
+An operation failed because it depends on one or more records that were required but not found. No record was found for a delete.
+    at <unknown> (src/app/api/inventory/route.ts:191:34)
+    at async DELETE (src/app/api/inventory/route.ts:191:5)
+  189 |     }
+  190 |
+> 191 |     await db.inventoryItem.delete({ where: { id } })
+      |                                  ^
+  192 |     return NextResponse.json({ success: true })
+  193 |   } catch (error) {
+  194 |     console.error('Error deleting inventory item:', error) {
+  code: 'P2025',
+  meta: [Object],
+  clientVersion: '6.19.2'
+}
+ DELETE /api/inventory?id=cmpwzcl0c001fnamcmr0pukag 500 in 254ms (compile: 1594µs, proxy.ts: 2ms, render: 250ms)
+ GET /api/notifications?userId=cmpo4w07k0000mg034fx4pt72&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 9ms (compile: 2ms, proxy.ts: 3ms, render: 4ms)
+ POST /api/inventory 200 in 16ms (compile: 3ms, proxy.ts: 4ms, render: 10ms)
+ GET /api/inventory?sStep=1&projectId=cmpok8xii00rjmgfj1nn1hiuh&zoneId=cmpok8xii00rkmgfjvv2ri8f8 200 in 13ms (compile: 3ms, proxy.ts: 4ms, render: 6ms)
+ DELETE /api/inventory?id=cmpx04sa0001hnamcwfmor8sv 200 in 14ms (compile: 4ms, proxy.ts: 3ms, render: 7ms)
+ GET /api/notifications?userId=cmpo4w07k0000mg034fx4pt72&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 11ms (compile: 1887µs, proxy.ts: 2ms, render: 7ms)
+ GET /api/notifications?userId=cmpo4w07k0000mg034fx4pt72&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 11ms (compile: 4ms, proxy.ts: 3ms, render: 4ms)
+ GET /api/inventory?jaulaOnly=true&projectId=cmpok8xii00rjmgfj1nn1hiuh&zoneId=cmpok8xii00rkmgfjvv2ri8f8 200 in 14ms (compile: 3ms, proxy.ts: 5ms, render: 7ms)
+ GET /api/notifications?userId=cmpo4w07k0000mg034fx4pt72&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 11ms (compile: 3ms, proxy.ts: 3ms, render: 5ms)
+✓ Compiled in 1809ms
+✓ Compiled in 1079ms
+✓ Compiled in 1079ms
+ GET /api/notifications?userId=cmpo4w07k0000mg034fx4pt72&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 10ms (compile: 3ms, proxy.ts: 2ms, render: 4ms)
+ GET / 200 in 392ms (compile: 63ms, proxy.ts: 3ms, render: 326ms)
+ GET /api/auth 200 in 12ms (compile: 3ms, proxy.ts: 3ms, render: 6ms)
+ GET /api/permissions 200 in 19ms (compile: 3ms, proxy.ts: 6ms, render: 10ms)
+ GET /api/projects 200 in 14ms (compile: 3ms, proxy.ts: 3ms, render: 8ms)
+ GET /api/progress 200 in 23ms (compile: 8ms, proxy.ts: 5ms, render: 10ms)
+ GET /api/notifications?userId=cmpo4w07k0000mg034fx4pt72&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 21ms (compile: 14ms, proxy.ts: 3ms, render: 4ms)
+ GET /api/auth/zones 200 in 30ms (compile: 11ms, proxy.ts: 5ms, render: 14ms)
+ GET /api/employee-progress?projectId=cmpok8xii00rjmgfj1nn1hiuh&zoneId=cmpok8xii00rkmgfjvv2ri8f8 200 in 22ms (compile: 4ms, proxy.ts: 3ms, render: 15ms)
+ POST /api/notifications/auto 200 in 49ms (compile: 3ms, proxy.ts: 4ms, render: 42ms)
+ GET / 200 in 81ms (compile: 7ms, proxy.ts: 8ms, render: 65ms)
+ GET /api/auth 200 in 10ms (compile: 2ms, proxy.ts: 1751µs, render: 6ms)
+ POST /api/auth 200 in 19ms (compile: 3ms, proxy.ts: 4ms, render: 11ms)
+ GET /api/permissions 200 in 16ms (compile: 2ms, proxy.ts: 3ms, render: 11ms)
+ GET /api/projects 200 in 11ms (compile: 1712µs, proxy.ts: 1714µs, render: 8ms)
+ GET /api/auth/zones 200 in 8ms (compile: 1566µs, proxy.ts: 2ms, render: 5ms)
+ GET /api/progress 200 in 13ms (compile: 4ms, proxy.ts: 2ms, render: 6ms)
+ GET /api/notifications?userId=cmpo4w07k0000mg034fx4pt72&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 20ms (compile: 13ms, proxy.ts: 2ms, render: 5ms)
+ GET /api/employee-progress?projectId=cmpok8xii00rjmgfj1nn1hiuh&zoneId=cmpok8xii00rkmgfjvv2ri8f8 200 in 10ms (compile: 2ms, proxy.ts: 3ms, render: 5ms)
+ GET /api/employee-progress?projectId=cmpok8xii00rjmgfj1nn1hiuh&zoneId=cmpok8xii00rkmgfjvv2ri8f8 200 in 17ms (compile: 6ms, proxy.ts: 2ms, render: 9ms)
+ POST /api/notifications/auto 200 in 60ms (compile: 4ms, proxy.ts: 5ms, render: 52ms)
+ GET /api/notifications?userId=cmpo4w07k0000mg034fx4pt72&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 14ms (compile: 3ms, proxy.ts: 3ms, render: 8ms)
+ GET /api/inventory?sStep=1&projectId=cmpok8xii00rjmgfj1nn1hiuh&zoneId=cmpok8xii00rkmgfjvv2ri8f8 200 in 17ms (compile: 4ms, proxy.ts: 5ms, render: 7ms)
+ GET /api/board-slots?boardConfigId=cmpvj5omj0000rycbi3gyhwa3&sStep=1&miniStep=3 200 in 14ms (compile: 5ms, proxy.ts: 3ms, render: 6ms)
+ GET /api/notifications?userId=cmpo4w07k0000mg034fx4pt72&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 12ms (compile: 4ms, proxy.ts: 3ms, render: 5ms)
+ GET /api/inventory?sStep=1&projectId=cmpok8xii00rjmgfj1nn1hiuh&zoneId=cmpok8xii00rkmgfjvv2ri8f8 200 in 19ms (compile: 4ms, proxy.ts: 4ms, render: 11ms)
+ GET /api/board-slots?boardConfigId=cmpvj5omj0000rycbi3gyhwa3&sStep=1&miniStep=3 200 in 16ms (compile: 10ms, proxy.ts: 1782µs, render: 4ms)
+ GET /api/notifications?userId=cmpo4w07k0000mg034fx4pt72&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 10ms (compile: 2ms, proxy.ts: 2ms, render: 5ms)
+ GET /api/notifications?userId=cmpo4w07k0000mg034fx4pt72&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 10ms (compile: 4ms, proxy.ts: 2ms, render: 4ms)
+ GET /api/inventory?sStep=1&projectId=cmpok8xii00rjmgfj1nn1hiuh&zoneId=cmpok8xii00rkmgfjvv2ri8f8 200 in 13ms (compile: 3ms, proxy.ts: 3ms, render: 6ms)
+ GET /api/board-slots?boardConfigId=cmpvj5omj0000rycbi3gyhwa3&sStep=1&miniStep=3 200 in 13ms (compile: 5ms, proxy.ts: 3ms, render: 4ms)
+ GET /api/notifications?userId=cmpo4w07k0000mg034fx4pt72&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 12ms (compile: 4ms, proxy.ts: 4ms, render: 4ms)
+ GET /api/notifications?userId=cmpo4w07k0000mg034fx4pt72&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 20ms (compile: 1910µs, proxy.ts: 3ms, render: 15ms)
+ GET /api/notifications?userId=cmpo4w07k0000mg034fx4pt72&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 14ms (compile: 6ms, proxy.ts: 3ms, render: 5ms)
+ GET /api/employee-progress?projectId=cmpok8xii00rjmgfj1nn1hiuh&zoneId=cmpok8xii00rlmgfjyw6q03ll 200 in 10ms (compile: 1718µs, proxy.ts: 4ms, render: 5ms)
+ GET /api/board-slots?boardConfigId=cmpvj5omj0000rycbi3gyhwa3&sStep=1&miniStep=3 200 in 15ms (compile: 2ms, proxy.ts: 3ms, render: 10ms)
+ GET /api/inventory?sStep=1&projectId=cmpok8xii00rjmgfj1nn1hiuh&zoneId=cmpok8xii00rlmgfjyw6q03ll 200 in 17ms (compile: 8ms, proxy.ts: 3ms, render: 7ms)
+ GET /api/notifications?userId=cmpo4w07k0000mg034fx4pt72&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 10ms (compile: 3ms, proxy.ts: 4ms, render: 4ms)
+ GET /api/notifications?userId=cmpo4w07k0000mg034fx4pt72&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 9ms (compile: 3ms, proxy.ts: 2ms, render: 4ms)
+ GET /api/notifications?userId=cmpo4w07k0000mg034fx4pt72&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 11ms (compile: 3ms, proxy.ts: 2ms, render: 6ms)
+ GET /api/inventory?sStep=1&projectId=cmpok8xii00rjmgfj1nn1hiuh&zoneId=cmpok8xii00rlmgfjyw6q03ll 200 in 12ms (compile: 5ms, proxy.ts: 3ms, render: 4ms)
+ GET /api/board-slots?boardConfigId=cmpvj5omj0000rycbi3gyhwa3&sStep=1&miniStep=3 200 in 13ms (compile: 8ms, proxy.ts: 1740µs, render: 4ms)
+ GET /api/notifications?userId=cmpo4w07k0000mg034fx4pt72&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 12ms (compile: 3ms, proxy.ts: 3ms, render: 6ms)
+ GET /api/notifications?userId=cmpo4w07k0000mg034fx4pt72&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 8ms (compile: 2ms, proxy.ts: 2ms, render: 4ms)
+ GET /api/notifications?userId=cmpo4w07k0000mg034fx4pt72&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 13ms (compile: 3ms, proxy.ts: 4ms, render: 6ms)
+ GET /api/inventory?sStep=1&projectId=cmpok8xii00rjmgfj1nn1hiuh&zoneId=cmpok8xii00rlmgfjyw6q03ll 200 in 15ms (compile: 5ms, proxy.ts: 3ms, render: 7ms)
+ GET /api/board-slots?boardConfigId=cmpvj5omj0000rycbi3gyhwa3&sStep=1&miniStep=3 200 in 16ms (compile: 5ms, proxy.ts: 4ms, render: 7ms)
+ GET /api/notifications?userId=cmpo4w07k0000mg034fx4pt72&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 12ms (compile: 5ms, proxy.ts: 2ms, render: 5ms)
+ GET /api/notifications?userId=cmpo4w07k0000mg034fx4pt72&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 11ms (compile: 2ms, proxy.ts: 4ms, render: 5ms)
+ GET /api/inventory?sStep=1 200 in 11ms (compile: 4ms, proxy.ts: 2ms, render: 5ms)
+ GET /api/inventory?sStep=1&jaulaOnly=true 200 in 10ms (compile: 2ms, proxy.ts: 3ms, render: 5ms)
+ GET /api/inventory?sStep=1 200 in 10ms (compile: 3ms, proxy.ts: 2ms, render: 5ms)
+ GET /api/notifications?userId=cmpo4w07k0000mg034fx4pt72&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 13ms (compile: 3ms, proxy.ts: 4ms, render: 6ms)
+ GET /api/inventory 400 in 12ms (compile: 4ms, proxy.ts: 3ms, render: 5ms)
+ GET /api/notifications?userId=cmpo4w07k0000mg034fx4pt72&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 12ms (compile: 2ms, proxy.ts: 2ms, render: 7ms)
+ GET /api/notifications?userId=cmpo4w07k0000mg034fx4pt72&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 15ms (compile: 2ms, proxy.ts: 8ms, render: 5ms)
+ GET /api/notifications?userId=cmpo4w07k0000mg034fx4pt72&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 10ms (compile: 3ms, proxy.ts: 3ms, render: 4ms)
+ GET /api/inventory?sStep=1&projectId=cmpok8xii00rjmgfj1nn1hiuh&zoneId=cmpok8xii00rlmgfjyw6q03ll 200 in 22ms (compile: 4ms, proxy.ts: 5ms, render: 13ms)
+ GET /api/board-slots?boardConfigId=cmpvj5omj0000rycbi3gyhwa3&sStep=1&miniStep=3 200 in 21ms (compile: 11ms, proxy.ts: 3ms, render: 7ms)
+ GET /api/notifications?userId=cmpo4w07k0000mg034fx4pt72&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 12ms (compile: 3ms, proxy.ts: 3ms, render: 6ms)
+ GET /api/inventory?sStep=1 200 in 12ms (compile: 3ms, proxy.ts: 3ms, render: 6ms)
+ GET /api/inventory 400 in 9ms (compile: 5ms, proxy.ts: 2ms, render: 2ms)
+ GET /api/notifications?userId=cmpo4w07k0000mg034fx4pt72&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 10ms (compile: 3ms, proxy.ts: 2ms, render: 5ms)
+ GET /api/projects 200 in 9ms (compile: 2ms, proxy.ts: 2ms, render: 4ms)
+ GET /api/projects 200 in 10ms (compile: 4ms, proxy.ts: 2ms, render: 4ms)
+ POST /api/inventory 200 in 12ms (compile: 2ms, proxy.ts: 3ms, render: 7ms)
+ GET /api/notifications?userId=cmpo4w07k0000mg034fx4pt72&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 9ms (compile: 1778µs, proxy.ts: 2ms, render: 4ms)
+ GET /api/inventory?sStep=1&projectId=cmpok8xii00rjmgfj1nn1hiuh&zoneId=cmpok8xii00rkmgfjvv2ri8f8 200 in 18ms (compile: 3ms, proxy.ts: 3ms, render: 12ms)
+ GET /api/notifications?userId=cmpo4w07k0000mg034fx4pt72&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 9ms (compile: 3ms, proxy.ts: 2ms, render: 4ms)
+ GET /api/notifications?userId=cmpo4w07k0000mg034fx4pt72&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 9ms (compile: 2ms, proxy.ts: 3ms, render: 4ms)
+ GET /api/employee-progress?projectId=cmpok8xii00rjmgfj1nn1hiuh&zoneId=cmpok8xii00rkmgfjvv2ri8f8 200 in 8ms (compile: 1902µs, proxy.ts: 2ms, render: 4ms)
+ GET /api/inventory?sStep=1&projectId=cmpok8xii00rjmgfj1nn1hiuh&zoneId=cmpok8xii00rkmgfjvv2ri8f8 200 in 16ms (compile: 5ms, proxy.ts: 3ms, render: 8ms)
+ GET /api/board-slots?boardConfigId=cmpvj5omj0000rycbi3gyhwa3&sStep=1&miniStep=3 200 in 16ms (compile: 8ms, proxy.ts: 3ms, render: 6ms)
+ GET /api/notifications?userId=cmpo4w07k0000mg034fx4pt72&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 19ms (compile: 4ms, proxy.ts: 2ms, render: 13ms)
+ GET /api/notifications?userId=cmpo4w07k0000mg034fx4pt72&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 8ms (compile: 1697µs, proxy.ts: 3ms, render: 3ms)
+ GET /api/notifications?userId=cmpo4w07k0000mg034fx4pt72&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 9ms (compile: 1653µs, proxy.ts: 2ms, render: 5ms)
+ GET / 200 in 43ms (compile: 4ms, proxy.ts: 3ms, render: 36ms)

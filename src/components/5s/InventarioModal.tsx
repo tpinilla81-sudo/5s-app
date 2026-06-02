@@ -973,76 +973,6 @@ export default function InventarioModal({ open, onClose, sStep, miniStep }: Inve
               </Card>
             )}
 
-            {/* 1S: Resumen elementos innecesarios con detalles */}
-            {sStep === 1 && innecesarios.length > 0 && (
-              <Card className="border border-red-300">
-                <CardContent className="p-3">
-                  <h5 className="text-sm font-semibold text-red-700 mb-2">Elementos Innecesarios</h5>
-                  <div className="overflow-x-auto rounded-lg border">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead className="text-xs">Elemento</TableHead>
-                          <TableHead className="text-xs">Ubicación</TableHead>
-                          <TableHead className="text-xs">Categoría</TableHead>
-                          <TableHead className="text-xs text-center">Innec.</TableHead>
-                          <TableHead className="text-xs text-right">Precio (€)</TableHead>
-                          <TableHead className="text-xs">Estado</TableHead>
-                          <TableHead className="text-xs">Frec. uso</TableHead>
-                          <TableHead className="text-xs">Decisión</TableHead>
-                          <TableHead className="text-xs">Z. Origen</TableHead>
-                          <TableHead className="text-xs">Z. Destino</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {innecesarios.map(item => (
-                          <TableRow key={item.id} className="bg-red-50/50">
-                            <TableCell className="text-xs font-medium">{item.name}</TableCell>
-                            <TableCell className="text-xs text-muted-foreground">{item.location}</TableCell>
-                            <TableCell className="text-xs">{getCategoryBadge(item.category)}</TableCell>
-                            <TableCell className="text-xs text-center text-red-700">{item.quantityUnneeded || item.quantity}</TableCell>
-                            <TableCell className="text-xs text-right font-medium text-red-700">{item.price ? `${(item.price * (item.quantityUnneeded || item.quantity)).toFixed(2)} €` : '—'}</TableCell>
-                            <TableCell className="text-xs">{String(item.extra?.estado ?? '—')}</TableCell>
-                            <TableCell className="text-xs">{String(item.extra?.frecuenciaUso ?? '—')}</TableCell>
-                            <TableCell className="text-xs">
-                              <Badge className={item.extra?.decision === 'Jaula' ? 'bg-red-100 text-red-800' : item.extra?.decision === 'Eliminar' ? 'bg-red-100 text-red-800' : item.extra?.decision === 'Reubicar' ? 'bg-blue-100 text-blue-800' : item.extra?.decision === 'Vender' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}>
-                                {String(item.extra?.decision || item.action || 'Jaula')}
-                              </Badge>
-                            </TableCell>
-                            <TableCell className="text-xs text-muted-foreground">{item.zonaOrigen || '—'}</TableCell>
-                            <TableCell className="text-xs">
-                              {!isReadOnly && item.id ? (
-                                <Select
-                                  value={item.zonaDestino || undefined}
-                                  onValueChange={val => {
-                                    const targetZone = currentProject?.zones?.find(z => z.name === val);
-                                    const updates: any = { zonaDestino: val };
-                                    if (targetZone) updates.zoneId = targetZone.id;
-                                    handleUpdateJaula(item.id!, updates);
-                                  }}
-                                >
-                                  <SelectTrigger className="h-5 w-20 text-[9px]">
-                                    <SelectValue placeholder="—"/>
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    {currentProject?.zones?.map(z => (
-                                      <SelectItem key={z.id} value={z.name}>{z.name}</SelectItem>
-                                    )) || []}
-                                  </SelectContent>
-                                </Select>
-                              ) : (
-                                <span className="text-muted-foreground">{item.zonaDestino || '—'}</span>
-                              )}
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-
             {/* Classification progress */}
             <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
               <div>
@@ -1417,6 +1347,7 @@ export default function InventarioModal({ open, onClose, sStep, miniStep }: Inve
                       {sStep === 1 ? (
                         <>
                           <TableHead>Estado</TableHead>
+                          <TableHead>Frec. uso</TableHead>
                           <TableHead>Decisión</TableHead>
                         </>
                       ) : (
@@ -1474,6 +1405,7 @@ export default function InventarioModal({ open, onClose, sStep, miniStep }: Inve
                         {sStep === 1 ? (
                           <>
                             <TableCell className="text-sm text-muted-foreground">{String(item.extra?.estado ?? '—')}</TableCell>
+                            <TableCell className="text-sm text-muted-foreground">{String(item.extra?.frecuenciaUso ?? '—')}</TableCell>
                             <TableCell className="text-sm">
                               <Badge className={item.extra?.decision === 'Jaula' ? 'bg-red-100 text-red-800' : item.extra?.decision === 'Eliminar' ? 'bg-red-100 text-red-800' : item.extra?.decision === 'Reubicar' ? 'bg-blue-100 text-blue-800' : item.extra?.decision === 'Vender' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}>
                                 {String(item.extra?.decision || item.action || 'Jaula')}
