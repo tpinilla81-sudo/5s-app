@@ -13,6 +13,7 @@ interface TagData {
   categoria?: string
   fechaEntrada?: string | null
   fechaRevision?: string | null
+  diasCuarentena?: number
   zonaOrigen?: string | null
   observaciones?: string
 }
@@ -52,8 +53,9 @@ export default function TagPrinter({ items, type }: TagPrinterProps) {
 
   const handlePrint = () => {
     const tagsHtml = items.map(item => {
-      // Calculate revision date: 40 days from entry
-      const fechaRevision = item.fechaRevision || addDays(item.fechaEntrada, 40)
+      // Calculate revision date: diasCuarentena from entry (default 40)
+      const dias = item.diasCuarentena || 40
+      const fechaRevision = item.fechaRevision || addDays(item.fechaEntrada, dias)
 
       return `
       <div style="
@@ -99,7 +101,7 @@ export default function TagPrinter({ items, type }: TagPrinterProps) {
             ${item.zonaOrigen ? `<tr><td style="padding: 4px 0; font-weight: bold; color: #374151;">Zona Origen:</td><td style="padding: 4px 0; color: #111827;">${item.zonaOrigen}</td></tr>` : ''}
             <tr><td colspan="2" style="padding: 6px 0 2px; border-top: 1px dashed ${borderColor};"></td></tr>
             ${item.fechaEntrada ? `<tr><td style="padding: 4px 0; font-weight: bold; color: #374151;">F. Entrada:</td><td style="padding: 4px 0; color: #111827;">${formatDate(item.fechaEntrada)}</td></tr>` : ''}
-            ${fechaRevision ? `<tr><td style="padding: 4px 0; font-weight: bold; color: #DC2626;">F. Revisión (40d):</td><td style="padding: 4px 0; color: #DC2626; font-weight: bold;">${formatDate(fechaRevision)}</td></tr>` : ''}
+            ${fechaRevision ? `<tr><td style="padding: 4px 0; font-weight: bold; color: #DC2626;">F. Revisión (${dias}d):</td><td style="padding: 4px 0; color: #DC2626; font-weight: bold;">${formatDate(fechaRevision)}</td></tr>` : ''}
             ${item.observaciones ? `<tr><td style="padding: 4px 0; font-weight: bold; color: #374151;">Obs.:</td><td style="padding: 4px 0; color: #111827;">${item.observaciones}</td></tr>` : ''}
           </table>
           ${!isRoja ? `

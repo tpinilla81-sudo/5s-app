@@ -1078,13 +1078,14 @@ export default function InventarioModal({ open, onClose, sStep, miniStep }: Inve
               </a>
               {/* S1: Print label buttons for innecesario items — linked to the S1 Step 3 template */}
               {sStep === 1 && items.length > 0 && (() => {
-                // Helper: compute revision date = entry date + 40 days
+                // Helper: compute revision date = entry date + diasCuarentena (default 40)
                 const withRevision = (i: InventoryItemData) => {
                   let fechaRevision: string | null = null;
+                  const dias = Number(i.extra?.diasCuarentena ?? 40);
                   if (i.jaulaFechaEntrada) {
                     try {
                       const d = new Date(i.jaulaFechaEntrada);
-                      d.setDate(d.getDate() + 40);
+                      d.setDate(d.getDate() + dias);
                       fechaRevision = d.toISOString();
                     } catch {}
                   }
@@ -1102,6 +1103,7 @@ export default function InventarioModal({ open, onClose, sStep, miniStep }: Inve
                     categoria: String(i.category ?? 'Innecesario'),
                     fechaEntrada: i.jaulaFechaEntrada,
                     fechaRevision: withRevision(i),
+                    diasCuarentena: Number(i.extra?.diasCuarentena ?? 40),
                     zonaOrigen: i.zonaOrigen || i.jaulaOrigen,
                   }));
                 const rojaItems = items
@@ -1116,6 +1118,7 @@ export default function InventarioModal({ open, onClose, sStep, miniStep }: Inve
                     categoria: String(i.category ?? 'Innecesario'),
                     fechaEntrada: i.jaulaFechaEntrada,
                     fechaRevision: withRevision(i),
+                    diasCuarentena: Number(i.extra?.diasCuarentena ?? 40),
                     zonaOrigen: i.zonaOrigen || i.jaulaOrigen,
                   }));
                 return (
@@ -1393,8 +1396,8 @@ export default function InventarioModal({ open, onClose, sStep, miniStep }: Inve
                         </div>
                       </div>
 
-                      {/* S1: Etiqueta fields — fecha entrada, fecha revisión (40 días) */}
-                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 items-end p-2 rounded-lg border border-orange-200 bg-orange-50/30">
+                      {/* S1: Etiqueta fields — fecha entrada, días cuarentena, fecha revisión */}
+                      <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 items-end p-2 rounded-lg border border-orange-200 bg-orange-50/30">
                         <div>
                           <label className="text-xs font-medium text-orange-700 flex items-center gap-1">
                             <Tag className="h-3 w-3" />
@@ -1412,15 +1415,40 @@ export default function InventarioModal({ open, onClose, sStep, miniStep }: Inve
                         <div>
                           <label className="text-xs font-medium text-orange-700 flex items-center gap-1">
                             <Tag className="h-3 w-3" />
-                            F. Revisión (40 días)
+                            Días cuarentena
+                          </label>
+                          <Select
+                            value={String(newItem.extra?.diasCuarentena ?? 40)}
+                            onValueChange={val =>
+                              setNewItem(prev => ({
+                                ...prev,
+                                extra: { ...(prev.extra || {}), diasCuarentena: parseInt(val) || 40 },
+                              }))
+                            }
+                          >
+                            <SelectTrigger>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {[7, 15, 20, 30, 40, 60, 90].map(d => (
+                                <SelectItem key={d} value={String(d)}>{d} días</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div>
+                          <label className="text-xs font-medium text-orange-700 flex items-center gap-1">
+                            <Tag className="h-3 w-3" />
+                            F. Revisión
                           </label>
                           <Input
                             type="date"
                             value={(() => {
                               const base = newItem.jaulaFechaEntrada || new Date().toISOString();
+                              const dias = Number(newItem.extra?.diasCuarentena ?? 40);
                               try {
                                 const d = new Date(base);
-                                d.setDate(d.getDate() + 40);
+                                d.setDate(d.getDate() + dias);
                                 return d.toISOString().split('T')[0];
                               } catch { return ''; }
                             })()}
@@ -1619,6 +1647,7 @@ export default function InventarioModal({ open, onClose, sStep, miniStep }: Inve
                           <TableHead className="text-green-700">Ubicación asig.</TableHead>
                           <TableHead className="text-green-700">Método id.</TableHead>
                           <TableHead className="text-green-700">Cercanía</TableHead>
+                          <TableHead className="text-orange-700">Días cuar.</TableHead>
                         </>
                       ) : (
                         config.extraFields.slice(0, 2).map(f => (
@@ -1874,6 +1903,26 @@ export default function InventarioModal({ open, onClose, sStep, miniStep }: Inve
                                 </Select>
                               ) : (
                                 <span>{String(item.extra?.cercania ?? '—')}</span>
+                              )}
+                            </TableCell>
+                            {/* Días cuarentena (etiqueta) */}
+                            <TableCell className="text-sm">
+                              {canEdit ? (
+                                <Select
+                                  value={String(item.extra?.diasCuarentena ?? 40)}
+                                  onValueChange={val => handleUpdateExtra(item.id!, 'diasCuarentena', parseInt(val) || 40)}
+                                >
+                                  <SelectTrigger className={inlineSelect}>
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {[7, 15, 20, 30, 40, 60, 90].map(d => (
+                                      <SelectItem key={d} value={String(d)}>{d}d</SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              ) : (
+                                <span>{item.extra?.diasCuarentena ?? 40}d</span>
                               )}
                             </TableCell>
                           </>
