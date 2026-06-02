@@ -375,31 +375,7 @@ export default function HomePage() {
                 )}
               </Button>
             )}
-            {/* Quick action buttons */}
-            {currentUser && currentProject && (
-              <>
-                <Button variant="outline" size="sm" onClick={() => openModal('globalActionPlan', 0)}
-                  className="gap-1 text-[10px] h-7 border-orange-300 text-orange-600 hover:bg-orange-50">
-                  <ListChecks className="h-3 w-3" /> Plan
-                </Button>
-                <Button variant="outline" size="sm" onClick={() => openModal('globalInventory', 0)}
-                  className="gap-1 text-[10px] h-7 border-green-300 text-green-600 hover:bg-green-50">
-                  <ClipboardList className="h-3 w-3" /> Inventario
-                </Button>
-                <Button variant="outline" size="sm" onClick={() => openModal('auditResults', 0)}
-                  className="gap-1 text-[10px] h-7 border-blue-300 text-blue-600 hover:bg-blue-50">
-                  <ShieldCheck className="h-3 w-3" /> Auditoría
-                </Button>
-                <Button variant="outline" size="sm" onClick={() => openModal('standardsLibrary', 0)}
-                  className="gap-1 text-[10px] h-7 border-teal-300 text-teal-600 hover:bg-teal-50">
-                  <BookOpen className="h-3 w-3" /> Estándares
-                </Button>
-                <Button variant="outline" size="sm" onClick={() => openModal('photoLibrary', 0)}
-                  className="gap-1 text-[10px] h-7 border-indigo-300 text-indigo-600 hover:bg-indigo-50">
-                  <ImageIcon className="h-3 w-3" /> Fotos
-                </Button>
-              </>
-            )}
+            {/* Quick action buttons — removed (accessed from board instead) */}
             {(isAdmin || canSkipSteps) && (
               <Button variant={adminFreeNavigation ? 'default' : 'outline'} size="sm"
                 onClick={() => setAdminFreeNavigation(!adminFreeNavigation)}
