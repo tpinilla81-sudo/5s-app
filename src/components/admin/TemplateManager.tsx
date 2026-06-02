@@ -13,7 +13,7 @@ import {
 } from '@/components/ui/select'
 import {
   Plus, Trash2, Edit3, Save, Loader2, BookOpen, FileCheck, ClipboardCheck, Camera,
-  ChevronDown, ChevronUp, AlertTriangle, Copy, RotateCcw,
+  ChevronDown, ChevronUp, AlertTriangle, Copy, RotateCcw, X,
   Eye, Code, GripVertical, Download, Upload, ClipboardList, Award,
 
 } from 'lucide-react'

@@ -40,3 +40,26 @@ Stage Summary:
 - App serving latest build with all visual changes (pentagon, logo, etc.)
 - Root cause of "changes not appearing between locations" = PM2 was crashing, not serving latest build + browser caching old version
 - User advised to use Ctrl+Shift+R to force cache refresh
+
+---
+Task ID: 1
+Agent: Main Agent
+Task: Fix template editing crash ("no se puede entrar a editar plantillas da error d servidor")
+
+Work Log:
+- Investigated server error when clicking edit button on templates
+- Used agent-browser to reproduce the error: clicking edit template → "Algo salió mal" error page
+- Found console error: "ReferenceError: X is not defined" in TemplateManager component
+- Root cause: `<X className="h-5 w-5" />` used on line 1485 but `X` was not imported from `lucide-react`
+- Fixed by adding `X` to the lucide-react import statement
+- Rebuilt Next.js app (`rm -rf .next && npx next build`)
+- Discovered `.next/standalone/.next/static` was missing (required for standalone server)
+- Copied static files: `cp -r .next/static .next/standalone/.next/static`
+- Restarted PM2 and verified fix works in browser
+- Successfully tested: editing formación template, editing exam template, saving changes
+
+Stage Summary:
+- Fixed ReferenceError: X is not defined by adding X to lucide-react imports
+- Fixed standalone server missing static files issue
+- Template editing now works correctly (both formación and examen types tested)
+- App rebuilt and running on PM2 (5s-app, port 3000)
