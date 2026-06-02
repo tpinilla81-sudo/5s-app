@@ -279,8 +279,7 @@ export default function InventarioModal({ open, onClose, sStep, miniStep }: Inve
           id: item.id,
           name: item.name,
           location: item.location || '',
-          // S1: Force all items to be 'innecesario' (fix old DB entries with 'dudoso'/'necesario')
-          category: sStep === 1 ? 'innecesario' : item.category,
+          category: item.category || '',
           quantity: item.quantity || 1,
           // S1: Force quantities (all items are innecesario)
           quantityNeeded: sStep === 1 ? 0 : (item.quantityNeeded || 0),
@@ -307,14 +306,8 @@ export default function InventarioModal({ open, onClose, sStep, miniStep }: Inve
   };
 
   const handleAddItem = async () => {
-    // S1: category is always 'innecesario', no need to check category
-    const category = sStep === 1 ? 'innecesario' : newItem.category;
-    if (!newItem.name || (!category && sStep !== 1)) {
+    if (!newItem.name || !newItem.category) {
       toast.error('Completa el nombre y la categoría del elemento');
-      return;
-    }
-    if (!newItem.name) {
-      toast.error('Completa el nombre del elemento');
       return;
     }
 
@@ -344,7 +337,7 @@ export default function InventarioModal({ open, onClose, sStep, miniStep }: Inve
           zoneId: currentZone?.id || null,
           name: newItem.name,
           location: newItem.location,
-          category: category || 'innecesario',
+          category: newItem.category || '',
           quantity: qty,
           quantityNeeded: qtyNeeded,
           quantityUnneeded: qtyUnneeded,
@@ -557,7 +550,7 @@ export default function InventarioModal({ open, onClose, sStep, miniStep }: Inve
         const item: InventoryItemData = {
           name: getVal(colMap.name, strValues[1] || strValues[0] || ''),
           location: getVal(colMap.location, strValues[2] || ''),
-          category: sStep === 1 ? 'innecesario' : (getVal(colMap.category) || config.categories[0]?.value || ''),
+          category: getVal(colMap.category) || config.categories[0]?.value || '',
           quantity: parseInt(getVal(colMap.quantity, strValues[4] || '1')) || 1,
           quantityNeeded: parseInt(getVal(colMap.quantityNeeded, '0')) || 0,
           quantityUnneeded: parseInt(getVal(colMap.quantityUnneeded, '0')) || 0,
@@ -566,9 +559,8 @@ export default function InventarioModal({ open, onClose, sStep, miniStep }: Inve
           extra: {},
         };
 
-        // S1: Force all items to be 'innecesario' and set default decision
+        // S1: All items are innecesario by nature, set default decision
         if (sStep === 1) {
-          item.category = 'innecesario';
           item.quantityUnneeded = item.quantity;
           item.quantityNeeded = 0;
           if (colMap.estado >= 0) item.extra!['estado'] = getVal(colMap.estado);
@@ -651,7 +643,7 @@ export default function InventarioModal({ open, onClose, sStep, miniStep }: Inve
             zoneId: currentZone?.id || null,
             name: item.name,
             location: item.location,
-            category: sStep === 1 ? 'innecesario' : (item.category || config.categories[0]?.value || ''),
+            category: item.category || config.categories[0]?.value || '',
             quantity: item.quantity || 1,
             quantityNeeded: sStep === 1 ? 0 : (item.quantityNeeded || 0),
             quantityUnneeded: sStep === 1 ? (item.quantityUnneeded || item.quantity || 1) : (item.quantityUnneeded || 0),
@@ -725,8 +717,8 @@ export default function InventarioModal({ open, onClose, sStep, miniStep }: Inve
   const needsLayout = sStep === 2 || sStep === 3 || sStep === 4;
   const canComplete = classifyPercent >= INVENTORY_CLASSIFY_THRESHOLD && items.length > 0 && (!needsLayout || layoutUploaded);
 
-  // S1 specific counts
-  const innecesarios = items.filter(i => i.category === 'innecesario');
+  // S1 specific counts: all items are innecesario by definition in S1
+  const innecesarios = sStep === 1 ? items : items.filter(i => i.category === 'innecesario');
   const jaulaItems = items.filter(i => i.jaulaStatus === 'en_jaula');
   const totalJaulaValue = jaulaItems.reduce((sum, i) => sum + (i.price || 0) * i.quantity, 0);
 
@@ -1126,6 +1118,7 @@ export default function InventarioModal({ open, onClose, sStep, miniStep }: Inve
                         <TableRow>
                           <TableHead className="text-xs">Elemento</TableHead>
                           <TableHead className="text-xs">Ubicación</TableHead>
+                          <TableHead className="text-xs">Categoría</TableHead>
                           <TableHead className="text-xs text-center">Innec.</TableHead>
                           <TableHead className="text-xs text-right">Precio (€)</TableHead>
                           <TableHead className="text-xs">Estado</TableHead>
@@ -1140,6 +1133,7 @@ export default function InventarioModal({ open, onClose, sStep, miniStep }: Inve
                           <TableRow key={item.id} className="bg-red-50/50">
                             <TableCell className="text-xs font-medium">{item.name}</TableCell>
                             <TableCell className="text-xs text-muted-foreground">{item.location}</TableCell>
+                            <TableCell className="text-xs">{getCategoryBadge(item.category)}</TableCell>
                             <TableCell className="text-xs text-center text-red-700">{item.quantityUnneeded || item.quantity}</TableCell>
                             <TableCell className="text-xs text-right font-medium text-red-700">{item.price ? `${(item.price * (item.quantityUnneeded || item.quantity)).toFixed(2)} €` : '—'}</TableCell>
                             <TableCell className="text-xs">{String(item.extra?.estado ?? '—')}</TableCell>
@@ -1285,8 +1279,8 @@ export default function InventarioModal({ open, onClose, sStep, miniStep }: Inve
               <CardContent className="p-4">
                 <div className="space-y-3">
                   {/* Row 1: Name, Location, (Category for non-S1), Quantity, Price */}
-                  <div className={`grid grid-cols-1 gap-3 items-end ${sStep === 1 ? 'sm:grid-cols-5' : 'sm:grid-cols-6'}`}>
-                    <div className={sStep === 1 ? 'sm:col-span-2' : 'sm:col-span-2'}>
+                  <div className="grid grid-cols-1 gap-3 items-end sm:grid-cols-6">
+                    <div className="sm:col-span-2">
                       <label className="text-xs font-medium">Elemento *</label>
                       <Input
                         placeholder="Nombre del elemento"
@@ -1302,27 +1296,24 @@ export default function InventarioModal({ open, onClose, sStep, miniStep }: Inve
                         onChange={e => setNewItem(prev => ({ ...prev, location: e.target.value }))}
                       />
                     </div>
-                    {/* S1: No category dropdown — everything is 'innecesario' automatically */}
-                    {sStep !== 1 && (
-                      <div>
-                        <label className="text-xs font-medium">Categoría *</label>
-                        <Select
-                          value={newItem.category || undefined}
-                          onValueChange={val => setNewItem(prev => ({ ...prev, category: val, extra: { ...(prev.extra || {}), subcategoria: undefined } }))}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Categoría" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {config.categories.map(cat => (
-                              <SelectItem key={cat.value} value={cat.value}>
-                                {cat.label}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    )}
+                    <div>
+                      <label className="text-xs font-medium">Categoría *</label>
+                      <Select
+                        value={newItem.category || undefined}
+                        onValueChange={val => setNewItem(prev => ({ ...prev, category: val, extra: { ...(prev.extra || {}), subcategoria: undefined } }))}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Categoría" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {config.categories.map(cat => (
+                            <SelectItem key={cat.value} value={cat.value}>
+                              {cat.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
                     <div>
                       <label className="text-xs font-medium">{sStep === 1 ? 'Cantidad' : 'Total exist.'}</label>
                       <Input
@@ -1431,7 +1422,7 @@ export default function InventarioModal({ open, onClose, sStep, miniStep }: Inve
                   <div className="flex justify-end">
                     <Button
                       onClick={handleAddItem}
-                      disabled={!newItem.name || (sStep !== 1 && !newItem.category)}
+                      disabled={!newItem.name || !newItem.category}
                       size="sm"
                       style={{ backgroundColor: sStepData?.color }}
                     >
@@ -1519,7 +1510,7 @@ export default function InventarioModal({ open, onClose, sStep, miniStep }: Inve
                     <TableRow>
                       <TableHead>Elemento</TableHead>
                       <TableHead>Ubicación</TableHead>
-                      {sStep !== 1 && <TableHead>Categoría</TableHead>}
+                      <TableHead>Categoría</TableHead>
                       <TableHead className="text-center">{sStep === 1 ? 'Cantidad' : 'Total'}</TableHead>
                       <TableHead className="text-right">Precio (€)</TableHead>
                       {sStep === 1 ? (
@@ -1576,7 +1567,7 @@ export default function InventarioModal({ open, onClose, sStep, miniStep }: Inve
                             <span>{item.location}</span>
                           )}
                         </TableCell>
-                        {sStep !== 1 && <TableCell>{getCategoryBadge(item.category)}</TableCell>}
+                        <TableCell>{getCategoryBadge(item.category)}</TableCell>
                         <TableCell className="text-center text-sm">{sStep === 1 ? (item.quantityUnneeded || item.quantity) : item.quantity}</TableCell>
                         <TableCell className="text-right text-sm">{item.price != null ? `${item.price.toFixed(2)} €` : '—'}</TableCell>
                         {sStep === 1 ? (
