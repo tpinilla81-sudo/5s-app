@@ -1315,10 +1315,6 @@ export default function InventarioModal({ open, onClose, sStep, miniStep }: Inve
                           <span className="text-[10px] font-medium text-red-700">Campos de Innecesario</span>
                         </div>
                         <div className="flex items-center gap-1.5">
-                          <div className="h-2.5 w-2.5 rounded bg-green-500" />
-                          <span className="text-[10px] font-medium text-green-700">Campos de Necesario</span>
-                        </div>
-                        <div className="flex items-center gap-1.5">
                           <div className="h-2.5 w-2.5 rounded bg-orange-500" />
                           <span className="text-[10px] font-medium text-orange-700">Datos de Etiqueta</span>
                         </div>
@@ -1369,54 +1365,6 @@ export default function InventarioModal({ open, onClose, sStep, miniStep }: Inve
                         <div className="col-span-full flex items-center gap-1">
                           <div className="w-2 h-2 rounded-full bg-red-400" />
                           <span className="text-[9px] text-red-600 font-medium">Innecesarios → van a la Jaula (etiqueta roja/naranja)</span>
-                        </div>
-                      </div>
-
-                      {/* S1: Necesario fields — always visible and editable */}
-                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 items-end p-2 rounded-lg border border-green-200 bg-green-50/30">
-                        {['ubicacionAsignada', 'metodoIdentificacion', 'cercania'].map(key => {
-                          const field = config.extraFields.find(f => f.key === key);
-                          if (!field) return null;
-                          return (
-                            <div key={field.key}>
-                              <label className="text-xs font-medium text-green-700">{field.label}</label>
-                              {field.type === 'select' && field.options ? (
-                                <Select
-                                  value={newItem.extra?.[field.key] ? String(newItem.extra[field.key]) : undefined}
-                                  onValueChange={val =>
-                                    setNewItem(prev => ({
-                                      ...prev,
-                                      extra: { ...(prev.extra || {}), [field.key]: val },
-                                    }))
-                                  }
-                                >
-                                  <SelectTrigger>
-                                    <SelectValue placeholder={field.label} />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    {field.options.filter(opt => opt && opt.trim() !== '').map(opt => (
-                                      <SelectItem key={opt} value={opt}>{opt}</SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
-                              ) : (
-                                <Input
-                                  placeholder={field.label}
-                                  value={String(newItem.extra?.[field.key] ?? '')}
-                                  onChange={e =>
-                                    setNewItem(prev => ({
-                                      ...prev,
-                                      extra: { ...(prev.extra || {}), [field.key]: e.target.value },
-                                    }))
-                                  }
-                                />
-                              )}
-                            </div>
-                          );
-                        })}
-                        <div className="col-span-full flex items-center gap-1">
-                          <div className="w-2 h-2 rounded-full bg-green-500" />
-                          <span className="text-[9px] text-green-600 font-medium">Necesarios → van a Activos (se organizan en S2)</span>
                         </div>
                       </div>
 
@@ -1668,9 +1616,6 @@ export default function InventarioModal({ open, onClose, sStep, miniStep }: Inve
                           <TableHead className="text-red-700">Estado</TableHead>
                           <TableHead className="text-red-700">Frec. uso</TableHead>
                           <TableHead className="text-red-700">Decisión</TableHead>
-                          <TableHead className="text-green-700">Ubicación asig.</TableHead>
-                          <TableHead className="text-green-700">Método id.</TableHead>
-                          <TableHead className="text-green-700">Cercanía</TableHead>
                           <TableHead className="text-orange-700">Días cuar.</TableHead>
                         </>
                       ) : (
@@ -1868,65 +1813,6 @@ export default function InventarioModal({ open, onClose, sStep, miniStep }: Inve
                                 ) : (
                                   <span className="text-muted-foreground">—</span>
                                 )
-                              )}
-                            </TableCell>
-                            {/* Ubicación asignada (necesario) */}
-                            <TableCell className="text-sm">
-                              {canEdit ? (
-                                <Input
-                                  value={String(item.extra?.ubicacionAsignada ?? '')}
-                                  className={inlineInput}
-                                  placeholder="—"
-                                  onChange={e => {
-                                    const val = e.target.value;
-                                    setItems(prev => prev.map(it => it.id === item.id ? { ...it, extra: { ...(it.extra || {}), ubicacionAsignada: val } } : it));
-                                  }}
-                                  onBlur={e => handleUpdateExtra(item.id!, 'ubicacionAsignada', e.target.value)}
-                                />
-                              ) : (
-                                <span>{String(item.extra?.ubicacionAsignada ?? '—')}</span>
-                              )}
-                            </TableCell>
-                            {/* Método identificación (necesario) */}
-                            <TableCell className="text-sm">
-                              {canEdit ? (
-                                <Select
-                                  value={item.extra?.metodoIdentificacion ? String(item.extra.metodoIdentificacion) : undefined}
-                                  onValueChange={val => handleUpdateExtra(item.id!, 'metodoIdentificacion', val)}
-                                >
-                                  <SelectTrigger className={inlineSelect}>
-                                    <SelectValue placeholder="—" />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    <SelectItem value="_clear_">—</SelectItem>
-                                    {['Etiqueta', 'Código color', 'Señal visual', 'Sombra/Contorno', 'Código numérico', 'Otro'].map(opt => (
-                                      <SelectItem key={opt} value={opt}>{opt}</SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
-                              ) : (
-                                <span>{String(item.extra?.metodoIdentificacion ?? '—')}</span>
-                              )}
-                            </TableCell>
-                            {/* Cercanía (necesario) */}
-                            <TableCell className="text-sm">
-                              {canEdit ? (
-                                <Select
-                                  value={item.extra?.cercania ? String(item.extra.cercania) : undefined}
-                                  onValueChange={val => handleUpdateExtra(item.id!, 'cercania', val)}
-                                >
-                                  <SelectTrigger className={inlineSelect}>
-                                    <SelectValue placeholder="—" />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    <SelectItem value="_clear_">—</SelectItem>
-                                    {['Muy cerca (brazo)', 'Cerca (1-3 pasos)', 'Media distancia', 'Poco accesible'].map(opt => (
-                                      <SelectItem key={opt} value={opt}>{opt}</SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
-                              ) : (
-                                <span>{String(item.extra?.cercania ?? '—')}</span>
                               )}
                             </TableCell>
                             {/* Días cuarentena (etiqueta) */}
