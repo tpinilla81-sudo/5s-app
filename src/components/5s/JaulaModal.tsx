@@ -100,30 +100,32 @@ export default function JaulaModal({ open, onClose }: JaulaModalProps) {
     return <Badge className={info.color}>{info.label}</Badge>;
   };
 
-  // Prepare tag data for TagPrinter — items with decision "Jaula" get naranja, "Eliminar" get roja
-  const naranjaTagItems = filteredJaulaItems
+  // Prepare tag data for TagPrinter — all Jaula items get red tag with QR
+  const tagItems = filteredJaulaItems
     .filter(i => !i.extra?.decision || i.extra.decision === 'Jaula')
-    .map(i => ({
-      nombre: i.name,
-      ubicacion: i.location,
-      cantidad: i.quantityUnneeded || i.quantity,
-      estado: String(i.extra?.estado ?? ''),
-      decision: String(i.extra?.decision || 'Jaula'),
-      fechaEntrada: i.jaulaFechaEntrada,
-      zonaOrigen: i.zonaOrigen || i.jaulaOrigen,
-    }));
-
-  const rojaTagItems = filteredJaulaItems
-    .filter(i => i.extra?.decision === 'Eliminar')
-    .map(i => ({
-      nombre: i.name,
-      ubicacion: i.location,
-      cantidad: i.quantityUnneeded || i.quantity,
-      estado: String(i.extra?.estado ?? ''),
-      decision: 'Eliminar',
-      fechaEntrada: i.jaulaFechaEntrada,
-      zonaOrigen: i.zonaOrigen || i.jaulaOrigen,
-    }));
+    .map(i => {
+      const dias = Number(i.extra?.diasCuarentena ?? 40);
+      let fechaRevision: string | null = null;
+      if (i.jaulaFechaEntrada) {
+        try {
+          const d = new Date(i.jaulaFechaEntrada);
+          d.setDate(d.getDate() + dias);
+          fechaRevision = d.toISOString();
+        } catch {}
+      }
+      return {
+        nombre: i.name,
+        ubicacion: i.location,
+        cantidad: i.quantityUnneeded || i.quantity,
+        estado: String(i.extra?.estado ?? ''),
+        frecuenciaUso: String(i.extra?.frecuenciaUso ?? ''),
+        decision: 'Jaula' as string,
+        fechaEntrada: i.jaulaFechaEntrada,
+        fechaRevision,
+        diasCuarentena: dias,
+        zonaOrigen: i.zonaOrigen || i.jaulaOrigen,
+      };
+    });
 
   return (
     <Dialog open={open} onOpenChange={() => onClose()}>
@@ -173,13 +175,10 @@ export default function JaulaModal({ open, onClose }: JaulaModalProps) {
                 </SelectContent>
               </Select>
             </div>
-            {/* Print label buttons */}
+            {/* Print label button */}
             <div className="flex items-center gap-2">
-              {naranjaTagItems.length > 0 && (
-                <TagPrinter items={naranjaTagItems} type="naranja" />
-              )}
-              {rojaTagItems.length > 0 && (
-                <TagPrinter items={rojaTagItems} type="roja" />
+              {tagItems.length > 0 && (
+                <TagPrinter items={tagItems} />
               )}
             </div>
           </div>

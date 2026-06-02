@@ -2,6 +2,7 @@
 
 import { Button } from '@/components/ui/button'
 import { Tag, Printer } from 'lucide-react'
+import QRCode from 'qrcode'
 
 interface TagData {
   nombre: string
@@ -20,7 +21,6 @@ interface TagData {
 
 interface TagPrinterProps {
   items: TagData[]
-  type: 'roja' | 'naranja'
 }
 
 function formatDate(dateStr: string | null | undefined): string {
@@ -43,25 +43,56 @@ function addDays(dateStr: string | null | undefined, days: number): string | nul
   }
 }
 
-export default function TagPrinter({ items, type }: TagPrinterProps) {
-  const isRoja = type === 'roja'
-  const label = isRoja ? 'INNECESARIO' : 'REVISAR — JAULA'
-  const color = isRoja ? '#DC2626' : '#EA580C'
-  const bgColor = isRoja ? '#FEF2F2' : '#FFF7ED'
-  const borderColor = isRoja ? '#FCA5A5' : '#FDBA74'
-  const footerText = isRoja ? 'Etiqueta Roja — Elemento Innecesario' : 'Etiqueta Naranja — Revisar en Jaula (Decidir en S2)'
+async function generateQRDataURL(text: string): Promise<string> {
+  try {
+    return await QRCode.toDataURL(text, {
+      width: 80,
+      margin: 1,
+      color: { dark: '#000000', light: '#FFFFFF' },
+    })
+  } catch {
+    return ''
+  }
+}
 
-  const handlePrint = () => {
-    const tagsHtml = items.map(item => {
+export default function TagPrinter({ items }: TagPrinterProps) {
+  const color = '#DC2626'
+  const bgColor = '#FEF2F2'
+  const borderColor = '#FCA5A5'
+
+  const handlePrint = async () => {
+    // Pre-generate QR codes for all items
+    const qrPromises = items.map(async (item) => {
+      const qrData = [
+        `INNECESARIO`,
+        `Elemento: ${item.nombre}`,
+        `Ubicación: ${item.ubicacion || '—'}`,
+        `Cantidad: ${item.cantidad}`,
+        item.estado ? `Estado: ${item.estado}` : '',
+        item.frecuenciaUso ? `Frec. uso: ${item.frecuenciaUso}` : '',
+        `Decisión: ${item.decision || 'Jaula'}`,
+        item.zonaOrigen ? `Zona Origen: ${item.zonaOrigen}` : '',
+        item.fechaEntrada ? `F. Entrada: ${formatDate(item.fechaEntrada)}` : '',
+        item.fechaRevision ? `F. Revisión: ${formatDate(item.fechaRevision)}` : '',
+        `Sistema 5S — Etiqueta Roja`,
+      ].filter(Boolean).join('\n')
+
+      const qrUrl = await generateQRDataURL(qrData)
+      return qrUrl
+    })
+    const qrCodes = await Promise.all(qrPromises)
+
+    const tagsHtml = items.map((item, idx) => {
       // Calculate revision date: diasCuarentena from entry (default 40)
       const dias = item.diasCuarentena || 40
       const fechaRevision = item.fechaRevision || addDays(item.fechaEntrada, dias)
+      const qrImg = qrCodes[idx] ? `<img src="${qrCodes[idx]}" style="width:80px; height:80px; float:right; margin: 0 0 4px 8px;" alt="QR" />` : ''
 
       return `
       <div style="
         border: 3px solid ${color};
         border-radius: 12px;
-        width: 300px;
+        width: 320px;
         padding: 0;
         margin: 8px;
         background: ${bgColor};
@@ -78,9 +109,10 @@ export default function TagPrinter({ items, type }: TagPrinterProps) {
           font-size: 16px;
           letter-spacing: 1px;
         ">
-          ${isRoja ? '&#10060;' : '&#9888;&#65039;'} ${label}
+          &#10060; INNECESARIO
         </div>
         <div style="padding: 12px 16px;">
+          ${qrImg}
           <table style="width: 100%; font-size: 12px; border-collapse: collapse;">
             <tr>
               <td style="padding: 4px 0; font-weight: bold; color: #374151; width: 45%;">Elemento:</td>
@@ -97,28 +129,14 @@ export default function TagPrinter({ items, type }: TagPrinterProps) {
             ${item.categoria ? `<tr><td style="padding: 4px 0; font-weight: bold; color: #374151;">Categoría:</td><td style="padding: 4px 0; color: #111827;">${item.categoria}</td></tr>` : ''}
             ${item.estado ? `<tr><td style="padding: 4px 0; font-weight: bold; color: #374151;">Estado:</td><td style="padding: 4px 0; color: #111827;">${item.estado}</td></tr>` : ''}
             ${item.frecuenciaUso ? `<tr><td style="padding: 4px 0; font-weight: bold; color: #374151;">Frec. uso:</td><td style="padding: 4px 0; color: #111827;">${item.frecuenciaUso}</td></tr>` : ''}
-            ${item.decision ? `<tr><td style="padding: 4px 0; font-weight: bold; color: #374151;">Decisión:</td><td style="padding: 4px 0; color: ${isRoja ? '#DC2626' : '#EA580C'}; font-weight: 600;">${item.decision}</td></tr>` : ''}
+            ${item.decision ? `<tr><td style="padding: 4px 0; font-weight: bold; color: #374151;">Decisión:</td><td style="padding: 4px 0; color: #DC2626; font-weight: 600;">${item.decision}</td></tr>` : ''}
             ${item.zonaOrigen ? `<tr><td style="padding: 4px 0; font-weight: bold; color: #374151;">Zona Origen:</td><td style="padding: 4px 0; color: #111827;">${item.zonaOrigen}</td></tr>` : ''}
             <tr><td colspan="2" style="padding: 6px 0 2px; border-top: 1px dashed ${borderColor};"></td></tr>
             ${item.fechaEntrada ? `<tr><td style="padding: 4px 0; font-weight: bold; color: #374151;">F. Entrada:</td><td style="padding: 4px 0; color: #111827;">${formatDate(item.fechaEntrada)}</td></tr>` : ''}
             ${fechaRevision ? `<tr><td style="padding: 4px 0; font-weight: bold; color: #DC2626;">F. Revisión (${dias}d):</td><td style="padding: 4px 0; color: #DC2626; font-weight: bold;">${formatDate(fechaRevision)}</td></tr>` : ''}
             ${item.observaciones ? `<tr><td style="padding: 4px 0; font-weight: bold; color: #374151;">Obs.:</td><td style="padding: 4px 0; color: #111827;">${item.observaciones}</td></tr>` : ''}
           </table>
-          ${!isRoja ? `
-          <div style="
-            margin-top: 8px;
-            padding: 6px 8px;
-            background: #FFF7ED;
-            border: 1px solid #FDBA74;
-            border-radius: 6px;
-            font-size: 10px;
-            color: #9A3412;
-            text-align: center;
-          ">
-            Si nadie reclama este elemento antes de la fecha de revisión, se eliminará.
-            <br/>Este elemento permanece en la zona para decidir en S2 (Necesarios).
-          </div>
-          ` : `
+          <div style="clear: both;"></div>
           <div style="
             margin-top: 8px;
             padding: 6px 8px;
@@ -129,10 +147,9 @@ export default function TagPrinter({ items, type }: TagPrinterProps) {
             color: #991B1B;
             text-align: center;
           ">
-            Elemento innecesario — ${item.decision === 'Tirar (Residuo)' ? 'Tirar a residuo.' : item.decision === 'Eliminar' ? 'Eliminar de la zona.' : 'Trasladar a la Jaula.'}
+            Elemento innecesario — Trasladar a la Jaula.
             <br/>Si no se actúa antes de la fecha de revisión, se procederá a su baja.
           </div>
-          `}
         </div>
         <div style="
           padding: 8px 16px;
@@ -141,7 +158,7 @@ export default function TagPrinter({ items, type }: TagPrinterProps) {
           color: #6B7280;
           text-align: center;
         ">
-          Sistema 5S — ${footerText}
+          Sistema 5S — Etiqueta Roja — Elemento Innecesario
           <br/>
           Impreso: ${new Date().toLocaleDateString('es-ES')}
         </div>
@@ -155,7 +172,7 @@ export default function TagPrinter({ items, type }: TagPrinterProps) {
       <!DOCTYPE html>
       <html>
         <head>
-          <title>Etiquetas ${isRoja ? 'Rojas' : 'Naranjas'} - Sistema 5S</title>
+          <title>Etiquetas Rojas - Sistema 5S</title>
           <style>
             body { margin: 0; padding: 16px; }
             .tags-container {
@@ -193,7 +210,7 @@ export default function TagPrinter({ items, type }: TagPrinterProps) {
               cursor: pointer;
             ">Cerrar</button>
             <p style="margin: 8px 0 0; font-size: 12px; color: #6B7280;">
-              ${items.length} etiqueta(s) ${isRoja ? 'roja(s)' : 'naranja(s)'} lista(s) para imprimir
+              ${items.length} etiqueta(s) roja(s) lista(s) para imprimir
             </p>
           </div>
           <div class="tags-container">
@@ -209,16 +226,12 @@ export default function TagPrinter({ items, type }: TagPrinterProps) {
     <Button
       size="sm"
       onClick={handlePrint}
-      className={`gap-1 text-xs h-8 ${
-        isRoja
-          ? 'bg-red-600 hover:bg-red-700 text-white'
-          : 'bg-orange-500 hover:bg-orange-600 text-white'
-      }`}
-      title={`Imprimir Etiqueta ${isRoja ? 'Roja (Innecesario)' : 'Naranja (Revisar Jaula)'}`}
+      className="gap-1 text-xs h-8 bg-red-600 hover:bg-red-700 text-white"
+      title="Imprimir Etiqueta Roja (Innecesario → Jaula)"
     >
       <Tag className="h-3 w-3" />
       <Printer className="h-3 w-3" />
-      {isRoja ? 'Etiqueta Roja' : 'Etiqueta Naranja'}
+      Etiqueta Roja
     </Button>
   )
 }
