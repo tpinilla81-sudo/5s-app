@@ -373,7 +373,7 @@ export default function InventarioModal({ open, onClose, sStep, miniStep }: Inve
           jaulaFechaEntrada: isInnecesario ? (newItem.jaulaFechaEntrada || new Date().toISOString()) : null,
           jaulaOrigen: isInnecesario ? newItem.zonaOrigen || currentZone?.name || currentProject.name || '' : null,
           zonaOrigen: newItem.zonaOrigen || currentZone?.name || null,
-          zonaDestino: newItem.zonaOrigen || currentZone?.name || null,
+          zonaDestino: isInnecesario ? 'Jaula' : (newItem.zonaOrigen || currentZone?.name || null),
         }),
       });
 
@@ -680,7 +680,7 @@ export default function InventarioModal({ open, onClose, sStep, miniStep }: Inve
             jaulaFechaEntrada: sStep === 1 && item.category === 'innecesario' ? new Date().toISOString() : null,
             jaulaOrigen: sStep === 1 && item.category === 'innecesario' ? item.zonaOrigen || currentZone?.name || currentProject!.name || '' : null,
             zonaOrigen: item.zonaOrigen || currentZone?.name || null,
-            zonaDestino: item.zonaOrigen || currentZone?.name || null,
+            zonaDestino: sStep === 1 && item.category === 'innecesario' ? 'Jaula' : (item.zonaOrigen || currentZone?.name || null),
           }))
         ),
       });
@@ -1875,7 +1875,9 @@ export default function InventarioModal({ open, onClose, sStep, miniStep }: Inve
                         </TableCell>
                         {/* Z. Destino */}
                         <TableCell className="text-xs">
-                          {canEdit ? (
+                          {sStep === 1 && item.category === 'innecesario' ? (
+                            <span className="text-red-600 font-medium">Jaula</span>
+                          ) : canEdit ? (
                             <Select
                               value={item.zonaDestino || undefined}
                               onValueChange={val => {
