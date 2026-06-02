@@ -86,10 +86,13 @@ export default function InventarioModal({ open, onClose, sStep, miniStep }: Inve
   const [savedLayouts, setSavedLayouts] = useState<{ id: string; title: string; photoUrl: string | null; createdAt: string }[]>([]);
   const [layoutUploaded, setLayoutUploaded] = useState(false);
 
+  // S1: default category is 'innecesario' since this template is for unnecessary items
+  const defaultCategory = sStep === 1 ? 'innecesario' : undefined;
+
   const [newItem, setNewItem] = useState<Partial<InventoryItemData> & { extra?: Record<string, string | number> }>({
     name: '',
     location: '',
-    category: undefined as string | undefined,
+    category: defaultCategory as string | undefined,
     quantity: 1,
     quantityNeeded: 0,
     quantityUnneeded: 0,
@@ -100,12 +103,14 @@ export default function InventarioModal({ open, onClose, sStep, miniStep }: Inve
     extra: {},
   });
 
-  // Update zonaOrigen when zone changes
+  // Update zonaOrigen and default category when zone/step changes
   useEffect(() => {
-    if (currentZone?.name && !newItem.zonaOrigen) {
-      setNewItem(prev => ({ ...prev, zonaOrigen: currentZone.name }));
-    }
-  }, [currentZone?.name]);
+    setNewItem(prev => ({
+      ...prev,
+      zonaOrigen: currentZone?.name || prev.zonaOrigen,
+      category: sStep === 1 ? 'innecesario' : prev.category,
+    }));
+  }, [currentZone?.name, sStep]);
 
   useEffect(() => {
     if (open) {
@@ -376,7 +381,7 @@ export default function InventarioModal({ open, onClose, sStep, miniStep }: Inve
       if (json.success) {
         toast.success('Elemento agregado correctamente');
         await loadInventory();
-        setNewItem({ name: '', location: '', category: undefined as string | undefined, quantity: 1, quantityNeeded: 0, quantityUnneeded: 0, price: null, action: '', zonaOrigen: currentZone?.name || null, jaulaFechaEntrada: new Date().toISOString(), extra: {} });
+        setNewItem({ name: '', location: '', category: defaultCategory as string | undefined, quantity: 1, quantityNeeded: 0, quantityUnneeded: 0, price: null, action: '', zonaOrigen: currentZone?.name || null, jaulaFechaEntrada: new Date().toISOString(), extra: {} });
       } else {
         toast.error(`Error al agregar: ${json.error || 'Error desconocido'}`);
       }
@@ -1196,8 +1201,8 @@ export default function InventarioModal({ open, onClose, sStep, miniStep }: Inve
             <Card>
               <CardContent className="p-4">
                 <div className="space-y-3">
-                  {/* Row 1: Name, Location, Zona, Category, Quantity, Price */}
-                  <div className="grid grid-cols-1 gap-3 items-end sm:grid-cols-7">
+                  {/* Row 1: Name, Zona (read-only), Category (auto innecesario for S1), Quantity, Price */}
+                  <div className="grid grid-cols-1 gap-3 items-end sm:grid-cols-5">
                     <div className="sm:col-span-2">
                       <label className="text-xs font-medium">Elemento *</label>
                       <Input
@@ -1206,59 +1211,78 @@ export default function InventarioModal({ open, onClose, sStep, miniStep }: Inve
                         onChange={e => setNewItem(prev => ({ ...prev, name: e.target.value }))}
                       />
                     </div>
-                    <div>
-                      <label className="text-xs font-medium">Ubicación</label>
-                      <Input
-                        placeholder="Ubicación"
-                        value={newItem.location}
-                        onChange={e => setNewItem(prev => ({ ...prev, location: e.target.value }))}
-                      />
-                    </div>
-                    <div>
-                      <label className="text-xs font-medium flex items-center gap-1">
-                        <MapPin className="h-3 w-3" />
-                        Zona
-                      </label>
-                      {currentProject?.zones && currentProject.zones.length > 0 ? (
+                    {sStep === 1 ? (
+                      /* S1: Zona is pre-filled from current zone, read-only */
+                      <div>
+                        <label className="text-xs font-medium flex items-center gap-1">
+                          <MapPin className="h-3 w-3" />
+                          Zona
+                        </label>
+                        <Input
+                          value={currentZone?.name || newItem.zonaOrigen || 'Sin zona'}
+                          readOnly
+                          className="bg-gray-50 text-gray-600"
+                        />
+                      </div>
+                    ) : (
+                      /* Non-S1: Zona selectable */
+                      <div>
+                        <label className="text-xs font-medium flex items-center gap-1">
+                          <MapPin className="h-3 w-3" />
+                          Zona
+                        </label>
+                        {currentProject?.zones && currentProject.zones.length > 0 ? (
+                          <Select
+                            value={newItem.zonaOrigen || currentZone?.name || undefined}
+                            onValueChange={val => setNewItem(prev => ({ ...prev, zonaOrigen: val }))}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Seleccionar zona" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {currentProject.zones.map(z => (
+                                <SelectItem key={z.id} value={z.name}>{z.name}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        ) : (
+                          <Input
+                            placeholder="Zona"
+                            value={newItem.zonaOrigen || currentZone?.name || ''}
+                            onChange={e => setNewItem(prev => ({ ...prev, zonaOrigen: e.target.value }))}
+                          />
+                        )}
+                      </div>
+                    )}
+                    {sStep === 1 ? (
+                      /* S1: Category is innecesario by default, shown as read-only badge */
+                      <div>
+                        <label className="text-xs font-medium">Categoría</label>
+                        <div className="h-9 flex items-center px-3 rounded-md border bg-red-50 text-red-700 text-sm font-medium">
+                          Innecesario
+                        </div>
+                      </div>
+                    ) : (
+                      /* Non-S1: Category selectable */
+                      <div>
+                        <label className="text-xs font-medium">Categoría *</label>
                         <Select
-                          value={newItem.zonaOrigen || currentZone?.name || undefined}
-                          onValueChange={val => setNewItem(prev => ({ ...prev, zonaOrigen: val }))}
+                          value={newItem.category || undefined}
+                          onValueChange={val => setNewItem(prev => ({ ...prev, category: val, extra: { ...(prev.extra || {}), subcategoria: undefined } }))}
                         >
                           <SelectTrigger>
-                            <SelectValue placeholder="Seleccionar zona" />
+                            <SelectValue placeholder="Categoría" />
                           </SelectTrigger>
                           <SelectContent>
-                            {currentProject.zones.map(z => (
-                              <SelectItem key={z.id} value={z.name}>{z.name}</SelectItem>
+                            {config.categories.filter(cat => cat.value && cat.value.trim() !== '').map(cat => (
+                              <SelectItem key={cat.value} value={cat.value}>
+                                {cat.label}
+                              </SelectItem>
                             ))}
                           </SelectContent>
                         </Select>
-                      ) : (
-                        <Input
-                          placeholder="Zona"
-                          value={newItem.zonaOrigen || currentZone?.name || ''}
-                          onChange={e => setNewItem(prev => ({ ...prev, zonaOrigen: e.target.value }))}
-                        />
-                      )}
-                    </div>
-                    <div>
-                      <label className="text-xs font-medium">Categoría *</label>
-                      <Select
-                        value={newItem.category || undefined}
-                        onValueChange={val => setNewItem(prev => ({ ...prev, category: val, extra: { ...(prev.extra || {}), subcategoria: undefined } }))}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Categoría" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {config.categories.filter(cat => cat.value && cat.value.trim() !== '').map(cat => (
-                            <SelectItem key={cat.value} value={cat.value}>
-                              {cat.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
+                      </div>
+                    )}
                     <div>
                       <label className="text-xs font-medium">{sStep === 1 ? 'Cantidad' : 'Total exist.'}</label>
                       <Input
