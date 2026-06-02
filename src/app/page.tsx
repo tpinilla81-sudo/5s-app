@@ -555,13 +555,13 @@ export default function HomePage() {
             <p className="text-muted-foreground">{isSeeding ? 'Inicializando datos...' : 'Cargando...'}</p>
           </div>
         ) : (
-          <div className="flex-1 overflow-auto">
+          <div className="flex-1 flex flex-col min-h-0">
             <AnimatePresence mode="wait">
               {/* ═══ TAB: BOARD 5S — Board-Centric Layout ═══ */}
               {activeTab === 'board' && (
-                <motion.div key="board" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="h-full flex flex-col">
-                  {/* TOP: Hero Board - Centered and Prominent */}
-                  <div className="flex-1 min-h-0 flex flex-col items-center justify-start py-2 overflow-auto">
+                <motion.div key="board" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex-1 flex flex-col min-h-0">
+                  {/* TOP: Hero Board - Centered and Prominent (scrollable area) */}
+                  <div className="flex-1 min-h-0 overflow-auto flex flex-col items-center justify-start py-2">
                     {/* Zone required message for empleados without zone assigned */}
                     {!currentZone && currentUser && !hasPermission('manage_zones') && getAvailableZones().length === 0 && (
                       <div className="text-center space-y-3 py-8">
@@ -634,7 +634,7 @@ export default function HomePage() {
 
                   {/* BOTTOM: S-Step Cards — Compact horizontal row (only when zone selected) */}
                   {currentZone && (
-                  <div className="shrink-0 border-t bg-white/80 backdrop-blur-sm px-2 py-2">
+                  <div className="shrink-0 border-t bg-white/80 backdrop-blur-sm px-2 py-2 z-10">
                     <div className="grid grid-cols-5 gap-2 max-w-5xl mx-auto">
                       {S_STEPS.map(s => {
                         const earned = isQuesitoEarned(s.id);
@@ -913,21 +913,21 @@ export default function HomePage() {
 
               {/* ═══ TAB: GERENTE ═══ */}
               {activeTab === 'gerente' && canSeeGerentePanel && (
-                <motion.div key="gerente" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="h-full overflow-auto p-4">
+                <motion.div key="gerente" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex-1 min-h-0 overflow-auto p-4">
                   <GerentePanel embedded />
                 </motion.div>
               )}
 
               {/* ═══ TAB: ADMIN ═══ */}
               {activeTab === 'admin' && isAdmin && (
-                <motion.div key="admin" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="h-full overflow-auto p-4">
+                <motion.div key="admin" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex-1 min-h-0 overflow-auto p-4">
                   <AdminPanel embedded />
                 </motion.div>
               )}
 
               {/* ═══ TAB: MAINTENANCE / MEJORA CONTINUA ═══ */}
               {activeTab === 'maintenance' && is5SCompleted() && (
-                <motion.div key="maintenance" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="h-full overflow-auto p-4">
+                <motion.div key="maintenance" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex-1 min-h-0 overflow-auto p-4">
                   <MaintenanceView embedded />
                 </motion.div>
               )}
