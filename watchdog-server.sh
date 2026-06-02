@@ -1,0 +1,12 @@
+#!/bin/bash
+cd /home/z/my-project/.next/standalone
+export DATABASE_URL="file:/home/z/my-project/db/custom.db"
+export PORT=3000
+export HOSTNAME=0.0.0.0
+export NODE_OPTIONS="--max-old-space-size=256"
+
+while true; do
+  node server.js 2>&1
+  echo "[$(date)] Server exited, restarting in 1s..."
+  sleep 1
+done

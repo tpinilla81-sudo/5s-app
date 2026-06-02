@@ -1,6 +1,6 @@
 ▲ Next.js 16.1.3 (Turbopack)
-- Local:         http://localhost:3000
-- Network:       http://0.0.0.0:3000
+- Local:         http://localhost:3001
+- Network:       http://0.0.0.0:3001
 - Environments: .env
 
 ✓ Starting...
@@ -10,7 +10,7 @@ You can learn more, including how to opt-out if you'd not like to participate in
 https://nextjs.org/telemetry
 
 ⚠ The "middleware" file convention is deprecated. Please use "proxy" instead. Learn more: https://nextjs.org/docs/messages/middleware-to-proxy
-✓ Ready in 1802ms
+✓ Ready in 1461ms
 ○ Compiling / ...
- GET / 200 in 8.6s (compile: 8.0s, proxy.ts: 65ms, render: 514ms)
- GET / 200 in 6.1s (compile: 6.0s, proxy.ts: 4ms, render: 87ms)
+ GET / 200 in 7.6s (compile: 7.1s, proxy.ts: 54ms, render: 448ms)
+ GET / 200 in 36ms (compile: 5ms, proxy.ts: 5ms, render: 26ms)
