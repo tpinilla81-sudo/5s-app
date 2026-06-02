@@ -731,12 +731,54 @@ export default function InventarioModal({ open, onClose, sStep, miniStep }: Inve
     }
   };
 
+  // Helper: update an extra field on an item and persist
+  const handleUpdateExtra = async (itemId: string, key: string, value: string | number) => {
+    const item = items.find(i => i.id === itemId);
+    if (!item) return;
+    const newExtra = { ...(item.extra || {}) };
+    if (value === '_clear_') {
+      delete newExtra[key];
+    } else {
+      newExtra[key] = value;
+    }
+    // Optimistic local update
+    setItems(prev => prev.map(it => it.id === itemId ? { ...it, extra: newExtra } : it));
+    try {
+      await fetch(`/api/inventory?id=${itemId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ extra: newExtra }),
+      });
+    } catch (e) {
+      console.error('Error updating extra field:', e);
+    }
+  };
+
+  // Helper: update a simple field on an item and persist
+  const handleUpdateField = async (itemId: string, field: string, value: any) => {
+    const cleanValue = value === '_clear_' ? null : value;
+    setItems(prev => prev.map(it => it.id === itemId ? { ...it, [field]: cleanValue } : it));
+    try {
+      await fetch(`/api/inventory?id=${itemId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ [field]: cleanValue }),
+      });
+    } catch (e) {
+      console.error('Error updating field:', e);
+    }
+  };
+
   // Count classified items
   const classifiedCount = items.filter(i => i.category && i.category !== '').length;
   const classifyPercent = items.length > 0 ? Math.round((classifiedCount / items.length) * 100) : 0;
   // For S2, S3, S4: layout must be uploaded AND classification threshold met
   const needsLayout = sStep === 2 || sStep === 3 || sStep === 4;
-  const canComplete = classifyPercent >= INVENTORY_CLASSIFY_THRESHOLD && items.length > 0 && (!needsLayout || layoutUploaded);
+  // S1: No minimum percentage required — just need at least 1 item. If step 4 goes bad, it means not everything was eliminated.
+  // S2-S5: Must meet classification threshold (80%)
+  const canComplete = sStep === 1
+    ? items.length > 0 && classifiedCount > 0
+    : classifyPercent >= INVENTORY_CLASSIFY_THRESHOLD && items.length > 0 && (!needsLayout || layoutUploaded);
 
   // S1 specific counts: split by category
   const innecesarios = sStep === 1 ? items.filter(i => i.category === 'innecesario') : items.filter(i => i.category === 'innecesario');
@@ -1005,7 +1047,7 @@ export default function InventarioModal({ open, onClose, sStep, miniStep }: Inve
                 </p>
               </div>
               <Badge variant={canComplete ? 'default' : 'secondary'}>
-                {classifyPercent}% (mín. {INVENTORY_CLASSIFY_THRESHOLD}%)
+                {classifyPercent}%{sStep !== 1 ? ` (mín. ${INVENTORY_CLASSIFY_THRESHOLD}%)` : ''}
               </Badge>
             </div>
 
@@ -1592,63 +1634,248 @@ export default function InventarioModal({ open, onClose, sStep, miniStep }: Inve
                     {items.map(item => {
                       const isInnecesario = item.category === 'innecesario';
                       const isNecesario = item.category === 'necesario';
+                      const canEdit = !isReadOnly && item.id;
+                      // Inline editable input style
+                      const inlineInput = "h-6 text-xs border-0 p-1 focus:border focus:border-gray-300 bg-transparent hover:bg-gray-50";
+                      const inlineSelect = "h-6 text-[10px] border-0 p-0 bg-transparent hover:bg-gray-50";
                       return (
                       <TableRow key={item.id} className={isInnecesario ? 'bg-red-50/50' : isNecesario ? 'bg-green-50/30' : ''}>
+                        {/* Elemento */}
                         <TableCell className="text-sm font-medium">
-                          {!isReadOnly && item.id ? (
+                          {canEdit ? (
                             <Input
                               value={item.name}
-                              className="h-6 text-xs border-0 p-1 focus:border focus:border-gray-300 bg-transparent hover:bg-gray-50"
-                              onChange={e => {
-                                setItems(prev => prev.map(it => it.id === item.id ? { ...it, name: e.target.value } : it));
-                              }}
-                              onBlur={e => {
-                                if (item.id) {
-                                  handleUpdateJaula(item.id, { name: e.target.value } as any);
-                                }
-                              }}
+                              className={inlineInput}
+                              onChange={e => setItems(prev => prev.map(it => it.id === item.id ? { ...it, name: e.target.value } : it))}
+                              onBlur={e => handleUpdateField(item.id!, 'name', e.target.value)}
                             />
                           ) : (
                             <span>{item.name}</span>
                           )}
                         </TableCell>
-                        <TableCell className="text-sm text-muted-foreground">
-                          {!isReadOnly && item.id ? (
+                        {/* Ubicación */}
+                        <TableCell className="text-sm">
+                          {canEdit ? (
                             <Input
                               value={item.location || ''}
-                              className="h-6 text-xs border-0 p-1 focus:border focus:border-gray-300 bg-transparent hover:bg-gray-50"
-                              onChange={e => {
-                                setItems(prev => prev.map(it => it.id === item.id ? { ...it, location: e.target.value } : it));
-                              }}
-                              onBlur={e => {
-                                if (item.id) {
-                                  handleUpdateJaula(item.id, { location: e.target.value } as any);
-                                }
-                              }}
+                              className={inlineInput}
+                              onChange={e => setItems(prev => prev.map(it => it.id === item.id ? { ...it, location: e.target.value } : it))}
+                              onBlur={e => handleUpdateField(item.id!, 'location', e.target.value)}
                             />
                           ) : (
-                            <span>{item.location}</span>
+                            <span>{item.location || '—'}</span>
                           )}
                         </TableCell>
-                        <TableCell>{getCategoryBadge(item.category)}</TableCell>
-                        <TableCell className="text-center text-sm">{sStep === 1 ? (isInnecesario ? (item.quantityUnneeded || item.quantity) : isNecesario ? (item.quantityNeeded || item.quantity) : item.quantity) : item.quantity}</TableCell>
-                        <TableCell className="text-right text-sm">{item.price != null ? `${item.price.toFixed(2)} €` : '—'}</TableCell>
+                        {/* Categoría */}
+                        <TableCell>
+                          {canEdit && sStep === 1 ? (
+                            <Select
+                              value={item.category || undefined}
+                              onValueChange={val => {
+                                const isInn = val === 'innecesario';
+                                const isNec = val === 'necesario';
+                                const qty = item.quantity || 1;
+                                const updates: any = {
+                                  category: val,
+                                  quantityNeeded: isNec ? qty : 0,
+                                  quantityUnneeded: isInn ? qty : 0,
+                                  jaulaStatus: isInn ? 'en_jaula' : '',
+                                  jaulaFechaEntrada: isInn ? (item.jaulaFechaEntrada || new Date().toISOString()) : null,
+                                };
+                                setItems(prev => prev.map(it => it.id === item.id ? { ...it, ...updates } : it));
+                                fetch(`/api/inventory?id=${item.id}`, {
+                                  method: 'PUT',
+                                  headers: { 'Content-Type': 'application/json' },
+                                  body: JSON.stringify(updates),
+                                });
+                              }}
+                            >
+                              <SelectTrigger className={inlineSelect}>
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {config.categories.filter(c => c.value && c.value.trim() !== '').map(c => (
+                                  <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          ) : (
+                            getCategoryBadge(item.category)
+                          )}
+                        </TableCell>
+                        {/* Cantidad */}
+                        <TableCell className="text-center text-sm">
+                          {canEdit ? (
+                            <Input
+                              type="number"
+                              min="1"
+                              value={item.quantity || 1}
+                              className={`${inlineInput} w-14 text-center`}
+                              onChange={e => {
+                                const val = parseInt(e.target.value) || 1;
+                                setItems(prev => prev.map(it => it.id === item.id ? { ...it, quantity: val } : it));
+                              }}
+                              onBlur={e => handleUpdateField(item.id!, 'quantity', parseInt(e.target.value) || 1)}
+                            />
+                          ) : (
+                            <span>{sStep === 1 ? (isInnecesario ? (item.quantityUnneeded || item.quantity) : isNecesario ? (item.quantityNeeded || item.quantity) : item.quantity) : item.quantity}</span>
+                          )}
+                        </TableCell>
+                        {/* Precio */}
+                        <TableCell className="text-right text-sm">
+                          {canEdit ? (
+                            <Input
+                              type="number"
+                              min="0"
+                              step="0.01"
+                              value={item.price ?? ''}
+                              className={`${inlineInput} w-20 text-right`}
+                              onChange={e => {
+                                const val = e.target.value ? parseFloat(e.target.value) : null;
+                                setItems(prev => prev.map(it => it.id === item.id ? { ...it, price: val } : it));
+                              }}
+                              onBlur={e => handleUpdateField(item.id!, 'price', e.target.value ? parseFloat(e.target.value) : null)}
+                            />
+                          ) : (
+                            <span>{item.price != null ? `${item.price.toFixed(2)} €` : '—'}</span>
+                          )}
+                        </TableCell>
                         {sStep === 1 ? (
                           <>
-                            <TableCell className="text-sm text-muted-foreground">{String(item.extra?.estado ?? '—')}</TableCell>
-                            <TableCell className="text-sm text-muted-foreground">{String(item.extra?.frecuenciaUso ?? '—')}</TableCell>
+                            {/* Estado (innecesario) */}
                             <TableCell className="text-sm">
-                              {item.extra?.decision ? (
-                                <Badge className={item.extra.decision === 'Jaula' ? 'bg-orange-100 text-orange-800' : item.extra.decision === 'Eliminar' ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-800'}>
-                                  {String(item.extra.decision || item.action || 'Jaula')}
-                                </Badge>
+                              {canEdit ? (
+                                <Select
+                                  value={item.extra?.estado ? String(item.extra.estado) : undefined}
+                                  onValueChange={val => handleUpdateExtra(item.id!, 'estado', val)}
+                                >
+                                  <SelectTrigger className={inlineSelect}>
+                                    <SelectValue placeholder="—" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="_clear_">—</SelectItem>
+                                    {['Bueno', 'Regular', 'Malo'].map(opt => (
+                                      <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
                               ) : (
-                                <span className="text-muted-foreground">—</span>
+                                <span>{String(item.extra?.estado ?? '—')}</span>
                               )}
                             </TableCell>
-                            <TableCell className="text-sm text-muted-foreground">{String(item.extra?.ubicacionAsignada ?? '—')}</TableCell>
-                            <TableCell className="text-sm text-muted-foreground">{String(item.extra?.metodoIdentificacion ?? '—')}</TableCell>
-                            <TableCell className="text-sm text-muted-foreground">{String(item.extra?.cercania ?? '—')}</TableCell>
+                            {/* Frecuencia uso (innecesario) */}
+                            <TableCell className="text-sm">
+                              {canEdit ? (
+                                <Select
+                                  value={item.extra?.frecuenciaUso ? String(item.extra.frecuenciaUso) : undefined}
+                                  onValueChange={val => handleUpdateExtra(item.id!, 'frecuenciaUso', val)}
+                                >
+                                  <SelectTrigger className={inlineSelect}>
+                                    <SelectValue placeholder="—" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="_clear_">—</SelectItem>
+                                    {['Diario', 'Semanal', 'Quincenal', 'Mensual', 'Trimestral', 'Anual', 'Nunca'].map(opt => (
+                                      <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              ) : (
+                                <span>{String(item.extra?.frecuenciaUso ?? '—')}</span>
+                              )}
+                            </TableCell>
+                            {/* Decisión (innecesario) */}
+                            <TableCell className="text-sm">
+                              {canEdit ? (
+                                <Select
+                                  value={item.extra?.decision ? String(item.extra.decision) : undefined}
+                                  onValueChange={val => {
+                                    handleUpdateExtra(item.id!, 'decision', val);
+                                    // Also update jaula status based on decision
+                                    const isInn = item.category === 'innecesario';
+                                    if (isInn) {
+                                      handleUpdateField(item.id!, 'action', val);
+                                    }
+                                  }}
+                                >
+                                  <SelectTrigger className={inlineSelect}>
+                                    <SelectValue placeholder="—" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="_clear_">—</SelectItem>
+                                    <SelectItem value="Jaula">Jaula</SelectItem>
+                                    <SelectItem value="Eliminar">Eliminar</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              ) : (
+                                item.extra?.decision ? (
+                                  <Badge className={item.extra.decision === 'Jaula' ? 'bg-orange-100 text-orange-800' : item.extra.decision === 'Eliminar' ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-800'}>
+                                    {String(item.extra.decision)}
+                                  </Badge>
+                                ) : (
+                                  <span className="text-muted-foreground">—</span>
+                                )
+                              )}
+                            </TableCell>
+                            {/* Ubicación asignada (necesario) */}
+                            <TableCell className="text-sm">
+                              {canEdit ? (
+                                <Input
+                                  value={String(item.extra?.ubicacionAsignada ?? '')}
+                                  className={inlineInput}
+                                  placeholder="—"
+                                  onChange={e => {
+                                    const val = e.target.value;
+                                    setItems(prev => prev.map(it => it.id === item.id ? { ...it, extra: { ...(it.extra || {}), ubicacionAsignada: val } } : it));
+                                  }}
+                                  onBlur={e => handleUpdateExtra(item.id!, 'ubicacionAsignada', e.target.value)}
+                                />
+                              ) : (
+                                <span>{String(item.extra?.ubicacionAsignada ?? '—')}</span>
+                              )}
+                            </TableCell>
+                            {/* Método identificación (necesario) */}
+                            <TableCell className="text-sm">
+                              {canEdit ? (
+                                <Select
+                                  value={item.extra?.metodoIdentificacion ? String(item.extra.metodoIdentificacion) : undefined}
+                                  onValueChange={val => handleUpdateExtra(item.id!, 'metodoIdentificacion', val)}
+                                >
+                                  <SelectTrigger className={inlineSelect}>
+                                    <SelectValue placeholder="—" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="_clear_">—</SelectItem>
+                                    {['Etiqueta', 'Código color', 'Señal visual', 'Sombra/Contorno', 'Código numérico', 'Otro'].map(opt => (
+                                      <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              ) : (
+                                <span>{String(item.extra?.metodoIdentificacion ?? '—')}</span>
+                              )}
+                            </TableCell>
+                            {/* Cercanía (necesario) */}
+                            <TableCell className="text-sm">
+                              {canEdit ? (
+                                <Select
+                                  value={item.extra?.cercania ? String(item.extra.cercania) : undefined}
+                                  onValueChange={val => handleUpdateExtra(item.id!, 'cercania', val)}
+                                >
+                                  <SelectTrigger className={inlineSelect}>
+                                    <SelectValue placeholder="—" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="_clear_">—</SelectItem>
+                                    {['Muy cerca (brazo)', 'Cerca (1-3 pasos)', 'Media distancia', 'Poco accesible'].map(opt => (
+                                      <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              ) : (
+                                <span>{String(item.extra?.cercania ?? '—')}</span>
+                              )}
+                            </TableCell>
                           </>
                         ) : (
                           config.extraFields.slice(0, 2).map(f => (
@@ -1657,24 +1884,53 @@ export default function InventarioModal({ open, onClose, sStep, miniStep }: Inve
                             </TableCell>
                           ))
                         )}
-                        <TableCell className="text-xs text-muted-foreground">{item.zonaOrigen || '—'}</TableCell>
+                        {/* Z. Origen */}
                         <TableCell className="text-xs">
-                          {!isReadOnly && item.id ? (
+                          {canEdit ? (
+                            currentProject?.zones && currentProject.zones.length > 0 ? (
+                              <Select
+                                value={item.zonaOrigen || undefined}
+                                onValueChange={val => handleUpdateField(item.id!, 'zonaOrigen', val)}
+                              >
+                                <SelectTrigger className={inlineSelect}>
+                                  <SelectValue placeholder="—" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="_clear_">—</SelectItem>
+                                  {currentProject.zones.map(z => (
+                                    <SelectItem key={z.id} value={z.name}>{z.name}</SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            ) : (
+                              <Input
+                                value={item.zonaOrigen || ''}
+                                className={inlineInput}
+                                placeholder="—"
+                                onBlur={e => handleUpdateField(item.id!, 'zonaOrigen', e.target.value)}
+                              />
+                            )
+                          ) : (
+                            <span className="text-muted-foreground">{item.zonaOrigen || '—'}</span>
+                          )}
+                        </TableCell>
+                        {/* Z. Destino */}
+                        <TableCell className="text-xs">
+                          {canEdit ? (
                             <Select
                               value={item.zonaDestino || undefined}
                               onValueChange={val => {
                                 const targetZone = currentProject?.zones?.find(z => z.name === val);
                                 const updates: any = { zonaDestino: val };
-                                if (targetZone) {
-                                  updates.zoneId = targetZone.id;
-                                }
+                                if (targetZone) updates.zoneId = targetZone.id;
                                 handleUpdateJaula(item.id!, updates);
                               }}
                             >
-                              <SelectTrigger className="h-6 w-24 text-[10px]">
+                              <SelectTrigger className={inlineSelect}>
                                 <SelectValue placeholder="—"/>
                               </SelectTrigger>
                               <SelectContent>
+                                <SelectItem value="_clear_">—</SelectItem>
                                 {currentProject?.zones?.map(z => (
                                   <SelectItem key={z.id} value={z.name}>{z.name}</SelectItem>
                                 )) || []}
@@ -1684,6 +1940,7 @@ export default function InventarioModal({ open, onClose, sStep, miniStep }: Inve
                             <span className="text-muted-foreground">{item.zonaDestino || '—'}</span>
                           )}
                         </TableCell>
+                        {/* Delete */}
                         <TableCell>
                           <Button
                             variant="ghost"
@@ -1710,7 +1967,7 @@ export default function InventarioModal({ open, onClose, sStep, miniStep }: Inve
                 disabled={!canComplete || items.length === 0 || isReadOnly}
                 style={canComplete ? { backgroundColor: sStepData?.color } : undefined}
               >
-                Completar Inventario ({classifyPercent}% clasificado)
+                Completar Inventario{sStep === 1 ? '' : ` (${classifyPercent}% clasificado)`}
               </Button>
             </div>
           </div>
