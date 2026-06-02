@@ -112,3 +112,26 @@ Stage Summary:
 - Fixed the crash by removing empty string from template options and adding defensive filtering
 - Fixed the board config panel click interactivity by using CSS zoom instead of transform scale
 - All board modals (Inventario, Auditoría, Autoevaluación, Formación+Examen) now work correctly
+---
+Task ID: 1
+Agent: Main Agent
+Task: Create print labels for S1 step 3, remove jaula from S1 step 3, add jaula to general toolbar
+
+Work Log:
+- Explored codebase to understand S1 step 3 (InventarioModal) and toolbar structure
+- Found existing TagPrinter.tsx component was orphaned (never imported/used)
+- Found jaula panels in InventarioModal.tsx at lines 976-1108 (S1-specific)
+- Created new JaulaModal.tsx component with full jaula view + tag printing
+- Added Jaula button to main header toolbar in page.tsx next to Avisos button
+- Removed jaula info panel and jaula de excedentes panel from S1 step 3 in InventarioModal.tsx
+- Integrated TagPrinter into InventarioModal S1 step 3 for printing labels
+- Added both "Etiqueta Naranja" (for Jaula items) and "Etiqueta Roja" (for Eliminar items) buttons
+- Cleaned up unused imports (Package, showJaula state)
+- Built successfully, tested in browser
+
+Stage Summary:
+- JaulaModal.tsx created at /home/z/my-project/src/components/5s/JaulaModal.tsx
+- Jaula button visible in toolbar next to Avisos
+- S1 step 3 no longer shows jaula panels
+- S1 step 3 now has print label buttons (Etiqueta Naranja/Roja)
+- Print opens new window with styled labels ready to print

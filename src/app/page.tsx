@@ -22,6 +22,7 @@ import RolePermissions from '@/components/auth/RolePermissions';
 import AdminPanel from '@/components/admin/AdminPanel';
 import MaintenanceView from '@/components/5s/MaintenanceView';
 import GerentePanel from '@/components/auth/GerentePanel';
+import JaulaModal from '@/components/5s/JaulaModal';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -35,7 +36,8 @@ import {
   Loader2, RefreshCw, LogOut, Settings, ChevronDown, Shield, ShieldCheck, Unlock, Lock,
   LayoutDashboard, Wrench, Sparkles, BarChart3, FileText, MapPin, ListChecks,
   ClipboardList, GraduationCap, Camera, CheckSquare, Trophy, ChevronRight,
-  Lock as LockIcon, AlertTriangle, Building2, Zap, Bell, BellRing, BookOpen, Image as ImageIcon
+  Lock as LockIcon, AlertTriangle, Building2, Zap, Bell, BellRing, BookOpen, Image as ImageIcon,
+  Package
 } from 'lucide-react';
 
 const MODAL_MAP: Record<string, React.ComponentType<{
@@ -110,6 +112,7 @@ export default function HomePage() {
   const [unreadNotifs, setUnreadNotifs] = useState(0);
   const [showNotifs, setShowNotifs] = useState(false);
   const [notifs, setNotifs] = useState<any[]>([]);
+  const [showJaulaModal, setShowJaulaModal] = useState(false);
 
   useEffect(() => {
     checkSession();
@@ -373,6 +376,16 @@ export default function HomePage() {
                 {unreadNotifs > 0 && (
                   <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-[8px] font-bold rounded-full flex items-center justify-center animate-pulse">{unreadNotifs > 9 ? '9+' : unreadNotifs}</span>
                 )}
+              </Button>
+            )}
+            {/* 📦 Jaula de Excedentes button — next to Avisos */}
+            {canSeeNotifications && (
+              <Button variant="outline" size="sm"
+                className="gap-1 text-[10px] h-7 border-red-300 text-red-600 hover:bg-red-50"
+                onClick={() => setShowJaulaModal(true)}
+                title="Jaula de Excedentes">
+                <Package className="h-3 w-3" />
+                <span className="hidden sm:inline">Jaula</span>
               </Button>
             )}
             {/* Quick action buttons — removed (accessed from board instead) */}
@@ -976,6 +989,9 @@ export default function HomePage() {
 
       {/* Role Permissions Modal */}
       <RolePermissions open={showRolePermissions} onClose={() => setShowRolePermissions(false)} />
+
+      {/* Jaula de Excedentes Modal */}
+      <JaulaModal open={showJaulaModal} onClose={() => setShowJaulaModal(false)} />
     </div>
   );
 }

@@ -26,13 +26,14 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { ClipboardList, Plus, CheckCircle, Download, Upload, FileSpreadsheet, BookOpen, Package, ArrowRight, AlertTriangle, FileUp, Maximize2, Minimize2, File, PenTool, Image as ImageIcon, Eye, Loader2 } from 'lucide-react';
+import { ClipboardList, Plus, CheckCircle, Download, Upload, FileSpreadsheet, BookOpen, ArrowRight, AlertTriangle, FileUp, Maximize2, Minimize2, File, PenTool, Image as ImageIcon, Eye, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { use5SStore } from '@/lib/store';
 import { S_STEPS, INVENTORY_CONFIGS, INVENTORY_CLASSIFY_THRESHOLD } from '@/lib/5s-constants';
 import type { InventoryConfig } from '@/lib/5s-constants';
 import LayoutEditor from '@/components/5s/LayoutEditor';
 import ColorCodeTable from '@/components/5s/ColorCodeTable';
+import TagPrinter from '@/components/5s/TagPrinter';
 
 interface InventoryItemData {
   id?: string;
@@ -77,7 +78,6 @@ export default function InventarioModal({ open, onClose, sStep, miniStep }: Inve
   const [items, setItems] = useState<InventoryItemData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isCompleted, setIsCompleted] = useState(false);
-  const [showJaula, setShowJaula] = useState(false);
   const [csvPreview, setCsvPreview] = useState<InventoryItemData[] | null>(null);
   const [isImporting, setIsImporting] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(true);
@@ -973,140 +973,6 @@ export default function InventarioModal({ open, onClose, sStep, miniStep }: Inve
               </Card>
             )}
 
-            {/* 1S: Jaula info panel */}
-            {sStep === 1 && (
-              <Card className="border-2 border-red-200 bg-red-50/30">
-                <CardContent className="p-4">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Package className="h-5 w-5 text-red-600" />
-                    <h4 className="font-semibold text-red-800">Sistema de Jaulas — Etiqueta ROJA</h4>
-                  </div>
-                  <div className="bg-white rounded-lg border p-3 text-xs mb-3">
-                    <div className="flex items-center gap-1 mb-1">
-                      <div className="w-3 h-3 rounded bg-red-500"></div>
-                      <span className="font-medium">Etiqueta ROJA — Innecesario</span>
-                    </div>
-                    <p className="text-muted-foreground">Todos los elementos de este inventario son INNECESARIOS. Se envían a la JAULA o se ELIMINAN directamente.</p>
-                  </div>
-                  <div className="mt-3 flex flex-wrap gap-4 text-xs">
-                    <span className="text-red-700 font-medium">Innecesarios: {innecesarios.length}</span>
-                    {jaulaItems.length > 0 && (
-                      <span className="text-red-800 font-bold">
-                        En Jaula: {jaulaItems.length} ({totalJaulaValue.toFixed(2)} €)
-                      </span>
-                    )}
-                  </div>
-                  {jaulaItems.length > 0 && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="mt-2 text-xs border-red-300 text-red-700 hover:bg-red-50"
-                      onClick={() => setShowJaula(!showJaula)}
-                    >
-                      <Package className="h-3 w-3 mr-1" />
-                      {showJaula ? 'Ocultar' : 'Ver'} Jaula de Excedentes ({jaulaItems.length})
-                    </Button>
-                  )}
-                </CardContent>
-              </Card>
-            )}
-
-            {/* 1S: Jaula de Excedentes panel */}
-            {sStep === 1 && showJaula && jaulaItems.length > 0 && (
-              <Card className="border-2 border-amber-300 bg-amber-50/30">
-                <CardContent className="p-4">
-                  <div className="flex items-center gap-2 mb-3">
-                    <Package className="h-5 w-5 text-amber-600" />
-                    <h4 className="font-semibold text-amber-800">Jaula de Excedentes</h4>
-                    <Badge className="bg-amber-200 text-amber-900">{jaulaItems.length} elementos</Badge>
-                  </div>
-                  <div className="overflow-x-auto rounded-lg border">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead className="text-xs">Elemento</TableHead>
-                          <TableHead className="text-xs">Cant.</TableHead>
-                          <TableHead className="text-xs">Precio</TableHead>
-                          <TableHead className="text-xs">F. Entrada</TableHead>
-                          <TableHead className="text-xs">Z. Origen</TableHead>
-                          <TableHead className="text-xs">Estado</TableHead>
-                          <TableHead className="text-xs">F. Salida</TableHead>
-                          <TableHead className="text-xs">Z. Destino</TableHead>
-                          <TableHead className="text-xs w-10"></TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {jaulaItems.map(item => (
-                          <TableRow key={item.id}>
-                            <TableCell className="text-xs font-medium">{item.name}</TableCell>
-                            <TableCell className="text-xs text-center">{item.quantityUnneeded || item.quantity}</TableCell>
-                            <TableCell className="text-xs text-right">{item.price ? `${(item.price * (item.quantityUnneeded || item.quantity)).toFixed(2)} €` : '—'}</TableCell>
-                            <TableCell className="text-xs">{item.jaulaFechaEntrada ? new Date(item.jaulaFechaEntrada).toLocaleDateString('es-ES') : '—'}</TableCell>
-                            <TableCell className="text-xs">{item.zonaOrigen || item.jaulaOrigen || '—'}</TableCell>
-                            <TableCell>{getJaulaStatusBadge(item.jaulaStatus || '')}</TableCell>
-                            <TableCell className="text-xs">{item.jaulaFechaSalida ? new Date(item.jaulaFechaSalida).toLocaleDateString('es-ES') : '—'}</TableCell>
-                            <TableCell className="text-xs">
-                              {!isReadOnly && item.id ? (
-                                <Select
-                                  value={item.zonaDestino || item.jaulaDestino || undefined}
-                                  onValueChange={val => {
-                                    const targetZone = currentProject?.zones?.find(z => z.name === val);
-                                    const updates: any = { zonaDestino: val, jaulaDestino: val };
-                                    if (targetZone) updates.zoneId = targetZone.id;
-                                    if (item.id) handleUpdateJaula(item.id, updates);
-                                  }}
-                                >
-                                  <SelectTrigger className="h-5 w-20 text-[9px]">
-                                    <SelectValue placeholder="—"/>
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    {currentProject?.zones?.map(z => (
-                                      <SelectItem key={z.id} value={z.name}>{z.name}</SelectItem>
-                                    )) || []}
-                                  </SelectContent>
-                                </Select>
-                              ) : (
-                                <span className="text-muted-foreground">{item.zonaDestino || item.jaulaDestino || '—'}</span>
-                              )}
-                            </TableCell>
-                            <TableCell>
-                              <Select
-                                value={item.jaulaStatus || undefined}
-                                onValueChange={val => {
-                                  const updates: any = { jaulaStatus: val };
-                                  if (val === 'transferido') {
-                                    updates.jaulaFechaSalida = new Date().toISOString();
-                                    updates.jaulaDestino = currentProject?.name || '';
-                                  }
-                                  if (val === 'reclamado') {
-                                    updates.jaulaDestino = currentProject?.name || '';
-                                  }
-                                  if (item.id) handleUpdateJaula(item.id, updates);
-                                }}
-                              >
-                                <SelectTrigger className="h-6 w-24 text-[10px]">
-                                  <SelectValue placeholder="Estado" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="en_jaula">En Jaula</SelectItem>
-                                  <SelectItem value="reclamado">Reclamado</SelectItem>
-                                  <SelectItem value="transferido">Transferido</SelectItem>
-                                </SelectContent>
-                              </Select>
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </div>
-                  <div className="mt-3 flex gap-4 text-xs text-amber-700">
-                    <span>Total en Jaula: {jaulaItems.length} elementos</span>
-                    <span>Valor total: {totalJaulaValue.toFixed(2)} €</span>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-
             {/* 1S: Resumen elementos innecesarios con detalles */}
             {sStep === 1 && innecesarios.length > 0 && (
               <Card className="border border-red-300">
@@ -1191,7 +1057,7 @@ export default function InventarioModal({ open, onClose, sStep, miniStep }: Inve
             </div>
 
             {/* Action buttons */}
-            <div className="flex gap-2 flex-wrap">
+            <div className="flex gap-2 flex-wrap items-center">
               <Button variant="outline" size="sm" onClick={handleImportTemplate}>
                 <Upload className="h-4 w-4 mr-1" /> Importar Plantilla
               </Button>
@@ -1215,6 +1081,41 @@ export default function InventarioModal({ open, onClose, sStep, miniStep }: Inve
               >
                 <FileSpreadsheet className="h-4 w-4 mr-1" /> Descargar Plantilla Excel
               </a>
+              {/* S1: Print label buttons for innecesario items */}
+              {sStep === 1 && items.length > 0 && (() => {
+                const naranjaItems = items
+                  .filter(i => !i.extra?.decision || i.extra.decision === 'Jaula')
+                  .map(i => ({
+                    nombre: i.name,
+                    ubicacion: i.location,
+                    cantidad: i.quantityUnneeded || i.quantity,
+                    estado: String(i.extra?.estado ?? ''),
+                    decision: String(i.extra?.decision || 'Jaula'),
+                    fechaEntrada: i.jaulaFechaEntrada,
+                    zonaOrigen: i.zonaOrigen || i.jaulaOrigen,
+                  }));
+                const rojaItems = items
+                  .filter(i => i.extra?.decision === 'Eliminar')
+                  .map(i => ({
+                    nombre: i.name,
+                    ubicacion: i.location,
+                    cantidad: i.quantityUnneeded || i.quantity,
+                    estado: String(i.extra?.estado ?? ''),
+                    decision: 'Eliminar',
+                    fechaEntrada: i.jaulaFechaEntrada,
+                    zonaOrigen: i.zonaOrigen || i.jaulaOrigen,
+                  }));
+                return (
+                  <div className="flex items-center gap-2 ml-2 pl-2 border-l">
+                    {naranjaItems.length > 0 && (
+                      <TagPrinter items={naranjaItems} type="naranja" />
+                    )}
+                    {rojaItems.length > 0 && (
+                      <TagPrinter items={rojaItems} type="roja" />
+                    )}
+                  </div>
+                );
+              })()}
             </div>
 
             {/* TASK 7: CSV Import Preview */}
