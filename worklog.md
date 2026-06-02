@@ -63,3 +63,32 @@ Stage Summary:
 - Fixed standalone server missing static files issue
 - Template editing now works correctly (both formación and examen types tested)
 - App rebuilt and running on PM2 (5s-app, port 3000)
+
+---
+Task ID: 2
+Agent: Main Agent
+Task: Insert "Fotos Antes" template in all S steps in the standards board with fields: photo, photographer name, zone
+
+Work Log:
+- Investigated current board structure: 1 board "Tablero Genérico" with slots for S1-S5
+- Found existing slots: S1_m1, S1_m3, S2_m1, S2_m3, S3_m1, S4_m1, S5_m1
+- Created 5 "Fotos Antes" estandar templates (S1-S5) with fields: beforePhotoUrl, nombreFotografo, zona, fecha, observaciones
+- Created missing slots: S3_m3, S4_m3, S5_m3
+- Assigned templates to all S*_m3 slots: inventario (S1,S2) + estandar_mejora + fotos_antes
+- Updated StandardsLibrary.tsx component:
+  - Added "fotos_antes" category with Camera icon and red styling
+  - Added "Fotos Antes" button in the action bar
+  - Created dedicated form section for fotos_antes: photo upload, photographer name, zone, date, observations
+  - Added validation: photo, name, and zone are required
+  - Updated handleSave to store zona/fecha/observaciones in content JSON
+  - Updated handleEdit to load extra fields from content JSON
+  - Updated list view to show fotos_antes items with photo preview and zona
+  - Updated StandardFormatCard detail view with dedicated fotos_antes layout
+- Rebuilt app, copied static files to standalone, restarted PM2
+- Verified in browser: "Fotos Antes" button appears, form works with all fields
+
+Stage Summary:
+- 5 new "Fotos Antes" templates created and assigned to board slots (S1-S5, miniStep=3)
+- StandardsLibrary component fully updated to support fotos_antes category
+- All form fields work: photo upload, photographer name, zone, date, observations
+- App rebuilt and running on PM2 (5s-app, port 3000)

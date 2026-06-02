@@ -55,6 +55,7 @@ interface StandardItem {
 
 const CATEGORIES = [
   { value: 'formato_mejora', label: 'Formato Estándar de Mejora', icon: Award, color: 'bg-teal-100 text-teal-800' },
+  { value: 'fotos_antes', label: 'Fotos del ANTES', icon: Camera, color: 'bg-red-100 text-red-800' },
   { value: 'layout', label: 'Layout', icon: Layout, color: 'bg-blue-100 text-blue-800' },
   { value: 'marcado_suelo', label: 'Código de Colores / Marcado de Suelo', icon: Paintbrush, color: 'bg-yellow-100 text-yellow-800' },
   { value: 'visual', label: 'Señalización Visual', icon: FileText, color: 'bg-purple-100 text-purple-800' },
@@ -123,6 +124,10 @@ export default function StandardsLibrary({ open, onClose }: StandardsLibraryProp
   const [formResponsable, setFormResponsable] = useState('')
   const [formContacto, setFormContacto] = useState('')
   const [formMejoraTipo, setFormMejoraTipo] = useState<string>('')
+  // Extra fields for fotos_antes template
+  const [formZona, setFormZona] = useState('')
+  const [formFecha, setFormFecha] = useState('')
+  const [formObservaciones, setFormObservaciones] = useState('')
   const [isSaving, setIsSaving] = useState(false)
   const [isUploading, setIsUploading] = useState<'before' | 'after' | null>(null)
 
@@ -219,6 +224,9 @@ export default function StandardsLibrary({ open, onClose }: StandardsLibraryProp
     setFormResponsable('')
     setFormContacto('')
     setFormMejoraTipo('')
+    setFormZona('')
+    setFormFecha('')
+    setFormObservaciones('')
     setIsCreating(false)
     setEditingId(null)
   }
@@ -237,6 +245,23 @@ export default function StandardsLibrary({ open, onClose }: StandardsLibraryProp
     setFormResponsable(std.responsable || '')
     setFormContacto(std.contacto || '')
     setFormMejoraTipo(std.mejoraTipo || '')
+    // Load extra fields from content JSON for fotos_antes
+    if (std.category === 'fotos_antes' && std.content) {
+      try {
+        const extra = typeof std.content === 'string' ? JSON.parse(std.content) : std.content
+        setFormZona(extra.zona || '')
+        setFormFecha(extra.fecha || '')
+        setFormObservaciones(extra.observaciones || '')
+      } catch {
+        setFormZona('')
+        setFormFecha('')
+        setFormObservaciones('')
+      }
+    } else {
+      setFormZona('')
+      setFormFecha('')
+      setFormObservaciones('')
+    }
     setIsCreating(true)
   }
 
@@ -275,6 +300,12 @@ export default function StandardsLibrary({ open, onClose }: StandardsLibraryProp
         return
       }
     }
+    // Validate required fields for fotos_antes
+    if (isFotosAntes) {
+      if (!formBeforePhotoUrl) { toast.error('La Foto del ANTES es obligatoria'); return }
+      if (!formResponsable.trim()) { toast.error('El nombre de quien hace la foto es obligatorio'); return }
+      if (!formZona.trim()) { toast.error('La zona es obligatoria'); return }
+    }
     setIsSaving(true)
     try {
       const payload: any = {
@@ -297,6 +328,17 @@ export default function StandardsLibrary({ open, onClose }: StandardsLibraryProp
         payload.responsable = formResponsable || null
         payload.contacto = formContacto || null
         payload.mejoraTipo = formMejoraTipo || null
+      }
+
+      // Add fotos_antes-specific fields
+      if (formCategory === 'fotos_antes') {
+        payload.beforePhotoUrl = formBeforePhotoUrl || null
+        payload.responsable = formResponsable || null
+        payload.content = JSON.stringify({
+          zona: formZona,
+          fecha: formFecha,
+          observaciones: formObservaciones,
+        })
       }
 
       if (editingId) {
@@ -348,6 +390,7 @@ export default function StandardsLibrary({ open, onClose }: StandardsLibraryProp
 
   // Check if form is in "formato mejora" mode
   const isFormatoMejora = formCategory === 'formato_mejora'
+  const isFotosAntes = formCategory === 'fotos_antes'
 
   // Load template when S step changes during creation
   useEffect(() => {
@@ -415,6 +458,10 @@ export default function StandardsLibrary({ open, onClose }: StandardsLibraryProp
                 <Button size="sm" onClick={() => setShowLayoutEditor(true)}
                   className="gap-1 bg-blue-600 hover:bg-blue-700 text-white text-xs h-8">
                   <PenTool className="h-3 w-3" /> Dibujar Layout
+                </Button>
+                <Button size="sm" onClick={() => { resetForm(); setFormCategory('fotos_antes'); setIsCreating(true) }}
+                  className="gap-1 bg-red-600 hover:bg-red-700 text-white text-xs h-8">
+                  <Camera className="h-3 w-3" /> Fotos Antes
                 </Button>
                 <Button size="sm" onClick={() => { resetForm(); setFormCategory('formato_mejora'); setIsCreating(true) }}
                   className="gap-1 bg-teal-600 hover:bg-teal-700 text-white text-xs h-8">
@@ -611,8 +658,88 @@ export default function StandardsLibrary({ open, onClose }: StandardsLibraryProp
                 </Card>
               )}
 
+              {/* ═══ FOTOS ANTES: Foto, Nombre, Zona ═══ */}
+              {isFotosAntes && (
+                <Card className="border-2 border-red-200 bg-white">
+                  <CardContent className="p-4 space-y-4">
+                    <div className="flex items-center gap-2">
+                      <Camera className="h-5 w-5 text-red-600" />
+                      <h5 className="text-sm font-bold text-red-800">Fotos del ANTES</h5>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Registra el estado ANTES de la zona con una foto, indica quién la hace y la zona.
+                    </p>
+
+                    {/* Foto ANTES */}
+                    <div className="space-y-2">
+                      <Label className="text-xs font-semibold flex items-center gap-1">
+                        <Camera className="h-3 w-3 text-red-500" />
+                        FOTO DEL ANTES <span className="text-red-500">*</span>
+                      </Label>
+                      <div className="relative border-2 border-dashed border-red-200 rounded-lg overflow-hidden bg-red-50/30 min-h-[200px] flex items-center justify-center">
+                        {formBeforePhotoUrl ? (
+                          <div className="relative w-full">
+                            <img src={formBeforePhotoUrl} alt="Antes" className="w-full h-48 object-cover" />
+                            <button type="button" onClick={() => setFormBeforePhotoUrl(null)}
+                              className="absolute top-1 right-1 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs hover:bg-red-600">
+                              <X className="h-3 w-3" />
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="text-center p-4">
+                            <Camera className="h-10 w-10 text-red-300 mx-auto mb-2" />
+                            <p className="text-sm text-red-400 font-medium">FOTO DEL ANTES</p>
+                            <p className="text-xs text-red-300 mt-1">Sube una foto del estado actual de la zona</p>
+                            <Button variant="outline" size="sm" className="mt-3 text-xs h-8 border-red-300 text-red-600 hover:bg-red-50"
+                              onClick={() => beforeInputRef.current?.click()}
+                              disabled={isUploading === 'before'}>
+                              {isUploading === 'before' ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <Camera className="h-3 w-3 mr-1" />}
+                              Subir Foto
+                            </Button>
+                            <input ref={beforeInputRef} type="file" accept="image/*" className="hidden"
+                              onChange={e => { const f = e.target.files?.[0]; if (f) handlePhotoUpload(f, 'before'); e.target.value = '' }} />
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Nombre + Zona */}
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <Label className="text-xs font-semibold flex items-center gap-1">
+                          <User className="h-3 w-3" /> Nombre de quien hace la foto <span className="text-red-500">*</span>
+                        </Label>
+                        <Input value={formResponsable} onChange={e => setFormResponsable(e.target.value)}
+                          placeholder="Nombre y apellidos" className="h-8 text-xs mt-1" />
+                      </div>
+                      <div>
+                        <Label className="text-xs font-semibold flex items-center gap-1">
+                          <ImageIcon className="h-3 w-3" /> Zona <span className="text-red-500">*</span>
+                        </Label>
+                        <Input value={formZona} onChange={e => setFormZona(e.target.value)}
+                          placeholder="Nombre de la zona" className="h-8 text-xs mt-1" />
+                      </div>
+                    </div>
+
+                    {/* Fecha + Observaciones */}
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <Label className="text-xs font-semibold">Fecha</Label>
+                        <Input type="date" value={formFecha} onChange={e => setFormFecha(e.target.value)}
+                          className="h-8 text-xs mt-1" />
+                      </div>
+                      <div>
+                        <Label className="text-xs font-semibold">Observaciones</Label>
+                        <Input value={formObservaciones} onChange={e => setFormObservaciones(e.target.value)}
+                          placeholder="Notas adicionales..." className="h-8 text-xs mt-1" />
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
               {/* Other category fields */}
-              {!isFormatoMejora && (
+              {!isFormatoMejora && !isFotosAntes && (
                 <div>
                   <Label className="text-xs">Contenido / Detalles</Label>
                   <Textarea value={formContent} onChange={e => setFormContent(e.target.value)}
@@ -675,10 +802,19 @@ export default function StandardsLibrary({ open, onClose }: StandardsLibraryProp
                         const statusInfo = getStatusInfo(std.status)
                         const mejoraInfo = getMejoraTipoInfo(std.mejoraTipo)
                         const isMejora = std.category === 'formato_mejora'
+                        const isFotosAntesItem = std.category === 'fotos_antes'
+                        // Parse zona from content for fotos_antes items
+                        let fotosAntesZona = ''
+                        if (isFotosAntesItem && std.content) {
+                          try {
+                            const extra = typeof std.content === 'string' ? JSON.parse(std.content) : std.content
+                            fotosAntesZona = extra.zona || ''
+                          } catch {}
+                        }
 
                         return (
                           <Card key={std.id} className="border-l-4 cursor-pointer hover:shadow-md transition-shadow"
-                            style={{ borderLeftColor: mejoraInfo?.accent || group.color }}
+                            style={{ borderLeftColor: isFotosAntesItem ? '#CC0000' : (mejoraInfo?.accent || group.color) }}
                             onClick={() => setViewingStandard(std)}>
                             <CardContent className="p-3">
                               <div className="flex items-start justify-between gap-2">
@@ -712,13 +848,28 @@ export default function StandardsLibrary({ open, onClose }: StandardsLibraryProp
                                     </div>
                                   )}
 
-                                  {/* Responsable & contacto inline */}
+                                  {/* Mini preview for fotos_antes */}
+                                  {isFotosAntesItem && std.beforePhotoUrl && (
+                                    <div className="flex items-center gap-2 mt-2">
+                                      <img src={std.beforePhotoUrl} alt="Antes" className="w-16 h-12 object-cover rounded border border-red-200" />
+                                      <div className="text-[10px] text-muted-foreground">
+                                        {fotosAntesZona && <span className="flex items-center gap-1"><ImageIcon className="h-3 w-3" /> {fotosAntesZona}</span>}
+                                      </div>
+                                    </div>
+                                  )}
+
+                                  {/* Responsable & zona inline */}
                                   {std.responsable && (
                                     <div className="flex items-center gap-3 mt-1.5 text-[10px] text-muted-foreground">
                                       <span className="flex items-center gap-1">
                                         <User className="h-3 w-3" /> {std.responsable}
                                       </span>
-                                      {std.contacto && (
+                                      {isFotosAntesItem && fotosAntesZona && (
+                                        <span className="flex items-center gap-1">
+                                          <ImageIcon className="h-3 w-3" /> {fotosAntesZona}
+                                        </span>
+                                      )}
+                                      {!isFotosAntesItem && std.contacto && (
                                         <span className="flex items-center gap-1">
                                           <Phone className="h-3 w-3" /> {std.contacto}
                                         </span>
@@ -775,14 +926,24 @@ function StandardFormatCard({ std, onEdit, onDelete }: { std: StandardItem; onEd
   const statusInfo = STATUS_OPTIONS.find(s => s.value === std.status) || STATUS_OPTIONS[0]
   const sStepData = S_STEPS.find(s => s.id === std.sStep)
   const isMejora = std.category === 'formato_mejora'
+  const isFotosAntesView = std.category === 'fotos_antes'
+  // Parse extra fields from content for fotos_antes
+  let fotosAntesExtra: { zona?: string; fecha?: string; observaciones?: string } = {}
+  if (isFotosAntesView && std.content) {
+    try {
+      fotosAntesExtra = typeof std.content === 'string' ? JSON.parse(std.content) : std.content
+    } catch {}
+  }
+
+  const headerColor = isFotosAntesView ? '#CC0000' : (mejoraInfo?.accent || '#0d9488')
 
   return (
-    <Card className="border-2 overflow-hidden" style={{ borderColor: mejoraInfo?.accent || '#0d9488' }}>
+    <Card className="border-2 overflow-hidden" style={{ borderColor: headerColor }}>
       {/* Header bar */}
-      <div className="px-4 py-3 flex items-center gap-2 text-white" style={{ backgroundColor: mejoraInfo?.accent || sStepData?.color || '#0d9488' }}>
-        <Award className="h-5 w-5" />
+      <div className="px-4 py-3 flex items-center gap-2 text-white" style={{ backgroundColor: headerColor }}>
+        {isFotosAntesView ? <Camera className="h-5 w-5" /> : <Award className="h-5 w-5" />}
         <span className="font-bold text-sm flex-1">
-          {isMejora ? 'FORMATO ESTÁNDAR DE MEJORA' : `ESTÁNDAR — ${std.category.toUpperCase()}`}
+          {isFotosAntesView ? 'FOTOS DEL ANTES' : (isMejora ? 'FORMATO ESTÁNDAR DE MEJORA' : `ESTÁNDAR — ${std.category.toUpperCase()}`)}
         </span>
         {mejoraInfo && (
           <Badge className="bg-white/20 text-white border-0 text-xs font-bold">
@@ -802,83 +963,144 @@ function StandardFormatCard({ std, onEdit, onDelete }: { std: StandardItem; onEd
           {std.description && <p className="text-sm text-muted-foreground mt-1">{std.description}</p>}
         </div>
 
-        {/* Before / After photos */}
-        {(std.beforePhotoUrl || std.afterPhotoUrl) && (
-          <div className="grid grid-cols-2 gap-4">
-            {/* ANTES */}
-            <div className="space-y-1">
-              <div className="flex items-center gap-1.5 text-xs font-bold text-red-600">
-                <Camera className="h-3.5 w-3.5" /> ANTES
-              </div>
-              <div className="border-2 border-red-200 rounded-lg overflow-hidden bg-red-50/30">
-                {std.beforePhotoUrl ? (
+        {/* fotos_antes view: single photo + details */}
+        {isFotosAntesView ? (
+          <>
+            {/* Foto ANTES */}
+            {std.beforePhotoUrl && (
+              <div className="space-y-1">
+                <div className="flex items-center gap-1.5 text-xs font-bold text-red-600">
+                  <Camera className="h-3.5 w-3.5" /> FOTO DEL ANTES
+                </div>
+                <div className="border-2 border-red-200 rounded-lg overflow-hidden bg-red-50/30">
                   <img src={std.beforePhotoUrl} alt="Antes"
-                    className="w-full h-48 object-cover cursor-pointer hover:opacity-80 transition-opacity"
+                    className="w-full h-64 object-cover cursor-pointer hover:opacity-80 transition-opacity"
                     onClick={() => window.open(std.beforePhotoUrl!, '_blank')} />
-                ) : (
-                  <div className="w-full h-48 flex items-center justify-center text-red-300">
-                    <Camera className="h-12 w-12" />
-                  </div>
-                )}
+                </div>
               </div>
-            </div>
+            )}
 
-            {/* DESPUÉS */}
-            <div className="space-y-1">
-              <div className="flex items-center gap-1.5 text-xs font-bold text-green-600">
-                <Camera className="h-3.5 w-3.5" /> DESPUÉS
+            {/* Details: Nombre, Zona, Fecha, Observaciones */}
+            <div className="grid grid-cols-2 gap-3 bg-red-50/50 rounded-lg p-3">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-full bg-red-100 flex items-center justify-center">
+                  <User className="h-4 w-4 text-red-600" />
+                </div>
+                <div>
+                  <p className="text-[10px] text-muted-foreground font-medium">FOTÓGRAFO</p>
+                  <p className="text-xs font-semibold">{std.responsable || '—'}</p>
+                </div>
               </div>
-              <div className="border-2 border-green-200 rounded-lg overflow-hidden bg-green-50/30">
-                {std.afterPhotoUrl ? (
-                  <img src={std.afterPhotoUrl} alt="Después"
-                    className="w-full h-48 object-cover cursor-pointer hover:opacity-80 transition-opacity"
-                    onClick={() => window.open(std.afterPhotoUrl!, '_blank')} />
-                ) : (
-                  <div className="w-full h-48 flex items-center justify-center text-green-300">
-                    <Camera className="h-12 w-12" />
-                  </div>
-                )}
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-full bg-red-100 flex items-center justify-center">
+                  <ImageIcon className="h-4 w-4 text-red-600" />
+                </div>
+                <div>
+                  <p className="text-[10px] text-muted-foreground font-medium">ZONA</p>
+                  <p className="text-xs font-semibold">{fotosAntesExtra.zona || '—'}</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center">
+                  <FileText className="h-4 w-4 text-gray-600" />
+                </div>
+                <div>
+                  <p className="text-[10px] text-muted-foreground font-medium">FECHA</p>
+                  <p className="text-xs font-semibold">{fotosAntesExtra.fecha || '—'}</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center">
+                  <Eye className="h-4 w-4 text-gray-600" />
+                </div>
+                <div>
+                  <p className="text-[10px] text-muted-foreground font-medium">OBSERVACIONES</p>
+                  <p className="text-xs font-semibold">{fotosAntesExtra.observaciones || '—'}</p>
+                </div>
               </div>
             </div>
-          </div>
+          </>
+        ) : (
+          <>
+            {/* Before / After photos (formato_mejora) */}
+            {(std.beforePhotoUrl || std.afterPhotoUrl) && (
+              <div className="grid grid-cols-2 gap-4">
+                {/* ANTES */}
+                <div className="space-y-1">
+                  <div className="flex items-center gap-1.5 text-xs font-bold text-red-600">
+                    <Camera className="h-3.5 w-3.5" /> ANTES
+                  </div>
+                  <div className="border-2 border-red-200 rounded-lg overflow-hidden bg-red-50/30">
+                    {std.beforePhotoUrl ? (
+                      <img src={std.beforePhotoUrl} alt="Antes"
+                        className="w-full h-48 object-cover cursor-pointer hover:opacity-80 transition-opacity"
+                        onClick={() => window.open(std.beforePhotoUrl!, '_blank')} />
+                    ) : (
+                      <div className="w-full h-48 flex items-center justify-center text-red-300">
+                        <Camera className="h-12 w-12" />
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* DESPUÉS */}
+                <div className="space-y-1">
+                  <div className="flex items-center gap-1.5 text-xs font-bold text-green-600">
+                    <Camera className="h-3.5 w-3.5" /> DESPUÉS
+                  </div>
+                  <div className="border-2 border-green-200 rounded-lg overflow-hidden bg-green-50/30">
+                    {std.afterPhotoUrl ? (
+                      <img src={std.afterPhotoUrl} alt="Después"
+                        className="w-full h-48 object-cover cursor-pointer hover:opacity-80 transition-opacity"
+                        onClick={() => window.open(std.afterPhotoUrl!, '_blank')} />
+                    ) : (
+                      <div className="w-full h-48 flex items-center justify-center text-green-300">
+                        <Camera className="h-12 w-12" />
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Responsable + Contacto + Tipo */}
+            <div className="grid grid-cols-3 gap-3 bg-gray-50 rounded-lg p-3">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-full bg-teal-100 flex items-center justify-center">
+                  <User className="h-4 w-4 text-teal-600" />
+                </div>
+                <div>
+                  <p className="text-[10px] text-muted-foreground font-medium">RESPONSABLE</p>
+                  <p className="text-xs font-semibold">{std.responsable || '—'}</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
+                  <Phone className="h-4 w-4 text-blue-600" />
+                </div>
+                <div>
+                  <p className="text-[10px] text-muted-foreground font-medium">CONTACTO</p>
+                  <p className="text-xs font-semibold">{std.contacto || '—'}</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-full flex items-center justify-center"
+                  style={{ backgroundColor: `${mejoraInfo?.accent || '#6b7280'}20` }}>
+                  {mejoraInfo ? <mejoraInfo.icon className="h-4 w-4" style={{ color: mejoraInfo.accent }} /> : <Cog className="h-4 w-4 text-gray-500" />}
+                </div>
+                <div>
+                  <p className="text-[10px] text-muted-foreground font-medium">TIPO DE MEJORA</p>
+                  <p className="text-xs font-semibold" style={{ color: mejoraInfo?.accent }}>
+                    {mejoraInfo?.label || '—'}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </>
         )}
 
-        {/* Responsable + Contacto + Tipo */}
-        <div className="grid grid-cols-3 gap-3 bg-gray-50 rounded-lg p-3">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-full bg-teal-100 flex items-center justify-center">
-              <User className="h-4 w-4 text-teal-600" />
-            </div>
-            <div>
-              <p className="text-[10px] text-muted-foreground font-medium">RESPONSABLE</p>
-              <p className="text-xs font-semibold">{std.responsable || '—'}</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
-              <Phone className="h-4 w-4 text-blue-600" />
-            </div>
-            <div>
-              <p className="text-[10px] text-muted-foreground font-medium">CONTACTO</p>
-              <p className="text-xs font-semibold">{std.contacto || '—'}</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-full flex items-center justify-center"
-              style={{ backgroundColor: `${mejoraInfo?.accent || '#6b7280'}20` }}>
-              {mejoraInfo ? <mejoraInfo.icon className="h-4 w-4" style={{ color: mejoraInfo.accent }} /> : <Cog className="h-4 w-4 text-gray-500" />}
-            </div>
-            <div>
-              <p className="text-[10px] text-muted-foreground font-medium">TIPO DE MEJORA</p>
-              <p className="text-xs font-semibold" style={{ color: mejoraInfo?.accent }}>
-                {mejoraInfo?.label || '—'}
-              </p>
-            </div>
-          </div>
-        </div>
-
-        {/* Content (for non-mejora standards) */}
-        {std.content && !isMejora && (
+        {/* Content (for non-mejora and non-fotos_antes standards) */}
+        {std.content && !isMejora && !isFotosAntesView && (
           <div className="bg-gray-50 rounded-lg p-3">
             <p className="text-[10px] text-muted-foreground font-medium mb-1">CONTENIDO</p>
             <p className="text-xs font-mono whitespace-pre-wrap">{std.content}</p>
