@@ -135,3 +135,21 @@ Stage Summary:
 - S1 step 3 no longer shows jaula panels
 - S1 step 3 now has print label buttons (Etiqueta Naranja/Roja)
 - Print opens new window with styled labels ready to print
+
+---
+Task ID: 1
+Agent: main
+Task: Update tag printing for S1 Step 3 — Red tag for innecesarios, Orange tag for doubt/revisar jaula, add 40-day revision date, template info
+
+Work Log:
+- Rewrote TagPrinter.tsx: Red tag = INNECESARIO (Eliminar), Orange tag = REVISAR JAULA (permanece en zona para decidir en S2)
+- Added fecha revision (entry date + 40 days) to both tags
+- Added template info fields: categoria, estado, frecuenciaUso, decision
+- Added contextual message: orange tag says "se queda en zona para decidir en S2", red tag says "eliminar de la zona"
+- Updated InventarioModal.tsx tag data: now passes frecuenciaUso, categoria, fechaRevision (40 days), updated decision labels
+- Label "Etiquetas Plantilla:" added next to tag buttons to show they're linked to the template
+
+Stage Summary:
+- TagPrinter.tsx fully rewritten with red (innecesario) and orange (revisar jaula) distinction
+- Both tags now show all template info + fecha entrada + fecha revision (40 days)
+- Build succeeds, app restarted

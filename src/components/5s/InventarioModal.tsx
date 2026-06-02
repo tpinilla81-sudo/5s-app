@@ -1011,8 +1011,20 @@ export default function InventarioModal({ open, onClose, sStep, miniStep }: Inve
               >
                 <FileSpreadsheet className="h-4 w-4 mr-1" /> Descargar Plantilla Excel
               </a>
-              {/* S1: Print label buttons for innecesario items */}
+              {/* S1: Print label buttons for innecesario items — linked to the S1 Step 3 template */}
               {sStep === 1 && items.length > 0 && (() => {
+                // Helper: compute revision date = entry date + 40 days
+                const withRevision = (i: InventoryItemData) => {
+                  let fechaRevision: string | null = null;
+                  if (i.jaulaFechaEntrada) {
+                    try {
+                      const d = new Date(i.jaulaFechaEntrada);
+                      d.setDate(d.getDate() + 40);
+                      fechaRevision = d.toISOString();
+                    } catch {}
+                  }
+                  return fechaRevision;
+                };
                 const naranjaItems = items
                   .filter(i => !i.extra?.decision || i.extra.decision === 'Jaula')
                   .map(i => ({
@@ -1020,8 +1032,11 @@ export default function InventarioModal({ open, onClose, sStep, miniStep }: Inve
                     ubicacion: i.location,
                     cantidad: i.quantityUnneeded || i.quantity,
                     estado: String(i.extra?.estado ?? ''),
-                    decision: String(i.extra?.decision || 'Jaula'),
+                    frecuenciaUso: String(i.extra?.frecuenciaUso ?? ''),
+                    decision: 'Revisar Jaula',
+                    categoria: String(i.category ?? 'Innecesario'),
                     fechaEntrada: i.jaulaFechaEntrada,
+                    fechaRevision: withRevision(i),
                     zonaOrigen: i.zonaOrigen || i.jaulaOrigen,
                   }));
                 const rojaItems = items
@@ -1031,12 +1046,16 @@ export default function InventarioModal({ open, onClose, sStep, miniStep }: Inve
                     ubicacion: i.location,
                     cantidad: i.quantityUnneeded || i.quantity,
                     estado: String(i.extra?.estado ?? ''),
+                    frecuenciaUso: String(i.extra?.frecuenciaUso ?? ''),
                     decision: 'Eliminar',
+                    categoria: String(i.category ?? 'Innecesario'),
                     fechaEntrada: i.jaulaFechaEntrada,
+                    fechaRevision: withRevision(i),
                     zonaOrigen: i.zonaOrigen || i.jaulaOrigen,
                   }));
                 return (
-                  <div className="flex items-center gap-2 ml-2 pl-2 border-l">
+                  <div className="flex items-center gap-2 ml-2 pl-2 border-l border-orange-300">
+                    <span className="text-[10px] text-muted-foreground font-medium">Etiquetas Plantilla:</span>
                     {naranjaItems.length > 0 && (
                       <TagPrinter items={naranjaItems} type="naranja" />
                     )}
