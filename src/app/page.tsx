@@ -23,6 +23,7 @@ import AdminPanel from '@/components/admin/AdminPanel';
 import MaintenanceView from '@/components/5s/MaintenanceView';
 import GerentePanel from '@/components/auth/GerentePanel';
 import JaulaModal from '@/components/5s/JaulaModal';
+import ActivosModal from '@/components/5s/ActivosModal';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -37,7 +38,7 @@ import {
   LayoutDashboard, Wrench, Sparkles, BarChart3, FileText, MapPin, ListChecks,
   ClipboardList, GraduationCap, Camera, CheckSquare, Trophy, ChevronRight,
   Lock as LockIcon, AlertTriangle, Building2, Zap, Bell, BellRing, BookOpen, Image as ImageIcon,
-  Package
+  Package, BoxSelect
 } from 'lucide-react';
 
 const MODAL_MAP: Record<string, React.ComponentType<{
@@ -113,6 +114,7 @@ export default function HomePage() {
   const [showNotifs, setShowNotifs] = useState(false);
   const [notifs, setNotifs] = useState<any[]>([]);
   const [showJaulaModal, setShowJaulaModal] = useState(false);
+  const [showActivosModal, setShowActivosModal] = useState(false);
 
   useEffect(() => {
     checkSession();
@@ -386,6 +388,16 @@ export default function HomePage() {
                 title="Jaula de Excedentes">
                 <Package className="h-3 w-3" />
                 <span className="hidden sm:inline">Jaula</span>
+              </Button>
+            )}
+            {/* ✅ Activos (Necesarios) button — next to Jaula */}
+            {canSeeNotifications && (
+              <Button variant="outline" size="sm"
+                className="gap-1 text-[10px] h-7 border-green-300 text-green-600 hover:bg-green-50"
+                onClick={() => setShowActivosModal(true)}
+                title="Activos (Necesarios)">
+                <BoxSelect className="h-3 w-3" />
+                <span className="hidden sm:inline">Activos</span>
               </Button>
             )}
             {/* Quick action buttons — removed (accessed from board instead) */}
@@ -992,6 +1004,8 @@ export default function HomePage() {
 
       {/* Jaula de Excedentes Modal */}
       <JaulaModal open={showJaulaModal} onClose={() => setShowJaulaModal(false)} />
+      {/* Activos (Necesarios) Modal */}
+      <ActivosModal open={showActivosModal} onClose={() => setShowActivosModal(false)} />
     </div>
   );
 }

@@ -153,3 +153,26 @@ Stage Summary:
 - TagPrinter.tsx fully rewritten with red (innecesario) and orange (revisar jaula) distinction
 - Both tags now show all template info + fecha entrada + fecha revision (40 days)
 - Build succeeds, app restarted
+
+---
+Task ID: 2
+Agent: main
+Task: Unify S1 Step 3 template for necesarios + innecesarios with conditional field graying, create Activos panel
+
+Work Log:
+- Updated 5s-constants.ts S1 config: now includes both "necesario" and "innecesario" categories + combined fields (estado, frecuenciaUso, decision for innecesario; ubicacionAsignada, metodoIdentificacion, cercania for necesario)
+- Updated InventarioModal.tsx: conditional field graying — innecesario fields grayed when necesario selected and vice versa, visual indicators (red/green borders), routing logic (innecesarios→Jaula, necesarios→Activos)
+- Updated table display: shows all 6 extra columns for S1 with conditional data (red/green text, gray dashes for inactive category)
+- Updated handleAddItem: auto-sets qtyNeeded for necesario, qtyUnneeded for innecesario, clears opposite fields
+- Updated handleConfirmCsvImport: same category-based logic for jaula status
+- Created ActivosModal.tsx: green-themed modal for necesarios, similar to JaulaModal, with filter, table showing necesario-specific fields
+- Created /api/inventory/activos/route.ts: GET endpoint for S1 items with category='necesario'
+- Added Activos button (green, BoxSelect icon) next to Jaula button (red) in main toolbar
+- Added ActivosModal component rendering in page.tsx
+
+Stage Summary:
+- S1 Step 3 now has unified template with both categories
+- Fields conditionally grayed out based on category selection
+- Innecesarios route to Jaula (red), Necesarios route to Activos (green)
+- Both buttons visible in main toolbar: Jaula (red) | Activos (green)
+- Build succeeds, app restarted
