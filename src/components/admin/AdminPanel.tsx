@@ -774,10 +774,10 @@ export default function AdminPanel({ embedded }: AdminPanelProps = {}) {
 
   // ─── Render ──────────────────────────────────────────────────────────────
   return (
-    <div className={`flex flex-col ${embedded ? '' : 'min-h-screen'} bg-gradient-to-b from-gray-50 to-white`}>
+    <div className={`flex flex-col h-full bg-gradient-to-b from-gray-50 to-white`}>
       {/* Header - only shown in standalone mode */}
       {!embedded && (
-        <header className="border-b bg-white/80 backdrop-blur-sm sticky top-0 z-10">
+        <header className="border-b bg-white/80 backdrop-blur-sm shrink-0 z-10">
           <div className="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
             <div className="flex items-center gap-3">
               <Button variant="ghost" size="sm" onClick={() => {
@@ -800,7 +800,7 @@ export default function AdminPanel({ embedded }: AdminPanelProps = {}) {
       )}
 
       {/* Tabs — Order: Empresas / Usuarios / Proyectos / Plantillas */}
-      <div className="border-b bg-white">
+      <div className="border-b bg-white shrink-0">
         <div className={`flex gap-1 ${embedded ? '' : 'max-w-5xl mx-auto px-4'}`}>
           <button
             onClick={() => { setActiveTab('companies'); setSelectedProjectId(null) }}
@@ -875,7 +875,7 @@ export default function AdminPanel({ embedded }: AdminPanelProps = {}) {
       </div>
 
       {/* Content */}
-      <main className={`flex-1 w-full px-4 py-6 ${activeTab === 'tablero5s' || activeTab === 'mejora' ? 'max-w-7xl mx-auto' : embedded ? '' : 'max-w-5xl mx-auto'}`}>
+      <main className={`flex-1 min-h-0 overflow-auto w-full px-4 py-6 ${activeTab === 'tablero5s' || activeTab === 'mejora' ? 'max-w-7xl mx-auto' : embedded ? '' : 'max-w-5xl mx-auto'}`}>
         <AnimatePresence mode="wait">
           {/* ═══ PROJECTS TAB ═══ */}
           {activeTab === 'projects' && (

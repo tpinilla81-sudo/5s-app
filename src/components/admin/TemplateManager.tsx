@@ -1283,9 +1283,9 @@ export default function TemplateManager() {
   // RENDER
   // ═══════════════════════════════════════════════════════
   return (
-    <div className="space-y-4">
-      {/* Tab selector */}
-      <div className="flex gap-2 border-b pb-2">
+    <div className="flex flex-col h-full">
+      {/* Tab selector — fixed */}
+      <div className="flex gap-2 border-b pb-2 shrink-0">
         {TEMPLATE_TABS.map(tab => {
           const Icon = tab.icon
           return (
@@ -1302,8 +1302,8 @@ export default function TemplateManager() {
         })}
       </div>
 
-      {/* Header actions */}
-      <div className="flex items-center justify-between">
+      {/* Header actions — fixed */}
+      <div className="flex items-center justify-between shrink-0">
         <h2 className="text-lg font-bold flex items-center gap-2">
           {(() => { const Icon = tabConfig.icon; return <Icon className="h-5 w-5 text-green-600" /> })()}
           Plantillas de {tabConfig.label}
@@ -1315,13 +1315,13 @@ export default function TemplateManager() {
         </Button>
       </div>
 
-      {/* S-Step cards */}
+      {/* S-Step cards — scrollable */}
       {isLoading ? (
         <div className="flex items-center justify-center py-12">
           <Loader2 className="h-8 w-8 text-green-500 animate-spin" />
         </div>
       ) : (
-        <div className="space-y-3">
+        <div className="flex-1 min-h-0 overflow-auto space-y-3">
           {S_STEPS.map(s => {
             const sTemplates = templatesByS(s.id)
             const isExpanded = expandedS === s.id

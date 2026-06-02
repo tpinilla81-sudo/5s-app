@@ -320,3 +320,20 @@ Read more: https://nextjs.org/docs/app/api-reference/config/next-config-js/allow
  GET /api/notifications?userId=cmpo4w07k0000mg034fx4pt72&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 17ms (compile: 3ms, proxy.ts: 6ms, render: 8ms)
  GET /api/notifications?userId=cmpo4w07k0000mg034fx4pt72&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 9ms (compile: 1847µs, proxy.ts: 2ms, render: 5ms)
  GET / 200 in 52ms (compile: 4ms, proxy.ts: 3ms, render: 45ms)
+ GET / 200 in 38ms (compile: 3ms, proxy.ts: 4ms, render: 31ms)
+ GET /api/templates?type=estandar&includeInactive=true 200 in 11ms (compile: 2ms, proxy.ts: 3ms, render: 6ms)
+ GET /api/templates?type=autoevaluacion&includeInactive=true 200 in 13ms (compile: 3ms, proxy.ts: 3ms, render: 7ms)
+ GET /api/notifications?userId=cmpo4w07k0000mg034fx4pt72&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 12ms (compile: 4ms, proxy.ts: 4ms, render: 5ms)
+ GET /api/templates?type=auditoria&includeInactive=true 200 in 8ms (compile: 1857µs, proxy.ts: 2ms, render: 4ms)
+ GET /api/templates?type=estandar&includeInactive=true 200 in 10ms (compile: 2ms, proxy.ts: 2ms, render: 5ms)
+ GET /api/notifications?userId=cmpo4w07k0000mg034fx4pt72&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 12ms (compile: 2ms, proxy.ts: 3ms, render: 6ms)
+✓ Compiled in 638ms
+ GET /api/projects 200 in 10ms (compile: 2ms, proxy.ts: 3ms, render: 5ms)
+ GET /api/users 200 in 11ms (compile: 2ms, proxy.ts: 2ms, render: 7ms)
+ GET /api/companies 200 in 11ms (compile: 3ms, proxy.ts: 3ms, render: 5ms)
+ GET /api/notifications?userId=cmpo4w07k0000mg034fx4pt72&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 10ms (compile: 2ms, proxy.ts: 2ms, render: 5ms)
+✓ Compiled in 915ms
+✓ Compiled in 2.3s
+✓ Compiled in 1299ms
+✓ Compiled in 780ms
+ GET / 200 in 373ms (compile: 59ms, proxy.ts: 2ms, render: 312ms)
