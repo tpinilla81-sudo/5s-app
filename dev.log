@@ -1493,3 +1493,44 @@ Read more: https://nextjs.org/docs/messages/failed-to-find-server-action
  POST /api/notifications/auto 200 in 42ms (compile: 7ms, proxy.ts: 4ms, render: 31ms)
 ✓ Compiled in 1530ms
  GET / 200 in 443ms (compile: 68ms, proxy.ts: 4ms, render: 370ms)
+ GET / 200 in 34ms (compile: 3ms, proxy.ts: 3ms, render: 28ms)
+ GET /api/notifications?userId=cmpo4w07k0000mg034fx4pt72&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 11ms (compile: 2ms, proxy.ts: 3ms, render: 5ms)
+ GET /api/notifications?userId=cmpo4w07k0000mg034fx4pt72&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 9ms (compile: 1972µs, proxy.ts: 3ms, render: 4ms)
+ GET /api/notifications?userId=cmpo4w07k0000mg034fx4pt72&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 9ms (compile: 2ms, proxy.ts: 3ms, render: 5ms)
+ GET /api/notifications?userId=cmpo4w07k0000mg034fx4pt72&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 9ms (compile: 2ms, proxy.ts: 2ms, render: 5ms)
+✓ Compiled in 1122ms
+✓ Compiled in 3.4s
+ GET /api/projects 200 in 12ms (compile: 2ms, proxy.ts: 3ms, render: 6ms)
+ GET /api/companies 200 in 18ms (compile: 6ms, proxy.ts: 3ms, render: 10ms)
+ GET /api/users 200 in 16ms (compile: 6ms, proxy.ts: 2ms, render: 7ms)
+ GET /api/templates?type=formacion&includeInactive=true 200 in 12ms (compile: 2ms, proxy.ts: 3ms, render: 6ms)
+✓ Compiled in 456ms
+ GET /api/templates?type=examen&includeInactive=true 200 in 11ms (compile: 3ms, proxy.ts: 3ms, render: 5ms)
+ GET /api/templates?type=inventario&includeInactive=true 200 in 12ms (compile: 3ms, proxy.ts: 3ms, render: 6ms)
+ GET /api/notifications?userId=cmpo4w07k0000mg034fx4pt72&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 11ms (compile: 3ms, proxy.ts: 3ms, render: 5ms)
+✓ Compiled in 536ms
+✓ Compiled in 1614ms
+ GET /api/notifications?userId=cmpo4w07k0000mg034fx4pt72&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 10ms (compile: 2ms, proxy.ts: 3ms, render: 5ms)
+✓ Compiled in 1556ms
+✓ Compiled in 1047ms
+✓ Compiled in 593ms
+✓ Compiled in 914ms
+ GET /api/notifications?userId=cmpo4w07k0000mg034fx4pt72&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 22ms (compile: 11ms, proxy.ts: 5ms, render: 6ms)
+ GET / 200 in 427ms (compile: 59ms, proxy.ts: 2ms, render: 366ms)
+ GET /api/auth 200 in 10ms (compile: 3ms, proxy.ts: 3ms, render: 5ms)
+ GET /api/permissions 200 in 12ms (compile: 2ms, proxy.ts: 3ms, render: 7ms)
+ GET /api/projects 200 in 10ms (compile: 1994µs, proxy.ts: 2ms, render: 5ms)
+ GET /api/auth/zones 200 in 32ms (compile: 3ms, proxy.ts: 3ms, render: 26ms)
+ GET /api/notifications?userId=cmpo4w07k0000mg034fx4pt72&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 28ms (compile: 5ms, proxy.ts: 17ms, render: 5ms)
+ GET /api/progress 200 in 14ms (compile: 7ms, proxy.ts: 4ms, render: 4ms)
+ GET /api/employee-progress?projectId=cmpok8xii00rjmgfj1nn1hiuh&zoneId=cmpok8xii00rkmgfjvv2ri8f8 200 in 8ms (compile: 2ms, proxy.ts: 2ms, render: 3ms)
+ GET /api/employee-progress?projectId=cmpok8xii00rjmgfj1nn1hiuh&zoneId=cmpok8xii00rkmgfjvv2ri8f8 200 in 9ms (compile: 1992µs, proxy.ts: 2ms, render: 5ms)
+ POST /api/notifications/auto 200 in 28ms (compile: 3ms, proxy.ts: 4ms, render: 21ms)
+ GET /api/projects 200 in 43ms (compile: 6ms, proxy.ts: 5ms, render: 32ms)
+ GET /api/users 200 in 51ms (compile: 26ms, proxy.ts: 10ms, render: 15ms)
+ GET /api/companies 200 in 29ms (compile: 6ms, proxy.ts: 3ms, render: 20ms)
+ GET /api/templates?type=formacion&includeInactive=true 200 in 13ms (compile: 3ms, proxy.ts: 3ms, render: 7ms)
+ GET /api/templates?type=examen&includeInactive=true 200 in 16ms (compile: 2ms, proxy.ts: 3ms, render: 10ms)
+ GET /api/templates?type=inventario&includeInactive=true 200 in 17ms (compile: 3ms, proxy.ts: 3ms, render: 11ms)
+ GET /api/notifications?userId=cmpo4w07k0000mg034fx4pt72&projectId=cmpok8xii00rjmgfj1nn1hiuh&unread=true 200 in 19ms (compile: 4ms, proxy.ts: 8ms, render: 7ms)
+ GET / 200 in 57ms (compile: 5ms, proxy.ts: 3ms, render: 50ms)

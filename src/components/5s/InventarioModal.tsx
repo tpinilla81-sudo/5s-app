@@ -26,7 +26,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { ClipboardList, Plus, CheckCircle, Download, Upload, FileSpreadsheet, BookOpen, ArrowRight, AlertTriangle, FileUp, Maximize2, Minimize2, File, PenTool, Image as ImageIcon, Eye, Loader2, MapPin } from 'lucide-react';
+import { ClipboardList, Plus, CheckCircle, Download, Upload, FileSpreadsheet, BookOpen, ArrowRight, AlertTriangle, FileUp, Maximize2, Minimize2, File, PenTool, Image as ImageIcon, Eye, Loader2, MapPin, Tag } from 'lucide-react';
 import { toast } from 'sonner';
 import { use5SStore } from '@/lib/store';
 import { S_STEPS, INVENTORY_CONFIGS, INVENTORY_CLASSIFY_THRESHOLD } from '@/lib/5s-constants';
@@ -96,6 +96,7 @@ export default function InventarioModal({ open, onClose, sStep, miniStep }: Inve
     price: null,
     action: '',
     zonaOrigen: currentZone?.name || null,
+    jaulaFechaEntrada: new Date().toISOString(),
     extra: {},
   });
 
@@ -342,17 +343,8 @@ export default function InventarioModal({ open, onClose, sStep, miniStep }: Inve
     if (sStep === 1 && isInnecesario && !extra.decision) {
       extra.decision = 'Jaula';
     }
-    // S1: clear innecesario fields when necesario selected, and vice versa
-    if (sStep === 1 && isNecesario) {
-      delete extra.estado;
-      delete extra.frecuenciaUso;
-      delete extra.decision;
-    }
-    if (sStep === 1 && isInnecesario) {
-      delete extra.ubicacionAsignada;
-      delete extra.metodoIdentificacion;
-      delete extra.cercania;
-    }
+    // S1: Keep all fields — user can fill in both necesario and innecesario fields
+    // No field deletion since all fields are now visible and editable
 
     try {
       const res = await fetch('/api/inventory', {
@@ -373,7 +365,7 @@ export default function InventarioModal({ open, onClose, sStep, miniStep }: Inve
           extra,
           // Auto-set jaula status only for S1 innecesario items; necesario items go to Activos
           jaulaStatus: isInnecesario ? 'en_jaula' : '',
-          jaulaFechaEntrada: isInnecesario ? new Date().toISOString() : null,
+          jaulaFechaEntrada: isInnecesario ? (newItem.jaulaFechaEntrada || new Date().toISOString()) : null,
           jaulaOrigen: isInnecesario ? newItem.zonaOrigen || currentZone?.name || currentProject.name || '' : null,
           zonaOrigen: newItem.zonaOrigen || currentZone?.name || null,
           zonaDestino: newItem.zonaOrigen || currentZone?.name || null,
@@ -384,7 +376,7 @@ export default function InventarioModal({ open, onClose, sStep, miniStep }: Inve
       if (json.success) {
         toast.success('Elemento agregado correctamente');
         await loadInventory();
-        setNewItem({ name: '', location: '', category: undefined as string | undefined, quantity: 1, quantityNeeded: 0, quantityUnneeded: 0, price: null, action: '', zonaOrigen: currentZone?.name || null, extra: {} });
+        setNewItem({ name: '', location: '', category: undefined as string | undefined, quantity: 1, quantityNeeded: 0, quantityUnneeded: 0, price: null, action: '', zonaOrigen: currentZone?.name || null, jaulaFechaEntrada: new Date().toISOString(), extra: {} });
       } else {
         toast.error(`Error al agregar: ${json.error || 'Error desconocido'}`);
       }
@@ -584,6 +576,7 @@ export default function InventarioModal({ open, onClose, sStep, miniStep }: Inve
           quantityUnneeded: parseInt(getVal(colMap.quantityUnneeded, '0')) || 0,
           price: parseFloat(getVal(colMap.price, '0')) || null,
           action: getVal(colMap.action, '') || getVal(colMap.observaciones, ''),
+          zonaOrigen: colMap.zona >= 0 ? getVal(colMap.zona) || null : null,
           extra: {},
         };
 
@@ -680,9 +673,9 @@ export default function InventarioModal({ open, onClose, sStep, miniStep }: Inve
             extra: item.extra || {},
             jaulaStatus: sStep === 1 && item.category === 'innecesario' ? 'en_jaula' : '',
             jaulaFechaEntrada: sStep === 1 && item.category === 'innecesario' ? new Date().toISOString() : null,
-            jaulaOrigen: sStep === 1 && item.category === 'innecesario' ? currentZone?.name || currentProject!.name || '' : null,
-            zonaOrigen: currentZone?.name || null,
-            zonaDestino: currentZone?.name || null,
+            jaulaOrigen: sStep === 1 && item.category === 'innecesario' ? item.zonaOrigen || currentZone?.name || currentProject!.name || '' : null,
+            zonaOrigen: item.zonaOrigen || currentZone?.name || null,
+            zonaDestino: item.zonaOrigen || currentZone?.name || null,
           }))
         ),
       });
@@ -1056,7 +1049,7 @@ export default function InventarioModal({ open, onClose, sStep, miniStep }: Inve
                   return fechaRevision;
                 };
                 const naranjaItems = items
-                  .filter(i => !i.extra?.decision || i.extra.decision === 'Jaula')
+                  .filter(i => i.category === 'innecesario' && (!i.extra?.decision || i.extra.decision === 'Jaula'))
                   .map(i => ({
                     nombre: i.name,
                     ubicacion: i.location,
@@ -1070,7 +1063,7 @@ export default function InventarioModal({ open, onClose, sStep, miniStep }: Inve
                     zonaOrigen: i.zonaOrigen || i.jaulaOrigen,
                   }));
                 const rojaItems = items
-                  .filter(i => i.extra?.decision === 'Eliminar')
+                  .filter(i => i.category === 'innecesario' && i.extra?.decision === 'Eliminar')
                   .map(i => ({
                     nombre: i.name,
                     ubicacion: i.location,
@@ -1243,35 +1236,36 @@ export default function InventarioModal({ open, onClose, sStep, miniStep }: Inve
                     </div>
                   </div>
 
-                  {/* S1: Conditional extra fields — innecesario fields vs necesario fields */}
+                  {/* S1: All fields visible and editable — Innecesario + Necesario + Etiquetas */}
                   {sStep === 1 ? (
                     <>
-                      {/* S1: Separator label */}
-                      <div className="flex items-center gap-2 mt-1">
-                        <div className={`h-2.5 w-2.5 rounded ${newItem.category === 'necesario' ? 'bg-green-500' : newItem.category === 'innecesario' ? 'bg-red-500' : 'bg-gray-300'}`} />
-                        <span className="text-[10px] font-medium text-muted-foreground">
-                          {newItem.category === 'necesario'
-                            ? 'Campos de Necesario (verde) — Campos de Innecesario deshabilitados'
-                            : newItem.category === 'innecesario'
-                            ? 'Campos de Innecesario (rojo) — Campos de Necesario deshabilitados'
-                            : 'Selecciona categoría para activar los campos correspondientes'}
-                        </span>
+                      {/* S1: Section labels */}
+                      <div className="flex items-center gap-3 mt-1">
+                        <div className="flex items-center gap-1.5">
+                          <div className="h-2.5 w-2.5 rounded bg-red-500" />
+                          <span className="text-[10px] font-medium text-red-700">Campos de Innecesario</span>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <div className="h-2.5 w-2.5 rounded bg-green-500" />
+                          <span className="text-[10px] font-medium text-green-700">Campos de Necesario</span>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <div className="h-2.5 w-2.5 rounded bg-orange-500" />
+                          <span className="text-[10px] font-medium text-orange-700">Datos de Etiqueta</span>
+                        </div>
                       </div>
-                      {/* S1: Innecesario fields */}
-                      <div className={`grid grid-cols-1 sm:grid-cols-3 gap-3 items-end p-2 rounded-lg border ${
-                        newItem.category === 'innecesario' ? 'border-red-200 bg-red-50/30' : 'border-gray-200 bg-gray-50/50'
-                      }`}>
+
+                      {/* S1: Innecesario fields — always visible and editable */}
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 items-end p-2 rounded-lg border border-red-200 bg-red-50/30">
                         {['estado', 'frecuenciaUso', 'decision'].map(key => {
                           const field = config.extraFields.find(f => f.key === key);
                           if (!field) return null;
-                          const isDisabled = newItem.category !== 'innecesario';
                           return (
-                            <div key={field.key} className={isDisabled ? 'opacity-40 pointer-events-none' : ''}>
-                              <label className={`text-xs font-medium ${isDisabled ? 'text-gray-400' : 'text-red-700'}`}>{field.label}</label>
+                            <div key={field.key}>
+                              <label className="text-xs font-medium text-red-700">{field.label}</label>
                               {field.type === 'select' && field.options ? (
                                 <Select
-                                  disabled={isDisabled}
-                                  value={!isDisabled && newItem.extra?.[field.key] ? String(newItem.extra[field.key]) : undefined}
+                                  value={newItem.extra?.[field.key] ? String(newItem.extra[field.key]) : undefined}
                                   onValueChange={val =>
                                     setNewItem(prev => ({
                                       ...prev,
@@ -1279,7 +1273,7 @@ export default function InventarioModal({ open, onClose, sStep, miniStep }: Inve
                                     }))
                                   }
                                 >
-                                  <SelectTrigger className={isDisabled ? 'bg-gray-100' : ''}>
+                                  <SelectTrigger>
                                     <SelectValue placeholder={field.label} />
                                   </SelectTrigger>
                                   <SelectContent>
@@ -1290,10 +1284,8 @@ export default function InventarioModal({ open, onClose, sStep, miniStep }: Inve
                                 </Select>
                               ) : (
                                 <Input
-                                  disabled={isDisabled}
                                   placeholder={field.label}
-                                  className={isDisabled ? 'bg-gray-100' : ''}
-                                  value={!isDisabled ? String(newItem.extra?.[field.key] ?? '') : ''}
+                                  value={String(newItem.extra?.[field.key] ?? '')}
                                   onChange={e =>
                                     setNewItem(prev => ({
                                       ...prev,
@@ -1310,21 +1302,18 @@ export default function InventarioModal({ open, onClose, sStep, miniStep }: Inve
                           <span className="text-[9px] text-red-600 font-medium">Innecesarios → van a la Jaula (etiqueta roja/naranja)</span>
                         </div>
                       </div>
-                      {/* S1: Necesario fields */}
-                      <div className={`grid grid-cols-1 sm:grid-cols-3 gap-3 items-end p-2 rounded-lg border ${
-                        newItem.category === 'necesario' ? 'border-green-200 bg-green-50/30' : 'border-gray-200 bg-gray-50/50'
-                      }`}>
+
+                      {/* S1: Necesario fields — always visible and editable */}
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 items-end p-2 rounded-lg border border-green-200 bg-green-50/30">
                         {['ubicacionAsignada', 'metodoIdentificacion', 'cercania'].map(key => {
                           const field = config.extraFields.find(f => f.key === key);
                           if (!field) return null;
-                          const isDisabled = newItem.category !== 'necesario';
                           return (
-                            <div key={field.key} className={isDisabled ? 'opacity-40 pointer-events-none' : ''}>
-                              <label className={`text-xs font-medium ${isDisabled ? 'text-gray-400' : 'text-green-700'}`}>{field.label}</label>
+                            <div key={field.key}>
+                              <label className="text-xs font-medium text-green-700">{field.label}</label>
                               {field.type === 'select' && field.options ? (
                                 <Select
-                                  disabled={isDisabled}
-                                  value={!isDisabled && newItem.extra?.[field.key] ? String(newItem.extra[field.key]) : undefined}
+                                  value={newItem.extra?.[field.key] ? String(newItem.extra[field.key]) : undefined}
                                   onValueChange={val =>
                                     setNewItem(prev => ({
                                       ...prev,
@@ -1332,7 +1321,7 @@ export default function InventarioModal({ open, onClose, sStep, miniStep }: Inve
                                     }))
                                   }
                                 >
-                                  <SelectTrigger className={isDisabled ? 'bg-gray-100' : ''}>
+                                  <SelectTrigger>
                                     <SelectValue placeholder={field.label} />
                                   </SelectTrigger>
                                   <SelectContent>
@@ -1343,10 +1332,8 @@ export default function InventarioModal({ open, onClose, sStep, miniStep }: Inve
                                 </Select>
                               ) : (
                                 <Input
-                                  disabled={isDisabled}
                                   placeholder={field.label}
-                                  className={isDisabled ? 'bg-gray-100' : ''}
-                                  value={!isDisabled ? String(newItem.extra?.[field.key] ?? '') : ''}
+                                  value={String(newItem.extra?.[field.key] ?? '')}
                                   onChange={e =>
                                     setNewItem(prev => ({
                                       ...prev,
@@ -1361,6 +1348,49 @@ export default function InventarioModal({ open, onClose, sStep, miniStep }: Inve
                         <div className="col-span-full flex items-center gap-1">
                           <div className="w-2 h-2 rounded-full bg-green-500" />
                           <span className="text-[9px] text-green-600 font-medium">Necesarios → van a Activos (se organizan en S2)</span>
+                        </div>
+                      </div>
+
+                      {/* S1: Etiqueta fields — fecha entrada, fecha revisión (40 días) */}
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 items-end p-2 rounded-lg border border-orange-200 bg-orange-50/30">
+                        <div>
+                          <label className="text-xs font-medium text-orange-700 flex items-center gap-1">
+                            <Tag className="h-3 w-3" />
+                            F. Entrada
+                          </label>
+                          <Input
+                            type="date"
+                            value={newItem.jaulaFechaEntrada ? new Date(newItem.jaulaFechaEntrada).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]}
+                            onChange={e => {
+                              const val = e.target.value ? new Date(e.target.value + 'T12:00:00').toISOString() : null;
+                              setNewItem(prev => ({ ...prev, jaulaFechaEntrada: val }));
+                            }}
+                          />
+                        </div>
+                        <div>
+                          <label className="text-xs font-medium text-orange-700 flex items-center gap-1">
+                            <Tag className="h-3 w-3" />
+                            F. Revisión (40 días)
+                          </label>
+                          <Input
+                            type="date"
+                            value={(() => {
+                              const base = newItem.jaulaFechaEntrada || new Date().toISOString();
+                              try {
+                                const d = new Date(base);
+                                d.setDate(d.getDate() + 40);
+                                return d.toISOString().split('T')[0];
+                              } catch { return ''; }
+                            })()}
+                            readOnly
+                            className="bg-orange-50"
+                          />
+                        </div>
+                        <div className="flex items-end">
+                          <div className="flex items-center gap-1">
+                            <div className="w-2 h-2 rounded-full bg-orange-500" />
+                            <span className="text-[9px] text-orange-600 font-medium">Datos para etiqueta roja/naranja</span>
+                          </div>
                         </div>
                       </div>
                     </>
@@ -1605,20 +1635,20 @@ export default function InventarioModal({ open, onClose, sStep, miniStep }: Inve
                         <TableCell className="text-right text-sm">{item.price != null ? `${item.price.toFixed(2)} €` : '—'}</TableCell>
                         {sStep === 1 ? (
                           <>
-                            <TableCell className={`text-sm ${isInnecesario ? 'text-muted-foreground' : 'text-gray-300'}`}>{isInnecesario ? String(item.extra?.estado ?? '—') : '—'}</TableCell>
-                            <TableCell className={`text-sm ${isInnecesario ? 'text-muted-foreground' : 'text-gray-300'}`}>{isInnecesario ? String(item.extra?.frecuenciaUso ?? '—') : '—'}</TableCell>
+                            <TableCell className="text-sm text-muted-foreground">{String(item.extra?.estado ?? '—')}</TableCell>
+                            <TableCell className="text-sm text-muted-foreground">{String(item.extra?.frecuenciaUso ?? '—')}</TableCell>
                             <TableCell className="text-sm">
-                              {isInnecesario ? (
-                                <Badge className={item.extra?.decision === 'Jaula' ? 'bg-orange-100 text-orange-800' : item.extra?.decision === 'Eliminar' ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-800'}>
-                                  {String(item.extra?.decision || item.action || 'Jaula')}
+                              {item.extra?.decision ? (
+                                <Badge className={item.extra.decision === 'Jaula' ? 'bg-orange-100 text-orange-800' : item.extra.decision === 'Eliminar' ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-800'}>
+                                  {String(item.extra.decision || item.action || 'Jaula')}
                                 </Badge>
                               ) : (
-                                <span className="text-gray-300">—</span>
+                                <span className="text-muted-foreground">—</span>
                               )}
                             </TableCell>
-                            <TableCell className={`text-sm ${isNecesario ? 'text-muted-foreground' : 'text-gray-300'}`}>{isNecesario ? String(item.extra?.ubicacionAsignada ?? '—') : '—'}</TableCell>
-                            <TableCell className={`text-sm ${isNecesario ? 'text-muted-foreground' : 'text-gray-300'}`}>{isNecesario ? String(item.extra?.metodoIdentificacion ?? '—') : '—'}</TableCell>
-                            <TableCell className={`text-sm ${isNecesario ? 'text-muted-foreground' : 'text-gray-300'}`}>{isNecesario ? String(item.extra?.cercania ?? '—') : '—'}</TableCell>
+                            <TableCell className="text-sm text-muted-foreground">{String(item.extra?.ubicacionAsignada ?? '—')}</TableCell>
+                            <TableCell className="text-sm text-muted-foreground">{String(item.extra?.metodoIdentificacion ?? '—')}</TableCell>
+                            <TableCell className="text-sm text-muted-foreground">{String(item.extra?.cercania ?? '—')}</TableCell>
                           </>
                         ) : (
                           config.extraFields.slice(0, 2).map(f => (
