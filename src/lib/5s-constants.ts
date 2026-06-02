@@ -147,23 +147,20 @@ export interface InventoryConfig {
 
 export const INVENTORY_CONFIGS: Record<number, InventoryConfig> = {
   1: {
-    title: 'Inventario de Clasificación (Necesarios / Innecesarios)',
-    subtitle: 'SEIRI — Clasifica los elementos: necesarios van a Activos, innecesarios van a la Jaula',
+    title: 'Inventario de Innecesarios (Clasificación)',
+    subtitle: 'SEIRI — Clasifica los elementos innecesarios y decide su destino (Jaula/Eliminar)',
     categories: [
-      { value: 'necesario', label: 'Necesario', color: 'bg-green-100 text-green-800' },
       { value: 'innecesario', label: 'Innecesario', color: 'bg-red-100 text-red-800' },
     ],
     extraFields: [
-      // === Campos para INNECESARIO ===
+      // === Campos de Innecesario (rojo) ===
       { key: 'estado', label: 'Estado', type: 'select', options: ['Bueno', 'Regular', 'Malo'] },
       { key: 'frecuenciaUso', label: 'Frecuencia uso', type: 'select', options: ['Diario', 'Semanal', 'Quincenal', 'Mensual', 'Trimestral', 'Anual', 'Nunca'] },
       { key: 'decision', label: 'Decisión', type: 'select', options: ['Jaula', 'Eliminar'] },
-      // === Campos para NECESARIO ===
-      { key: 'ubicacionAsignada', label: 'Ubicación asignada', type: 'text' },
-      { key: 'metodoIdentificacion', label: 'Método identificación', type: 'select', options: ['Etiqueta', 'Código color', 'Señal visual', 'Sombra/Contorno', 'Código numérico', 'Otro'] },
-      { key: 'cercania', label: 'Cercanía al puesto', type: 'select', options: ['Muy cerca (brazo)', 'Cerca (1-3 pasos)', 'Media distancia', 'Poco accesible'] },
+      // === Datos de Etiqueta (naranja) ===
+      { key: 'diasCuarentena', label: 'Días cuarentena', type: 'select', options: ['7', '15', '20', '30', '40', '60', '90'] },
     ],
-    templateName: 'S1_Inventario_Clasificacion_Seiri.xlsx',
+    templateName: 'S1_Inventario_Innecesarios_Seiri.xlsx',
   },
   2: {
     title: 'Inventario de Necesarios',

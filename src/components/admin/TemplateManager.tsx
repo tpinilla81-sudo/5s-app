@@ -667,8 +667,8 @@ function FormationEditor({ content, onChange }: { content: string; onChange: (v:
 interface InvCategory { value: string; label: string; color: string }
 interface InvField { key: string; label: string; type: 'select' | 'text' | 'number'; options?: string[] }
 
-function InventoryConfigEditor({ content, onChange }: { content: string; onChange: (v: string) => void }) {
-  let parsed: { categories: InvCategory[]; extraFields: InvField[] }
+function InventoryConfigEditor({ content, onChange, sStep }: { content: string; onChange: (v: string) => void; sStep: number }) {
+  let parsed: { categories: InvCategory[]; extraFields: InvField[]; title?: string; subtitle?: string; templateName?: string }
   try {
     parsed = JSON.parse(content)
   } catch {
@@ -764,8 +764,60 @@ function InventoryConfigEditor({ content, onChange }: { content: string; onChang
     'bg-teal-100 text-teal-800', 'bg-pink-100 text-pink-800',
   ]
 
+  // Built-in fields that always appear in the inventory form (not editable in template, shown for reference)
+  const builtInFields: { label: string; section: string; note?: string }[] = sStep === 1
+    ? [
+        { label: 'Elemento', section: 'Datos básicos', note: 'Nombre del elemento (obligatorio)' },
+        { label: 'Zona', section: 'Datos básicos', note: 'Se rellena automáticamente con la zona actual' },
+        { label: 'Categoría', section: 'Datos básicos', note: 'Innecesario (fijo)' },
+        { label: 'Cantidad', section: 'Datos básicos' },
+        { label: 'Precio (€)', section: 'Datos básicos' },
+        { label: 'F. Entrada', section: 'Etiqueta', note: 'Fecha de entrada a la Jaula' },
+        { label: 'F. Revisión', section: 'Etiqueta', note: 'Calculada automáticamente (F. Entrada + Días cuarentena)' },
+        { label: 'Z. Origen', section: 'Zonas', note: 'Zona donde se encontró el elemento' },
+        { label: 'Z. Destino', section: 'Zonas', note: 'Siempre "Jaula" para innecesarios' },
+      ]
+    : sStep === 2
+    ? [
+        { label: 'Elemento', section: 'Datos básicos' },
+        { label: 'Ubicación', section: 'Datos básicos' },
+        { label: 'Zona', section: 'Datos básicos' },
+        { label: 'Categoría', section: 'Datos básicos' },
+        { label: 'Total exist.', section: 'Datos básicos' },
+        { label: 'Precio (€)', section: 'Datos básicos' },
+      ]
+    : [
+        { label: 'Elemento', section: 'Datos básicos' },
+        { label: 'Ubicación', section: 'Datos básicos' },
+        { label: 'Zona', section: 'Datos básicos' },
+        { label: 'Categoría', section: 'Datos básicos' },
+        { label: 'Total exist.', section: 'Datos básicos' },
+        { label: 'Precio (€)', section: 'Datos básicos' },
+      ]
+
   return (
     <div className="space-y-6">
+      {/* BUILT-IN FIELDS (read-only reference) */}
+      <div>
+        <h4 className="text-sm font-bold text-blue-700 mb-2 flex items-center gap-2">
+          <Badge className="bg-blue-100 text-blue-800">Campos fijos del formulario</Badge>
+          {builtInFields.length} campo(s) — no editables
+        </h4>
+        <div className="border rounded-lg p-3 bg-blue-50/30 space-y-1">
+          <p className="text-[10px] text-blue-600 mb-2">Estos campos siempre aparecen en el inventario y no se pueden quitar de la plantilla.</p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-1">
+            {builtInFields.map((f, i) => (
+              <div key={i} className="flex items-center gap-2 text-xs px-2 py-1 rounded bg-white/60">
+                <span className="font-medium text-blue-800">{f.label}</span>
+                <span className="text-blue-400">—</span>
+                <span className="text-blue-500 text-[10px]">{f.section}</span>
+                {f.note && <span className="text-[9px] text-blue-400 italic">({f.note})</span>}
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
       {/* CATEGORIES */}
       <div>
         <h4 className="text-sm font-bold text-orange-700 mb-2 flex items-center gap-2">
@@ -1782,7 +1834,7 @@ export default function TemplateManager() {
                       <FormationEditor content={formContent} onChange={setFormContent} />
                     )}
                     {formType === 'inventario' && (
-                      <InventoryConfigEditor content={formContent} onChange={setFormContent} />
+                      <InventoryConfigEditor content={formContent} onChange={setFormContent} sStep={formSStep} />
                     )}
                     {formType === 'estandar' && (
                       <StandardTemplateEditor content={formContent} onChange={setFormContent} />
