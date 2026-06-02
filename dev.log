@@ -4135,3 +4135,12 @@ https://nextjs.org/docs/messages/module-not-found
  GET / 200 in 36ms (compile: 4ms, proxy.ts: 3ms, render: 29ms)
  GET / 200 in 67ms (compile: 9ms, proxy.ts: 6ms, render: 52ms)
 ✓ Compiled in 877ms
+ GET / 200 in 592ms (compile: 275ms, proxy.ts: 3ms, render: 314ms)
+ GET / 200 in 48ms (compile: 3ms, proxy.ts: 2ms, render: 43ms)
+ GET / 200 in 58ms (compile: 4ms, proxy.ts: 6ms, render: 48ms)
+ GET / 200 in 45ms (compile: 4ms, proxy.ts: 5ms, render: 36ms)
+ GET / 200 in 37ms (compile: 3ms, proxy.ts: 2ms, render: 32ms)
+ GET / 200 in 37ms (compile: 3ms, proxy.ts: 2ms, render: 32ms)
+ GET / 200 in 38ms (compile: 3ms, proxy.ts: 3ms, render: 33ms)
+ GET / 200 in 30ms (compile: 3ms, proxy.ts: 2ms, render: 25ms)
+ GET / 200 in 37ms (compile: 4ms, proxy.ts: 3ms, render: 30ms)
