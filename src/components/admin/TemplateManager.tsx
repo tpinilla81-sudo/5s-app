@@ -666,10 +666,9 @@ function FormationEditor({ content, onChange }: { content: string; onChange: (v:
 // ═══════════════════════════════════════════════════════
 interface InvCategory { value: string; label: string; color: string }
 interface InvField { key: string; label: string; type: 'select' | 'text' | 'number'; options?: string[] }
-interface InvDelegacion { prefijo_codigo: string; subcategorias: string[] }
 
 function InventoryConfigEditor({ content, onChange, sStep }: { content: string; onChange: (v: string) => void; sStep: number }) {
-  let parsed: { categories: InvCategory[]; extraFields: InvField[]; fixedFields?: InvFixedField[]; desplegables_jerarquicos?: Record<string, InvDelegacion>; title?: string; subtitle?: string; templateName?: string }
+  let parsed: { categories: InvCategory[]; extraFields: InvField[]; fixedFields?: InvFixedField[]; title?: string; subtitle?: string; templateName?: string }
   try {
     parsed = JSON.parse(content)
   } catch {
@@ -682,49 +681,9 @@ function InventoryConfigEditor({ content, onChange, sStep }: { content: string; 
 
   const categories = parsed.categories || []
   const extraFields = parsed.extraFields || []
-  const delegaciones: Record<string, InvDelegacion> = parsed.desplegables_jerarquicos || {}
 
   const update = (newData: Partial<typeof parsed>) => {
     onChange(JSON.stringify({ ...parsed, ...newData }, null, 2))
-  }
-
-  // Delegaciones (desplegables jerárquicos) editing functions
-  const addDelegacion = () => {
-    const key = `Delegación ${Object.keys(delegaciones).length + 1}`
-    update({ desplegables_jerarquicos: { ...delegaciones, [key]: { prefijo_codigo: '', subcategorias: [''] } } })
-  }
-
-  const removeDelegacion = (key: string) => {
-    const updated = { ...delegaciones }
-    delete updated[key]
-    update({ desplegables_jerarquicos: Object.keys(updated).length > 0 ? updated : undefined })
-  }
-
-  const renameDelegacion = (oldKey: string, newKey: string) => {
-    if (oldKey === newKey) return
-    const updated: Record<string, InvDelegacion> = {}
-    for (const [k, v] of Object.entries(delegaciones)) {
-      updated[k === oldKey ? newKey : k] = v
-    }
-    update({ desplegables_jerarquicos: updated })
-  }
-
-  const updateDelegacionPrefix = (key: string, prefix: string) => {
-    update({ desplegables_jerarquicos: { ...delegaciones, [key]: { ...delegaciones[key], prefijo_codigo: prefix } } })
-  }
-
-  const addDelegacionSubcat = (key: string) => {
-    update({ desplegables_jerarquicos: { ...delegaciones, [key]: { ...delegaciones[key], subcategorias: [...delegaciones[key].subcategorias, ''] } } })
-  }
-
-  const removeDelegacionSubcat = (key: string, idx: number) => {
-    update({ desplegables_jerarquicos: { ...delegaciones, [key]: { ...delegaciones[key], subcategorias: delegaciones[key].subcategorias.filter((_, i) => i !== idx) } } })
-  }
-
-  const updateDelegacionSubcat = (key: string, idx: number, value: string) => {
-    const updated = [...delegaciones[key].subcategorias]
-    updated[idx] = value
-    update({ desplegables_jerarquicos: { ...delegaciones, [key]: { ...delegaciones[key], subcategorias: updated } } })
   }
 
   const addCategory = () => {
@@ -894,66 +853,6 @@ function InventoryConfigEditor({ content, onChange, sStep }: { content: string; 
           <Button variant="outline" onClick={addCategory} size="sm"
             className="w-full border-dashed border-2 text-orange-600 hover:bg-orange-50 hover:border-orange-400 gap-1">
             <Plus className="h-4 w-4" /> Añadir categoría
-          </Button>
-        </div>
-      </div>
-
-      {/* ═══ 2.5 DELEGACIONES (DESPLEGABLES JERÁRQUICOS) ═══ */}
-      <div>
-        <h4 className="text-sm font-bold text-indigo-700 mb-2 flex items-center gap-2">
-          <Badge className="bg-indigo-100 text-indigo-800">Delegaciones</Badge>
-          {Object.keys(delegaciones).length} delegación(es)
-        </h4>
-        <div className="border rounded-lg p-3 bg-indigo-50/30 space-y-3">
-          <p className="text-[10px] text-indigo-600 mb-2">
-            Las delegaciones crean desplegables jerárquicos: cuando un campo extra tiene key "subcategoria", sus opciones se filtran automáticamente según la categoría seleccionada y la delegación a la que pertenece.
-          </p>
-          {Object.entries(delegaciones).map(([key, deleg]) => (
-            <div key={key} className="border-2 rounded-lg overflow-hidden bg-white shadow-sm">
-              <div className="flex items-center gap-2 px-3 py-2 bg-indigo-50 border-b border-indigo-200">
-                <Badge className="bg-indigo-200 text-indigo-800 shrink-0 text-[10px] px-1.5 py-0.5">Delegación</Badge>
-                <Input
-                  value={key}
-                  onChange={e => renameDelegacion(key, e.target.value)}
-                  className="flex-1 h-7 text-xs font-semibold"
-                  placeholder="Nombre delegación (ej: Madrid)"
-                />
-                <div className="flex items-center gap-1">
-                  <Label className="text-[9px] text-muted-foreground shrink-0">Prefijo:</Label>
-                  <Input
-                    value={deleg.prefijo_codigo}
-                    onChange={e => updateDelegacionPrefix(key, e.target.value)}
-                    className="w-20 h-7 text-xs font-mono"
-                    placeholder="MAD"
-                  />
-                </div>
-                <Button variant="ghost" size="sm" onClick={() => removeDelegacion(key)}
-                  className="h-7 w-7 p-0 text-red-400 hover:text-red-500">
-                  <Trash2 className="h-3.5 w-3.5" />
-                </Button>
-              </div>
-              <div className="px-3 py-2 space-y-1">
-                <Label className="text-[10px] text-muted-foreground">Subcategorías (zonas/departamentos de esta delegación):</Label>
-                {deleg.subcategorias.map((sub, sIdx) => (
-                  <div key={sIdx} className="flex items-center gap-1">
-                    <Input value={sub} onChange={e => updateDelegacionSubcat(key, sIdx, e.target.value)}
-                      className="flex-1 h-7 text-xs" placeholder={`Subcategoría ${sIdx + 1}`} />
-                    <Button variant="ghost" size="sm" onClick={() => removeDelegacionSubcat(key, sIdx)}
-                      className="h-7 w-7 p-0 text-red-300 hover:text-red-500">
-                      <Trash2 className="h-3 w-3" />
-                    </Button>
-                  </div>
-                ))}
-                <Button variant="ghost" size="sm" onClick={() => addDelegacionSubcat(key)}
-                  className="h-7 text-xs text-indigo-600 hover:text-indigo-700 gap-1 px-2">
-                  <Plus className="h-3 w-3" /> Añadir subcategoría
-                </Button>
-              </div>
-            </div>
-          ))}
-          <Button variant="outline" onClick={addDelegacion} size="sm"
-            className="w-full border-dashed border-2 text-indigo-600 hover:bg-indigo-50 hover:border-indigo-400 gap-1">
-            <Plus className="h-4 w-4" /> Añadir delegación
           </Button>
         </div>
       </div>
