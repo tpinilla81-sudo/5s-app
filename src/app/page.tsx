@@ -319,9 +319,9 @@ export default function HomePage() {
               <img src="/5s-logo.png" alt="5S" className="w-full h-full object-contain" />
             </div>
             <div>
-              <h1 className="text-sm font-bold text-gray-900 leading-tight">Método 5S</h1>
+              <h1 className="text-sm font-black text-gray-900 leading-tight tracking-wide">5S</h1>
               <div className="flex items-center gap-1">
-                <span className="text-[10px] text-muted-foreground">Implementación</span>
+                <span className="text-[10px] font-semibold text-green-600">by Método</span>
                 {currentProject && <span className="text-[10px] text-muted-foreground">· {currentProject.name}</span>}
                 {currentZone && <span className="text-[10px] font-medium" style={{ color: currentZone.color || '#3B82F6' }}>· {currentZone.name}</span>}
               </div>
