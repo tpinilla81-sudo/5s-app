@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 
 // GET /api/companies - List companies
-// Admin sees all; gerente sees their assigned companies
+// Gestor sees all; admin/gerente sees their assigned companies only
 export async function GET(request: NextRequest) {
   try {
     const sessionId = request.cookies.get('5s_session')?.value
@@ -20,10 +20,10 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    const isAdmin = userRole === 'admin'
+    const isGestor = userRole === 'gestor'
 
     let companies
-    if (isAdmin) {
+    if (isGestor) {
       companies = await db.company.findMany({
         where: { active: true },
         include: {
@@ -65,7 +65,7 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// POST /api/companies - Create company (admin only)
+// POST /api/companies - Create company (SOLO gestor, dueño de la app)
 export async function POST(request: NextRequest) {
   try {
     const sessionId = request.cookies.get('5s_session')?.value
@@ -73,8 +73,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: 'No autenticado' }, { status: 401 })
     }
     const user = await db.user.findUnique({ where: { id: sessionId } })
-    if (!user || user.role !== 'admin') {
-      return NextResponse.json({ success: false, error: 'Solo administradores pueden crear empresas' }, { status: 403 })
+    if (!user || user.role !== 'gestor') {
+      return NextResponse.json({ success: false, error: 'Solo el gestor (dueño de la app) puede crear empresas' }, { status: 403 })
     }
 
     const body = await request.json()

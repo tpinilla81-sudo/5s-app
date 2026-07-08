@@ -94,7 +94,7 @@ interface FiveSState {
   progress: ProgressItem[]
   employeeProgress: EmployeeProgressItem[]
   currentView: 'board' | 'detail' | 'admin' | 'maintenance' | 'gerente'
-  activeTab: 'board' | 'gerente' | 'admin' | 'maintenance'
+  activeTab: 'board' | 'gerente' | 'admin' | 'maintenance' | 'gestion'
   selectedSStep: number | null
   activeModal: 'formacion' | 'fotos' | 'inventario' | 'actionplan' | 'autoevaluacion' | 'auditoria' | 'globalActionPlan' | 'globalInventory' | 'auditResults' | 'standardsLibrary' | 'photoLibrary' | null
   activeMiniStep: number | null
@@ -163,7 +163,7 @@ export const use5SStore = create<FiveSState>((set, get) => ({
   progress: [],
   employeeProgress: [],
   currentView: 'board',
-  activeTab: 'board',
+  activeTab: 'board' as const,
   selectedSStep: null,
   activeModal: null,
   activeMiniStep: null,
@@ -731,6 +731,13 @@ export const use5SStore = create<FiveSState>((set, get) => ({
       // Check for projects after login
       await get().fetchProjects()
       const { projects } = get()
+
+      // Gestor (dueño de la app) goes directly to management panel
+      if (currentUser?.role === 'gestor') {
+        set({ authView: 'board', activeTab: 'gestion' })
+        await get().fetchCompanies()
+        return true
+      }
 
       if (projects.length > 0) {
         set({ currentProject: projects[0], authView: 'board' })

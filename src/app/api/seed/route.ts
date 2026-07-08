@@ -366,13 +366,27 @@ const AUDIT_TEMPLATES: Record<number, { criteria: Array<{ criterion: string; wei
 
 export async function POST() {
   try {
-    // Create admin user if not exists
+    // Create gestor (dueño de la app) user if not exists
+    const existingGestor = await db.user.findUnique({ where: { email: 'gestor@cincos.com' } })
+    if (!existingGestor) {
+      await db.user.create({
+        data: {
+          email: 'gestor@cincos.com',
+          name: 'Gestor',
+          password: hashPassword('gestor123'),
+          role: 'gestor',
+          active: true,
+        },
+      })
+    }
+
+    // Create admin (admin de empresa) user if not exists
     const existingAdmin = await db.user.findUnique({ where: { email: 'admin@5s.com' } })
     if (!existingAdmin) {
       await db.user.create({
         data: {
           email: 'admin@5s.com',
-          name: 'Administrador',
+          name: 'Admin de Empresa',
           password: hashPassword('admin123'),
           role: 'admin',
           active: true,
@@ -426,6 +440,15 @@ export async function POST() {
         await db.projectMember.create({
           data: { userId: admin.id, projectId: demoProjectId, role: 'admin' },
         })
+        // Also add admin as company member
+        const existingCompanyMember = await db.companyMember.findFirst({
+          where: { userId: admin.id, companyId: demoCompany.id }
+        })
+        if (!existingCompanyMember) {
+          await db.companyMember.create({
+            data: { userId: admin.id, companyId: demoCompany.id, role: 'admin' },
+          })
+        }
       }
     } else {
       demoProjectId = projects[0].id

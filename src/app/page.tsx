@@ -20,6 +20,7 @@ import ProjectSetup from '@/components/auth/ProjectSetup';
 import TeamManagement from '@/components/auth/TeamManagement';
 import RolePermissions from '@/components/auth/RolePermissions';
 import AdminPanel from '@/components/admin/AdminPanel';
+import ConstructorPanel from '@/components/admin/ConstructorPanel';
 import MaintenanceView from '@/components/5s/MaintenanceView';
 import GerentePanel from '@/components/auth/GerentePanel';
 import JaulaModal from '@/components/5s/JaulaModal';
@@ -36,6 +37,7 @@ import {
 import {
   Loader2, RefreshCw, LogOut, Settings, ChevronDown, Shield, ShieldCheck, Unlock, Lock,
   LayoutDashboard, Wrench, Sparkles, BarChart3, FileText, MapPin, ListChecks,
+  Crown,
   ClipboardList, GraduationCap, Camera, CheckSquare, Trophy, ChevronRight,
   Lock as LockIcon, AlertTriangle, Building2, Zap, Bell, BellRing, BookOpen, Image as ImageIcon,
   Package, BoxSelect
@@ -193,7 +195,7 @@ export default function HomePage() {
 
   const getRoleLabel = (role: string) => {
     const map: Record<string, string> = {
-      constructor: 'Constructor', admin: 'Administrador', gerente: 'Gerente', responsable: 'Responsable',
+      gestor: 'Gestor (Dueño)', admin: 'Admin de Empresa', gerente: 'Gerente', responsable: 'Responsable',
       empleado: 'Empleado', auditor: 'Auditor',
     };
     return map[role] || role;
@@ -201,7 +203,7 @@ export default function HomePage() {
 
   const getRoleBadgeColor = (role: string) => {
     const map: Record<string, string> = {
-      constructor: 'bg-red-100 text-red-700 border-red-200',
+      gestor: 'bg-red-100 text-red-700 border-red-200',
       admin: 'bg-purple-100 text-purple-700 border-purple-200',
       gerente: 'bg-indigo-100 text-indigo-700 border-indigo-200',
       responsable: 'bg-blue-100 text-blue-700 border-blue-200',
@@ -250,26 +252,34 @@ export default function HomePage() {
 
   const canManageTeam = currentUser && hasPermission('add_members');
   const canSkipSteps = hasPermission('skip_steps');
-  // Admin tab: only users who can manage the system (admin role for system config)
-  const isAdmin = currentUser?.role === 'admin' || currentUser?.role === 'constructor';
-  const isConstructor = currentUser?.role === 'constructor';
+  // Role checks
+  const isGestor = currentUser?.role === 'gestor';
+  const isAdmin = currentUser?.role === 'admin';
   const canSeeGerentePanel = hasPermission('view_progress') || hasPermission('edit_project');
 
   const isGlobalModal = activeModal === 'globalActionPlan' || activeModal === 'globalInventory';
   const ActiveModalComponent = !isGlobalModal && activeModal ? MODAL_MAP[activeModal] : null;
 
   // Available tabs based on role
-  const availableTabs: { key: 'board' | 'gerente' | 'admin' | 'maintenance'; label: string; icon: React.ReactNode }[] = [
-    { key: 'board', label: 'Tablero 5S', icon: <LayoutDashboard className="h-3.5 w-3.5" /> },
-  ];
-  if (canSeeGerentePanel) {
-    availableTabs.push({ key: 'gerente', label: 'Gerencia', icon: <BarChart3 className="h-3.5 w-3.5" /> });
-  }
-  if (isAdmin) {
-    availableTabs.push({ key: 'admin', label: 'Admin', icon: <Shield className="h-3.5 w-3.5" /> });
-  }
-  if (is5SCompleted()) {
-    availableTabs.push({ key: 'maintenance', label: 'Mejora Continua', icon: <Sparkles className="h-3.5 w-3.5" /> });
+  // GESTOR (dueño de la app): ONLY sees "Gestión" tab (company management platform)
+  // ADMIN (admin de empresa): sees operational tabs (board, gerencia, admin, mejora continua)
+  const availableTabs: { key: 'board' | 'gerente' | 'admin' | 'maintenance' | 'gestion'; label: string; icon: React.ReactNode }[] = [];
+
+  if (isGestor) {
+    // Gestor ONLY sees the platform management tab
+    availableTabs.push({ key: 'gestion', label: 'Gestión', icon: <Crown className="h-3.5 w-3.5" /> });
+  } else {
+    // All other roles see the operational tabs
+    availableTabs.push({ key: 'board', label: 'Tablero 5S', icon: <LayoutDashboard className="h-3.5 w-3.5" /> });
+    if (canSeeGerentePanel) {
+      availableTabs.push({ key: 'gerente', label: 'Gerencia', icon: <BarChart3 className="h-3.5 w-3.5" /> });
+    }
+    if (isAdmin) {
+      availableTabs.push({ key: 'admin', label: 'Admin', icon: <Shield className="h-3.5 w-3.5" /> });
+    }
+    if (is5SCompleted()) {
+      availableTabs.push({ key: 'maintenance', label: 'Mejora Continua', icon: <Sparkles className="h-3.5 w-3.5" /> });
+    }
   }
 
   // Loading screen
@@ -936,6 +946,13 @@ export default function HomePage() {
                 </motion.div>
               )}
 
+              {/* ═══ TAB: GESTIÓN (Solo Gestor - Dueño de la app) ═══ */}
+              {activeTab === 'gestion' && isGestor && (
+                <motion.div key="gestion" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex-1 min-h-0 overflow-auto p-4">
+                  <ConstructorPanel embedded />
+                </motion.div>
+              )}
+
               {/* ═══ TAB: GERENTE ═══ */}
               {activeTab === 'gerente' && canSeeGerentePanel && (
                 <motion.div key="gerente" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex-1 min-h-0 overflow-auto p-4">
@@ -943,7 +960,7 @@ export default function HomePage() {
                 </motion.div>
               )}
 
-              {/* ═══ TAB: ADMIN ═══ */}
+              {/* ═══ TAB: ADMIN (Solo Admin de Empresa) ═══ */}
               {activeTab === 'admin' && isAdmin && (
                 <motion.div key="admin" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex-1 min-h-0 overflow-auto p-4">
                   <AdminPanel embedded />

@@ -111,7 +111,8 @@ interface MemberData {
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 const ROLE_LABELS: Record<string, string> = {
-  admin: 'Administrador',
+  gestor: 'Gestor (Dueño)',
+  admin: 'Admin de Empresa',
   gerente: 'Gerente',
   responsable: 'Responsable',
   empleado: 'Empleado',
@@ -119,6 +120,7 @@ const ROLE_LABELS: Record<string, string> = {
 }
 
 const ROLE_COLORS: Record<string, string> = {
+  gestor: 'bg-red-100 text-red-700 border-red-200',
   admin: 'bg-purple-100 text-purple-700 border-purple-200',
   gerente: 'bg-indigo-100 text-indigo-700 border-indigo-200',
   responsable: 'bg-blue-100 text-blue-700 border-blue-200',

@@ -35,14 +35,14 @@ const GENERAL_PERMISSIONS = [
 ]
 
 const ALL_PERMISSIONS = [...PER_S_PERMISSIONS, ...GENERAL_PERMISSIONS]
-const ALL_ROLES = ['constructor', 'admin', 'gerente', 'responsable', 'empleado', 'auditor']
+const ALL_ROLES = ['gestor', 'admin', 'gerente', 'responsable', 'empleado', 'auditor']
 
 // ═══════════════════════════════════════════════════════
 // DEFAULT PERMISSIONS
 // ═══════════════════════════════════════════════════════
 const DEFAULT_PERMISSIONS: Record<string, string[]> = {
-  constructor: ALL_PERMISSIONS, // Constructor (app owner) has everything
-  admin: ALL_PERMISSIONS, // Admin (license holder) has everything
+  gestor: ALL_PERMISSIONS, // Gestor (dueño de la app) has everything
+  admin: ALL_PERMISSIONS, // Admin de empresa has everything
 
   gerente: [
     'view_board', 'view_progress', 'view_project', 'view_team',

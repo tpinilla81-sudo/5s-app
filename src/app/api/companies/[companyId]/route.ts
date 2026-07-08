@@ -18,12 +18,12 @@ export async function GET(
       return NextResponse.json({ success: false, error: 'No autenticado' }, { status: 401 })
     }
 
-    const isAdmin = user.role === 'admin'
-    const isMember = !isAdmin ? await db.companyMember.findFirst({
+    const isGestor = user.role === 'gestor'
+    const isMember = !isGestor ? await db.companyMember.findFirst({
       where: { companyId, userId: user.id },
     }) : true
 
-    if (!isAdmin && !isMember) {
+    if (!isGestor && !isMember) {
       return NextResponse.json({ success: false, error: 'Sin permisos' }, { status: 403 })
     }
 
@@ -100,8 +100,16 @@ export async function PUT(
     }
 
     const user = await db.user.findUnique({ where: { id: sessionId } })
-    if (!user || user.role !== 'admin') {
-      return NextResponse.json({ success: false, error: 'Solo administradores pueden editar empresas' }, { status: 403 })
+    if (!user || (user.role !== 'gestor' && user.role !== 'admin')) {
+      return NextResponse.json({ success: false, error: 'Sin permisos para editar empresas' }, { status: 403 })
+    }
+
+    // Admin can only edit companies they're a member of; gestor can edit any
+    if (user.role === 'admin') {
+      const membership = await db.companyMember.findFirst({ where: { companyId, userId: user.id } })
+      if (!membership) {
+        return NextResponse.json({ success: false, error: 'Solo puedes editar empresas donde eres miembro' }, { status: 403 })
+      }
     }
 
     const body = await request.json()
@@ -162,8 +170,8 @@ export async function DELETE(
     }
 
     const user = await db.user.findUnique({ where: { id: sessionId } })
-    if (!user || user.role !== 'admin') {
-      return NextResponse.json({ success: false, error: 'Solo administradores pueden eliminar empresas' }, { status: 403 })
+    if (!user || user.role !== 'gestor') {
+      return NextResponse.json({ success: false, error: 'Solo el gestor (dueño de la app) puede eliminar empresas' }, { status: 403 })
     }
 
     // Check company has no projects with data
