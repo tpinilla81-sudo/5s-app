@@ -834,6 +834,14 @@ export const use5SStore = create<FiveSState>((set, get) => ({
         // Load permissions after session restore
         await get().fetchPermissions()
 
+        // Gestor (dueño de la app) goes directly to management panel
+        if (data.user.role === 'gestor') {
+          set({ authView: 'board', activeTab: 'gestion' })
+          await get().fetchCompanies()
+          set({ isAuthLoading: false })
+          return
+        }
+
         await get().fetchProjects()
         const { projects } = get()
 
