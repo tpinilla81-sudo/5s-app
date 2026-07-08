@@ -332,12 +332,13 @@ export default function HomePage() {
               <h1 className="text-sm font-black text-gray-900 leading-tight tracking-wide">5S</h1>
               <div className="flex items-center gap-1">
                 <span className="text-[10px] font-semibold text-green-600">by Método</span>
-                {currentProject && <span className="text-[10px] text-muted-foreground">· {currentProject.name}</span>}
-                {currentZone && <span className="text-[10px] font-medium" style={{ color: currentZone.color || '#3B82F6' }}>· {currentZone.name}</span>}
+                {isGestor && <span className="text-[10px] font-semibold text-red-500">· Gestor</span>}
+                {!isGestor && currentProject && <span className="text-[10px] text-muted-foreground">· {currentProject.name}</span>}
+                {!isGestor && currentZone && <span className="text-[10px] font-medium" style={{ color: currentZone.color || '#3B82F6' }}>· {currentZone.name}</span>}
               </div>
             </div>
-            {/* Zone selector */}
-            {(() => {
+            {/* Zone selector — only for non-gestor users */}
+            {!isGestor && (() => {
               const availableZones = getAvailableZones();
               const isSingleZone = availableZones.length === 1;
               const isZoneRestricted = currentUser && !hasPermission('manage_zones');
@@ -346,7 +347,6 @@ export default function HomePage() {
                 <div className="flex items-center gap-1 ml-2">
                   <MapPin className="h-3 w-3 text-muted-foreground" />
                   {isSingleZone && isZoneRestricted ? (
-                    // Single zone: show as label, no selector
                     <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full border"
                       style={{ color: availableZones[0].color, borderColor: availableZones[0].color, backgroundColor: `${availableZones[0].color}15` }}>
                       {availableZones[0].name}
@@ -368,8 +368,78 @@ export default function HomePage() {
               );
             })()}
           </div>
+
+          {/* ── GESTOR HEADER: solo Avisos, Manual y Login ── */}
+          {isGestor ? (
+            <div className="flex items-center gap-2">
+              {/* Avisos */}
+              <Button variant={unreadNotifs > 0 ? 'default' : 'outline'} size="sm"
+                className={`relative gap-1 text-[10px] h-7 ${unreadNotifs > 0 ? 'bg-orange-500 hover:bg-orange-600 text-white border-orange-500' : 'border-orange-300 text-orange-600 hover:bg-orange-50'}`}
+                onClick={async () => {
+                  if (currentUser?.id) {
+                    try {
+                      const res = await fetch(`/api/notifications?userId=${currentUser.id}&unread=true`);
+                      const data = await res.json();
+                      if (data.success) setNotifs(data.data || []);
+                    } catch (e) { console.error(e); }
+                  }
+                  setShowNotifs(!showNotifs);
+                }}>
+                {unreadNotifs > 0 ? <BellRing className="h-3.5 w-3.5" /> : <Bell className="h-3 w-3" />}
+                <span>{unreadNotifs > 0 ? `${unreadNotifs} avisos` : 'Avisos'}</span>
+                {unreadNotifs > 0 && (
+                  <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-[8px] font-bold rounded-full flex items-center justify-center animate-pulse">{unreadNotifs > 9 ? '9+' : unreadNotifs}</span>
+                )}
+              </Button>
+              {/* Manual */}
+              <Button variant="ghost" size="sm" onClick={async () => {
+                try {
+                  const res = await fetch('/api/manual');
+                  if (!res.ok) throw new Error('Download failed');
+                  const blob = await res.blob();
+                  const url = window.URL.createObjectURL(blob);
+                  const link = document.createElement('a');
+                  link.href = url; link.download = 'Manual_Usuario_5S.pdf';
+                  document.body.appendChild(link); link.click();
+                  document.body.removeChild(link);
+                  window.URL.revokeObjectURL(url);
+                } catch { window.open('/Manual_Usuario_5S.pdf', '_blank'); }
+              }} className="text-purple-600 hover:text-purple-700 h-7 px-2">
+                <FileText className="h-3.5 w-3.5" />
+                <span className="text-[10px]">Manual</span>
+              </Button>
+              {/* User menu (Login) */}
+              {currentUser && (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" size="sm" className="gap-1 h-7 px-2">
+                      <div className="w-5 h-5 rounded-full bg-red-100 flex items-center justify-center text-red-700 text-[9px] font-bold">
+                        {currentUser.name.charAt(0).toUpperCase()}
+                      </div>
+                      <span className="text-[10px] font-medium max-w-[80px] truncate">{currentUser.name}</span>
+                      <ChevronDown className="h-2.5 w-2.5 text-muted-foreground" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-48">
+                    <div className="px-2 py-1.5">
+                      <p className="text-xs font-medium">{currentUser.name}</p>
+                      <p className="text-[10px] text-muted-foreground">{currentUser.email}</p>
+                      <Badge className={`${getRoleBadgeColor(currentUser.role)} border mt-1 text-[10px]`}>
+                        {getRoleLabel(currentUser.role)}
+                      </Badge>
+                    </div>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={handleLogout} className="text-red-600 cursor-pointer text-xs">
+                      <LogOut className="h-3 w-3 mr-1" /> Cerrar Sesión
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
+            </div>
+          ) : (
+          /* ── NON-GESTOR HEADER: full controls ── */
           <div className="flex items-center gap-1.5">
-            {/* 🔔 Notification bell — FIRST position, prominent for all board users */}
+            {/* 🔔 Notification bell */}
             {canSeeNotifications && (
               <Button variant={unreadNotifs > 0 ? 'default' : 'outline'} size="sm"
                 className={`relative gap-1 text-[10px] h-7 ${unreadNotifs > 0 ? 'bg-orange-500 hover:bg-orange-600 text-white border-orange-500' : 'border-orange-300 text-orange-600 hover:bg-orange-50'}`}
@@ -390,7 +460,7 @@ export default function HomePage() {
                 )}
               </Button>
             )}
-            {/* 📦 Jaula de Excedentes button — next to Avisos */}
+            {/* 📦 Jaula de Excedentes */}
             {canSeeNotifications && (
               <Button variant="outline" size="sm"
                 className="gap-1 text-[10px] h-7 border-red-300 text-red-600 hover:bg-red-50"
@@ -400,7 +470,7 @@ export default function HomePage() {
                 <span className="hidden sm:inline">Jaula</span>
               </Button>
             )}
-            {/* ✅ Activos (Necesarios) button — next to Jaula */}
+            {/* ✅ Activos (Necesarios) */}
             {canSeeNotifications && (
               <Button variant="outline" size="sm"
                 className="gap-1 text-[10px] h-7 border-green-300 text-green-600 hover:bg-green-50"
@@ -410,7 +480,7 @@ export default function HomePage() {
                 <span className="hidden sm:inline">Activos</span>
               </Button>
             )}
-            {/* Quick action buttons — removed (accessed from board instead) */}
+            {/* Free navigation lock */}
             {(isAdmin || canSkipSteps) && (
               <Button variant={adminFreeNavigation ? 'default' : 'outline'} size="sm"
                 onClick={() => setAdminFreeNavigation(!adminFreeNavigation)}
@@ -473,6 +543,7 @@ export default function HomePage() {
               </DropdownMenu>
             )}
           </div>
+          )}
         </div>
 
         {/* Tab Navigation Bar */}
@@ -494,8 +565,8 @@ export default function HomePage() {
         </div>
       </header>
 
-      {/* Notification dropdown for auditors */}
-      {showNotifs && canSeeNotifications && (
+      {/* Notification dropdown */}
+      {showNotifs && (canSeeNotifications || isGestor) && (
         <div className="fixed top-12 right-16 z-50 w-80 bg-white border rounded-lg shadow-xl max-h-96 overflow-y-auto">
           <div className="p-3 border-b flex items-center justify-between">
             <span className="text-sm font-semibold">Notificaciones</span>
