@@ -366,15 +366,15 @@
    366→
    367→export async function POST() {
    368→  try {
-   369→    // Create admin user if not exists
-   370→    const existingAdmin = await db.user.findUnique({ where: { email: 'admin@5s.com' } })
-   371→    if (!existingAdmin) {
+   369→    // Create gestor user if not exists (platform owner)
+   370→    const existingGestor = await db.user.findUnique({ where: { email: 'gestor@cincos.com' } })
+   371→    if (!existingGestor) {
    372→      await db.user.create({
    373→        data: {
-   374→          email: 'admin@5s.com',
-   375→          name: 'Administrador',
-   376→          password: hashPassword('admin123'),
-   377→          role: 'admin',
+   374→          email: 'gestor@cincos.com',
+   375→          name: 'Gestor',
+   376→          password: hashPassword('gestor123'),
+   377→          role: 'gestor',
    378→          active: true,
    379→        },
    380→      })
@@ -560,7 +560,7 @@
    560→        progressRecords: progressCount,
    561→        users: userCount,
    562→        projects: projectCount,
-   563→        adminCredentials: 'admin@5s.com / admin123',
+   563→        gestorCredentials: 'gestor@cincos.com / gestor123',
    564→      },
    565→    })
    566→  } catch (error) {

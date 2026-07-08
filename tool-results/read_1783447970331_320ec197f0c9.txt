@@ -1,0 +1,930 @@
+     1→import { create } from 'zustand'
+     2→
+     3→export interface ProgressItem {
+     4→  id: string
+     5→  sStep: number
+     6→  miniStep: number
+     7→  completed: boolean
+     8→  score: number | null
+     9→  notes: string | null
+    10→  photoUrls: string | null
+    11→  passedAt: string | null
+    12→  zoneId: string | null
+    13→}
+    14→
+    15→export interface EmployeeProgressItem {
+    16→  id: string
+    17→  sStep: number
+    18→  miniStep: number
+    19→  completed: boolean
+    20→  score: number | null
+    21→  notes: string | null
+    22→  passedAt: string | null
+    23→  projectId: string
+    24→  zoneId: string
+    25→  userId: string
+    26→}
+    27→
+    28→export interface User {
+    29→  id: string
+    30→  email: string
+    31→  name: string
+    32→  role: string
+    33→  avatar: string | null
+    34→  active: boolean
+    35→}
+    36→
+    37→export interface Zone {
+    38→  id: string
+    39→  name: string
+    40→  description: string | null
+    41→  color: string
+    42→  projectId: string
+    43→  responsableId: string | null
+    44→  boardConfigId: string | null
+    45→}
+    46→
+    47→export interface Company {
+    48→  id: string
+    49→  name: string
+    50→  description: string | null
+    51→  active: boolean
+    52→  projectCount?: number
+    53→  memberCount?: number
+    54→}
+    55→
+    56→export interface Project {
+    57→  id: string
+    58→  name: string
+    59→  description: string | null
+    60→  company: string
+    61→  companyId: string | null
+    62→  companyName?: string
+    63→  startDate: string
+    64→  active: boolean
+    65→  zones: Zone[]
+    66→  memberCount?: number
+    67→}
+    68→
+    69→// Mini-step types: ZONE steps (2,3,4,5) are collaborative per zone; INDIVIDUAL step (1) is per employee
+    70→// Step 4 (Autoevaluación) is done by EMPLOYEES for S1/S2/S3/S5, and by RESPONSABLE for S4
+    71→const ZONE_MINI_STEPS = [2, 3, 4, 5]
+    72→const INDIVIDUAL_MINI_STEPS = [1]
+    73→
+    74→// User's assigned zones (filtered by MemberZone for empleados)
+    75→export interface UserZoneAssignment {
+    76→  id: string
+    77→  name: string
+    78→  description: string | null
+    79→  color: string
+    80→  projectId: string
+    81→  responsableId: string | null
+    82→  boardConfigId: string | null
+    83→}
+    84→
+    85→// Permission map: { [role]: { [permissionId]: boolean } }
+    86→export interface PermissionMap {
+    87→  [role: string]: {
+    88→    [permission: string]: boolean
+    89→  }
+    90→}
+    91→
+    92→interface FiveSState {
+    93→  // Progress & Board State
+    94→  progress: ProgressItem[]
+    95→  employeeProgress: EmployeeProgressItem[]
+    96→  currentView: 'board' | 'detail' | 'admin' | 'maintenance' | 'gerente'
+    97→  activeTab: 'board' | 'gerente' | 'admin' | 'maintenance'
+    98→  selectedSStep: number | null
+    99→  activeModal: 'formacion' | 'fotos' | 'inventario' | 'actionplan' | 'autoevaluacion' | 'auditoria' | 'globalActionPlan' | 'globalInventory' | 'auditResults' | 'standardsLibrary' | 'photoLibrary' | null
+   100→  activeMiniStep: number | null
+   101→  isLoadingProgress: boolean
+   102→  adminFreeNavigation: boolean  // Admin mode: skip progressive unlocking
+   103→
+   104→  // Zone State
+   105→  currentZone: Zone | null
+   106→  userZones: UserZoneAssignment[]  // Zones assigned to the current user
+   107→
+   108→  // Auth & Project State
+   109→  currentUser: User | null
+   110→  currentProject: Project | null
+   111→  authView: 'login' | 'register' | 'setup' | 'board' | 'no_projects'
+   112→  projects: Project[]
+   113→  companies: Company[]
+   114→  isAuthLoading: boolean       // Only for initial session check
+   115→  isLoginLoading: boolean      // For login/register button loading state
+   116→  authError: string | null     // Error message from auth operations
+   117→
+   118→  // Permissions State
+   119→  permissions: PermissionMap
+   120→
+   121→  // Progress & Board Actions
+   122→  fetchProgress: () => Promise<void>
+   123→  fetchEmployeeProgress: (projectId: string, zoneId?: string) => Promise<void>
+   124→  selectSStep: (s: number | null) => void
+   125→  setCurrentView: (view: 'board' | 'detail' | 'admin' | 'maintenance' | 'gerente') => void
+   126→  setActiveTab: (tab: 'board' | 'gerente' | 'admin' | 'maintenance') => void
+   127→  openModal: (type: 'formacion' | 'fotos' | 'inventario' | 'actionplan' | 'autoevaluacion' | 'auditoria' | 'globalActionPlan' | 'globalInventory' | 'auditResults' | 'standardsLibrary' | 'photoLibrary', miniStep: number) => void
+   128→  closeModal: () => void
+   129→  seedDatabase: () => Promise<void>
+   130→  setAdminFreeNavigation: (enabled: boolean) => void
+   131→  setCurrentZone: (zone: Zone | null) => void
+   132→  fetchUserZones: () => Promise<void>
+   133→  getAvailableZones: () => Zone[]  // Zones the user can see/work in
+   134→
+   135→  // Permission Actions
+   136→  fetchPermissions: () => Promise<void>
+   137→  hasPermission: (permission: string) => boolean  // Check if current user has a permission
+   138→  canPerform: (sStep: number, miniStep: number) => boolean  // Check a1 (execute) permission
+   139→  canView: (sStep: number, miniStep: number) => boolean  // Check a0 (view) permission
+   140→
+   141→  // Computed helpers
+   142→  getMiniStepStatus: (sStep: number, miniStep: number) => 'locked' | 'available' | 'completed'
+   143→  isZoneMiniStepComplete: (sStep: number, miniStep: number, zoneId: string) => boolean
+   144→  isQuesitoEarned: (sStep: number) => boolean
+   145→  is5SCompleted: () => boolean
+   146→  getCompletedCount: () => { sSteps: number; miniSteps: number; total: number }
+   147→
+   148→  // Auth & Project Actions
+   149→  login: (email: string, password: string) => Promise<boolean>
+   150→  register: (name: string, email: string, password: string, role: string) => Promise<boolean>
+   151→  logout: () => Promise<void>
+   152→  checkSession: () => Promise<void>
+   153→  fetchProjects: () => Promise<void>
+   154→  fetchCompanies: () => Promise<void>
+   155→  createProject: (data: { name: string; description?: string; company: string; companyId?: string; zones: { name: string; description?: string; color?: string }[] }) => Promise<void>
+   156→  setCurrentProject: (project: Project | null) => void
+   157→  setAuthView: (view: 'login' | 'register' | 'setup' | 'board') => void
+   158→  clearAuthError: () => void
+   159→}
+   160→
+   161→export const use5SStore = create<FiveSState>((set, get) => ({
+   162→  // Progress & Board State
+   163→  progress: [],
+   164→  employeeProgress: [],
+   165→  currentView: 'board',
+   166→  activeTab: 'board',
+   167→  selectedSStep: null,
+   168→  activeModal: null,
+   169→  activeMiniStep: null,
+   170→  isLoadingProgress: true,
+   171→  adminFreeNavigation: true,  // Default: admin can navigate freely
+   172→  currentZone: null,
+   173→  userZones: [],
+   174→
+   175→  // Auth & Project State
+   176→  currentUser: null,
+   177→  currentProject: null,
+   178→  authView: 'login',
+   179→  projects: [],
+   180→  companies: [],
+   181→  isAuthLoading: true,
+   182→  isLoginLoading: false,
+   183→  authError: null,
+   184→
+   185→  // Permissions State
+   186→  permissions: {},
+   187→
+   188→  // Progress & Board Actions
+   189→  fetchProgress: async () => {
+   190→    try {
+   191→      const { currentProject, currentZone } = get()
+   192→      const params = currentProject ? `?projectId=${currentProject.id}` : ''
+   193→      const res = await fetch(`/api/progress${params}`)
+   194→      const data = await res.json()
+   195→      // API returns { success: true, data: [...] }
+   196→      const progressData = data?.data ? data.data : (Array.isArray(data) ? data : [])
+   197→      set({ progress: progressData, isLoadingProgress: false })
+   198→
+   199→      // Also refresh employee progress to keep isQuesitoEarned accurate
+   200→      if (currentProject) {
+   201→        try {
+   202→          const epParams = `?projectId=${currentProject.id}` + (currentZone ? `&zoneId=${currentZone.id}` : '')
+   203→          const epRes = await fetch(`/api/employee-progress${epParams}`)
+   204→          const epData = await epRes.json()
+   205→          const epResult = epData?.data ? epData.data : (Array.isArray(epData) ? epData : [])
+   206→          set({ employeeProgress: epResult })
+   207→        } catch (epError) {
+   208→          console.error('Error fetching employee progress during refresh:', epError)
+   209→        }
+   210→      }
+   211→    } catch (error) {
+   212→      console.error('Error fetching progress:', error)
+   213→      set({ isLoadingProgress: false })
+   214→    }
+   215→  },
+   216→
+   217→  fetchEmployeeProgress: async (projectId: string, zoneId?: string) => {
+   218→    try {
+   219→      let params = `?projectId=${projectId}`
+   220→      if (zoneId) params += `&zoneId=${zoneId}`
+   221→      const res = await fetch(`/api/employee-progress${params}`)
+   222→      const data = await res.json()
+   223→      const epData = data?.data ? data.data : (Array.isArray(data) ? data : [])
+   224→      set({ employeeProgress: epData })
+   225→    } catch (error) {
+   226→      console.error('Error fetching employee progress:', error)
+   227→    }
+   228→  },
+   229→
+   230→  selectSStep: (s) => {
+   231→    if (s === null) {
+   232→      set({ selectedSStep: null })
+   233→    } else {
+   234→      set({ selectedSStep: s })
+   235→    }
+   236→  },
+   237→
+   238→  setCurrentView: (view) => set({ currentView: view }),
+   239→
+   240→  setActiveTab: (tab) => set({ activeTab: tab }),
+   241→
+   242→  openModal: (type, miniStep) => set({ activeModal: type, activeMiniStep: miniStep }),
+   243→
+   244→  closeModal: () => set({ activeModal: null, activeMiniStep: null }),
+   245→
+   246→  setAdminFreeNavigation: (enabled: boolean) => set({ adminFreeNavigation: enabled }),
+   247→
+   248→  setCurrentZone: (zone: Zone | null) => {
+   249→    set({ currentZone: zone })
+   250→    // Also fetch employee progress when zone changes
+   251→    const { currentProject } = get()
+   252→    if (currentProject && zone) {
+   253→      get().fetchEmployeeProgress(currentProject.id, zone.id)
+   254→    }
+   255→  },
+   256→
+   257→  fetchUserZones: async () => {
+   258→    try {
+   259→      const res = await fetch('/api/auth/zones')
+   260→      const data = await res.json()
+   261→      const zones: UserZoneAssignment[] = data.zones || []
+   262→      set({ userZones: zones })
+   263→
+   264→      // Auto-select zone if user has zones but none selected yet
+   265→      const { currentUser, currentZone, currentProject } = get()
+   266→      if (zones.length >= 1 && !currentZone) {
+   267→        const z = zones[0]
+   268→        // Find matching zone in current project
+   269→        const projectZone = currentProject?.zones.find(pz => pz.id === z.id) || {
+   270→          id: z.id, name: z.name, description: z.description, color: z.color, projectId: z.projectId, responsableId: z.responsableId, boardConfigId: z.boardConfigId || null
+   271→        }
+   272→        set({ currentZone: projectZone as Zone })
+   273→        if (currentProject) {
+   274→          get().fetchEmployeeProgress(currentProject.id, z.id)
+   275→        }
+   276→      }
+   277→
+   278→      return zones
+   279→    } catch (error) {
+   280→      console.error('Error fetching user zones:', error)
+   281→      return []
+   282→    }
+   283→  },
+   284→
+   285→  getAvailableZones: () => {
+   286→    const { currentUser, currentProject, userZones, permissions } = get()
+   287→    if (!currentProject) return []
+   288→
+   289→    // Direct permission check (avoid circular get().hasPermission during store init)
+   290→    const checkPerm = (perm: string): boolean => {
+   291→      if (!currentUser) return false
+   292→      const rolePerms = permissions[currentUser.role]
+   293→      return rolePerms?.[perm] === true
+   294→    }
+   295→
+   296→    // Users with manage_zones permission can see all project zones
+   297→    if (checkPerm('manage_zones')) {
+   298→      return currentProject.zones
+   299→    }
+   300→
+   301→    // Users with view_board: show assigned zones or all if none assigned
+   302→    if (checkPerm('view_board')) {
+   303→      const userZoneIds = userZones.map(uz => uz.id)
+   304→      const assignedZones = currentProject.zones.filter(z => userZoneIds.includes(z.id))
+   305→      if (assignedZones.length === 0) {
+   306→        return currentProject.zones
+   307→      }
+   308→      return assignedZones
+   309→    }
+   310→
+   311→    // Fallback: only assigned zones
+   312→    const userZoneIds = userZones.map(uz => uz.id)
+   313→    return currentProject.zones.filter(z => userZoneIds.includes(z.id))
+   314→  },
+   315→
+   316→  seedDatabase: async () => {
+   317→    try {
+   318→      await fetch('/api/seed', { method: 'POST' })
+   319→      await get().fetchProgress()
+   320→    } catch (error) {
+   321→      console.error('Error seeding database:', error)
+   322→    }
+   323→  },
+   324→
+   325→  // ═══════════════════════════════════════════════════════
+   326→  // PERMISSION SYSTEM — Single source of truth
+   327→  // ═══════════════════════════════════════════════════════
+   328→
+   329→  fetchPermissions: async () => {
+   330→    try {
+   331→      const res = await fetch('/api/permissions')
+   332→      const data = await res.json()
+   333→      if (data.permissions) {
+   334→        set({ permissions: data.permissions })
+   335→      }
+   336→    } catch (error) {
+   337→      console.error('Error fetching permissions:', error)
+   338→    }
+   339→  },
+   340→
+   341→  hasPermission: (permission: string): boolean => {
+   342→    const { currentUser, permissions } = get()
+   343→    if (!currentUser) return false
+   344→    // Permission-driven: check rolePermissionConfig from DB (NO admin bypass)
+   345→    const rolePerms = permissions[currentUser.role]
+   346→    if (!rolePerms) return false
+   347→    return rolePerms[permission] === true
+   348→  },
+   349→
+   350→  canPerform: (sStep: number, miniStep: number): boolean => {
+   351→    // Check a1 (execute/perform) permission for a specific sStep + miniStep
+   352→    return get().hasPermission(`s${sStep}_step${miniStep}_a1`)
+   353→  },
+   354→
+   355→  canView: (sStep: number, miniStep: number): boolean => {
+   356→    // Check a0 (view) permission for a specific sStep + miniStep
+   357→    return get().hasPermission(`s${sStep}_step${miniStep}_a0`)
+   358→  },
+   359→
+   360→  // ═══════════════════════════════════════════════════════
+   361→  // getMiniStepStatus — Permission-Driven with Business Rules
+   362→  // Permissions are the source of truth for WHO can do WHAT.
+   363→  // Business rules define WHEN things are accessible:
+   364→  //   - INTER-S progression: S2 requires S1 completed, S3 requires S2, etc.
+   365→  //   - INTRA-S progression: step N requires step N-1 completed
+   366→  //   - Step 5 (audit): requires steps 1-4 ALL completed within the same S
+   367→  //   - a1 (perform) → can enter and act (if previous step done)
+   368→  //   - a0 (view) only → can see the step exists, but CANNOT enter it
+   369→  //   - No permission → locked (not even visible)
+   370→  //   - IMPORTANT: Previous step completion is checked at ZONE level,
+   371→  //     so an auditor can access step 5 if employees completed 1-4
+   372→  //   - For step 1 (individual): also checks EmployeeProgress for the
+   373→  //     current user, so the employee's own completion unlocks step 2
+   374→  // ═══════════════════════════════════════════════════════
+   375→  getMiniStepStatus: (sStep, miniStep) => {
+   376→    const { progress, employeeProgress, currentUser, adminFreeNavigation, currentZone } = get()
+   377→    if (!currentUser) return 'locked'
+   378→
+   379→    const canViewStep = get().canView(sStep, miniStep)
+   380→    const canPerformStep = get().canPerform(sStep, miniStep)
+   381→    // Permission-driven: skip_steps from DB replaces hardcoded isAdmin check
+   382→    const canSkipSteps = get().hasPermission('skip_steps')
+   383→    const skipLocks = canSkipSteps && adminFreeNavigation
+   384→
+   385→    // Check if a specific mini-step of a specific S is completed at zone level
+   386→    const isStepCompletedAt = (s: number, ms: number): boolean => {
+   387→      if (currentZone) {
+   388→        const zoneStep = progress.find(p =>
+   389→          p.sStep === s &&
+   390→          p.miniStep === ms &&
+   391→          (p.zoneId === currentZone.id || p.zoneId === null) &&
+   392→          p.completed
+   393→        )
+   394→        return !!zoneStep
+   395→      }
+   396→      const anyStep = progress.find(p =>
+   397→        p.sStep === s &&
+   398→        p.miniStep === ms &&
+   399→        p.completed
+   400→      )
+   401→      return !!anyStep
+   402→    }
+   403→
+   404→    // Check if a specific S-step (all 5 mini-steps) is fully completed (quesito earned)
+   405→    // Also checks employeeProgress for individual steps, consistent with areSteps1to4Completed
+   406→    const isSCompleted = (s: number): boolean => {
+   407→      for (let ms = 1; ms <= 5; ms++) {
+   408→        // Check zone-level progress first
+   409→        if (isStepCompletedAt(s, ms)) continue
+   410→        // Also check employeeProgress for this step (e.g., individual formación step 1)
+   411→        const anyEmpCompleted = currentZone
+   412→          ? employeeProgress.some(ep =>
+   413→              ep.sStep === s &&
+   414→              ep.miniStep === ms &&
+   415→              ep.zoneId === currentZone.id &&
+   416→              ep.completed
+   417→            )
+   418→          : employeeProgress.some(ep =>
+   419→              ep.sStep === s &&
+   420→              ep.miniStep === ms &&
+   421→              ep.completed
+   422→            )
+   423→        if (!anyEmpCompleted) return false
+   424→      }
+   425→      return true
+   426→    }
+   427→
+   428→    // Check if the CURRENT USER has completed step 1 individually (EmployeeProgress)
+   429→    // This is crucial for unlocking step 2 for an employee who passed the exam
+   430→    // even if not ALL employees in the zone have completed it yet
+   431→    const hasUserCompletedStep1 = (): boolean => {
+   432→      if (!currentZone) return false
+   433→      const userStep = employeeProgress.find(ep =>
+   434→        ep.sStep === sStep &&
+   435→        ep.miniStep === 1 &&
+   436→        ep.zoneId === currentZone.id &&
+   437→        ep.userId === currentUser.id &&
+   438→        ep.completed
+   439→      )
+   440→      return !!userStep
+   441→    }
+   442→
+   443→    // Check if already completed at zone level (or project level if no zone)
+   444→    const isStepCompleted = (): boolean => isStepCompletedAt(sStep, miniStep)
+   445→
+   446→    // Check if the CURRENT USER has completed this individual step (EmployeeProgress)
+   447→    // For step 1 (formación) and step 4 (autoevaluación), completion is tracked per employee
+   448→    const hasUserCompletedIndividualStep = (): boolean => {
+   449→      if (!currentZone) return false
+   450→      if (miniStep !== 1 && miniStep !== 4) return false // Only individual steps
+   451→      const userStep = employeeProgress.find(ep =>
+   452→        ep.sStep === sStep &&
+   453→        ep.miniStep === miniStep &&
+   454→        ep.zoneId === currentZone.id &&
+   455→        ep.userId === currentUser.id &&
+   456→        ep.completed
+   457→      )
+   458→      return !!userStep
+   459→    }
+   460→
+   461→    // Combined: step is "done" if either zone-level completed OR user completed individually
+   462→    const isStepDoneForUser = (): boolean => isStepCompleted() || hasUserCompletedIndividualStep()
+   463→
+   464→    // Check if step is completed by ANYONE (zone or any employee)
+   465→    // This is crucial: ALL users must see completed steps in green,
+   466→    // even if they don't have permission to enter them (e.g., auditors viewing steps 1-4)
+   467→    const isStepCompletedByAnyone = (): boolean => {
+   468→      if (isStepCompleted()) return true
+   469→      if (!currentZone) {
+   470→        return employeeProgress.some(ep =>
+   471→          ep.sStep === sStep &&
+   472→          ep.miniStep === miniStep &&
+   473→          ep.completed
+   474→        )
+   475→      }
+   476→      return employeeProgress.some(ep =>
+   477→        ep.sStep === sStep &&
+   478→        ep.miniStep === miniStep &&
+   479→        ep.zoneId === currentZone.id &&
+   480→        ep.completed
+   481→      )
+   482→    }
+   483→
+   484→    // Helper: check if steps 1-4 are all completed for this S-step
+   485→    // Uses BOTH zone-level progress AND any employee progress,
+   486→    // so auditors can access step 5 when employees have completed 1-4
+   487→    const areSteps1to4Completed = (): boolean => {
+   488→      for (let ms = 1; ms <= 4; ms++) {
+   489→        const zoneCompleted = isStepCompletedAt(sStep, ms)
+   490→        if (zoneCompleted) continue
+   491→        // Check if ANY employee has completed this step individually
+   492→        const anyEmpCompleted = currentZone
+   493→          ? employeeProgress.some(ep =>
+   494→              ep.sStep === sStep &&
+   495→              ep.miniStep === ms &&
+   496→              ep.zoneId === currentZone.id &&
+   497→              ep.completed
+   498→            )
+   499→          : employeeProgress.some(ep =>
+   500→              ep.sStep === sStep &&
+   501→              ep.miniStep === ms &&
+   502→              ep.completed
+   503→            )
+   504→        if (!anyEmpCompleted) return false
+   505→      }
+   506→      return true
+   507→    }
+   508→
+   509→    // ═══ INTER-S PROGRESSION CHECK ═══
+   510→    // S1 is always available. S2 requires S1 completed. S3 requires S2. Etc.
+   511→    // This enforces the 5S methodology sequence: Clasificar → Ordenar → Limpiar → Estandarizar → Mantener
+   512→    const isPreviousSCompleted = (): boolean => {
+   513→      if (sStep === 1) return true // S1 has no prerequisite
+   514→      return isSCompleted(sStep - 1)
+   515→    }
+   516→
+   517→    // ═══ INTRA-S PROGRESSION CHECK ═══
+   518→    // Step 1: always available (if you have permission AND previous S is done)
+   519→    // Steps 2-4: need the immediately previous step completed
+   520→    // Step 5: needs ALL steps 1-4 completed
+   521→    // IMPORTANT: Completion checks include BOTH zone-level AND any employee progress,
+   522→    // so auditors/responsables can see steps as available when employees completed them
+   523→    const isPreviousStepCompleted = (): boolean => {
+   524→      if (miniStep === 1) return true
+   525→      if (miniStep === 5) return areSteps1to4Completed()
+   526→      // Steps 2, 3, 4: need previous step completed at zone level
+   527→      if (isStepCompletedAt(sStep, miniStep - 1)) return true
+   528→      // For step 2: current user completed step 1 individually (exam passed)
+   529→      if (miniStep === 2 && hasUserCompletedStep1()) return true
+   530→      // Also check: ANY employee completed previous step (for auditors/responsables)
+   531→      const anyEmpCompletedPrev = currentZone
+   532→        ? employeeProgress.some(ep =>
+   533→            ep.sStep === sStep &&
+   534→            ep.miniStep === miniStep - 1 &&
+   535→            ep.zoneId === currentZone.id &&
+   536→            ep.completed
+   537→          )
+   538→        : employeeProgress.some(ep =>
+   539→            ep.sStep === sStep &&
+   540→            ep.miniStep === miniStep - 1 &&
+   541→            ep.completed
+   542→          )
+   543→      if (anyEmpCompletedPrev) return true
+   544→      return false
+   545→    }
+   546→
+   547→    // ── If already completed (zone-level OR user's individual), VERIFY COHERENCY ──
+   548→    if (isStepDoneForUser()) {
+   549→      const isChainCoherent = (): boolean => {
+   550→        // First check inter-S: previous S must be completed
+   551→        if (!isPreviousSCompleted()) return false
+   552→        // Then check intra-S chain — reuse same logic as isPreviousStepCompleted
+   553→        if (miniStep === 1) return true // Step 1 is always coherent if previous S is done
+   554→        if (miniStep === 5) return areSteps1to4Completed()
+   555→        if (isStepCompletedAt(sStep, miniStep - 1)) return true
+   556→        if (miniStep === 2 && hasUserCompletedStep1()) return true
+   557→        // Also check any employee completed previous step
+   558→        const anyEmpPrev = currentZone
+   559→          ? employeeProgress.some(ep =>
+   560→              ep.sStep === sStep &&
+   561→              ep.miniStep === miniStep - 1 &&
+   562→              ep.zoneId === currentZone.id &&
+   563→              ep.completed
+   564→            )
+   565→          : employeeProgress.some(ep =>
+   566→              ep.sStep === sStep &&
+   567→              ep.miniStep === miniStep - 1 &&
+   568→              ep.completed
+   569→            )
+   570→        if (anyEmpPrev) return true
+   571→        return false
+   572→      }
+   573→
+   574→      if (isChainCoherent()) {
+   575→        if (canPerformStep || canSkipSteps) return 'completed'
+   576→        if (canViewStep) return 'completed_viewonly'
+   577→        return 'locked'
+   578→      }
+   579→      // Chain is incoherent: treat as NOT completed — fall through
+   580→    }
+   581→
+   582→    // ── Step completed by ANYONE (zone or employee) → show as green for ALL users ──
+   583→    // Even users without permission must see completed steps in green
+   584→    if (isStepCompletedByAnyone()) {
+   585→      if (canPerformStep || canSkipSteps) return 'completed'
+   586→      // Everyone else sees it as completed_viewonly (green, read-only)
+   587→      return 'completed_viewonly'
+   588→    }
+   589→
+   590→    // ── Admin with lock open: skip all checks ──
+   591→    if (skipLocks) return 'available'
+   592→
+   593→    // ── No permission at all = locked ──
+   594→    if (!canViewStep && !canPerformStep) return 'locked'
+   595→
+   596→    // ── Has perform permission (a1) → check progression ──
+   597→    if (canPerformStep) {
+   598→      // INTER-S: can't start this S until previous S is completed
+   599→      if (!isPreviousSCompleted()) return 'locked'
+   600→      // INTRA-S: can't enter step until previous step is completed
+   601→      if (!isPreviousStepCompleted()) return 'locked'
+   602→      return 'available'
+   603→    }
+   604→
+   605→    // ── Has view permission only (a0) → can see but CANNOT enter ──
+   606→    if (canViewStep) return 'locked'
+   607→
+   608→    return 'locked'
+   609→  },
+   610→
+   611→  isZoneMiniStepComplete: (sStep, miniStep, zoneId) => {
+   612→    const { progress, employeeProgress, currentProject } = get()
+   613→    if (!currentProject) return false
+   614→
+   615→    if (ZONE_MINI_STEPS.includes(miniStep)) {
+   616→      // Zone step: check if the zone's Progress record is completed
+   617→      const zoneStep = progress.find(p =>
+   618→        p.sStep === sStep &&
+   619→        p.miniStep === miniStep &&
+   620→        p.zoneId === zoneId
+   621→      )
+   622→      return zoneStep?.completed ?? false
+   623→    }
+   624→
+   625→    if (INDIVIDUAL_MINI_STEPS.includes(miniStep)) {
+   626→      // Individual step (1 only): ALL employees in the zone must have completed
+   627→      // The zone-level Progress record for step 1 is only marked completed when ALL employees pass
+   628→      const zoneStep = progress.find(p =>
+   629→        p.sStep === sStep &&
+   630→        p.miniStep === miniStep &&
+   631→        (p.zoneId === zoneId || p.zoneId === null) &&
+   632→        p.completed
+   633→      )
+   634→      return !!zoneStep
+   635→    }
+   636→
+   637→    return false
+   638→  },
+   639→
+   640→  isQuesitoEarned: (sStep) => {
+   641→    const { progress, employeeProgress, currentZone } = get()
+   642→    const zoneId = currentZone?.id || null
+   643→
+   644→    // Check ALL 5 mini-steps are completed — each one individually
+   645→    // For zone-level steps (2,3,5): check progress table
+   646→    // For individual steps (1,4): also check employeeProgress as fallback
+   647→    for (let miniStep = 1; miniStep <= 5; miniStep++) {
+   648→      // Check zone-level progress first
+   649→      const zoneStep = progress.find(p =>
+   650→        p.sStep === sStep &&
+   651→        p.miniStep === miniStep &&
+   652→        (p.zoneId === zoneId || p.zoneId === null) &&
+   653→        p.completed
+   654→      )
+   655→      if (zoneStep) continue
+   656→
+   657→      // Also check employeeProgress for this step (e.g., individual formación step 1)
+   658→      // This ensures the quesito is earned even when not all employees have completed step 1,
+   659→      // but the auditor was able to pass step 5 (audit) because areSteps1to4Completed returned true
+   660→      const anyEmpCompleted = currentZone
+   661→        ? employeeProgress.some(ep =>
+   662→            ep.sStep === sStep &&
+   663→            ep.miniStep === miniStep &&
+   664→            ep.zoneId === currentZone.id &&
+   665→            ep.completed
+   666→          )
+   667→        : employeeProgress.some(ep =>
+   668→            ep.sStep === sStep &&
+   669→            ep.miniStep === miniStep &&
+   670→            ep.completed
+   671→          )
+   672→      if (anyEmpCompleted) continue
+   673→
+   674→      return false
+   675→    }
+   676→    return true
+   677→  },
+   678→
+   679→  is5SCompleted: () => {
+   680→    for (let i = 1; i <= 5; i++) {
+   681→      if (!get().isQuesitoEarned(i)) return false
+   682→    }
+   683→    return true
+   684→  },
+   685→
+   686→  getCompletedCount: () => {
+   687→    const { progress, currentZone } = get()
+   688→
+   689→    if (currentZone) {
+   690→      const completedMiniSteps = progress.filter(p =>
+   691→        (p.zoneId === currentZone.id || p.zoneId === null) &&
+   692→        p.completed
+   693→      ).length
+   694→      let completedSSteps = 0
+   695→      for (let i = 1; i <= 5; i++) {
+   696→        if (get().isQuesitoEarned(i)) completedSSteps++
+   697→      }
+   698→      return { sSteps: completedSSteps, miniSteps: completedMiniSteps, total: 25 }
+   699→    }
+   700→
+   701→    const completedMiniSteps = progress.filter(p => p.completed).length
+   702→    let completedSSteps = 0
+   703→    for (let i = 1; i <= 5; i++) {
+   704→      if (get().isQuesitoEarned(i)) completedSSteps++
+   705→    }
+   706→    return { sSteps: completedSSteps, miniSteps: completedMiniSteps, total: 25 }
+   707→  },
+   708→
+   709→  // Auth & Project Actions
+   710→  login: async (email: string, password: string) => {
+   711→    try {
+   712→      set({ isLoginLoading: true, authError: null })
+   713→      const res = await fetch('/api/auth', {
+   714→        method: 'POST',
+   715→        headers: { 'Content-Type': 'application/json' },
+   716→        body: JSON.stringify({ email, password }),
+   717→      })
+   718→      const data = await res.json()
+   719→
+   720→      if (!res.ok) {
+   721→        const errorMsg = data.error || 'Email o contraseña incorrectos'
+   722→        set({ isLoginLoading: false, authError: errorMsg })
+   723→        return false
+   724→      }
+   725→
+   726→      set({ currentUser: data.user, isLoginLoading: false, authError: null })
+   727→
+   728→      // Load permissions after login
+   729→      await get().fetchPermissions()
+   730→
+   731→      // Check for projects after login
+   732→      await get().fetchProjects()
+   733→      const { projects } = get()
+   734→
+   735→      if (projects.length > 0) {
+   736→        set({ currentProject: projects[0], authView: 'board' })
+   737→        // Fetch user's assigned zones after login
+   738→        await get().fetchUserZones()
+   739→      } else {
+   740→        // Only admin can create projects via setup wizard
+   741→        // Non-admin users see a waiting screen
+   742→        const { currentUser } = get()
+   743→        if (currentUser?.role === 'admin') {
+   744→          set({ authView: 'setup' })
+   745→        } else {
+   746→          set({ authView: 'no_projects' })
+   747→        }
+   748→      }
+   749→
+   750→      return true
+   751→    } catch (error) {
+   752→      console.error('Login error:', error)
+   753→      set({ isLoginLoading: false, authError: 'Error de conexión. Inténtalo de nuevo.' })
+   754→      return false
+   755→    }
+   756→  },
+   757→
+   758→  register: async (name: string, email: string, password: string, role: string) => {
+   759→    try {
+   760→      set({ isLoginLoading: true, authError: null })
+   761→      const res = await fetch('/api/auth', {
+   762→        method: 'PUT',
+   763→        headers: { 'Content-Type': 'application/json' },
+   764→        body: JSON.stringify({ name, email, password, role }),
+   765→      })
+   766→      const data = await res.json()
+   767→
+   768→      if (!res.ok) {
+   769→        const errorMsg = data.error || 'Error al crear cuenta'
+   770→        set({ isLoginLoading: false, authError: errorMsg })
+   771→        return false
+   772→      }
+   773→
+   774→      set({ currentUser: data.user, isLoginLoading: false, authError: null })
+   775→
+   776→      // Load permissions after registration
+   777→      await get().fetchPermissions()
+   778→
+   779→      // Check for projects after registration
+   780→      await get().fetchProjects()
+   781→      const { projects } = get()
+   782→
+   783→      if (projects.length > 0) {
+   784→        set({ currentProject: projects[0], authView: 'board' })
+   785→      } else {
+   786→        // Self-registered users are always 'empleado' — they need admin to assign a project
+   787→        set({ authView: 'no_projects' })
+   788→      }
+   789→
+   790→      return true
+   791→    } catch (error) {
+   792→      console.error('Registration error:', error)
+   793→      set({ isLoginLoading: false, authError: 'Error de conexión. Inténtalo de nuevo.' })
+   794→      return false
+   795→    }
+   796→  },
+   797→
+   798→  logout: async () => {
+   799→    try {
+   800→      await fetch('/api/auth', { method: 'DELETE' })
+   801→    } catch (error) {
+   802→      console.error('Logout error:', error)
+   803→    }
+   804→    set({
+   805→      currentUser: null,
+   806→      currentProject: null,
+   807→      currentZone: null,
+   808→      userZones: [],
+   809→      authView: 'login',
+   810→      projects: [],
+   811→      companies: [],
+   812→      isLoginLoading: false,
+   813→      authError: null,
+   814→      permissions: {},
+   815→    })
+   816→  },
+   817→
+   818→  checkSession: async () => {
+   819→    try {
+   820→      set({ isAuthLoading: true })
+   821→      const res = await fetch('/api/auth')
+   822→      const data = await res.json()
+   823→
+   824→      if (data.user) {
+   825→        set({ currentUser: data.user })
+   826→
+   827→        // Load permissions after session restore
+   828→        await get().fetchPermissions()
+   829→
+   830→        await get().fetchProjects()
+   831→        const { projects } = get()
+   832→
+   833→        if (projects.length > 0) {
+   834→          set({ currentProject: projects[0], authView: 'board' })
+   835→          // Fetch user's assigned zones after session restore
+   836→          await get().fetchUserZones()
+   837→        } else {
+   838→          // Only admin can create projects via setup wizard
+   839→          const { currentUser } = get()
+   840→          if (currentUser?.role === 'admin') {
+   841→            set({ authView: 'setup' })
+   842→          } else {
+   843→            set({ authView: 'no_projects' })
+   844→          }
+   845→        }
+   846→      } else {
+   847→        set({ authView: 'login' })
+   848→      }
+   849→    } catch (error) {
+   850→      console.error('Session check error:', error)
+   851→      set({ authView: 'login' })
+   852→    } finally {
+   853→      set({ isAuthLoading: false })
+   854→    }
+   855→  },
+   856→
+   857→  fetchProjects: async () => {
+   858→    try {
+   859→      const res = await fetch('/api/projects')
+   860→      const data = await res.json()
+   861→      set({ projects: data.projects || [] })
+   862→    } catch (error) {
+   863→      console.error('Fetch projects error:', error)
+   864→    }
+   865→  },
+   866→
+   867→  fetchCompanies: async () => {
+   868→    try {
+   869→      const res = await fetch('/api/companies')
+   870→      const data = await res.json()
+   871→      if (data.success) {
+   872→        set({ companies: data.companies || [] })
+   873→      }
+   874→    } catch (error) {
+   875→      console.error('Fetch companies error:', error)
+   876→    }
+   877→  },
+   878→
+   879→  createProject: async (data) => {
+   880→    try {
+   881→      const res = await fetch('/api/projects', {
+   882→        method: 'POST',
+   883→        headers: { 'Content-Type': 'application/json' },
+   884→        body: JSON.stringify(data),
+   885→      })
+   886→      const result = await res.json()
+   887→
+   888→      if (res.ok && result.project) {
+   889→        // Add the current user as admin member of the project
+   890→        const { currentUser } = get()
+   891→        if (currentUser) {
+   892→          try {
+   893→            await fetch(`/api/projects/${result.project.id}/members`, {
+   894→              method: 'POST',
+   895→              headers: { 'Content-Type': 'application/json' },
+   896→              body: JSON.stringify({
+   897→                email: currentUser.email,
+   898→                name: currentUser.name,
+   899→                role: 'admin',
+   900→                zoneIds: result.project.zones?.map((z: any) => z.id) || [],
+   901→              }),
+   902→            })
+   903→          } catch (memberError) {
+   904→            console.error('Error adding admin as member:', memberError)
+   905→            // Don't block project creation if member add fails
+   906→          }
+   907→        }
+   908→
+   909→        set({ currentProject: result.project, authView: 'board' })
+   910→        await get().fetchProjects()
+   911→      } else {
+   912→        console.error('Create project error:', result.error)
+   913→      }
+   914→    } catch (error) {
+   915→      console.error('Create project error:', error)
+   916→    }
+   917→  },
+   918→
+   919→  setCurrentProject: (project) => {
+   920→    set({ currentProject: project })
+   921→    if (project) {
+   922→      set({ authView: 'board' })
+   923→    }
+   924→  },
+   925→
+   926→  setAuthView: (view) => set({ authView: view as 'login' | 'register' | 'setup' | 'board' | 'no_projects', authError: null }),
+   927→
+   928→  clearAuthError: () => set({ authError: null }),
+   929→}))
+   930→

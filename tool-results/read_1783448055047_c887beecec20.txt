@@ -128,7 +128,7 @@
    128→// ─── Constants ───────────────────────────────────────────────────────────────
    129→
    130→const ROLE_LABELS: Record<string, string> = {
-   131→  constructor: 'Constructor',
+   131→  gestor: 'Gestor',
    132→  admin: 'Administrador',
    133→  gerente: 'Gerente',
    134→  responsable: 'Responsable',
@@ -137,7 +137,7 @@
    137→}
    138→
    139→const ROLE_COLORS: Record<string, string> = {
-   140→  constructor: 'bg-violet-100 text-violet-700 border-violet-200',
+   140→  gestor: 'bg-violet-100 text-violet-700 border-violet-200',
    141→  admin: 'bg-purple-100 text-purple-700 border-purple-200',
    142→  gerente: 'bg-indigo-100 text-indigo-700 border-indigo-200',
    143→  responsable: 'bg-blue-100 text-blue-700 border-blue-200',
@@ -151,13 +151,13 @@
    151→  vencida: { label: 'Vencida', color: 'bg-red-100 text-red-700 border-red-200' },
    152→}
    153→
-   154→type ConstructorTab = 'dashboard' | 'empresas' | 'usuarios' | 'suscripciones' | 'configuracion' | 'plantillas' | 'tablero5s'
+   154→type GestorTab = 'dashboard' | 'empresas' | 'usuarios' | 'suscripciones' | 'configuracion' | 'plantillas' | 'tablero5s'
    155→
    156→// ─── Component ───────────────────────────────────────────────────────────────
    157→
-   158→export default function ConstructorPanel() {
+   158→export default function GestorPanel() {
    159→  const { setCurrentView, fetchProjects, fetchCompanies, projects, setCurrentProject, currentProject } = use5SStore()
-   160→  const [activeTab, setActiveTab] = useState<ConstructorTab>('dashboard')
+   160→  const [activeTab, setActiveTab] = useState<GestorTab>('dashboard')
    161→
    162→  // Platform stats
    163→  const [stats, setStats] = useState<PlatformStats | null>(null)
@@ -423,7 +423,7 @@
    423→  })
    424→
    425→  // ─── Render ──────────────────────────────────────────────────────────────
-   426→  const tabs: { key: ConstructorTab; label: string; icon: React.ReactNode }[] = [
+   426→  const tabs: { key: GestorTab; label: string; icon: React.ReactNode }[] = [
    427→    { key: 'dashboard', label: 'Panel General', icon: <Activity className="h-4 w-4" /> },
    428→    { key: 'empresas', label: 'Empresas', icon: <Building2 className="h-4 w-4" /> },
    429→    { key: 'usuarios', label: 'Usuarios', icon: <Users className="h-4 w-4" /> },
@@ -444,7 +444,7 @@
    444→            </div>
    445→            <div>
    446→              <h1 className="text-lg font-bold bg-gradient-to-r from-violet-300 to-purple-200 bg-clip-text text-transparent">
-   447→                Constructor Panel
+   447→                Gestor Panel
    448→              </h1>
    449→              <p className="text-xs text-violet-400">Super Administrador de Plataforma</p>
    450→            </div>
@@ -464,7 +464,7 @@
    464→              ← Vista App
    465→            </Button>
    466→            <Badge className="bg-gradient-to-r from-violet-600 to-purple-600 text-white border-0 px-3 py-1">
-   467→              <Crown className="h-3 w-3 mr-1" /> CONSTRUCTOR
+   467→              <Crown className="h-3 w-3 mr-1" /> GESTOR
    468→            </Badge>
    469→          </div>
    470→        </div>

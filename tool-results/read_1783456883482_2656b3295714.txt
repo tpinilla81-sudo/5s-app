@@ -1,0 +1,1013 @@
+     1→'use client';
+     2→
+     3→import { useEffect, useState, useMemo } from 'react';
+     4→import { AnimatePresence, motion } from 'framer-motion';
+     5→import { use5SStore } from '@/lib/store';
+     6→import { S_STEPS, MINI_STEPS } from '@/lib/5s-constants';
+     7→import Board5S from '@/components/5s/Board5S';
+     8→import FormacionModal from '@/components/5s/FormacionModal';
+     9→import FotosModal from '@/components/5s/FotosModal';
+    10→import InventarioModal from '@/components/5s/InventarioModal';
+    11→import ActionPlanModal from '@/components/5s/ActionPlanModal';
+    12→import GlobalInventoryModal from '@/components/5s/GlobalInventoryModal';
+    13→import AuditResultsModal from '@/components/5s/AuditResultsModal';
+    14→import StandardsLibrary from '@/components/5s/StandardsLibrary';
+    15→import PhotoLibrary from '@/components/5s/PhotoLibrary';
+    16→import AutoevaluacionModal from '@/components/5s/AutoevaluacionModal';
+    17→import AuditoriaModal from '@/components/5s/AuditoriaModal';
+    18→import LoginPage from '@/components/auth/LoginPage';
+    19→import ProjectSetup from '@/components/auth/ProjectSetup';
+    20→import TeamManagement from '@/components/auth/TeamManagement';
+    21→import RolePermissions from '@/components/auth/RolePermissions';
+    22→import AdminPanel from '@/components/admin/AdminPanel';
+    23→import GestorPanel from '@/components/admin/GestorPanel';
+    24→import MaintenanceView from '@/components/5s/MaintenanceView';
+    25→import GerentePanel from '@/components/auth/GerentePanel';
+    26→import JaulaModal from '@/components/5s/JaulaModal';
+    27→import ActivosModal from '@/components/5s/ActivosModal';
+    28→import { Button } from '@/components/ui/button';
+    29→import { Badge } from '@/components/ui/badge';
+    30→import {
+    31→  DropdownMenu,
+    32→  DropdownMenuContent,
+    33→  DropdownMenuItem,
+    34→  DropdownMenuSeparator,
+    35→  DropdownMenuTrigger,
+    36→} from '@/components/ui/dropdown-menu';
+    37→import {
+    38→  Loader2, RefreshCw, LogOut, Settings, ChevronDown, Shield, ShieldCheck, Unlock, Lock,
+    39→  LayoutDashboard, Wrench, Sparkles, BarChart3, FileText, MapPin, ListChecks,
+    40→  ClipboardList, GraduationCap, Camera, CheckSquare, Trophy, ChevronRight,
+    41→  Lock as LockIcon, AlertTriangle, Building2, Zap, Bell, BellRing, BookOpen, Image as ImageIcon,
+    42→  Package, BoxSelect
+    43→} from 'lucide-react';
+    44→
+    45→const MODAL_MAP: Record<string, React.ComponentType<{
+    46→  open: boolean;
+    47→  onClose: () => void;
+    48→  sStep: number;
+    49→  miniStep: number;
+    50→}>> = {
+    51→  formacion: FormacionModal,
+    52→  fotos: FotosModal,
+    53→  inventario: InventarioModal,
+    54→  actionplan: ActionPlanModal,
+    55→  autoevaluacion: AutoevaluacionModal,
+    56→  auditoria: AuditoriaModal,
+    57→};
+    58→
+    59→function getModalType(miniStepId: number, sStep: number): string {
+    60→  if (miniStepId === 3) {
+    61→    return sStep === 5 ? 'actionplan' : 'inventario';
+    62→  }
+    63→  const map: Record<number, string> = {
+    64→    1: 'formacion',
+    65→    2: 'fotos',
+    66→    4: 'autoevaluacion',
+    67→    5: 'auditoria',
+    68→  };
+    69→  return map[miniStepId] || 'formacion';
+    70→}
+    71→
+    72→const MINI_STEP_ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
+    73→  GraduationCap,
+    74→  Camera,
+    75→  ClipboardList,
+    76→  CheckSquare,
+    77→  ShieldCheck,
+    78→};
+    79→
+    80→export default function HomePage() {
+    81→  const {
+    82→    activeModal,
+    83→    activeMiniStep,
+    84→    selectSStep,
+    85→    openModal,
+    86→    closeModal,
+    87→    seedDatabase,
+    88→    currentUser,
+    89→    currentProject,
+    90→    authView,
+    91→    isAuthLoading,
+    92→    checkSession,
+    93→    logout,
+    94→    adminFreeNavigation,
+    95→    setAdminFreeNavigation,
+    96→    currentZone,
+    97→    setCurrentZone,
+    98→    userZones,
+    99→    getAvailableZones,
+   100→    is5SCompleted,
+   101→    getMiniStepStatus,
+   102→    isQuesitoEarned,
+   103→    progress,
+   104→    selectedSStep,
+   105→    activeTab,
+   106→    setActiveTab,
+   107→    employeeProgress,
+   108→  } = use5SStore();
+   109→
+   110→  const [isSeeding, setIsSeeding] = useState(false);
+   111→  const [isInitialized, setIsInitialized] = useState(false);
+   112→  const [showTeamManagement, setShowTeamManagement] = useState(false);
+   113→  const [showRolePermissions, setShowRolePermissions] = useState(false);
+   114→  const [unreadNotifs, setUnreadNotifs] = useState(0);
+   115→  const [showNotifs, setShowNotifs] = useState(false);
+   116→  const [notifs, setNotifs] = useState<any[]>([]);
+   117→  const [showJaulaModal, setShowJaulaModal] = useState(false);
+   118→  const [showActivosModal, setShowActivosModal] = useState(false);
+   119→
+   120→  useEffect(() => {
+   121→    checkSession();
+   122→  }, []);
+   123→
+   124→  useEffect(() => {
+   125→    if (authView === 'board' && !isInitialized) {
+   126→      const init = async (retries = 3) => {
+   127→        try {
+   128→          const res = await fetch('/api/progress');
+   129→          if (!res.ok && retries > 0) {
+   130→            await new Promise(r => setTimeout(r, 2000));
+   131→            return init(retries - 1);
+   132→          }
+   133→          const json = await res.json();
+   134→          if (json.success && json.data && json.data.length > 0) {
+   135→            use5SStore.setState({ progress: json.data, isLoadingProgress: false });
+   136→            setIsInitialized(true);
+   137→            // Also fetch employee progress for the current zone
+   138→            const { currentProject, currentZone } = use5SStore.getState();
+   139→            if (currentProject && currentZone) {
+   140→              await use5SStore.getState().fetchEmployeeProgress(currentProject.id, currentZone.id);
+   141→            }
+   142→            // Auto-generate audit_ready notifications for any pending audits
+   143→            if (currentProject?.id) {
+   144→              fetch('/api/notifications/auto', {
+   145→                method: 'POST',
+   146→                headers: { 'Content-Type': 'application/json' },
+   147→                body: JSON.stringify({ projectId: currentProject.id }),
+   148→              }).catch(e => console.error('Auto-notification error:', e));
+   149→            }
+   150→          } else {
+   151→            setIsSeeding(true);
+   152→            await seedDatabase();
+   153→            setIsSeeding(false);
+   154→            setIsInitialized(true);
+   155→          }
+   156→        } catch {
+   157→          if (retries > 0) {
+   158→            await new Promise(r => setTimeout(r, 2000));
+   159→            return init(retries - 1);
+   160→          }
+   161→          setIsSeeding(true);
+   162→          await seedDatabase();
+   163→          setIsSeeding(false);
+   164→          setIsInitialized(true);
+   165→        }
+   166→      };
+   167→      init();
+   168→    }
+   169→  }, [authView, isInitialized, seedDatabase]);
+   170→
+   171→  const handleSStepClick = (sStep: number) => {
+   172→    selectSStep(sStep);
+   173→  };
+   174→
+   175→  const handleOpenModal = (type: string, miniStep: number, sStep: number) => {
+   176→    if (sStep && !selectedSStep) {
+   177→      selectSStep(sStep);
+   178→    } else if (sStep && selectedSStep !== sStep) {
+   179→      selectSStep(sStep);
+   180→    }
+   181→    openModal(type as any, miniStep);
+   182→  };
+   183→
+   184→  const handleReseed = async () => {
+   185→    setIsSeeding(true);
+   186→    await seedDatabase();
+   187→    setIsSeeding(false);
+   188→  };
+   189→
+   190→  const handleLogout = async () => {
+   191→    await logout();
+   192→    setIsInitialized(false);
+   193→  };
+   194→
+   195→  const getRoleLabel = (role: string) => {
+   196→    const map: Record<string, string> = {
+   197→      gestor: 'Gestor', admin: 'Administrador', gerente: 'Gerente', responsable: 'Responsable',
+   198→      empleado: 'Empleado', auditor: 'Auditor',
+   199→    };
+   200→    return map[role] || role;
+   201→  };
+   202→
+   203→  const getRoleBadgeColor = (role: string) => {
+   204→    const map: Record<string, string> = {
+   205→      gestor: 'bg-red-100 text-red-700 border-red-200',
+   206→      admin: 'bg-purple-100 text-purple-700 border-purple-200',
+   207→      gerente: 'bg-indigo-100 text-indigo-700 border-indigo-200',
+   208→      responsable: 'bg-blue-100 text-blue-700 border-blue-200',
+   209→      empleado: 'bg-green-100 text-green-700 border-green-200',
+   210→      auditor: 'bg-orange-100 text-orange-700 border-orange-200',
+   211→    };
+   212→    return map[role] || 'bg-gray-100 text-gray-700 border-gray-200';
+   213→  };
+   214→
+   215→  // Permission helpers — derived from store permissions map (NO admin bypass)
+   216→  const permissions = use5SStore(s => s.permissions);
+   217→  const hasPermission = useMemo(() => {
+   218→    const hp = (perm: string): boolean => {
+   219→      if (!currentUser) return false;
+   220→      return permissions[currentUser.role]?.[perm] === true;
+   221→    };
+   222→    return hp;
+   223→  }, [currentUser, permissions]);
+   224→  const canPerformPerm = useMemo(() => (sStep: number, miniStep: number): boolean => hasPermission(`s${sStep}_step${miniStep}_a1`), [hasPermission]);
+   225→  const canViewPerm = useMemo(() => (sStep: number, miniStep: number): boolean => hasPermission(`s${sStep}_step${miniStep}_a0`), [hasPermission]);
+   226→  const canAuditAny = useMemo(() => currentUser ? [1,2,3,4,5].some(s => canPerformPerm(s, 5)) : false, [currentUser, canPerformPerm]);
+   227→  const canNotifyAudit = hasPermission('notify_audit'); // Only employees (by default) can trigger audit notification
+   228→  const canAcceptAuditMeeting = hasPermission('accept_audit_meeting'); // Auditors and responsables can accept audit meetings
+   229→  const isResponsable = currentUser?.role === 'responsable';
+   230→  const canSeeNotifications = hasPermission('view_board'); // All board users can see notifications
+   231→
+   232→  // Fetch notifications — must be after canSeeNotifications is defined
+   233→  useEffect(() => {
+   234→    if (canSeeNotifications && currentUser?.id && currentProject?.id) {
+   235→      const fetchNotifs = async () => {
+   236→        try {
+   237→          const res = await fetch(`/api/notifications?userId=${currentUser.id}&projectId=${currentProject.id}&unread=true`);
+   238→          const data = await res.json();
+   239→          if (data.success) {
+   240→            setUnreadNotifs(data.data?.length || 0);
+   241→          }
+   242→        } catch (e) { console.error('Error fetching notifications:', e); }
+   243→      };
+   244→      fetchNotifs();
+   245→      const interval = setInterval(fetchNotifs, 30000); // Poll every 30s
+   246→      return () => clearInterval(interval);
+   247→    } else {
+   248→      setUnreadNotifs(0);
+   249→    }
+   250→  }, [canSeeNotifications, currentUser?.id, currentProject?.id]);
+   251→
+   252→  const canManageTeam = currentUser && hasPermission('add_members');
+   253→  const canSkipSteps = hasPermission('skip_steps');
+   254→  // Admin tab: only users who can manage the system (admin role for system config)
+   255→  const isAdmin = currentUser?.role === 'admin' || currentUser?.role === 'gestor';
+   256→  const isGestor = currentUser?.role === 'gestor';
+   257→  const canSeeGerentePanel = hasPermission('view_progress') || hasPermission('edit_project');
+   258→
+   259→  const isGlobalModal = activeModal === 'globalActionPlan' || activeModal === 'globalInventory';
+   260→  const ActiveModalComponent = !isGlobalModal && activeModal ? MODAL_MAP[activeModal] : null;
+   261→
+   262→  // Available tabs based on role
+   263→  const availableTabs: { key: 'board' | 'gerente' | 'admin' | 'maintenance'; label: string; icon: React.ReactNode }[] = [
+   264→    { key: 'board', label: 'Tablero 5S', icon: <LayoutDashboard className="h-3.5 w-3.5" /> },
+   265→  ];
+   266→  if (canSeeGerentePanel) {
+   267→    availableTabs.push({ key: 'gerente', label: 'Gerencia', icon: <BarChart3 className="h-3.5 w-3.5" /> });
+   268→  }
+   269→  if (isAdmin) {
+   270→    availableTabs.push({ key: 'admin', label: 'Admin', icon: <Shield className="h-3.5 w-3.5" /> });
+   271→  }
+   272→  if (is5SCompleted()) {
+   273→    availableTabs.push({ key: 'maintenance', label: 'Mejora Continua', icon: <Sparkles className="h-3.5 w-3.5" /> });
+   274→  }
+   275→
+   276→  // Loading screen
+   277→  if (isAuthLoading) {
+   278→    return (
+   279→      <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-green-50 via-white to-emerald-50 gap-4">
+   280→        <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: 'spring', stiffness: 200 }}
+   281→          className="w-16 h-16">
+   282→          <img src="/5s-logo.png" alt="5S" className="w-full h-full object-contain" />
+   283→        </motion.div>
+   284→        <Loader2 className="h-6 w-6 text-green-500 animate-spin" />
+   285→        <p className="text-sm text-muted-foreground">Cargando...</p>
+   286→      </div>
+   287→    );
+   288→  }
+   289→
+   290→  if (authView === 'login' || authView === 'register') return <LoginPage />;
+   291→  if (authView === 'setup') return <ProjectSetup />;
+   292→  if (authView === 'no_projects') {
+   293→    return (
+   294→      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-green-50 via-white to-emerald-50 p-4">
+   295→        <div className="w-full max-w-md text-center">
+   296→          <div className="w-20 h-20 mx-auto mb-6">
+   297→            <img src="/5s-logo.png" alt="5S" className="w-full h-full object-contain" />
+   298→          </div>
+   299→          <h1 className="text-2xl font-bold text-gray-900 mb-3">Bienvenido, {currentUser?.name || 'Usuario'}</h1>
+   300→          <p className="text-muted-foreground mb-6">Tu cuenta ha sido creada correctamente. Aún no tienes ningún proyecto asignado.</p>
+   301→          <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-6">
+   302→            <p className="text-sm text-amber-800">El administrador del sistema te asignará un proyecto y un rol. Una vez asignado, podrás acceder a la plataforma.</p>
+   303→          </div>
+   304→          <Button variant="outline" onClick={handleLogout} className="gap-2"><LogOut className="h-4 w-4" /> Cerrar Sesión</Button>
+   305→        </div>
+   306→      </div>
+   307→    );
+   308→  }
+   309→
+   310→  // ============================================================
+   311→  // SINGLE-SCREEN LAYOUT WITH TABS
+   312→  // ============================================================
+   313→  return (
+   314→    <div className="h-screen flex flex-col bg-gradient-to-b from-gray-50 to-white overflow-hidden">
+   315→      {/* Compact Header */}
+   316→      <header className="border-b bg-white/90 backdrop-blur-sm shrink-0 z-20">
+   317→        <div className="px-4 py-2 flex items-center justify-between">
+   318→          <div className="flex items-center gap-2">
+   319→            <div className="w-8 h-8">
+   320→              <img src="/5s-logo.png" alt="5S" className="w-full h-full object-contain" />
+   321→            </div>
+   322→            <div>
+   323→              <h1 className="text-sm font-black text-gray-900 leading-tight tracking-wide">5S</h1>
+   324→              <div className="flex items-center gap-1">
+   325→                <span className="text-[10px] font-semibold text-green-600">by Método</span>
+   326→                {currentProject && <span className="text-[10px] text-muted-foreground">· {currentProject.name}</span>}
+   327→                {currentZone && <span className="text-[10px] font-medium" style={{ color: currentZone.color || '#3B82F6' }}>· {currentZone.name}</span>}
+   328→              </div>
+   329→            </div>
+   330→            {/* Zone selector */}
+   331→            {(() => {
+   332→              const availableZones = getAvailableZones();
+   333→              const isSingleZone = availableZones.length === 1;
+   334→              const isZoneRestricted = currentUser && !hasPermission('manage_zones');
+   335→              if (!currentProject || availableZones.length === 0) return null;
+   336→              return (
+   337→                <div className="flex items-center gap-1 ml-2">
+   338→                  <MapPin className="h-3 w-3 text-muted-foreground" />
+   339→                  {isSingleZone && isZoneRestricted ? (
+   340→                    // Single zone: show as label, no selector
+   341→                    <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full border"
+   342→                      style={{ color: availableZones[0].color, borderColor: availableZones[0].color, backgroundColor: `${availableZones[0].color}15` }}>
+   343→                      {availableZones[0].name}
+   344→                    </span>
+   345→                  ) : (
+   346→                    <select
+   347→                      className="text-[10px] border rounded px-1 py-0.5 bg-background"
+   348→                      value={currentZone?.id || ''}
+   349→                      onChange={(e) => {
+   350→                        const zone = availableZones.find(z => z.id === e.target.value) || null;
+   351→                        setCurrentZone(zone);
+   352→                      }}
+   353→                    >
+   354→                      <option value="">Sin zona</option>
+   355→                      {availableZones.map(z => <option key={z.id} value={z.id}>{z.name}</option>)}
+   356→                    </select>
+   357→                  )}
+   358→                </div>
+   359→              );
+   360→            })()}
+   361→          </div>
+   362→          <div className="flex items-center gap-1.5">
+   363→            {/* 🔔 Notification bell — FIRST position, prominent for all board users */}
+   364→            {canSeeNotifications && (
+   365→              <Button variant={unreadNotifs > 0 ? 'default' : 'outline'} size="sm"
+   366→                className={`relative gap-1 text-[10px] h-7 ${unreadNotifs > 0 ? 'bg-orange-500 hover:bg-orange-600 text-white border-orange-500' : 'border-orange-300 text-orange-600 hover:bg-orange-50'}`}
+   367→                onClick={async () => {
+   368→                  if (currentUser?.id && currentProject?.id) {
+   369→                    try {
+   370→                      const res = await fetch(`/api/notifications?userId=${currentUser.id}&projectId=${currentProject.id}`);
+   371→                      const data = await res.json();
+   372→                      if (data.success) setNotifs(data.data || []);
+   373→                    } catch (e) { console.error(e); }
+   374→                  }
+   375→                  setShowNotifs(!showNotifs);
+   376→                }}>
+   377→                {unreadNotifs > 0 ? <BellRing className="h-3.5 w-3.5" /> : <Bell className="h-3 w-3" />}
+   378→                <span className="hidden sm:inline">{unreadNotifs > 0 ? `${unreadNotifs} avisos` : 'Avisos'}</span>
+   379→                {unreadNotifs > 0 && (
+   380→                  <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-[8px] font-bold rounded-full flex items-center justify-center animate-pulse">{unreadNotifs > 9 ? '9+' : unreadNotifs}</span>
+   381→                )}
+   382→              </Button>
+   383→            )}
+   384→            {/* 📦 Jaula de Excedentes button — next to Avisos */}
+   385→            {canSeeNotifications && (
+   386→              <Button variant="outline" size="sm"
+   387→                className="gap-1 text-[10px] h-7 border-red-300 text-red-600 hover:bg-red-50"
+   388→                onClick={() => setShowJaulaModal(true)}
+   389→                title="Jaula de Excedentes">
+   390→                <Package className="h-3 w-3" />
+   391→                <span className="hidden sm:inline">Jaula</span>
+   392→              </Button>
+   393→            )}
+   394→            {/* ✅ Activos (Necesarios) button — next to Jaula */}
+   395→            {canSeeNotifications && (
+   396→              <Button variant="outline" size="sm"
+   397→                className="gap-1 text-[10px] h-7 border-green-300 text-green-600 hover:bg-green-50"
+   398→                onClick={() => setShowActivosModal(true)}
+   399→                title="Activos (Necesarios)">
+   400→                <BoxSelect className="h-3 w-3" />
+   401→                <span className="hidden sm:inline">Activos</span>
+   402→              </Button>
+   403→            )}
+   404→            {/* Quick action buttons — removed (accessed from board instead) */}
+   405→            {(isAdmin || canSkipSteps) && (
+   406→              <Button variant={adminFreeNavigation ? 'default' : 'outline'} size="sm"
+   407→                onClick={() => setAdminFreeNavigation(!adminFreeNavigation)}
+   408→                className={`gap-1 text-[10px] h-7 ${adminFreeNavigation ? 'bg-amber-500 hover:bg-amber-600 text-white border-amber-500' : 'text-amber-600 border-amber-300 hover:bg-amber-50'}`}
+   409→                title={adminFreeNavigation ? 'Navegación libre activada' : 'Navegación secuencial'}>
+   410→                {adminFreeNavigation ? <Unlock className="h-3 w-3" /> : <Lock className="h-3 w-3" />}
+   411→              </Button>
+   412→            )}
+   413→            {canManageTeam && (
+   414→              <Button variant="ghost" size="sm" onClick={() => setShowTeamManagement(true)} className="text-green-600 hover:text-green-700 h-7 px-1.5">
+   415→                <Settings className="h-3.5 w-3.5" />
+   416→              </Button>
+   417→            )}
+   418→            <Button variant="ghost" size="sm" onClick={() => setShowRolePermissions(true)} className="text-green-600 hover:text-green-700 h-7 px-1.5">
+   419→              <Shield className="h-3.5 w-3.5" />
+   420→            </Button>
+   421→            <Button variant="ghost" size="sm" onClick={async () => {
+   422→              try {
+   423→                const res = await fetch('/api/manual');
+   424→                if (!res.ok) throw new Error('Download failed');
+   425→                const blob = await res.blob();
+   426→                const url = window.URL.createObjectURL(blob);
+   427→                const link = document.createElement('a');
+   428→                link.href = url; link.download = 'Manual_Usuario_5S.pdf';
+   429→                document.body.appendChild(link); link.click();
+   430→                document.body.removeChild(link);
+   431→                window.URL.revokeObjectURL(url);
+   432→              } catch { window.open('/Manual_Usuario_5S.pdf', '_blank'); }
+   433→            }} className="text-purple-600 hover:text-purple-700 h-7 px-1.5">
+   434→              <FileText className="h-3.5 w-3.5" />
+   435→            </Button>
+   436→            <Button variant="ghost" size="sm" onClick={handleReseed} disabled={isSeeding} className="text-muted-foreground h-7 px-1.5">
+   437→              <RefreshCw className={`h-3.5 w-3.5 ${isSeeding ? 'animate-spin' : ''}`} />
+   438→            </Button>
+   439→            {/* User menu */}
+   440→            {currentUser && (
+   441→              <DropdownMenu>
+   442→                <DropdownMenuTrigger asChild>
+   443→                  <Button variant="outline" size="sm" className="gap-1 h-7 px-2">
+   444→                    <div className="w-5 h-5 rounded-full bg-green-100 flex items-center justify-center text-green-700 text-[9px] font-bold">
+   445→                      {currentUser.name.charAt(0).toUpperCase()}
+   446→                    </div>
+   447→                    <span className="text-[10px] font-medium max-w-[60px] truncate hidden sm:inline">{currentUser.name}</span>
+   448→                    <ChevronDown className="h-2.5 w-2.5 text-muted-foreground" />
+   449→                  </Button>
+   450→                </DropdownMenuTrigger>
+   451→                <DropdownMenuContent align="end" className="w-48">
+   452→                  <div className="px-2 py-1.5">
+   453→                    <p className="text-xs font-medium">{currentUser.name}</p>
+   454→                    <p className="text-[10px] text-muted-foreground">{currentUser.email}</p>
+   455→                    <Badge className={`${getRoleBadgeColor(currentUser.role)} border mt-1 text-[10px]`}>
+   456→                      {getRoleLabel(currentUser.role)}
+   457→                    </Badge>
+   458→                  </div>
+   459→                  <DropdownMenuSeparator />
+   460→                  <DropdownMenuItem onClick={handleLogout} className="text-red-600 cursor-pointer text-xs">
+   461→                    <LogOut className="h-3 w-3 mr-1" /> Cerrar Sesión
+   462→                  </DropdownMenuItem>
+   463→                </DropdownMenuContent>
+   464→              </DropdownMenu>
+   465→            )}
+   466→          </div>
+   467→        </div>
+   468→
+   469→        {/* Tab Navigation Bar */}
+   470→        <div className="border-t bg-white flex items-center gap-0 px-4">
+   471→          {availableTabs.map(tab => (
+   472→            <button
+   473→              key={tab.key}
+   474→              onClick={() => setActiveTab(tab.key)}
+   475→              className={`flex items-center gap-1.5 px-4 py-2 text-xs font-medium border-b-2 transition-all ${
+   476→                activeTab === tab.key
+   477→                  ? 'border-green-500 text-green-700 bg-green-50/50'
+   478→                  : 'border-transparent text-muted-foreground hover:text-foreground hover:border-gray-300'
+   479→              }`}
+   480→            >
+   481→              {tab.icon}
+   482→              {tab.label}
+   483→            </button>
+   484→          ))}
+   485→        </div>
+   486→      </header>
+   487→
+   488→      {/* Notification dropdown for auditors */}
+   489→      {showNotifs && canSeeNotifications && (
+   490→        <div className="fixed top-12 right-16 z-50 w-80 bg-white border rounded-lg shadow-xl max-h-96 overflow-y-auto">
+   491→          <div className="p-3 border-b flex items-center justify-between">
+   492→            <span className="text-sm font-semibold">Notificaciones</span>
+   493→            {notifs.length > 0 && (
+   494→              <button className="text-[10px] text-blue-600 hover:underline" onClick={async () => {
+   495→                if (currentUser?.id) {
+   496→                  await fetch('/api/notifications', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ markAllRead: true, userId: currentUser.id }) });
+   497→                  setUnreadNotifs(0);
+   498→                  setNotifs(notifs.map(n => ({ ...n, read: true })));
+   499→                }
+   500→              }}>Marcar todo como leído</button>
+   501→            )}
+   502→          </div>
+   503→          {notifs.length === 0 ? (
+   504→            <div className="p-4 text-center text-sm text-muted-foreground">No hay notificaciones</div>
+   505→          ) : (
+   506→            <div className="divide-y">
+   507→              {notifs.map((n: any) => (
+   508→                <div key={n.id} className={`p-3 ${n.read ? 'bg-white' : n.type === 'audit_requested' ? 'bg-orange-50' : 'bg-blue-50'}`}>
+   509→                  <div className="flex items-center gap-1.5 mb-0.5">
+   510→                    {n.type === 'audit_requested' && <BellRing className="h-3 w-3 text-orange-500 shrink-0" />}
+   511→                    {n.type === 'audit_ready' && <ShieldCheck className="h-3 w-3 text-green-500 shrink-0" />}
+   512→                    {n.type === 'audit_meeting_accepted' && <CheckSquare className="h-3 w-3 text-green-600 shrink-0" />}
+   513→                    <p className="text-xs font-semibold">{n.title}</p>
+   514→                  </div>
+   515→                  <p className="text-[10px] text-muted-foreground mt-0.5">{n.message}</p>
+   516→                  <div className="flex items-center justify-between mt-1.5">
+   517→                    <p className="text-[9px] text-muted-foreground">{new Date(n.createdAt).toLocaleString('es-ES')}</p>
+   518→                    {/* Accept audit meeting button — only for audit_requested notifications and users with accept_audit_meeting permission */}
+   519→                    {n.type === 'audit_requested' && !n.read && canAcceptAuditMeeting && (
+   520→                      <button
+   521→                        className="text-[10px] font-semibold text-green-700 bg-green-100 hover:bg-green-200 px-2 py-0.5 rounded border border-green-300 transition-colors"
+   522→                        onClick={async () => {
+   523→                          try {
+   524→                            // Mark this notification as read
+   525→                            await fetch('/api/notifications', {
+   526→                              method: 'PUT',
+   527→                              headers: { 'Content-Type': 'application/json' },
+   528→                              body: JSON.stringify({ notificationId: n.id, read: true }),
+   529→                            });
+   530→                            // Send acceptance notification back to the employee who requested
+   531→                            // Find the zone info for context
+   532→                            const zoneName = currentZone?.name || 'la zona';
+   533→                            const sStepName = n.sStep ? `S${n.sStep} (${S_STEPS.find(s => s.id === n.sStep)?.japaneseName || ''})` : 'la auditoría';
+   534→                            // Notify all employees in the zone
+   535→                            if (currentProject?.id && currentZone?.id) {
+   536→                              const membersRes = await fetch(`/api/projects/${currentProject.id}/members`);
+   537→                              const membersData = await membersRes.json();
+   538→                              const employees = (membersData?.members || []).filter((m: any) => m.role === 'empleado');
+   539→                              for (const emp of employees) {
+   540→                                await fetch('/api/notifications', {
+   541→                                  method: 'POST',
+   542→                                  headers: { 'Content-Type': 'application/json' },
+   543→                                  body: JSON.stringify({
+   544→                                    userId: emp.userId,
+   545→                                    type: 'audit_meeting_accepted',
+   546→                                    title: `Reunión aceptada: ${sStepName}`,
+   547→                                    message: `${currentUser?.name || 'El auditor/responsable'} ha aceptado la reunión de auditoría para ${sStepName} en la zona "${zoneName}".`,
+   548→                                    sStep: n.sStep,
+   549→                                    zoneId: currentZone.id,
+   550→                                    projectId: currentProject.id,
+   551→                                  }),
+   552→                                });
+   553→                              }
+   554→                            }
+   555→                            // Refresh notifications
+   556→                            setNotifs(notifs.map((nn: any) => nn.id === n.id ? { ...nn, read: true } : nn));
+   557→                            setUnreadNotifs(prev => Math.max(0, prev - 1));
+   558→                            alert('Reunión de auditoría aceptada. Se ha notificado al empleado.');
+   559→                          } catch (err) {
+   560→                            console.error('Error accepting meeting:', err);
+   561→                            alert('Error al aceptar la reunión.');
+   562→                          }
+   563→                        }}
+   564→                      >
+   565→                        ✓ Aceptar reunión
+   566→                      </button>
+   567→                    )}
+   568→                  </div>
+   569→                </div>
+   570→              ))}
+   571→            </div>
+   572→          )}
+   573→        </div>
+   574→      )}
+   575→
+   576→      {/* Main content - SINGLE SCREEN */}
+   577→      <main className="flex-1 overflow-hidden flex flex-col">
+   578→        {!isInitialized || isSeeding ? (
+   579→          <div className="flex-1 flex items-center justify-center gap-4">
+   580→            <Loader2 className="h-10 w-10 text-green-500 animate-spin" />
+   581→            <p className="text-muted-foreground">{isSeeding ? 'Inicializando datos...' : 'Cargando...'}</p>
+   582→          </div>
+   583→        ) : (
+   584→          <div className="flex-1 flex flex-col min-h-0">
+   585→            <AnimatePresence mode="wait">
+   586→              {/* ═══ TAB: BOARD 5S — Board-Centric Layout ═══ */}
+   587→              {activeTab === 'board' && (
+   588→                <motion.div key="board" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex-1 flex flex-col min-h-0">
+   589→                  {/* TOP: Hero Board - Centered and Prominent (scrollable area) */}
+   590→                  <div className="flex-1 min-h-0 overflow-auto flex flex-col items-center justify-start py-2">
+   591→                    {/* Zone required message for empleados without zone assigned */}
+   592→                    {!currentZone && currentUser && !hasPermission('manage_zones') && getAvailableZones().length === 0 && (
+   593→                      <div className="text-center space-y-3 py-8">
+   594→                        <div className="w-16 h-16 rounded-full bg-amber-100 flex items-center justify-center mx-auto">
+   595→                          <MapPin className="h-8 w-8 text-amber-500" />
+   596→                        </div>
+   597→                        <h3 className="text-lg font-bold text-gray-900">Sin zona asignada</h3>
+   598→                        <p className="text-sm text-muted-foreground max-w-md">Tu responsable aún no te ha asignado ninguna zona. Una vez asignada, podrás comenzar tu formación y completar los pasos 5S.</p>
+   599→                      </div>
+   600→                    )}
+   601→                    {/* Zone selector prompt when user has zones but none selected */}
+   602→                    {!currentZone && getAvailableZones().length > 0 && (
+   603→                      <div className="text-center space-y-2 py-4">
+   604→                        <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center mx-auto">
+   605→                          <MapPin className="h-6 w-6 text-blue-500" />
+   606→                        </div>
+   607→                        <p className="text-xs text-muted-foreground">Selecciona una zona en la barra superior para comenzar</p>
+   608→                      </div>
+   609→                    )}
+   610→                    {currentZone && (
+   611→                      <div className="w-full flex-1 min-h-0 flex items-center justify-center px-2">
+   612→                        <Board5S onSStepClick={handleSStepClick} />
+   613→                      </div>
+   614→                    )}
+   615→                    {/* Notification: show which S-steps are ready for audit — only for users who can notify (employees) */}
+   616→                    {currentZone && canNotifyAudit && (() => {
+   617→                      const readyForAudit: number[] = [];
+   618→                      for (let s = 1; s <= 5; s++) {
+   619→                        // Check using BOTH zone-level AND employee-level progress
+   620→                        const steps1to4Done = [1,2,3,4].every(ms => {
+   621→                          const zoneCompleted = progress.some(p =>
+   622→                            p.sStep === s && p.miniStep === ms &&
+   623→                            (p.zoneId === currentZone.id || p.zoneId === null) &&
+   624→                            p.completed
+   625→                          );
+   626→                          const empCompleted = employeeProgress.some(ep =>
+   627→                            ep.sStep === s && ep.miniStep === ms &&
+   628→                            ep.zoneId === currentZone.id &&
+   629→                            ep.completed
+   630→                          );
+   631→                          return zoneCompleted || empCompleted;
+   632→                        });
+   633→                        const step5Done = progress.some(p =>
+   634→                          p.sStep === s && p.miniStep === 5 &&
+   635→                          (p.zoneId === currentZone.id || p.zoneId === null) &&
+   636→                          p.completed
+   637→                        );
+   638→                        if (steps1to4Done && !step5Done) readyForAudit.push(s);
+   639→                      }
+   640→                      if (readyForAudit.length === 0) return null;
+   641→                      return (
+   642→                        <div className="mt-2 px-3 py-2 bg-orange-50 border border-orange-200 rounded-lg flex items-center gap-2 max-w-md mx-auto">
+   643→                          <BellRing className="h-4 w-4 text-orange-500 shrink-0" />
+   644→                          <span className="text-xs text-orange-700 font-medium">
+   645→                            Pendiente de auditoría: {readyForAudit.map(s => `S${s} (${S_STEPS.find(ss => ss.id === s)?.japaneseName})`).join(', ')}
+   646→                          </span>
+   647→                        </div>
+   648→                      );
+   649→                    })()}
+   650→
+   651→                    {/* Mejora Continua button */}
+   652→                    {currentZone && is5SCompleted() && (
+   653→                      <Button onClick={() => setActiveTab('maintenance')}
+   654→                        className="mt-2 gap-1 bg-gradient-to-r from-green-500 to-emerald-600 text-white shadow text-xs h-8"
+   655→                        size="sm">
+   656→                        <Sparkles className="h-3.5 w-3.5" /> Mejora Continua
+   657→                      </Button>
+   658→                    )}
+   659→                  </div>
+   660→
+   661→                  {/* BOTTOM: S-Step Cards — Compact horizontal row (only when zone selected) */}
+   662→                  {currentZone && (
+   663→                  <div className="shrink-0 border-t bg-white/80 backdrop-blur-sm px-2 py-2 z-10">
+   664→                    <div className="grid grid-cols-5 gap-2 max-w-5xl mx-auto">
+   665→                      {S_STEPS.map(s => {
+   666→                        const earned = isQuesitoEarned(s.id);
+   667→                        const zoneId = currentZone?.id;
+   668→
+   669→                        // Count completed mini-steps using getMiniStepStatus (consistent with Board5S)
+   670→                        // This properly counts employeeProgress for individual steps like Formación
+   671→                        let completedMiniSteps = 0;
+   672→                        for (let ms = 1; ms <= 5; ms++) {
+   673→                          const status = getMiniStepStatus(s.id, ms);
+   674→                          if (status === 'completed' || status === 'completed_viewonly') completedMiniSteps++;
+   675→                        }
+   676→                        const pct = Math.min(Math.round((completedMiniSteps / 5) * 100), 100);
+   677→
+   678→                        return (
+   679→                          <div
+   680→                            key={s.id}
+   681→                            className={`rounded-xl border-2 overflow-hidden transition-all duration-300 cursor-pointer hover:shadow-md ${
+   682→                              earned
+   683→                                ? 'border-green-500 bg-gradient-to-b from-green-50 to-emerald-50 shadow-md shadow-green-100'
+   684→                                : 'border-gray-200 bg-white'
+   685→                            }`}
+   686→                            onClick={() => handleSStepClick(s.id)}
+   687→                          >
+   688→                            {/* S Label header */}
+   689→                            <div
+   690→                              className={`flex items-center justify-center gap-1.5 py-1.5 ${earned ? 'bg-green-500' : ''}`}
+   691→                              style={!earned ? { backgroundColor: `${s.color}20` } : undefined}
+   692→                            >
+   693→                              <div className={`w-6 h-6 rounded-lg flex items-center justify-center text-white text-xs font-black ${earned ? 'bg-green-600 ring-1 ring-yellow-400' : ''}`}
+   694→                                style={!earned ? { backgroundColor: s.color } : undefined}>
+   695→                                {earned ? '★' : s.id}
+   696→                              </div>
+   697→                              <span className={`text-[10px] font-bold ${earned ? 'text-white' : ''}`} style={!earned ? { color: s.color } : undefined}>
+   698→                                {s.name}
+   699→                              </span>
+   700→                            </div>
+   701→
+   702→                            {/* Mini-step dots */}
+   703→                            <div className="flex items-center justify-center gap-1 py-1.5 px-1">
+   704→                              {MINI_STEPS.map(ms => {
+   705→                                const status = getMiniStepStatus(s.id, ms.id);
+   706→                                const effectiveStatus = status;
+   707→                                // 'completed_viewonly': step is done but user only has a0 (view) — show ✓ and can view (read-only)
+   708→                                const isCompleted = effectiveStatus === 'completed' || effectiveStatus === 'completed_viewonly';
+   709→                                const canOpenModal = effectiveStatus === 'completed' || effectiveStatus === 'completed_viewonly' || effectiveStatus === 'available';
+   710→                                const modalType = getModalType(ms.id, s.id);
+   711→                                // Lock reasons based on permissions and progression
+   712→                                const canPerformThisStep = canPerformPerm(s.id, ms.id);
+   713→                                const canViewThisStep = canViewPerm(s.id, ms.id);
+   714→                                // Check if previous step is completed (for intra-S progressive unlocking tooltip)
+   715→                                const isPrevStepDone = ms.id === 1 || progress.some(p =>
+   716→                                  p.sStep === s.id && p.miniStep === ms.id - 1 && (p.zoneId === currentZone?.id || p.zoneId === null) && p.completed
+   717→                                );
+   718→                                // Check if previous S is completed (for inter-S progressive unlocking tooltip)
+   719→                                const isPrevSDone = s.id === 1 || (() => {
+   720→                                  for (let ms2 = 1; ms2 <= 5; ms2++) {
+   721→                                    if (!progress.some(p => p.sStep === s.id - 1 && p.miniStep === ms2 && (p.zoneId === currentZone?.id || p.zoneId === null) && p.completed)) return false;
+   722→                                  }
+   723→                                  return true;
+   724→                                })();
+   725→                                const lockReason = canSkipSteps && !adminFreeNavigation
+   726→                                  ? 'Solo lectura (candado cerrado)'
+   727→                                  : effectiveStatus === 'completed_viewonly'
+   728→                                    ? 'Solo lectura (completado)'
+   729→                                    : effectiveStatus === 'locked' && canViewThisStep && !canPerformThisStep
+   730→                                      ? 'Solo lectura'
+   731→                                      : effectiveStatus === 'locked' && canPerformThisStep && !isPrevSDone
+   732→                                        ? `Completa S${s.id - 1}`
+   733→                                        : ms.id === 5 && effectiveStatus === 'locked' && canPerformThisStep && !isPrevStepDone
+   734→                                          ? 'Completa pasos 1-4'
+   735→                                          : ms.id > 1 && ms.id < 5 && effectiveStatus === 'locked' && canPerformThisStep && !isPrevStepDone
+   736→                                            ? `Completa paso ${ms.id - 1}`
+   737→                                            : effectiveStatus === 'locked'
+   738→                                              ? 'Sin permiso'
+   739→                                              : '';
+   740→                                // Get score for steps 4 and 5
+   741→                                const stepScore = (ms.id === 4 || ms.id === 5)
+   742→                                  ? progress.find(p => p.sStep === s.id && p.miniStep === ms.id && (p.zoneId === currentZone?.id || p.zoneId === null))?.score
+   743→                                  : null;
+   744→
+   745→                                return (
+   746→                                  <div key={ms.id} className="flex flex-col items-center">
+   747→                                    {/* Score badge above step 4 and 5 dots */}
+   748→                                    {(ms.id === 4 || ms.id === 5) && stepScore != null && (
+   749→                                      <span className={`text-[7px] font-bold ${stepScore >= 70 ? 'text-green-600' : 'text-red-500'} leading-none mb-0.5`}>
+   750→                                        {stepScore}%
+   751→                                      </span>
+   752→                                    )}
+   753→                                    {/* "Request audit" button above step 5 when steps 1-4 are completed but 5 isn't — only for users with notify_audit permission */}
+   754→                                    {ms.id === 5 && canNotifyAudit && (() => {
+   755→                                      // Check completion using BOTH zone-level progress AND individual employee progress
+   756→                                      // This ensures auditors/responsables see the button even if they don't have personal completion
+   757→                                      const steps1to4Done = [1,2,3,4].every(msCheck => {
+   758→                                        const zoneCompleted = progress.some(p =>
+   759→                                          p.sStep === s.id && p.miniStep === msCheck &&
+   760→                                          (currentZone ? (p.zoneId === currentZone.id || p.zoneId === null) : true) &&
+   761→                                          p.completed
+   762→                                        );
+   763→                                        const empCompleted = employeeProgress.some(ep =>
+   764→                                          ep.sStep === s.id && ep.miniStep === msCheck &&
+   765→                                          currentZone && ep.zoneId === currentZone.id &&
+   766→                                          ep.completed
+   767→                                        );
+   768→                                        return zoneCompleted || empCompleted;
+   769→                                      });
+   770→                                      const step5Done = progress.some(p =>
+   771→                                        p.sStep === s.id && p.miniStep === 5 &&
+   772→                                        (currentZone ? (p.zoneId === currentZone.id || p.zoneId === null) : true) &&
+   773→                                        p.completed
+   774→                                      );
+   775→                                      return steps1to4Done && !step5Done;
+   776→                                    })() && (
+   777→                                      <button
+   778→                                        className="text-[8px] font-bold text-orange-600 hover:text-orange-700 hover:bg-orange-50 px-1.5 py-0.5 rounded border border-orange-300 mb-0.5 transition-colors leading-tight whitespace-nowrap animate-pulse bg-orange-50 shadow-sm"
+   779→                                        onClick={async (e) => {
+   780→                                          e.stopPropagation();
+   781→                                          const proposedDate = new Date();
+   782→                                          proposedDate.setDate(proposedDate.getDate() + 2);
+   783→                                          const dateStr = proposedDate.toISOString().slice(0, 16);
+   784→                                          const result = prompt(`Propón fecha y hora para la auditoría S${s.id}:\n(Formato: AAAA-MM-DDTHH:MM)`, dateStr);
+   785→                                          if (!result) return;
+   786→                                          try {
+   787→                                            const sStepData = S_STEPS.find(ss => ss.id === s.id);
+   788→                                            const formattedDate = new Date(result).toLocaleString('es-ES', { dateStyle: 'medium', timeStyle: 'short' });
+   789→                                            const msg = `Se solicita auditoría para S${s.id} (${sStepData?.japaneseName || ''}) en la zona "${currentZone?.name || ''}". Fecha propuesta: ${formattedDate}.`;
+   790→                                            const membersRes = await fetch(`/api/projects/${currentProject?.id}/members`);
+   791→                                            const membersData = await membersRes.json();
+   792→                                            const allMembers = membersData?.members || [];
+   793→                                            // Notify all auditors
+   794→                                            const auditors = allMembers.filter((m: any) => m.role === 'auditor');
+   795→                                            for (const auditor of auditors) {
+   796→                                              await fetch('/api/notifications', {
+   797→                                                method: 'POST',
+   798→                                                headers: { 'Content-Type': 'application/json' },
+   799→                                                body: JSON.stringify({
+   800→                                                  userId: auditor.userId,
+   801→                                                  type: 'audit_requested',
+   802→                                                  title: `Solicitud auditoría: S${s.id} — ${sStepData?.japaneseName || ''}`,
+   803→                                                  message: msg,
+   804→                                                  sStep: s.id,
+   805→                                                  zoneId: currentZone?.id,
+   806→                                                  projectId: currentProject?.id,
+   807→                                                }),
+   808→                                              });
+   809→                                            }
+   810→                                            // Notify all responsables (from zone.responsableId OR from project members)
+   811→                                            const responsableIds = new Set<string>();
+   812→                                            if (currentZone?.responsableId) responsableIds.add(currentZone.responsableId);
+   813→                                            const responsables = allMembers.filter((m: any) => m.role === 'responsable');
+   814→                                            for (const resp of responsables) responsableIds.add(resp.userId);
+   815→                                            for (const respId of responsableIds) {
+   816→                                              await fetch('/api/notifications', {
+   817→                                                method: 'POST',
+   818→                                                headers: { 'Content-Type': 'application/json' },
+   819→                                                body: JSON.stringify({
+   820→                                                  userId: respId,
+   821→                                                  type: 'audit_requested',
+   822→                                                  title: `Solicitud auditoría: S${s.id} — ${sStepData?.japaneseName || ''}`,
+   823→                                                  message: msg,
+   824→                                                  sStep: s.id,
+   825→                                                  zoneId: currentZone?.id,
+   826→                                                  projectId: currentProject?.id,
+   827→                                                }),
+   828→                                              });
+   829→                                            }
+   830→                                            // Also notify the requesting user as confirmation
+   831→                                            if (currentUser?.id) {
+   832→                                              await fetch('/api/notifications', {
+   833→                                                method: 'POST',
+   834→                                                headers: { 'Content-Type': 'application/json' },
+   835→                                                body: JSON.stringify({
+   836→                                                  userId: currentUser.id,
+   837→                                                  type: 'audit_ready',
+   838→                                                  title: `Solicitud enviada: S${s.id} — ${sStepData?.japaneseName || ''}`,
+   839→                                                  message: `Tu solicitud de auditoría para S${s.id} ha sido enviada al auditor y responsable. Fecha propuesta: ${formattedDate}.`,
+   840→                                                  sStep: s.id,
+   841→                                                  zoneId: currentZone?.id,
+   842→                                                  projectId: currentProject?.id,
+   843→                                                }),
+   844→                                              });
+   845→                                            }
+   846→                                            alert('Solicitud de auditoría enviada a auditor y responsable.');
+   847→                                          } catch (err) {
+   848→                                            console.error('Error sending audit request:', err);
+   849→                                            alert('Error al enviar la solicitud.');
+   850→                                          }
+   851→                                        }}
+   852→                                        title="Solicitar auditoría: notificar al auditor y responsable para fijar fecha"
+   853→                                      >
+   854→                                        🔔 Auditar
+   855→                                      </button>
+   856→                                    )}
+   857→                                    <div className="relative">
+   858→                                      <button
+   859→                                        className={`
+   860→                                          w-8 h-8 rounded-full flex items-center justify-center text-[10px] font-bold transition-all
+   861→                                          ${effectiveStatus === 'completed'
+   862→                                            ? 'bg-green-500 text-white shadow-sm shadow-green-200 ring-2 ring-green-300'
+   863→                                            : effectiveStatus === 'completed_viewonly'
+   864→                                              ? 'bg-green-500 text-white shadow-sm shadow-green-200 ring-2 ring-green-300 cursor-default'
+   865→                                            : effectiveStatus === 'available'
+   866→                                              ? 'text-white hover:scale-110 hover:shadow-md cursor-pointer'
+   867→                                              : 'bg-gray-100 text-gray-300 cursor-not-allowed'}
+   868→                                        `}
+   869→                                        style={effectiveStatus === 'available' ? { backgroundColor: s.color } : undefined}
+   870→                                        onClick={(e) => {
+   871→                                          e.stopPropagation();
+   872→                                          if (canOpenModal) {
+   873→                                            handleOpenModal(modalType, ms.id, s.id);
+   874→                                          }
+   875→                                        }}
+   876→                                        disabled={!canOpenModal}
+   877→                                        title={`${ms.name}${lockReason ? ` (${lockReason})` : ''}`}
+   878→                                      >
+   879→                                        {isCompleted ? '✓' : effectiveStatus === 'locked' ? <LockIcon className="h-2.5 w-2.5" /> : ms.id}
+   880→                                      </button>
+   881→                                      {/* Admin reset button: only shown when admin with lock open and step is completed */}
+   882→                                      {canSkipSteps && adminFreeNavigation && effectiveStatus === 'completed' && (
+   883→                                        <button
+   884→                                          className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-red-500 text-white flex items-center justify-center text-[8px] font-bold hover:bg-red-600 transition-colors z-10"
+   885→                                          onClick={async (e) => {
+   886→                                            e.stopPropagation();
+   887→                                            if (!confirm(`¿Restablecer paso ${ms.id} de S${s.id}? Esto eliminará el progreso guardado.`)) return;
+   888→                                            try {
+   889→                                              const params = new URLSearchParams({ sStep: String(s.id), miniStep: String(ms.id), projectId: currentProject?.id || '' });
+   890→                                              if (currentZone?.id) params.set('zoneId', currentZone.id);
+   891→                                              const res = await fetch(`/api/progress/step?${params}`, { method: 'DELETE' });
+   892→                                              const json = await res.json();
+   893→                                              if (json.success) {
+   894→                                                await use5SStore.getState().fetchProgress();
+   895→                                                if (currentProject && currentZone) {
+   896→                                                  await use5SStore.getState().fetchEmployeeProgress(currentProject.id, currentZone.id);
+   897→                                                }
+   898→                                              } else {
+   899→                                                alert(json.error || 'Error al restablecer');
+   900→                                              }
+   901→                                            } catch (err) { console.error('Reset error:', err); }
+   902→                                          }}
+   903→                                          title="Restablecer paso (admin)"
+   904→                                        >
+   905→                                          ×
+   906→                                        </button>
+   907→                                      )}
+   908→                                    </div>
+   909→                                  </div>
+   910→                                );
+   911→                              })}
+   912→                            </div>
+   913→
+   914→                            {/* Progress bar */}
+   915→                            <div className="px-2 pb-1.5">
+   916→                              <div className="h-1.5 rounded-full overflow-hidden bg-gray-100">
+   917→                                <div
+   918→                                  className="h-full rounded-full transition-all duration-500"
+   919→                                  style={{ width: `${pct}%`, backgroundColor: earned ? '#22c55e' : s.color }}
+   920→                                />
+   921→                              </div>
+   922→                              <div className="flex items-center justify-between mt-0.5">
+   923→                                <span className={`text-[8px] font-bold ${earned ? 'text-green-600' : 'text-muted-foreground'}`}>
+   924→                                  {earned ? 'COMPLETADO' : `${completedMiniSteps}/5`}
+   925→                                </span>
+   926→                                <span className={`text-[8px] font-bold ${earned ? 'text-green-600' : 'text-muted-foreground'}`}>
+   927→                                  {pct}%
+   928→                                </span>
+   929→                              </div>
+   930→                            </div>
+   931→                          </div>
+   932→                        );
+   933→                      })}
+   934→                    </div>
+   935→                  </div>
+   936→                  )}
+   937→                </motion.div>
+   938→              )}
+   939→
+   940→              {/* ═══ TAB: GERENTE ═══ */}
+   941→              {activeTab === 'gerente' && canSeeGerentePanel && (
+   942→                <motion.div key="gerente" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex-1 min-h-0 overflow-auto p-4">
+   943→                  <GerentePanel embedded />
+   944→                </motion.div>
+   945→              )}
+   946→
+   947→              {/* ═══ TAB: ADMIN ═══ */}
+   948→              {activeTab === 'admin' && isAdmin && (
+   949→                <motion.div key="admin" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex-1 min-h-0 overflow-auto p-4">
+   950→                    {isGestor ? <GestorPanel /> : <AdminPanel embedded />}
+   951→                </motion.div>
+   952→              )}
+   953→
+   954→              {/* ═══ TAB: MAINTENANCE / MEJORA CONTINUA ═══ */}
+   955→              {activeTab === 'maintenance' && is5SCompleted() && (
+   956→                <motion.div key="maintenance" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex-1 min-h-0 overflow-auto p-4">
+   957→                  <MaintenanceView embedded />
+   958→                </motion.div>
+   959→              )}
+   960→            </AnimatePresence>
+   961→          </div>
+   962→        )}
+   963→      </main>
+   964→
+   965→      {/* Modals */}
+   966→      {ActiveModalComponent && selectedSStep && activeMiniStep && (
+   967→        <ActiveModalComponent
+   968→          open={activeModal !== null}
+   969→          onClose={closeModal}
+   970→          sStep={selectedSStep}
+   971→          miniStep={activeMiniStep}
+   972→        />
+   973→      )}
+   974→
+   975→      {/* Global Action Plan Modal */}
+   976→      {activeModal === 'globalActionPlan' && currentProject && (
+   977→        <ActionPlanModal open={true} onClose={closeModal} sStep={selectedSStep || 1} miniStep={0} />
+   978→      )}
+   979→
+   980→      {/* Global Inventory Modal */}
+   981→      {activeModal === 'globalInventory' && (
+   982→        <GlobalInventoryModal open={true} onClose={closeModal} />
+   983→      )}
+   984→
+   985→      {/* Audit Results Modal */}
+   986→      {activeModal === 'auditResults' && (
+   987→        <AuditResultsModal open={true} onClose={closeModal} />
+   988→      )}
+   989→
+   990→      {/* Standards Library Modal */}
+   991→      {activeModal === 'standardsLibrary' && (
+   992→        <StandardsLibrary open={true} onClose={closeModal} />
+   993→      )}
+   994→
+   995→      {/* Photo Library Modal */}
+   996→      {activeModal === 'photoLibrary' && (
+   997→        <PhotoLibrary open={true} onClose={closeModal} />
+   998→      )}
+   999→
+  1000→      {/* Team Management Modal */}
+  1001→      <TeamManagement open={showTeamManagement} onClose={() => setShowTeamManagement(false)} />
+  1002→
+  1003→      {/* Role Permissions Modal */}
+  1004→      <RolePermissions open={showRolePermissions} onClose={() => setShowRolePermissions(false)} />
+  1005→
+  1006→      {/* Jaula de Excedentes Modal */}
+  1007→      <JaulaModal open={showJaulaModal} onClose={() => setShowJaulaModal(false)} />
+  1008→      {/* Activos (Necesarios) Modal */}
+  1009→      <ActivosModal open={showActivosModal} onClose={() => setShowActivosModal(false)} />
+  1010→    </div>
+  1011→  );
+  1012→}
+  1013→

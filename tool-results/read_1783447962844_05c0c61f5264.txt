@@ -93,13 +93,13 @@
     93→
     94→// Locked permissions per role (always ON)
     95→const LOCKED_PERMISSIONS: Record<string, string[]> = {
-    96→  constructor: ALL_PERM_IDS, // Constructor permissions are always locked (all ON)
+    96→  gestor: ALL_PERM_IDS, // Gestor permissions are always locked (all ON)
     97→  admin: ['view_board', 'view_project', 'view_team'],
     98→}
     99→
    100→// Default permissions per role
    101→const DEFAULT_PERMISSIONS: Record<string, string[]> = {
-   102→  constructor: ALL_PERM_IDS, // Constructor (app owner) has everything
+   102→  gestor: ALL_PERM_IDS, // Gestor (dueño de la plataforma) tiene todo
    103→  admin: ALL_PERM_IDS, // Admin (license holder) has everything
    104→  gerente: [
    105→    'view_board', 'view_progress', 'view_project', 'view_team',
@@ -136,7 +136,7 @@
    136→
    137→// Role definitions
    138→const ROLES = [
-   139→  { id: 'constructor', name: 'Constructor', desc: 'Dueño de la app', color: '#DC2626', icon: Crown },
+   139→  { id: 'gestor', name: 'Gestor', desc: 'Dueño de la plataforma', color: '#DC2626', icon: Crown },
    140→  { id: 'admin', name: 'Administrador', desc: 'Licencia del sistema', color: '#8B5CF6', icon: Shield },
    141→  { id: 'gerente', name: 'Gerente', desc: 'Supervisión global', color: '#6366F1', icon: Building2 },
    142→  { id: 'responsable', name: 'Responsable', desc: 'Gestión de equipo y zonas', color: '#3B82F6', icon: UserCheck },
@@ -171,8 +171,8 @@
    171→  const [isSaving, setIsSaving] = useState(false)
    172→  const [hasChanges, setHasChanges] = useState(false)
    173→
-   174→  const isConstructor = currentUser?.role === 'constructor'
-   175→  const isAdmin = currentUser?.role === 'admin' || isConstructor
+   174→  const isGestor = currentUser?.role === 'gestor'
+   175→  const isAdmin = currentUser?.role === 'admin' || isGestor
    176→
    177→  const fetchPermissions = useCallback(async () => {
    178→    setIsLoading(true)
