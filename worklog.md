@@ -193,3 +193,26 @@ Stage Summary:
 - Documento generado: /home/z/my-project/download/Sistema5S_Resumen_Estado_Actual.docx
 - Cubre: visión general, arquitectura, modelo de datos, progresión 5S, permisos, componentes clave, inventarios, plantillas, API routes, store, constantes, tareas pendientes, archivos críticos
 - Confirmado: No existe "Delegación" en el esquema Prisma ni en constantes
+---
+Task ID: gestor-role-separation
+Agent: main
+Task: Separar roles gestor/admin - gestor solo ve Gestión, admin ve pantallas operativas
+
+Work Log:
+- Renombrado 'constructor' → 'gestor' en todo el código (4 archivos + schema)
+- page.tsx: Gestor SOLO ve tab "Gestión" (ConstructorPanel), admin ve tabs operativos
+- Store: Gestor va directo a gestión al login y session restore
+- API companies: Solo gestor crea/elimina empresas, admin solo ve las suyas
+- API platform-stats: Protegido solo para gestor
+- Seed: Crea gestor@cincos.com / gestor123 y admin@5s.com / admin123
+- Permissions: gestor en ALL_ROLES, admin ya no incluye constructor
+- UI: ConstructorPanel → "Panel de Gestión", AdminPanel → "Panel de Admin de Empresa"
+- Badge: "GESTOR (DUEÑO)" en vez de "CONSTRUCTOR"
+- Quitado botón "← Vista App" del panel del gestor
+- Build compila sin errores
+- Commits: 4 commits locales, no se pudo hacer push (falta token GitHub/Vercel)
+
+Stage Summary:
+- Todos los cambios de código completados y compilados
+- Se necesita token de GitHub o Vercel para hacer push y deploy
+- Credenciales: gestor@cincos.com / gestor123 (nuevo), admin@5s.com / admin123
