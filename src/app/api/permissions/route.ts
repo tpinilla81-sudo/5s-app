@@ -1,9 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 
-// ═══════════════════════════════════════════════════════
-// PER-S PERMISSION DEFINITIONS
-// ═══════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════
+// TWO-TIER PERMISSION SYSTEM
+// ═══════════════════════════════════════════════════════════════════
+// Tier 1: PLATFORM permissions (gestor manages the app)
+//   - What the gestor can do regarding the platform
+//   - What the gestor allows/restricts for each admin de empresa
+//   - Contracts, subscriptions, company limits, etc.
+//
+// Tier 2: PROJECT permissions (admin manages their company)
+//   - What each role can do inside a project
+//   - Only the admin de empresa can configure these
+//   - The gestor does NOT touch these (each company is independent)
+// ═══════════════════════════════════════════════════════════════════
+
+// ═════════════════════════════════════════════════════════
+// PER-S PERMISSION DEFINITIONS (PROJECT TIER)
+// ═════════════════════════════════════════════════════════
 const S_STEPS = [1, 2, 3, 4, 5]
 const MINI_STEPS = [1, 2, 3, 4, 5]
 const MINI_STEP_ACTIONS: Record<number, string[]> = {
@@ -25,8 +39,38 @@ for (const s of S_STEPS) {
   }
 }
 
-// General permissions (not per-S)
-const GENERAL_PERMISSIONS = [
+// ═════════════════════════════════════════════════════════
+// TIER 1: PLATFORM PERMISSIONS (gestor level)
+// ═════════════════════════════════════════════════════════
+const PLATFORM_PERMISSIONS = [
+  // Company management
+  'platform_create_company',     // Crear empresas
+  'platform_edit_company',       // Editar empresas
+  'platform_delete_company',     // Eliminar empresas
+  'platform_view_companies',     // Ver todas las empresas
+  'platform_activate_company',   // Activar/desactivar empresas
+  // Admin management
+  'platform_assign_admin',       // Asignar admin a empresa
+  'platform_remove_admin',       // Quitar admin de empresa
+  'platform_reset_admin_pwd',    // Resetear contraseña de admin
+  'platform_view_all_users',     // Ver todos los usuarios de la plataforma
+  'platform_edit_users',         // Editar usuarios de la plataforma
+  // Contracts & subscriptions
+  'platform_manage_contracts',   // Gestionar contratos
+  'platform_view_contracts',     // Ver contratos
+  'platform_manage_subscriptions', // Gestionar suscripciones
+  'platform_set_company_limits', // Definir límites por empresa (usuarios, proyectos, etc.)
+  // Platform config
+  'platform_config',             // Configurar la plataforma
+  'platform_manage_templates',   // Gestionar plantillas globales
+  'platform_view_stats',         // Ver estadísticas de la plataforma
+  'platform_send_notifications', // Enviar notificaciones globales
+]
+
+// ═════════════════════════════════════════════════════════
+// TIER 2: PROJECT PERMISSIONS (admin de empresa level)
+// ═════════════════════════════════════════════════════════
+const PROJECT_GENERAL_PERMISSIONS = [
   'view_board', 'view_progress', 'view_project', 'edit_project', 'manage_zones',
   'view_team', 'add_members', 'remove_members', 'change_roles',
   'manage_training', 'delete_photos', 'delete_inventory', 'approve_audit',
@@ -34,15 +78,23 @@ const GENERAL_PERMISSIONS = [
   'notify_audit', 'accept_audit_meeting',
 ]
 
-const ALL_PERMISSIONS = [...PER_S_PERMISSIONS, ...GENERAL_PERMISSIONS]
+const ALL_PERMISSIONS = [...PLATFORM_PERMISSIONS, ...PER_S_PERMISSIONS, ...PROJECT_GENERAL_PERMISSIONS]
 const ALL_ROLES = ['gestor', 'admin', 'gerente', 'responsable', 'empleado', 'auditor']
 
-// ═══════════════════════════════════════════════════════
+// ═════════════════════════════════════════════════════════
 // DEFAULT PERMISSIONS
-// ═══════════════════════════════════════════════════════
+// ═════════════════════════════════════════════════════════
 const DEFAULT_PERMISSIONS: Record<string, string[]> = {
-  gestor: ALL_PERMISSIONS, // Gestor (dueño de la app) has everything
-  admin: ALL_PERMISSIONS, // Admin de empresa has everything
+  // GESTOR: full platform access, NO project-level access (manages platform, not projects)
+  gestor: [
+    ...PLATFORM_PERMISSIONS, // All platform permissions
+  ],
+
+  // ADMIN DE EMPRESA: full project access, NO platform access
+  admin: [
+    ...PROJECT_GENERAL_PERMISSIONS, // All project general permissions
+    ...PER_S_PERMISSIONS,            // All per-S permissions
+  ],
 
   gerente: [
     'view_board', 'view_progress', 'view_project', 'view_team',

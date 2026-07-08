@@ -20,7 +20,7 @@ import {
   Lock, Unlock, Crown, UserCheck, HardHat, ClipboardCheck, BookOpen,
   Camera, ListChecks, FileCheck, Building2, BarChart3, UserPlus,
   UserMinus, KeyRound, RotateCcw, Save, Loader2, AlertTriangle,
-  ArrowLeft, X, GraduationCap, MapPin, Target, Bell,
+  ArrowLeft, X, GraduationCap, MapPin, Target, Bell, CreditCard,
 } from 'lucide-react'
 
 interface RolePermissionsProps {
@@ -65,8 +65,34 @@ S_STEPS_DEF.forEach(s => {
   })
 })
 
-// General (non-S) permissions
-const GENERAL_PERMS = [
+// ═══════════════════════════════════════════════════════
+// TIER 1: PLATFORM PERMISSIONS (gestor level)
+// ═══════════════════════════════════════════════════════
+const PLATFORM_PERMS = [
+  { id: 'platform_create_company', name: 'Crear empresas', desc: 'Crear nuevas empresas en la plataforma', icon: Building2, locked: true },
+  { id: 'platform_edit_company', name: 'Editar empresas', desc: 'Modificar datos de empresas', icon: Pencil },
+  { id: 'platform_delete_company', name: 'Eliminar empresas', desc: 'Eliminar empresas de la plataforma', icon: Trash2 },
+  { id: 'platform_view_companies', name: 'Ver empresas', desc: 'Ver todas las empresas de la plataforma', icon: Eye, locked: true },
+  { id: 'platform_activate_company', name: 'Activar/desactivar empresas', desc: 'Cambiar estado activo de empresas', icon: CheckCircle2 },
+  { id: 'platform_assign_admin', name: 'Asignar admin', desc: 'Asignar administrador a una empresa', icon: UserPlus, locked: true },
+  { id: 'platform_remove_admin', name: 'Quitar admin', desc: 'Quitar administrador de una empresa', icon: UserMinus },
+  { id: 'platform_reset_admin_pwd', name: 'Resetear contraseña admin', desc: 'Restablecer contraseña de administradores', icon: KeyRound },
+  { id: 'platform_view_all_users', name: 'Ver todos los usuarios', desc: 'Ver todos los usuarios de la plataforma', icon: Users, locked: true },
+  { id: 'platform_edit_users', name: 'Editar usuarios', desc: 'Editar datos de usuarios de la plataforma', icon: Pencil },
+  { id: 'platform_manage_contracts', name: 'Gestionar contratos', desc: 'Crear y gestionar contratos con empresas', icon: FileCheck, locked: true },
+  { id: 'platform_view_contracts', name: 'Ver contratos', desc: 'Consultar contratos de empresas', icon: Eye, locked: true },
+  { id: 'platform_manage_subscriptions', name: 'Gestionar suscripciones', desc: 'Administrar suscripciones y planes', icon: CreditCard, locked: true },
+  { id: 'platform_set_company_limits', name: 'Definir límites', desc: 'Establecer límites por empresa (usuarios, proyectos, etc.)', icon: Lock },
+  { id: 'platform_config', name: 'Configurar plataforma', desc: 'Configurar ajustes globales de la plataforma', icon: Settings, locked: true },
+  { id: 'platform_manage_templates', name: 'Gestionar plantillas globales', desc: 'Crear, editar y eliminar plantillas de la plataforma', icon: BookOpen },
+  { id: 'platform_view_stats', name: 'Ver estadísticas', desc: 'Ver estadísticas globales de la plataforma', icon: BarChart3, locked: true },
+  { id: 'platform_send_notifications', name: 'Enviar notificaciones globales', desc: 'Enviar avisos a todos los usuarios', icon: Bell },
+]
+
+// ═══════════════════════════════════════════════════════
+// TIER 2: PROJECT PERMISSIONS (admin de empresa level)
+// ═══════════════════════════════════════════════════════
+const PROJECT_PERMS = [
   { id: 'view_board', name: 'Ver tablero 5S', desc: 'Acceso al tablero principal', icon: Eye, locked: true },
   { id: 'view_progress', name: 'Ver progreso general', desc: 'Consultar dashboard de progreso', icon: BarChart3 },
   { id: 'view_project', name: 'Ver proyecto', desc: 'Consultar datos del proyecto', icon: Building2, locked: true },
@@ -89,18 +115,18 @@ const GENERAL_PERMS = [
 ]
 
 // All permission IDs
-const ALL_PERM_IDS = [...PERM_ID_MAP.map(p => p.id), ...GENERAL_PERMS.map(p => p.id)]
+const ALL_PERM_IDS = [...PLATFORM_PERMS.map(p => p.id), ...PERM_ID_MAP.map(p => p.id), ...PROJECT_PERMS.map(p => p.id)]
 
 // Locked permissions per role (always ON)
 const LOCKED_PERMISSIONS: Record<string, string[]> = {
-  gestor: ALL_PERM_IDS, // Gestor (dueño de la app) permissions are always locked (all ON)
+  gestor: PLATFORM_PERMS.map(p => p.id), // Gestor platform permissions are always locked ON
   admin: ['view_board', 'view_project', 'view_team'],
 }
 
 // Default permissions per role
 const DEFAULT_PERMISSIONS: Record<string, string[]> = {
-  gestor: ALL_PERM_IDS, // Gestor (dueño de la app) has everything
-  admin: ALL_PERM_IDS, // Admin (license holder) has everything
+  gestor: PLATFORM_PERMS.map(p => p.id), // Gestor: only platform permissions (manages platform, not projects)
+  admin: [...PERM_ID_MAP.map(p => p.id), ...PROJECT_PERMS.map(p => p.id)], // Admin: full project access, no platform
   gerente: [
     'view_board', 'view_progress', 'view_project', 'view_team',
     'accept_audit_meeting',
@@ -172,7 +198,8 @@ export default function RolePermissions({ open, onClose }: RolePermissionsProps)
   const [hasChanges, setHasChanges] = useState(false)
 
   const isGestor = currentUser?.role === 'gestor'
-  const isAdmin = currentUser?.role === 'admin' || isGestor
+  const isAdmin = currentUser?.role === 'admin'
+  const [permissionTab, setPermissionTab] = useState<'plataforma' | 'proyecto'>('proyecto')
 
   const fetchPermissions = useCallback(async () => {
     setIsLoading(true)
@@ -197,8 +224,9 @@ export default function RolePermissions({ open, onClose }: RolePermissionsProps)
       setViewMode('view')
       setSelectedRole(null)
       setExpandedS(null)
+      setPermissionTab(isGestor ? 'plataforma' : 'proyecto')
     }
-  }, [open, fetchPermissions])
+  }, [open, fetchPermissions, isGestor])
 
   const isLocked = (roleId: string, permId: string) => {
     const locked = LOCKED_PERMISSIONS[roleId] || []
@@ -316,6 +344,9 @@ export default function RolePermissions({ open, onClose }: RolePermissionsProps)
   // RENDER HELPERS
   // ═══════════════════════════════════════════════════════
 
+  // When in 'proyecto' tab, hide gestor from role lists
+  const visibleRoles = permissionTab === 'proyecto' ? ROLES.filter(r => r.id !== 'gestor') : ROLES
+
   const renderSStepCard = (sDef: typeof S_STEPS_DEF[0]) => {
     const sPerms = PERM_ID_MAP.filter(p => p.id.startsWith(`s${sDef.id}_`))
     const isExpanded = expandedS === sDef.id
@@ -341,7 +372,7 @@ export default function RolePermissions({ open, onClose }: RolePermissionsProps)
           </div>
           <div className="flex items-center gap-3">
             {/* Quick role summary */}
-            {ROLES.map(role => {
+            {visibleRoles.map(role => {
               const count = countPermsForRoleInS(role.id, sDef.id)
               const total = sPerms.length
               return (
@@ -407,7 +438,7 @@ export default function RolePermissions({ open, onClose }: RolePermissionsProps)
                           <thead>
                             <tr>
                               <th className="text-left p-3 text-xs font-semibold text-muted-foreground min-w-[200px]">Acción</th>
-                              {ROLES.map(role => {
+                              {visibleRoles.map(role => {
                                 const RoleIcon = role.icon
                                 return (
                                   <th key={role.id} className="p-3 text-center min-w-[110px]">
@@ -424,7 +455,7 @@ export default function RolePermissions({ open, onClose }: RolePermissionsProps)
                             {msPerms.map(perm => (
                               <tr key={perm.id} className="hover:bg-gray-50/50 transition-colors">
                                 <td className="p-3 border-t text-sm font-medium">{perm.name}</td>
-                                {ROLES.map(role => {
+                                {visibleRoles.map(role => {
                                   const allowed = getPermValue(role.id, perm.id)
                                   const locked = isLocked(role.id, perm.id)
                                   return (
@@ -489,7 +520,7 @@ export default function RolePermissions({ open, onClose }: RolePermissionsProps)
               <thead>
                 <tr>
                   <th className="text-left p-3 text-xs font-semibold text-muted-foreground min-w-[220px]">Permiso</th>
-                  {ROLES.map(role => {
+                  {visibleRoles.map(role => {
                     const RoleIcon = role.icon
                     return (
                       <th key={role.id} className="p-3 text-center min-w-[120px]">
@@ -503,7 +534,7 @@ export default function RolePermissions({ open, onClose }: RolePermissionsProps)
                 </tr>
               </thead>
               <tbody>
-                {GENERAL_PERMS.map(perm => {
+              {PROJECT_PERMS.map(perm => {
                   const PermIcon = perm.icon
                   return (
                     <tr key={perm.id} className="hover:bg-gray-50/50 transition-colors">
@@ -516,7 +547,7 @@ export default function RolePermissions({ open, onClose }: RolePermissionsProps)
                           </div>
                         </div>
                       </td>
-                      {ROLES.map(role => {
+                      {visibleRoles.map(role => {
                         const allowed = getPermValue(role.id, perm.id)
                         const locked = isLocked(role.id, perm.id)
                         return (
@@ -635,74 +666,149 @@ export default function RolePermissions({ open, onClose }: RolePermissionsProps)
           </div>
         ) : (
           <div className="space-y-6">
-            {/* Role summary bar */}
-            <div className="grid grid-cols-6 gap-3">
-              {ROLES.map(role => {
-                const RoleIcon = role.icon
-                const total = countPermsForRole(role.id)
-                const max = ALL_PERM_IDS.length
-                const pct = Math.round((total / max) * 100)
-                return (
-                  <div key={role.id} className="rounded-xl border-2 p-4 transition-all"
-                    style={{ borderColor: role.color + '40', backgroundColor: role.color + '08' }}>
-                    <div className="flex items-center gap-2 mb-2">
-                      <RoleIcon className="h-5 w-5" style={{ color: role.color }} />
-                      <span className="font-bold text-sm" style={{ color: role.color }}>{role.name}</span>
-                    </div>
-                    <div className="flex items-center gap-2 mb-2">
-                      <div className="flex-1 h-2.5 rounded-full bg-white/80 overflow-hidden">
-                        <div className="h-full rounded-full transition-all duration-500"
-                          style={{ width: `${pct}%`, backgroundColor: role.color }} />
-                      </div>
-                      <span className="text-xs font-bold" style={{ color: role.color }}>{pct}%</span>
-                    </div>
-                    <div className="text-[10px] text-muted-foreground">{total} de {max} permisos</div>
-                    {viewMode === 'edit' && isAdmin && (
-                      <div className="flex gap-1.5 mt-2">
-                        <Button variant="outline" size="sm" className="h-6 text-[10px] flex-1 border-green-300 text-green-600 hover:bg-green-50"
-                          onClick={() => toggleAllForRole(role.id, true)}>Todo ON</Button>
-                        <Button variant="outline" size="sm" className="h-6 text-[10px] flex-1 border-red-300 text-red-600 hover:bg-red-50"
-                          onClick={() => toggleAllForRole(role.id, false)}>Todo OFF</Button>
-                      </div>
-                    )}
+            {/* ── Permission Tier Tabs ── */}
+            <div className="flex border-b">
+              {isGestor && (
+                <button
+                  className={`px-5 py-2.5 text-xs font-semibold border-b-2 transition-all flex items-center gap-1.5 ${
+                    permissionTab === 'plataforma'
+                      ? 'border-red-500 text-red-700 bg-red-50/50'
+                      : 'border-transparent text-muted-foreground hover:text-foreground hover:border-gray-300'
+                  }`}
+                  onClick={() => setPermissionTab('plataforma')}
+                >
+                  <Crown className="h-3.5 w-3.5" />
+                  Plataforma (Gestor)
+                </button>
+              )}
+              <button
+                className={`px-5 py-2.5 text-xs font-semibold border-b-2 transition-all flex items-center gap-1.5 ${
+                  permissionTab === 'proyecto'
+                    ? 'border-purple-500 text-purple-700 bg-purple-50/50'
+                    : 'border-transparent text-muted-foreground hover:text-foreground hover:border-gray-300'
+                }`}
+                onClick={() => setPermissionTab('proyecto')}
+              >
+                <Shield className="h-3.5 w-3.5" />
+                Proyecto (Admin de Empresa)
+              </button>
+            </div>
+
+            {/* ── TIER 1: Platform Permissions ── */}
+            {permissionTab === 'plataforma' && isGestor && (
+              <div className="space-y-4">
+                <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-sm text-red-800 flex items-start gap-2">
+                  <Crown className="h-5 w-5 shrink-0 mt-0.5" />
+                  <div>
+                    <p className="font-semibold">Permisos de Plataforma — Gestor (Dueño)</p>
+                    <p className="text-xs mt-1 text-red-600">El Gestor controla la plataforma: crea empresas, asigna admins, gestiona contratos y suscripciones. Estos permisos no se pueden modificar.</p>
                   </div>
-                )
-              })}
-            </div>
-
-            {/* S-Step cards */}
-            <div className="space-y-4">
-              <h2 className="text-lg font-bold text-gray-800 flex items-center gap-2">
-                <Shield className="h-5 w-5 text-green-500" />
-                Permisos por 5S
-                <span className="text-sm font-normal text-muted-foreground">(pulsa en cada S para desplegar)</span>
-              </h2>
-              {S_STEPS_DEF.map(sDef => renderSStepCard(sDef))}
-            </div>
-
-            {/* General permissions */}
-            <div className="mt-8">
-              {renderGeneralPerms()}
-            </div>
-
-            {/* Totals footer */}
-            <div className="rounded-xl bg-gray-50 border p-5">
-              <h3 className="text-sm font-bold text-gray-600 mb-3">Resumen Total de Permisos</h3>
-              <div className="grid grid-cols-6 gap-4">
-                {ROLES.map(role => {
-                  const total = countPermsForRole(role.id)
-                  const max = ALL_PERM_IDS.length
-                  const pct = Math.round((total / max) * 100)
-                  return (
-                    <div key={role.id} className="text-center">
-                      <div className="text-2xl font-black" style={{ color: role.color }}>{pct}%</div>
-                      <div className="text-xs text-muted-foreground">{total}/{max}</div>
-                      <div className="text-xs font-bold mt-1" style={{ color: role.color }}>{role.name}</div>
-                    </div>
-                  )
-                })}
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                  {PLATFORM_PERMS.map(perm => {
+                    const PermIcon = perm.icon
+                    return (
+                      <div key={perm.id} className="flex items-center justify-between p-3 bg-white rounded-lg border shadow-sm">
+                        <div className="flex items-center gap-2.5">
+                          <PermIcon className="h-4 w-4 text-red-500 shrink-0" />
+                          <div>
+                            <p className="text-xs font-medium">{perm.name}</p>
+                            <p className="text-[10px] text-muted-foreground">{perm.desc}</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <Lock className="h-3 w-3 text-red-400" />
+                          <span className="text-[10px] text-red-500 font-semibold">Siempre ON</span>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
               </div>
-            </div>
+            )}
+
+            {/* ── TIER 2: Project Permissions ── */}
+            {permissionTab === 'proyecto' && (
+              <>
+                {/* Info banner */}
+                <div className="bg-purple-50 border border-purple-200 rounded-lg p-4 text-sm text-purple-800 flex items-start gap-2">
+                  <Shield className="h-5 w-5 shrink-0 mt-0.5" />
+                  <div>
+                    <p className="font-semibold">Permisos de Proyecto — Admin de Empresa</p>
+                    <p className="text-xs mt-1 text-purple-600">Cada empresa configura los permisos de sus propios proyectos. El Gestor no interviene aquí — solo el Admin de cada empresa decide qué puede hacer cada rol dentro de su proyecto.</p>
+                  </div>
+                </div>
+
+                {/* Role summary bar — only project roles */}
+                <div className="grid grid-cols-5 gap-3">
+                  {ROLES.filter(r => r.id !== 'gestor').map(role => {
+                    const RoleIcon = role.icon
+                    const total = countPermsForRole(role.id)
+                    const projectPermCount = [...PERM_ID_MAP.map(p => p.id), ...PROJECT_PERMS.map(p => p.id)].length
+                    const pct = Math.round((total / projectPermCount) * 100)
+                    return (
+                      <div key={role.id} className="rounded-xl border-2 p-4 transition-all"
+                        style={{ borderColor: role.color + '40', backgroundColor: role.color + '08' }}>
+                        <div className="flex items-center gap-2 mb-2">
+                          <RoleIcon className="h-5 w-5" style={{ color: role.color }} />
+                          <span className="font-bold text-sm" style={{ color: role.color }}>{role.name}</span>
+                        </div>
+                        <div className="flex items-center gap-2 mb-2">
+                          <div className="flex-1 h-2.5 rounded-full bg-white/80 overflow-hidden">
+                            <div className="h-full rounded-full transition-all duration-500"
+                              style={{ width: `${pct}%`, backgroundColor: role.color }} />
+                          </div>
+                          <span className="text-xs font-bold" style={{ color: role.color }}>{pct}%</span>
+                        </div>
+                        <div className="text-[10px] text-muted-foreground">{total} permisos</div>
+                        {viewMode === 'edit' && isAdmin && (
+                          <div className="flex gap-1.5 mt-2">
+                            <Button variant="outline" size="sm" className="h-6 text-[10px] flex-1 border-green-300 text-green-600 hover:bg-green-50"
+                              onClick={() => toggleAllForRole(role.id, true)}>Todo ON</Button>
+                            <Button variant="outline" size="sm" className="h-6 text-[10px] flex-1 border-red-300 text-red-600 hover:bg-red-50"
+                              onClick={() => toggleAllForRole(role.id, false)}>Todo OFF</Button>
+                          </div>
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
+
+                {/* S-Step cards */}
+                <div className="space-y-4">
+                  <h2 className="text-lg font-bold text-gray-800 flex items-center gap-2">
+                    <Shield className="h-5 w-5 text-green-500" />
+                    Permisos por 5S
+                    <span className="text-sm font-normal text-muted-foreground">(pulsa en cada S para desplegar)</span>
+                  </h2>
+                  {S_STEPS_DEF.map(sDef => renderSStepCard(sDef))}
+                </div>
+
+                {/* General (project) permissions */}
+                <div className="mt-8">
+                  {renderGeneralPerms()}
+                </div>
+
+                {/* Totals footer — project roles only */}
+                <div className="rounded-xl bg-gray-50 border p-5">
+                  <h3 className="text-sm font-bold text-gray-600 mb-3">Resumen de Permisos de Proyecto</h3>
+                  <div className="grid grid-cols-5 gap-4">
+                    {ROLES.filter(r => r.id !== 'gestor').map(role => {
+                      const total = countPermsForRole(role.id)
+                      const projectPermCount = [...PERM_ID_MAP.map(p => p.id), ...PROJECT_PERMS.map(p => p.id)].length
+                      const pct = Math.round((total / projectPermCount) * 100)
+                      return (
+                        <div key={role.id} className="text-center">
+                          <div className="text-2xl font-black" style={{ color: role.color }}>{pct}%</div>
+                          <div className="text-xs text-muted-foreground">{total}/{projectPermCount}</div>
+                          <div className="text-xs font-bold mt-1" style={{ color: role.color }}>{role.name}</div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              </>
+            )}
           </div>
         )}
       </div>

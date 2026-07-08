@@ -1,0 +1,712 @@
+     1→     1→'use client'
+     2→     2→
+     3→     3→import { useState, useEffect, useCallback } from 'react'
+     4→     4→import { motion, AnimatePresence } from 'framer-motion'
+     5→     5→import { use5SStore } from '@/lib/store'
+     6→     6→import { Button } from '@/components/ui/button'
+     7→     7→import { Badge } from '@/components/ui/badge'
+     8→     8→import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
+     9→     9→import {
+    10→    10→  Switch,
+    11→    11→} from '@/components/ui/switch'
+    12→    12→import {
+    13→    13→  Tooltip,
+    14→    14→  TooltipContent,
+    15→    15→  TooltipProvider,
+    16→    16→  TooltipTrigger,
+    17→    17→} from '@/components/ui/tooltip'
+    18→    18→import {
+    19→    19→  Shield, Users, Settings, Eye, Pencil, Trash2, CheckCircle2, XCircle,
+    20→    20→  Lock, Unlock, Crown, UserCheck, HardHat, ClipboardCheck, BookOpen,
+    21→    21→  Camera, ListChecks, FileCheck, Building2, BarChart3, UserPlus,
+    22→    22→  UserMinus, KeyRound, RotateCcw, Save, Loader2, AlertTriangle,
+    23→    23→  ArrowLeft, X, GraduationCap, MapPin, Target, Bell,
+    24→    24→} from 'lucide-react'
+    25→    25→
+    26→    26→interface RolePermissionsProps {
+    27→    27→  open: boolean
+    28→    28→  onClose: () => void
+    29→    29→}
+    30→    30→
+    31→    31→// ═══════════════════════════════════════════════════════
+    32→    32→// S-STEP DEFINITIONS
+    33→    33→// ═══════════════════════════════════════════════════════
+    34→    34→const S_STEPS_DEF = [
+    35→    35→  { id: 1, name: 'Clasificar', japanese: 'Seiri', color: '#EF4444' },
+    36→    36→  { id: 2, name: 'Ordenar', japanese: 'Seiton', color: '#F97316' },
+    37→    37→  { id: 3, name: 'Limpiar', japanese: 'Seiso', color: '#EAB308' },
+    38→    38→  { id: 4, name: 'Estandarizar', japanese: 'Seiketsu', color: '#22C55E' },
+    39→    39→  { id: 5, name: 'Mantener', japanese: 'Shitsuke', color: '#3B82F6' },
+    40→    40→]
+    41→    41→
+    42→    42→// Mini-step definitions for each S
+    43→    43→const MINI_STEPS_DEF = [
+    44→    44→  { id: 1, name: 'Formación', icon: GraduationCap, actions: ['Ver formación', 'Completar formación'] },
+    45→    45→  { id: 2, name: 'Evidencias', icon: Camera, actions: ['Ver fotos', 'Subir fotos'] },
+    46→    46→  { id: 3, name: 'Inventario', icon: ListChecks, actions: ['Ver inventario', 'Editar inventario'] },
+    47→    47→  { id: 4, name: 'Autoevaluación', icon: Target, actions: ['Ver autoevaluación', 'Realizar autoevaluación'] },
+    48→    48→  { id: 5, name: 'Auditoría', icon: ClipboardCheck, actions: ['Ver auditoría', 'Realizar auditoría'] },
+    49→    49→]
+    50→    50→
+    51→    51→// Build all per-S permissions dynamically
+    52→    52→const PERM_ID_MAP: { id: string; name: string; desc: string; miniStep: number; actionIdx: number }[] = []
+    53→    53→S_STEPS_DEF.forEach(s => {
+    54→    54→  MINI_STEPS_DEF.forEach(ms => {
+    55→    55→    ms.actions.forEach((actionName, aIdx) => {
+    56→    56→      const id = `s${s.id}_step${ms.id}_a${aIdx}`
+    57→    57→      PERM_ID_MAP.push({
+    58→    58→        id,
+    59→    59→        name: actionName,
+    60→    60→        desc: `${actionName} - ${s.japanese} (${ms.name})`,
+    61→    61→        miniStep: ms.id,
+    62→    62→        actionIdx: aIdx,
+    63→    63→      })
+    64→    64→    })
+    65→    65→  })
+    66→    66→})
+    67→    67→
+    68→    68→// General (non-S) permissions
+    69→    69→const GENERAL_PERMS = [
+    70→    70→  { id: 'view_board', name: 'Ver tablero 5S', desc: 'Acceso al tablero principal', icon: Eye, locked: true },
+    71→    71→  { id: 'view_progress', name: 'Ver progreso general', desc: 'Consultar dashboard de progreso', icon: BarChart3 },
+    72→    72→  { id: 'view_project', name: 'Ver proyecto', desc: 'Consultar datos del proyecto', icon: Building2, locked: true },
+    73→    73→  { id: 'edit_project', name: 'Editar proyecto', desc: 'Modificar datos generales del proyecto', icon: Pencil },
+    74→    74→  { id: 'manage_zones', name: 'Gestionar zonas', desc: 'Crear, editar y eliminar zonas de trabajo', icon: MapPin },
+    75→    75→  { id: 'view_team', name: 'Ver equipo', desc: 'Consultar la lista de miembros y sus roles', icon: Users, locked: true },
+    76→    76→  { id: 'add_members', name: 'Añadir miembros', desc: 'Invitar nuevos miembros al proyecto', icon: UserPlus },
+    77→    77→  { id: 'remove_members', name: 'Eliminar miembros', desc: 'Eliminar miembros del equipo', icon: UserMinus },
+    78→    78→  { id: 'change_roles', name: 'Cambiar roles', desc: 'Modificar el rol asignado a los miembros', icon: KeyRound },
+    79→    79→  { id: 'manage_training', name: 'Gestionar formación', desc: 'Crear, editar y eliminar contenidos formativos', icon: BookOpen },
+    80→    80→  { id: 'delete_photos', name: 'Eliminar fotos', desc: 'Eliminar evidencias fotográficas de cualquier miembro', icon: Trash2 },
+    81→    81→  { id: 'delete_inventory', name: 'Eliminar inventario', desc: 'Eliminar elementos del inventario', icon: Trash2 },
+    82→    82→  { id: 'approve_audit', name: 'Aprobar auditorías', desc: 'Dar por válida o rechazar una auditoría', icon: FileCheck },
+    83→    83→  { id: 'delete_project', name: 'Eliminar proyecto', desc: 'Eliminar el proyecto completo', icon: Trash2 },
+    84→    84→  { id: 'reset_data', name: 'Reiniciar datos', desc: 'Reiniciar progreso y datos del proyecto', icon: Lock },
+    85→    85→  { id: 'manage_templates', name: 'Gestionar plantillas', desc: 'Crear, editar y eliminar plantillas', icon: Pencil },
+    86→    86→  { id: 'notify_audit', name: 'Solicitar auditoría', desc: 'Puede activar el aviso de auditoría en el paso 5', icon: Bell },
+    87→    87→  { id: 'accept_audit_meeting', name: 'Aceptar reunión auditoría', desc: 'Puede aceptar la reunión de auditoría para apagar el aviso', icon: CheckCircle2 },
+    88→    88→  { id: 'skip_steps', name: 'Saltar pasos', desc: 'Puede navegar libremente sin seguir el orden progresivo', icon: Unlock },
+    89→    89→]
+    90→    90→
+    91→    91→// All permission IDs
+    92→    92→const ALL_PERM_IDS = [...PERM_ID_MAP.map(p => p.id), ...GENERAL_PERMS.map(p => p.id)]
+    93→    93→
+    94→    94→// Locked permissions per role (always ON)
+    95→    95→const LOCKED_PERMISSIONS: Record<string, string[]> = {
+    96→    96→  gestor: ALL_PERM_IDS, // Gestor (dueño de la app) permissions are always locked (all ON)
+    97→    97→  admin: ['view_board', 'view_project', 'view_team'],
+    98→    98→}
+    99→    99→
+   100→   100→// Default permissions per role
+   101→   101→const DEFAULT_PERMISSIONS: Record<string, string[]> = {
+   102→   102→  gestor: ALL_PERM_IDS, // Gestor (dueño de la app) has everything
+   103→   103→  admin: ALL_PERM_IDS, // Admin (license holder) has everything
+   104→   104→  gerente: [
+   105→   105→    'view_board', 'view_progress', 'view_project', 'view_team',
+   106→   106→    'accept_audit_meeting',
+   107→   107→    // S-steps: can view all, but cannot execute most actions
+   108→   108→    ...PERM_ID_MAP.filter(p => p.actionIdx === 0).map(p => p.id), // All "view" actions
+   109→   109→    's2_step3_a1', 's3_step3_a1', // edit inventory for S2, S3
+   110→   110→  ],
+   111→   111→  responsable: [
+   112→   112→    'view_board', 'view_progress', 'view_project', 'view_team',
+   113→   113→    'edit_project', 'manage_zones', 'add_members', 'remove_members', 'change_roles',
+   114→   114→    'manage_training', 'delete_photos', 'delete_inventory', 'approve_audit',
+   115→   115→    'accept_audit_meeting',
+   116→   116→    // S-steps: can view and execute most
+   117→   117→    ...PERM_ID_MAP.filter(p => p.miniStep !== 5 || p.actionIdx === 0).map(p => p.id), // All except conduct audit
+   118→   118→  ],
+   119→   119→  empleado: [
+   120→   120→    'view_board', 'view_progress', 'view_project', 'view_team',
+   121→   121→    'notify_audit',
+   122→   122→    // S-steps: can view all, can execute steps 1-4 but NOT step 5
+   123→   123→    ...PERM_ID_MAP.filter(p => p.miniStep < 5).map(p => p.id),
+   124→   124→    // Can view audits but not conduct
+   125→   125→    ...PERM_ID_MAP.filter(p => p.miniStep === 5 && p.actionIdx === 0).map(p => p.id),
+   126→   126→  ],
+   127→   127→  auditor: [
+   128→   128→    'view_board', 'view_progress', 'view_project', 'view_team',
+   129→   129→    'accept_audit_meeting',
+   130→   130→    // S-steps: can view all, can conduct audits but not do steps 1-4
+   131→   131→    ...PERM_ID_MAP.filter(p => p.actionIdx === 0).map(p => p.id), // All "view" actions
+   132→   132→    ...PERM_ID_MAP.filter(p => p.miniStep === 5 && p.actionIdx === 1).map(p => p.id), // Conduct audits
+   133→   133→    'approve_audit',
+   134→   134→  ],
+   135→   135→}
+   136→   136→
+   137→   137→// Role definitions
+   138→   138→const ROLES = [
+   139→   139→  { id: 'gestor', name: 'Gestor (Dueño)', desc: 'Dueño de la app', color: '#DC2626', icon: Crown },
+   140→   140→  { id: 'admin', name: 'Admin de Empresa', desc: 'Administrador de empresa', color: '#8B5CF6', icon: Shield },
+   141→   141→  { id: 'gerente', name: 'Gerente', desc: 'Supervisión global', color: '#6366F1', icon: Building2 },
+   142→   142→  { id: 'responsable', name: 'Responsable', desc: 'Gestión de equipo y zonas', color: '#3B82F6', icon: UserCheck },
+   143→   143→  { id: 'empleado', name: 'Empleado', desc: 'Ejecuta pasos 5S', color: '#22C55E', icon: HardHat },
+   144→   144→  { id: 'auditor', name: 'Auditor', desc: 'Auditoría externa', color: '#F97316', icon: ClipboardCheck },
+   145→   145→]
+   146→   146→
+   147→   147→type PermMap = Record<string, Record<string, boolean>>
+   148→   148→
+   149→   149→// ═══════════════════════════════════════════════════════
+   150→   150→// NORMALIZE HELPER
+   151→   151→// ═══════════════════════════════════════════════════════
+   152→   152→const normalize = (obj: PermMap): string => {
+   153→   153→  const sorted: PermMap = {}
+   154→   154→  Object.keys(obj).sort().forEach(role => {
+   155→   155→    sorted[role] = {}
+   156→   156→    Object.keys(obj[role]).sort().forEach(perm => {
+   157→   157→      sorted[role][perm] = obj[role][perm]
+   158→   158→    })
+   159→   159→  })
+   160→   160→  return JSON.stringify(sorted)
+   161→   161→}
+   162→   162→
+   163→   163→export default function RolePermissions({ open, onClose }: RolePermissionsProps) {
+   164→   164→  const { currentUser } = use5SStore()
+   165→   165→  const [viewMode, setViewMode] = useState<'view' | 'edit'>('view')
+   166→   166→  const [selectedRole, setSelectedRole] = useState<string | null>(null)
+   167→   167→  const [expandedS, setExpandedS] = useState<number | null>(null)
+   168→   168→  const [permissions, setPermissions] = useState<PermMap>({})
+   169→   169→  const [editedPermissions, setEditedPermissions] = useState<PermMap>({})
+   170→   170→  const [isLoading, setIsLoading] = useState(false)
+   171→   171→  const [isSaving, setIsSaving] = useState(false)
+   172→   172→  const [hasChanges, setHasChanges] = useState(false)
+   173→   173→
+   174→   174→  const isGestor = currentUser?.role === 'gestor'
+   175→   175→  const isAdmin = currentUser?.role === 'admin' || isGestor
+   176→   176→
+   177→   177→  const fetchPermissions = useCallback(async () => {
+   178→   178→    setIsLoading(true)
+   179→   179→    try {
+   180→   180→      const res = await fetch('/api/permissions')
+   181→   181→      const data = await res.json()
+   182→   182→      if (data.permissions) {
+   183→   183→        setPermissions(data.permissions)
+   184→   184→        setEditedPermissions(data.permissions)
+   185→   185→      }
+   186→   186→    } catch (error) {
+   187→   187→      console.error('Fetch permissions error:', error)
+   188→   188→    } finally {
+   189→   189→      setIsLoading(false)
+   190→   190→    }
+   191→   191→  }, [])
+   192→   192→
+   193→   193→  useEffect(() => {
+   194→   194→    if (open) {
+   195→   195→      fetchPermissions()
+   196→   196→      setHasChanges(false)
+   197→   197→      setViewMode('view')
+   198→   198→      setSelectedRole(null)
+   199→   199→      setExpandedS(null)
+   200→   200→    }
+   201→   201→  }, [open, fetchPermissions])
+   202→   202→
+   203→   203→  const isLocked = (roleId: string, permId: string) => {
+   204→   204→    const locked = LOCKED_PERMISSIONS[roleId] || []
+   205→   205→    return locked.includes(permId)
+   206→   206→  }
+   207→   207→
+   208→   208→  const getPermValue = (roleId: string, permId: string): boolean => {
+   209→   209→    const source = viewMode === 'edit' ? editedPermissions : permissions
+   210→   210→    return source[roleId]?.[permId] ?? false
+   211→   211→  }
+   212→   212→
+   213→   213→  const togglePermission = (roleId: string, permId: string) => {
+   214→   214→    if (!isAdmin || viewMode !== 'edit') return
+   215→   215→    if (isLocked(roleId, permId)) return
+   216→   216→    const newPerms = JSON.parse(JSON.stringify(editedPermissions))
+   217→   217→    if (!newPerms[roleId]) newPerms[roleId] = {}
+   218→   218→    newPerms[roleId][permId] = !newPerms[roleId][permId]
+   219→   219→    setEditedPermissions(newPerms)
+   220→   220→    setHasChanges(normalize(newPerms) !== normalize(permissions))
+   221→   221→  }
+   222→   222→
+   223→   223→  const toggleAllInGroup = (roleId: string, permIds: string[], value: boolean) => {
+   224→   224→    if (!isAdmin || viewMode !== 'edit') return
+   225→   225→    const newPerms = JSON.parse(JSON.stringify(editedPermissions))
+   226→   226→    if (!newPerms[roleId]) newPerms[roleId] = {}
+   227→   227→    for (const pid of permIds) {
+   228→   228→      if (!isLocked(roleId, pid)) newPerms[roleId][pid] = value
+   229→   229→    }
+   230→   230→    setEditedPermissions(newPerms)
+   231→   231→    setHasChanges(normalize(newPerms) !== normalize(permissions))
+   232→   232→  }
+   233→   233→
+   234→   234→  const toggleAllForRole = (roleId: string, value: boolean) => {
+   235→   235→    if (!isAdmin || viewMode !== 'edit') return
+   236→   236→    const newPerms = JSON.parse(JSON.stringify(editedPermissions))
+   237→   237→    if (!newPerms[roleId]) newPerms[roleId] = {}
+   238→   238→    for (const pid of ALL_PERM_IDS) {
+   239→   239→      if (!isLocked(roleId, pid)) newPerms[roleId][pid] = value
+   240→   240→    }
+   241→   241→    setEditedPermissions(newPerms)
+   242→   242→    setHasChanges(normalize(newPerms) !== normalize(permissions))
+   243→   243→  }
+   244→   244→
+   245→   245→  const toggleAllForStep = (sId: number, value: boolean) => {
+   246→   246→    if (!isAdmin || viewMode !== 'edit') return
+   247→   247→    const stepPermIds = PERM_ID_MAP.filter(p => p.id.startsWith(`s${sId}_`)).map(p => p.id)
+   248→   248→    const newPerms = JSON.parse(JSON.stringify(editedPermissions))
+   249→   249→    for (const roleId of ROLES.map(r => r.id)) {
+   250→   250→      if (!newPerms[roleId]) newPerms[roleId] = {}
+   251→   251→      for (const pid of stepPermIds) {
+   252→   252→        if (!isLocked(roleId, pid)) newPerms[roleId][pid] = value
+   253→   253→      }
+   254→   254→    }
+   255→   255→    setEditedPermissions(newPerms)
+   256→   256→    setHasChanges(normalize(newPerms) !== normalize(permissions))
+   257→   257→  }
+   258→   258→
+   259→   259→  const handleSave = async () => {
+   260→   260→    setIsSaving(true)
+   261→   261→    try {
+   262→   262→      const res = await fetch('/api/permissions', {
+   263→   263→        method: 'PUT',
+   264→   264→        headers: { 'Content-Type': 'application/json' },
+   265→   265→        body: JSON.stringify({ permissions: editedPermissions }),
+   266→   266→      })
+   267→   267→      const data = await res.json()
+   268→   268→      if (data.permissions) {
+   269→   269→        setPermissions(data.permissions)
+   270→   270→        setEditedPermissions(data.permissions)
+   271→   271→        setHasChanges(false)
+   272→   272→      } else if (data.error) {
+   273→   273→        alert('Error al guardar: ' + data.error)
+   274→   274→      }
+   275→   275→    } catch (error) {
+   276→   276→      console.error('Save permissions error:', error)
+   277→   277→      alert('Error de conexión al guardar permisos.')
+   278→   278→    } finally {
+   279→   279→      setIsSaving(false)
+   280→   280→    }
+   281→   281→  }
+   282→   282→
+   283→   283→  const handleReset = async () => {
+   284→   284→    if (!confirm('¿Restaurar todos los permisos a los valores por defecto?')) return
+   285→   285→    setIsSaving(true)
+   286→   286→    try {
+   287→   287→      const res = await fetch('/api/permissions', { method: 'POST' })
+   288→   288→      const data = await res.json()
+   289→   289→      if (data.permissions) {
+   290→   290→        setPermissions(data.permissions)
+   291→   291→        setEditedPermissions(data.permissions)
+   292→   292→        setHasChanges(false)
+   293→   293→      }
+   294→   294→    } catch (error) {
+   295→   295→      console.error('Reset permissions error:', error)
+   296→   296→    } finally {
+   297→   297→      setIsSaving(false)
+   298→   298→    }
+   299→   299→  }
+   300→   300→
+   301→   301→  const countPermsForRole = (roleId: string): number => {
+   302→   302→    const source = viewMode === 'edit' ? editedPermissions : permissions
+   303→   303→    const rolePerms = source[roleId] || {}
+   304→   304→    return Object.values(rolePerms).filter(Boolean).length
+   305→   305→  }
+   306→   306→
+   307→   307→  const countPermsForRoleInS = (roleId: string, sId: number): number => {
+   308→   308→    const source = viewMode === 'edit' ? editedPermissions : permissions
+   309→   309→    const rolePerms = source[roleId] || {}
+   310→   310→    return PERM_ID_MAP.filter(p => p.id.startsWith(`s${sId}_`) && rolePerms[p.id]).length
+   311→   311→  }
+   312→   312→
+   313→   313→  if (!open) return null
+   314→   314→
+   315→   315→  // ═══════════════════════════════════════════════════════
+   316→   316→  // RENDER HELPERS
+   317→   317→  // ═══════════════════════════════════════════════════════
+   318→   318→
+   319→   319→  const renderSStepCard = (sDef: typeof S_STEPS_DEF[0]) => {
+   320→   320→    const sPerms = PERM_ID_MAP.filter(p => p.id.startsWith(`s${sDef.id}_`))
+   321→   321→    const isExpanded = expandedS === sDef.id
+   322→   322→
+   323→   323→    return (
+   324→   324→      <div key={sDef.id} className="rounded-2xl border-2 overflow-hidden shadow-sm"
+   325→   325→        style={{ borderColor: sDef.color + '40' }}>
+   326→   326→        {/* S-Step Header */}
+   327→   327→        <div
+   328→   328→          className="flex items-center justify-between px-5 py-4 cursor-pointer hover:opacity-90 transition-opacity"
+   329→   329→          style={{ backgroundColor: sDef.color + '10' }}
+   330→   330→          onClick={() => setExpandedS(isExpanded ? null : sDef.id)}
+   331→   331→        >
+   332→   332→          <div className="flex items-center gap-4">
+   333→   333→            <div className="w-12 h-12 rounded-xl flex items-center justify-center text-white font-black text-lg shadow-md"
+   334→   334→              style={{ backgroundColor: sDef.color }}>
+   335→   335→              S{sDef.id}
+   336→   336→            </div>
+   337→   337→            <div>
+   338→   338→              <h3 className="text-lg font-bold" style={{ color: sDef.color }}>{sDef.japanese}</h3>
+   339→   339→              <p className="text-sm text-muted-foreground">{sDef.name}</p>
+   340→   340→            </div>
+   341→   341→          </div>
+   342→   342→          <div className="flex items-center gap-3">
+   343→   343→            {/* Quick role summary */}
+   344→   344→            {ROLES.map(role => {
+   345→   345→              const count = countPermsForRoleInS(role.id, sDef.id)
+   346→   346→              const total = sPerms.length
+   347→   347→              return (
+   348→   348→                <div key={role.id} className="text-center" title={`${role.name}: ${count}/${total}`}>
+   349→   349→                  <div className="text-[10px] font-semibold" style={{ color: role.color }}>{role.name.slice(0, 3).toUpperCase()}</div>
+   350→   350→                  <div className="text-xs font-bold" style={{ color: role.color }}>{count}/{total}</div>
+   351→   351→                </div>
+   352→   352→              )
+   353→   353→            })}
+   354→   354→            <motion.div animate={{ rotate: isExpanded ? 180 : 0 }} transition={{ duration: 0.2 }}>
+   355→   355→              <svg width="20" height="20" viewBox="0 0 20 20" fill="none" style={{ color: sDef.color }}>
+   356→   356→                <path d="M6 8l4 4 4-4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+   357→   357→              </svg>
+   358→   358→            </motion.div>
+   359→   359→          </div>
+   360→   360→        </div>
+   361→   361→
+   362→   362→        {/* Expanded content */}
+   363→   363→        <AnimatePresence>
+   364→   364→          {isExpanded && (
+   365→   365→            <motion.div
+   366→   366→              initial={{ height: 0, opacity: 0 }}
+   367→   367→              animate={{ height: 'auto', opacity: 1 }}
+   368→   368→              exit={{ height: 0, opacity: 0 }}
+   369→   369→              transition={{ duration: 0.3 }}
+   370→   370→              className="overflow-hidden"
+   371→   371→            >
+   372→   372→              <div className="p-5 space-y-5">
+   373→   373→                {/* Edit mode: bulk actions per S */}
+   374→   374→                {viewMode === 'edit' && isAdmin && (
+   375→   375→                  <div className="flex gap-2 mb-2">
+   376→   376→                    <Button variant="outline" size="sm"
+   377→   377→                      className="text-xs border-green-300 text-green-600 hover:bg-green-50"
+   378→   378→                      onClick={() => toggleAllForStep(sDef.id, true)}>
+   379→   379→                      Activar todo S{sDef.id} para todos
+   380→   380→                    </Button>
+   381→   381→                    <Button variant="outline" size="sm"
+   382→   382→                      className="text-xs border-red-300 text-red-600 hover:bg-red-50"
+   383→   383→                      onClick={() => toggleAllForStep(sDef.id, false)}>
+   384→   384→                      Desactivar todo S{sDef.id}
+   385→   385→                    </Button>
+   386→   386→                  </div>
+   387→   387→                )}
+   388→   388→
+   389→   389→                {/* Mini-steps grid */}
+   390→   390→                {MINI_STEPS_DEF.map(msDef => {
+   391→   391→                  const msPerms = sPerms.filter(p => p.miniStep === msDef.id)
+   392→   392→                  if (msPerms.length === 0) return null
+   393→   393→                  const MsIcon = msDef.icon
+   394→   394→                  return (
+   395→   395→                    <div key={msDef.id} className="rounded-xl border bg-white/50 overflow-hidden">
+   396→   396→                      {/* Mini-step header */}
+   397→   397→                      <div className="flex items-center gap-3 px-4 py-3 border-b" style={{ backgroundColor: sDef.color + '08' }}>
+   398→   398→                        <MsIcon className="h-5 w-5" style={{ color: sDef.color }} />
+   399→   399→                        <span className="text-sm font-bold" style={{ color: sDef.color }}>
+   400→   400→                          Paso {msDef.id}: {msDef.name}
+   401→   401→                        </span>
+   402→   402→                      </div>
+   403→   403→
+   404→   404→                      {/* Permission matrix for this mini-step */}
+   405→   405→                      <div className="overflow-x-auto">
+   406→   406→                        <table className="w-full">
+   407→   407→                          <thead>
+   408→   408→                            <tr>
+   409→   409→                              <th className="text-left p-3 text-xs font-semibold text-muted-foreground min-w-[200px]">Acción</th>
+   410→   410→                              {ROLES.map(role => {
+   411→   411→                                const RoleIcon = role.icon
+   412→   412→                                return (
+   413→   413→                                  <th key={role.id} className="p-3 text-center min-w-[110px]">
+   414→   414→                                    <div className="flex flex-col items-center gap-1">
+   415→   415→                                      <RoleIcon className="h-4 w-4" style={{ color: role.color }} />
+   416→   416→                                      <span className="text-[10px] font-bold" style={{ color: role.color }}>{role.name}</span>
+   417→   417→                                    </div>
+   418→   418→                                  </th>
+   419→   419→                                )
+   420→   420→                              })}
+   421→   421→                            </tr>
+   422→   422→                          </thead>
+   423→   423→                          <tbody>
+   424→   424→                            {msPerms.map(perm => (
+   425→   425→                              <tr key={perm.id} className="hover:bg-gray-50/50 transition-colors">
+   426→   426→                                <td className="p-3 border-t text-sm font-medium">{perm.name}</td>
+   427→   427→                                {ROLES.map(role => {
+   428→   428→                                  const allowed = getPermValue(role.id, perm.id)
+   429→   429→                                  const locked = isLocked(role.id, perm.id)
+   430→   430→                                  return (
+   431→   431→                                    <td key={role.id} className="p-3 border-t text-center">
+   432→   432→                                      {viewMode === 'edit' && isAdmin ? (
+   433→   433→                                        <TooltipProvider>
+   434→   434→                                          <Tooltip>
+   435→   435→                                            <TooltipTrigger asChild>
+   436→   436→                                              <div className="flex justify-center">
+   437→   437→                                                <Switch
+   438→   438→                                                  checked={allowed}
+   439→   439→                                                  disabled={locked}
+   440→   440→                                                  onCheckedChange={() => togglePermission(role.id, perm.id)}
+   441→   441→                                                  className={locked ? 'opacity-50' : ''}
+   442→   442→                                                />
+   443→   443→                                              </div>
+   444→   444→                                            </TooltipTrigger>
+   445→   445→                                            <TooltipContent className="text-xs">
+   446→   446→                                              {locked ? 'Bloqueado' : allowed ? 'Clic para desactivar' : 'Clic para activar'}
+   447→   447→                                            </TooltipContent>
+   448→   448→                                          </Tooltip>
+   449→   449→                                        </TooltipProvider>
+   450→   450→                                      ) : allowed ? (
+   451→   451→                                        <CheckCircle2 className="h-5 w-5 text-green-500 mx-auto" />
+   452→   452→                                      ) : (
+   453→   453→                                        <XCircle className="h-5 w-5 text-red-300 mx-auto" />
+   454→   454→                                      )}
+   455→   455→                                    </td>
+   456→   456→                                  )
+   457→   457→                                })}
+   458→   458→                              </tr>
+   459→   459→                            ))}
+   460→   460→                          </tbody>
+   461→   461→                        </table>
+   462→   462→                      </div>
+   463→   463→                    </div>
+   464→   464→                  )
+   465→   465→                })}
+   466→   466→              </div>
+   467→   467→            </motion.div>
+   468→   468→          )}
+   469→   469→        </AnimatePresence>
+   470→   470→      </div>
+   471→   471→    )
+   472→   472→  }
+   473→   473→
+   474→   474→  const renderGeneralPerms = () => {
+   475→   475→    return (
+   476→   476→      <div className="rounded-2xl border-2 border-gray-200 overflow-hidden shadow-sm">
+   477→   477→        <div className="flex items-center gap-4 px-5 py-4 bg-gray-50 border-b">
+   478→   478→          <div className="w-12 h-12 rounded-xl bg-gray-600 flex items-center justify-center shadow-md">
+   479→   479→            <Settings className="h-6 w-6 text-white" />
+   480→   480→          </div>
+   481→   481→          <div>
+   482→   482→            <h3 className="text-lg font-bold text-gray-700">Gestión General</h3>
+   483→   483→            <p className="text-sm text-muted-foreground">Permisos de administración, proyecto y equipo</p>
+   484→   484→          </div>
+   485→   485→        </div>
+   486→   486→        <div className="p-5">
+   487→   487→          <div className="overflow-x-auto">
+   488→   488→            <table className="w-full">
+   489→   489→              <thead>
+   490→   490→                <tr>
+   491→   491→                  <th className="text-left p-3 text-xs font-semibold text-muted-foreground min-w-[220px]">Permiso</th>
+   492→   492→                  {ROLES.map(role => {
+   493→   493→                    const RoleIcon = role.icon
+   494→   494→                    return (
+   495→   495→                      <th key={role.id} className="p-3 text-center min-w-[120px]">
+   496→   496→                        <div className="flex flex-col items-center gap-1">
+   497→   497→                          <RoleIcon className="h-5 w-5" style={{ color: role.color }} />
+   498→   498→                          <span className="text-xs font-bold" style={{ color: role.color }}>{role.name}</span>
+   499→   499→                        </div>
+   500→   500→                      </th>
+   501→   501→                    )
+   502→   502→                  })}
+   503→   503→                </tr>
+   504→   504→              </thead>
+   505→   505→              <tbody>
+   506→   506→                {GENERAL_PERMS.map(perm => {
+   507→   507→                  const PermIcon = perm.icon
+   508→   508→                  return (
+   509→   509→                    <tr key={perm.id} className="hover:bg-gray-50/50 transition-colors">
+   510→   510→                      <td className="p-3 border-t">
+   511→   511→                        <div className="flex items-center gap-3">
+   512→   512→                          <PermIcon className="h-5 w-5 text-muted-foreground shrink-0" />
+   513→   513→                          <div>
+   514→   514→                            <p className="text-sm font-medium">{perm.name}</p>
+   515→   515→                            <p className="text-xs text-muted-foreground">{perm.desc}</p>
+   516→   516→                          </div>
+   517→   517→                        </div>
+   518→   518→                      </td>
+   519→   519→                      {ROLES.map(role => {
+   520→   520→                        const allowed = getPermValue(role.id, perm.id)
+   521→   521→                        const locked = isLocked(role.id, perm.id)
+   522→   522→                        return (
+   523→   523→                          <td key={role.id} className="p-3 border-t text-center">
+   524→   524→                            {viewMode === 'edit' && isAdmin ? (
+   525→   525→                              <TooltipProvider>
+   526→   526→                                <Tooltip>
+   527→   527→                                  <TooltipTrigger asChild>
+   528→   528→                                    <div className="flex justify-center">
+   529→   529→                                      <Switch
+   530→   530→                                        checked={allowed}
+   531→   531→                                        disabled={locked}
+   532→   532→                                        onCheckedChange={() => togglePermission(role.id, perm.id)}
+   533→   533→                                        className={locked ? 'opacity-50' : ''}
+   534→   534→                                      />
+   535→   535→                                    </div>
+   536→   536→                                  </TooltipTrigger>
+   537→   537→                                  <TooltipContent className="text-xs">
+   538→   538→                                    {locked ? 'Bloqueado' : allowed ? 'Clic para desactivar' : 'Clic para activar'}
+   539→   539→                                  </TooltipContent>
+   540→   540→                                </Tooltip>
+   541→   541→                              </TooltipProvider>
+   542→   542→                            ) : allowed ? (
+   543→   543→                              <CheckCircle2 className="h-5 w-5 text-green-500 mx-auto" />
+   544→   544→                            ) : (
+   545→   545→                              <XCircle className="h-5 w-5 text-red-300 mx-auto" />
+   546→   546→                            )}
+   547→   547→                          </td>
+   548→   548→                        )
+   549→   549→                      })}
+   550→   550→                    </tr>
+   551→   551→                  )
+   552→   552→                })}
+   553→   553→              </tbody>
+   554→   554→            </table>
+   555→   555→          </div>
+   556→   556→        </div>
+   557→   557→      </div>
+   558→   558→    )
+   559→   559→  }
+   560→   560→
+   561→   561→  // ═══════════════════════════════════════════════════════
+   562→   562→  // MAIN RENDER
+   563→   563→  // ═══════════════════════════════════════════════════════
+   564→   564→  return (
+   565→   565→    <div className="fixed inset-0 z-50 bg-gradient-to-br from-gray-50 via-white to-green-50/30 overflow-auto">
+   566→   566→      {/* Header */}
+   567→   567→      <div className="sticky top-0 z-10 bg-white/95 backdrop-blur-sm border-b shadow-sm">
+   568→   568→        <div className="px-6 py-4 flex items-center justify-between">
+   569→   569→          <div className="flex items-center gap-4">
+   570→   570→            <Button variant="ghost" size="sm" onClick={onClose} className="gap-2 text-muted-foreground hover:text-foreground">
+   571→   571→              <ArrowLeft className="h-5 w-5" /> Volver
+   572→   572→            </Button>
+   573→   573→            <div className="flex items-center gap-3">
+   574→   574→              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center shadow-md">
+   575→   575→                <Shield className="h-5 w-5 text-white" />
+   576→   576→              </div>
+   577→   577→              <div>
+   578→   578→                <h1 className="text-xl font-bold text-gray-900">Matriz de Permisos por 5S</h1>
+   579→   579→                <p className="text-sm text-muted-foreground">
+   580→   580→                  {isAdmin ? 'Permisos individuales por cada S y paso. Activa o desactiva según rol.' : 'Consulta los permisos asignados a cada rol.'}
+   581→   581→                </p>
+   582→   582→              </div>
+   583→   583→            </div>
+   584→   584→          </div>
+   585→   585→          <div className="flex items-center gap-3">
+   586→   586→            <div className="flex gap-2">
+   587→   587→              <Button variant={viewMode === 'view' ? 'default' : 'outline'} size="sm"
+   588→   588→                onClick={() => { setViewMode('view'); setEditedPermissions(permissions) }}
+   589→   589→                className={viewMode === 'view' ? 'bg-gradient-to-r from-green-500 to-emerald-600 text-white' : ''}>
+   590→   590→                <Eye className="h-4 w-4 mr-1.5" /> Consultar
+   591→   591→              </Button>
+   592→   592→              {isAdmin && (
+   593→   593→                <Button variant={viewMode === 'edit' ? 'default' : 'outline'} size="sm"
+   594→   594→                  onClick={() => { setViewMode('edit'); setEditedPermissions(permissions) }}
+   595→   595→                  className={viewMode === 'edit' ? 'bg-gradient-to-r from-green-500 to-emerald-600 text-white' : ''}>
+   596→   596→                  <Pencil className="h-4 w-4 mr-1.5" /> Editar
+   597→   597→                </Button>
+   598→   598→              )}
+   599→   599→            </div>
+   600→   600→            {isAdmin && viewMode === 'edit' && (
+   601→   601→              <div className="flex gap-2 border-l pl-3">
+   602→   602→                <Button variant="outline" size="sm" onClick={handleReset} disabled={isSaving}
+   603→   603→                  className="text-orange-600 hover:text-orange-700 hover:bg-orange-50">
+   604→   604→                  <RotateCcw className="h-4 w-4 mr-1.5" /> Defaults
+   605→   605→                </Button>
+   606→   606→                <Button size="sm" onClick={handleSave} disabled={!hasChanges || isSaving}
+   607→   607→                  className="bg-gradient-to-r from-green-500 to-emerald-600 text-white">
+   608→   608→                  {isSaving ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <Save className="h-4 w-4 mr-1.5" />}
+   609→   609→                  Guardar
+   610→   610→                </Button>
+   611→   611→              </div>
+   612→   612→            )}
+   613→   613→            <Button variant="ghost" size="sm" onClick={onClose} className="h-9 w-9 p-0 text-muted-foreground">
+   614→   614→              <X className="h-5 w-5" />
+   615→   615→            </Button>
+   616→   616→          </div>
+   617→   617→        </div>
+   618→   618→
+   619→   619→        {hasChanges && viewMode === 'edit' && (
+   620→   620→          <div className="px-6 pb-3">
+   621→   621→            <div className="px-4 py-2.5 bg-yellow-50 border border-yellow-200 rounded-lg flex items-center gap-2 text-sm text-yellow-700">
+   622→   622→              <AlertTriangle className="h-4 w-4 shrink-0" />
+   623→   623→              Hay cambios sin guardar. Pulsa &quot;Guardar&quot; para aplicar.
+   624→   624→            </div>
+   625→   625→          </div>
+   626→   626→        )}
+   627→   627→      </div>
+   628→   628→
+   629→   629→      {/* Content */}
+   630→   630→      <div className="px-6 py-6 max-w-[1400px] mx-auto">
+   631→   631→        {isLoading ? (
+   632→   632→          <div className="flex flex-col items-center justify-center py-32 gap-4">
+   633→   633→            <Loader2 className="h-10 w-10 text-green-500 animate-spin" />
+   634→   634→            <p className="text-base text-muted-foreground">Cargando permisos...</p>
+   635→   635→          </div>
+   636→   636→        ) : (
+   637→   637→          <div className="space-y-6">
+   638→   638→            {/* Role summary bar */}
+   639→   639→            <div className="grid grid-cols-6 gap-3">
+   640→   640→              {ROLES.map(role => {
+   641→   641→                const RoleIcon = role.icon
+   642→   642→                const total = countPermsForRole(role.id)
+   643→   643→                const max = ALL_PERM_IDS.length
+   644→   644→                const pct = Math.round((total / max) * 100)
+   645→   645→                return (
+   646→   646→                  <div key={role.id} className="rounded-xl border-2 p-4 transition-all"
+   647→   647→                    style={{ borderColor: role.color + '40', backgroundColor: role.color + '08' }}>
+   648→   648→                    <div className="flex items-center gap-2 mb-2">
+   649→   649→                      <RoleIcon className="h-5 w-5" style={{ color: role.color }} />
+   650→   650→                      <span className="font-bold text-sm" style={{ color: role.color }}>{role.name}</span>
+   651→   651→                    </div>
+   652→   652→                    <div className="flex items-center gap-2 mb-2">
+   653→   653→                      <div className="flex-1 h-2.5 rounded-full bg-white/80 overflow-hidden">
+   654→   654→                        <div className="h-full rounded-full transition-all duration-500"
+   655→   655→                          style={{ width: `${pct}%`, backgroundColor: role.color }} />
+   656→   656→                      </div>
+   657→   657→                      <span className="text-xs font-bold" style={{ color: role.color }}>{pct}%</span>
+   658→   658→                    </div>
+   659→   659→                    <div className="text-[10px] text-muted-foreground">{total} de {max} permisos</div>
+   660→   660→                    {viewMode === 'edit' && isAdmin && (
+   661→   661→                      <div className="flex gap-1.5 mt-2">
+   662→   662→                        <Button variant="outline" size="sm" className="h-6 text-[10px] flex-1 border-green-300 text-green-600 hover:bg-green-50"
+   663→   663→                          onClick={() => toggleAllForRole(role.id, true)}>Todo ON</Button>
+   664→   664→                        <Button variant="outline" size="sm" className="h-6 text-[10px] flex-1 border-red-300 text-red-600 hover:bg-red-50"
+   665→   665→                          onClick={() => toggleAllForRole(role.id, false)}>Todo OFF</Button>
+   666→   666→                      </div>
+   667→   667→                    )}
+   668→   668→                  </div>
+   669→   669→                )
+   670→   670→              })}
+   671→   671→            </div>
+   672→   672→
+   673→   673→            {/* S-Step cards */}
+   674→   674→            <div className="space-y-4">
+   675→   675→              <h2 className="text-lg font-bold text-gray-800 flex items-center gap-2">
+   676→   676→                <Shield className="h-5 w-5 text-green-500" />
+   677→   677→                Permisos por 5S
+   678→   678→                <span className="text-sm font-normal text-muted-foreground">(pulsa en cada S para desplegar)</span>
+   679→   679→              </h2>
+   680→   680→              {S_STEPS_DEF.map(sDef => renderSStepCard(sDef))}
+   681→   681→            </div>
+   682→   682→
+   683→   683→            {/* General permissions */}
+   684→   684→            <div className="mt-8">
+   685→   685→              {renderGeneralPerms()}
+   686→   686→            </div>
+   687→   687→
+   688→   688→            {/* Totals footer */}
+   689→   689→            <div className="rounded-xl bg-gray-50 border p-5">
+   690→   690→              <h3 className="text-sm font-bold text-gray-600 mb-3">Resumen Total de Permisos</h3>
+   691→   691→              <div className="grid grid-cols-6 gap-4">
+   692→   692→                {ROLES.map(role => {
+   693→   693→                  const total = countPermsForRole(role.id)
+   694→   694→                  const max = ALL_PERM_IDS.length
+   695→   695→                  const pct = Math.round((total / max) * 100)
+   696→   696→                  return (
+   697→   697→                    <div key={role.id} className="text-center">
+   698→   698→                      <div className="text-2xl font-black" style={{ color: role.color }}>{pct}%</div>
+   699→   699→                      <div className="text-xs text-muted-foreground">{total}/{max}</div>
+   700→   700→                      <div className="text-xs font-bold mt-1" style={{ color: role.color }}>{role.name}</div>
+   701→   701→                    </div>
+   702→   702→                  )
+   703→   703→                })}
+   704→   704→              </div>
+   705→   705→            </div>
+   706→   706→          </div>
+   707→   707→        )}
+   708→   708→      </div>
+   709→   709→    </div>
+   710→   710→  )
+   711→   711→}
+   712→   712→
