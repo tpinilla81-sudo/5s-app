@@ -795,7 +795,7 @@ export default function AdminPanel({ embedded }: AdminPanelProps = {}) {
               <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-purple-600 flex items-center justify-center text-white font-bold text-sm">
                 A
               </div>
-              <h1 className="text-lg font-bold text-gray-900">Panel de Administración</h1>
+              <h1 className="text-lg font-bold text-gray-900">Panel de Admin de Empresa</h1>
             </div>
           </div>
         </header>
@@ -2122,7 +2122,7 @@ export default function AdminPanel({ embedded }: AdminPanelProps = {}) {
       <footer className="border-t bg-white mt-auto">
         <div className="max-w-5xl mx-auto px-4 py-3 text-center">
           <p className="text-xs text-muted-foreground">
-            Panel de Administración — Metodología 5S
+            Panel de Admin de Empresa — Metodología 5S
           </p>
         </div>
       </footer>

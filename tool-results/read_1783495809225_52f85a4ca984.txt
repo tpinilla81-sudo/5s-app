@@ -1,0 +1,2002 @@
+     1→'use client'
+     2→
+     3→import { useState, useEffect, useCallback } from 'react'
+     4→import { motion, AnimatePresence } from 'framer-motion'
+     5→import { use5SStore } from '@/lib/store'
+     6→import { Button } from '@/components/ui/button'
+     7→import { Input } from '@/components/ui/input'
+     8→import { Label } from '@/components/ui/label'
+     9→import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+    10→import {
+    11→  Select,
+    12→  SelectContent,
+    13→  SelectItem,
+    14→  SelectTrigger,
+    15→  SelectValue,
+    16→} from '@/components/ui/select'
+    17→import { Badge } from '@/components/ui/badge'
+    18→import {
+    19→  Table,
+    20→  TableBody,
+    21→  TableCell,
+    22→  TableHead,
+    23→  TableHeader,
+    24→  TableRow,
+    25→} from '@/components/ui/table'
+    26→import {
+    27→  Dialog,
+    28→  DialogContent,
+    29→  DialogHeader,
+    30→  DialogTitle,
+    31→} from '@/components/ui/dialog'
+    32→import {
+    33→  ArrowLeft,
+    34→  Plus,
+    35→  Trash2,
+    36→  Edit3,
+    37→  Check,
+    38→  X,
+    39→  Building2,
+    40→  Users,
+    41→  Key,
+    42→  Mail,
+    43→  Lock,
+    44→  User,
+    45→  Shield,
+    46→  MapPin,
+    47→  UserPlus,
+    48→  Loader2,
+    49→  AlertTriangle,
+    50→  Eye,
+    51→  EyeOff,
+    52→  CheckSquare,
+    53→  ShieldCheck,
+    54→  Save,
+    55→  BookOpen,
+    56→  LayoutGrid,
+    57→  Sparkles,
+    58→} from 'lucide-react'
+    59→import { Checkbox } from '@/components/ui/checkbox'
+    60→import { S_STEPS } from '@/lib/5s-constants'
+    61→import TemplateManager from './TemplateManager'
+    62→import Tablero5S from './Tablero5S'
+    63→import MejoraContinuaAdmin from './MejoraContinuaAdmin'
+    64→
+    65→
+    66→// ─── Types ───────────────────────────────────────────────────────────────────
+    67→
+    68→interface UserData {
+    69→  id: string
+    70→  email: string
+    71→  name: string
+    72→  role: string
+    73→  active: boolean
+    74→  createdAt: string
+    75→  projects: Array<{
+    76→    projectId: string
+    77→    projectName: string
+    78→    projectCompany: string
+    79→    role: string
+    80→    zones: Array<{ id: string; name: string; color: string }>
+    81→  }>
+    82→}
+    83→
+    84→interface ProjectData {
+    85→  id: string
+    86→  name: string
+    87→  description: string | null
+    88→  company: string
+    89→  startDate: string
+    90→  active: boolean
+    91→  zones: Array<{ id: string; name: string; description: string | null; color: string }>
+    92→  memberCount: number
+    93→}
+    94→
+    95→interface ZoneData {
+    96→  id: string
+    97→  name: string
+    98→  description: string | null
+    99→  color: string
+   100→  boardConfigId: string | null
+   101→  boardConfig?: { id: string; name: string } | null
+   102→}
+   103→
+   104→interface MemberData {
+   105→  id: string
+   106→  role: string
+   107→  user: { id: string; email: string; name: string; role: string; active: boolean }
+   108→  zones: Array<{ id: string; name: string; color: string }>
+   109→}
+   110→
+   111→// ─── Helpers ─────────────────────────────────────────────────────────────────
+   112→
+   113→const ROLE_LABELS: Record<string, string> = {
+   114→  admin: 'Administrador',
+   115→  gerente: 'Gerente',
+   116→  responsable: 'Responsable',
+   117→  empleado: 'Empleado',
+   118→  auditor: 'Auditor',
+   119→}
+   120→
+   121→const ROLE_COLORS: Record<string, string> = {
+   122→  admin: 'bg-purple-100 text-purple-700 border-purple-200',
+   123→  gerente: 'bg-indigo-100 text-indigo-700 border-indigo-200',
+   124→  responsable: 'bg-blue-100 text-blue-700 border-blue-200',
+   125→  empleado: 'bg-green-100 text-green-700 border-green-200',
+   126→  auditor: 'bg-orange-100 text-orange-700 border-orange-200',
+   127→}
+   128→
+   129→const PRESET_COLORS = ['#8B5CF6', '#EAB308', '#3B82F6', '#F43F5E', '#F97316', '#22C55E', '#06B6D4', '#EC4899']
+   130→
+   131→// ─── Component ───────────────────────────────────────────────────────────────
+   132→
+   133→interface AdminPanelProps {
+   134→  embedded?: boolean;
+   135→}
+   136→
+   137→export default function AdminPanel({ embedded }: AdminPanelProps = {}) {
+   138→  const { setCurrentView, fetchProjects, fetchCompanies, projects, setCurrentProject, currentProject } = use5SStore()
+   139→  const [activeTab, setActiveTab] = useState<'companies' | 'users' | 'projects' | 'plantillas' | 'tablero5s' | 'mejora'>('companies')
+   140→
+   141→  // ─── Projects state ──────────────────────────────────────────────────────
+   142→  const [allProjects, setAllProjects] = useState<ProjectData[]>([])
+   143→  const [isLoadingProjects, setIsLoadingProjects] = useState(false)
+   144→  const [editingProject, setEditingProject] = useState<string | null>(null)
+   145→  const [editProjectData, setEditProjectData] = useState({ name: '', description: '', company: '' })
+   146→
+   147→  // New project form
+   148→  const [showNewProject, setShowNewProject] = useState(false)
+   149→  const [newProjectName, setNewProjectName] = useState('')
+   150→  const [newProjectCompany, setNewProjectCompany] = useState('')
+   151→  const [isNewCompanyCustom, setIsNewCompanyCustom] = useState(false)
+   152→  const [newProjectDesc, setNewProjectDesc] = useState('')
+   153→  const [newProjectZones, setNewProjectZones] = useState<Array<{ name: string; color: string }>>([
+   154→    { name: '', color: PRESET_COLORS[0] },
+   155→  ])
+   156→
+   157→  // Project detail (zones + members)
+   158→  const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null)
+   159→  const [projectZones, setProjectZones] = useState<ZoneData[]>([])
+   160→  const [projectMembers, setProjectMembers] = useState<MemberData[]>([])
+   161→  const [isLoadingDetail, setIsLoadingDetail] = useState(false)
+   162→  const [newZoneName, setNewZoneName] = useState('')
+   163→  const [newZoneColor, setNewZoneColor] = useState(PRESET_COLORS[0])
+   164→  const [boardConfigs, setBoardConfigs] = useState<Array<{ id: string; name: string; isDefault: boolean }>>([])
+   165→  const [newMemberName, setNewMemberName] = useState('')
+   166→  const [newMemberEmail, setNewMemberEmail] = useState('')
+   167→  const [newMemberRole, setNewMemberRole] = useState('empleado')
+   168→  const [newMemberZones, setNewMemberZones] = useState<string[]>([])
+   169→  const [newMemberPassword, setNewMemberPassword] = useState('')
+   170→  const [addMemberMode, setAddMemberMode] = useState<'existing' | 'new'>('existing')
+   171→  const [selectedExistingUserId, setSelectedExistingUserId] = useState('')
+   172→
+   173→  // ─── Users state ─────────────────────────────────────────────────────────
+   174→  const [users, setUsers] = useState<UserData[]>([])
+   175→  const [isLoadingUsers, setIsLoadingUsers] = useState(false)
+   176→  const [editingUser, setEditingUser] = useState<string | null>(null)
+   177→  const [editUserData, setEditUserData] = useState({ name: '', email: '', role: '', active: true })
+   178→  const [resetPasswordUserId, setResetPasswordUserId] = useState<string | null>(null)
+   179→  const [newPassword, setNewPassword] = useState('')
+   180→  const [showPassword, setShowPassword] = useState(false)
+   181→
+   182→  // New user form
+   183→  const [showNewUser, setShowNewUser] = useState(false)
+   184→  const [newUserName, setNewUserName] = useState('')
+   185→  const [newUserEmail, setNewUserEmail] = useState('')
+   186→  const [newUserPassword, setNewUserPassword] = useState('')
+   187→  const [newUserRole, setNewUserRole] = useState('empleado')
+   188→
+   189→  // ─── Companies state ────────────────────────────────────────────────────
+   190→  const [companies, setCompanies] = useState<Array<{ id: string; name: string; description: string | null; active: boolean; projectCount: number; memberCount: number }>>([])
+   191→  const [isLoadingCompanies, setIsLoadingCompanies] = useState(false)
+   192→  const [showNewCompany, setShowNewCompany] = useState(false)
+   193→  const [newCompanyName, setNewCompanyName] = useState('')
+   194→  const [newCompanyDesc, setNewCompanyDesc] = useState('')
+   195→  const [editingCompany, setEditingCompany] = useState<string | null>(null)
+   196→  const [editCompanyData, setEditCompanyData] = useState({ name: '', description: '' })
+   197→  const [expandedCompanyId, setExpandedCompanyId] = useState<string | null>(null)
+   198→  const [companyMembers, setCompanyMembers] = useState<Array<{ id: string; userId: string; companyId: string; role: string; user: { id: string; name: string; email: string; role: string; active: boolean } }>>([])
+   199→  const [addGerenteUserId, setAddGerenteUserId] = useState('')
+   200→  const [isLoadingCompanyDetail, setIsLoadingCompanyDetail] = useState(false)
+   201→
+   202→  // ─── 5S Steps state ────────────────────────────────────────────────────
+   203→  const [progress5S, setProgress5S] = useState<Array<{ id: string; sStep: number; miniStep: number; completed: boolean; score: number | null; notes: string | null; zoneId: string | null; zoneName?: string }>>([])
+   204→  const [isLoading5S, setIsLoading5S] = useState(false)
+   205→  const [editingScore, setEditingScore] = useState<string | null>(null) // progress record id
+   206→  const [editScoreValue, setEditScoreValue] = useState('')
+   207→  const [editNotesValue, setEditNotesValue] = useState('')
+   208→  const [selected5SProjectId, setSelected5SProjectId] = useState<string | null>(null)
+   209→  const [selected5SZoneId, setSelected5SZoneId] = useState<string | null>(null)
+   210→
+   211→  // ─── Data loading ────────────────────────────────────────────────────────
+   212→  const loadProjects = useCallback(async () => {
+   213→    setIsLoadingProjects(true)
+   214→    try {
+   215→      const res = await fetch('/api/projects')
+   216→      const data = await res.json()
+   217→      setAllProjects(data.projects || [])
+   218→    } catch (error) {
+   219→      console.error('Error loading projects:', error)
+   220→    } finally {
+   221→      setIsLoadingProjects(false)
+   222→    }
+   223→  }, [])
+   224→
+   225→  const loadUsers = useCallback(async () => {
+   226→    setIsLoadingUsers(true)
+   227→    try {
+   228→      const res = await fetch('/api/users')
+   229→      const data = await res.json()
+   230→      setUsers(data.users || [])
+   231→    } catch (error) {
+   232→      console.error('Error loading users:', error)
+   233→    } finally {
+   234→      setIsLoadingUsers(false)
+   235→    }
+   236→  }, [])
+   237→
+   238→  const loadCompanies = useCallback(async () => {
+   239→    setIsLoadingCompanies(true)
+   240→    try {
+   241→      const res = await fetch('/api/companies')
+   242→      const data = await res.json()
+   243→      if (data.success) {
+   244→        setCompanies(data.companies || [])
+   245→      }
+   246→    } catch (error) {
+   247→      console.error('Error loading companies:', error)
+   248→    } finally {
+   249→      setIsLoadingCompanies(false)
+   250→    }
+   251→  }, [])
+   252→
+   253→  const loadCompanyDetail = useCallback(async (companyId: string) => {
+   254→    setIsLoadingCompanyDetail(true)
+   255→    try {
+   256→      const res = await fetch(`/api/companies/${companyId}`)
+   257→      const data = await res.json()
+   258→      if (data.success) {
+   259→        setCompanyMembers(data.company?.members || [])
+   260→      }
+   261→    } catch (error) {
+   262→      console.error('Error loading company detail:', error)
+   263→    } finally {
+   264→      setIsLoadingCompanyDetail(false)
+   265→    }
+   266→  }, [])
+   267→
+   268→  const loadProjectDetail = useCallback(async (projectId: string) => {
+   269→    setIsLoadingDetail(true)
+   270→    try {
+   271→      const [zonesRes, membersRes, configsRes] = await Promise.all([
+   272→        fetch(`/api/projects/${projectId}/zones`),
+   273→        fetch(`/api/projects/${projectId}/members`),
+   274→        fetch('/api/board-configs'),
+   275→      ])
+   276→      const zonesData = await zonesRes.json()
+   277→      const membersData = await membersRes.json()
+   278→      const configsData = await configsRes.json()
+   279→      setProjectZones(zonesData.zones || [])
+   280→      setProjectMembers(membersData.members || [])
+   281→      if (configsData.success) {
+   282→        setBoardConfigs((configsData.data || []).map((c: any) => ({ id: c.id, name: c.name, isDefault: c.isDefault })))
+   283→      }
+   284→    } catch (error) {
+   285→      console.error('Error loading project detail:', error)
+   286→    } finally {
+   287→      setIsLoadingDetail(false)
+   288→    }
+   289→  }, [])
+   290→
+   291→  const load5SProgress = useCallback(async () => {
+   292→    setIsLoading5S(true)
+   293→    try {
+   294→      const params = new URLSearchParams()
+   295→      if (selected5SProjectId) params.set('projectId', selected5SProjectId)
+   296→      const res = await fetch(`/api/progress?${params.toString()}`)
+   297→      const data = await res.json()
+   298→      const progressData = data?.data ? data.data : (Array.isArray(data) ? data : [])
+   299→      // Enrich with zone names
+   300→      if (selected5SProjectId) {
+   301→        const zonesRes = await fetch(`/api/projects/${selected5SProjectId}/zones`)
+   302→        const zonesData = await zonesRes.json()
+   303→        const zones = zonesData.zones || []
+   304→        const enriched = progressData.map((p: any) => ({
+   305→          ...p,
+   306→          zoneName: zones.find((z: any) => z.id === p.zoneId)?.name || (p.zoneId ? 'Zona sin nombre' : 'Sin zona'),
+   307→        }))
+   308→        setProgress5S(enriched)
+   309→      } else {
+   310→        setProgress5S(progressData)
+   311→      }
+   312→    } catch (error) {
+   313→      console.error('Error loading 5S progress:', error)
+   314→    } finally {
+   315→      setIsLoading5S(false)
+   316→    }
+   317→  }, [selected5SProjectId])
+   318→
+   319→  useEffect(() => {
+   320→    loadProjects()
+   321→    loadUsers()
+   322→    loadCompanies()
+   323→  }, [loadProjects, loadUsers, loadCompanies])
+   324→
+   325→  useEffect(() => {
+   326→    if (activeTab === '5s-steps') {
+   327→      load5SProgress()
+   328→    }
+   329→  }, [activeTab, load5SProgress])
+   330→
+   331→  useEffect(() => {
+   332→    if (selectedProjectId) {
+   333→      loadProjectDetail(selectedProjectId)
+   334→    }
+   335→  }, [selectedProjectId, loadProjectDetail])
+   336→
+   337→  useEffect(() => {
+   338→    if (expandedCompanyId) {
+   339→      loadCompanyDetail(expandedCompanyId)
+   340→    }
+   341→  }, [expandedCompanyId, loadCompanyDetail])
+   342→
+   343→  // ─── Project actions ─────────────────────────────────────────────────────
+   344→  const handleCreateProject = async () => {
+   345→    if (!newProjectName.trim() || !newProjectCompany.trim()) return
+   346→    const validZones = newProjectZones.filter(z => z.name.trim())
+   347→    if (validZones.length === 0) return
+   348→
+   349→    try {
+   350→      const res = await fetch('/api/projects', {
+   351→        method: 'POST',
+   352→        headers: { 'Content-Type': 'application/json' },
+   353→        body: JSON.stringify({
+   354→          name: newProjectName,
+   355→          description: newProjectDesc || undefined,
+   356→          company: newProjectCompany,
+   357→          companyId: companies.find(c => c.name === newProjectCompany)?.id || undefined,
+   358→          zones: validZones.map(z => ({ name: z.name, color: z.color })),
+   359→        }),
+   360→      })
+   361→      if (res.ok) {
+   362→        const data = await res.json()
+   363→        // Auto-add current user as admin
+   364→        const { currentUser } = use5SStore.getState()
+   365→        if (currentUser) {
+   366→          await fetch(`/api/projects/${data.project.id}/members`, {
+   367→            method: 'POST',
+   368→            headers: { 'Content-Type': 'application/json' },
+   369→            body: JSON.stringify({ email: currentUser.email, name: currentUser.name, role: 'admin', zoneIds: data.project.zones?.map((z: any) => z.id) || [] }),
+   370→          })
+   371→        }
+   372→        setShowNewProject(false)
+   373→        setNewProjectName('')
+   374→        setNewProjectCompany('')
+   375→        setIsNewCompanyCustom(false)
+   376→        setNewProjectDesc('')
+   377→        setNewProjectZones([{ name: '', color: PRESET_COLORS[0] }])
+   378→        await loadProjects()
+   379→        await fetchProjects()
+   380→      }
+   381→    } catch (error) {
+   382→      console.error('Error creating project:', error)
+   383→    }
+   384→  }
+   385→
+   386→  const handleUpdateProject = async (projectId: string) => {
+   387→    try {
+   388→      const res = await fetch(`/api/projects/${projectId}`, {
+   389→        method: 'PUT',
+   390→        headers: { 'Content-Type': 'application/json' },
+   391→        body: JSON.stringify(editProjectData),
+   392→      })
+   393→      if (res.ok) {
+   394→        setEditingProject(null)
+   395→        await loadProjects()
+   396→        await fetchProjects()
+   397→      }
+   398→    } catch (error) {
+   399→      console.error('Error updating project:', error)
+   400→    }
+   401→  }
+   402→
+   403→  const handleDeleteProject = async (projectId: string) => {
+   404→    if (!confirm('¿Estás seguro de eliminar este proyecto? Se eliminarán todos los datos asociados (inventarios, progresos, auditorías, etc.).')) return
+   405→    try {
+   406→      const res = await fetch(`/api/projects/${projectId}`, { method: 'DELETE' })
+   407→      if (res.ok) {
+   408→        if (currentProject?.id === projectId) {
+   409→          const remaining = allProjects.filter(p => p.id !== projectId)
+   410→          setCurrentProject(remaining.length > 0 ? remaining[0] : null)
+   411→        }
+   412→        await loadProjects()
+   413→        await fetchProjects()
+   414→      }
+   415→    } catch (error) {
+   416→      console.error('Error deleting project:', error)
+   417→    }
+   418→  }
+   419→
+   420→  const handleSelectProject = (projectId: string) => {
+   421→    if (selectedProjectId === projectId) {
+   422→      setSelectedProjectId(null)
+   423→    } else {
+   424→      setSelectedProjectId(projectId)
+   425→    }
+   426→  }
+   427→
+   428→  const handleAddZone = async () => {
+   429→    if (!selectedProjectId || !newZoneName.trim()) return
+   430→    try {
+   431→      const res = await fetch(`/api/projects/${selectedProjectId}/zones`, {
+   432→        method: 'POST',
+   433→        headers: { 'Content-Type': 'application/json' },
+   434→        body: JSON.stringify({ name: newZoneName, color: newZoneColor }),
+   435→      })
+   436→      if (res.ok) {
+   437→        setNewZoneName('')
+   438→        setNewZoneColor(PRESET_COLORS[(projectZones.length) % PRESET_COLORS.length])
+   439→        await loadProjectDetail(selectedProjectId)
+   440→        await loadProjects()
+   441→      } else {
+   442→        const data = await res.json()
+   443→        alert(data.error || 'Error al agregar zona')
+   444→      }
+   445→    } catch (error) {
+   446→      console.error('Error adding zone:', error)
+   447→      alert('Error de conexión al agregar zona')
+   448→    }
+   449→  }
+   450→
+   451→  const handleDeleteZone = async (zoneId: string, zoneName: string) => {
+   452→    if (!selectedProjectId) return
+   453→    if (!confirm(`¿Estás seguro de eliminar la zona "${zoneName}"? Los miembros asignados a esta zona perderán la asignación.`)) return
+   454→    try {
+   455→      const res = await fetch(`/api/projects/${selectedProjectId}/zones`, {
+   456→        method: 'DELETE',
+   457→        headers: { 'Content-Type': 'application/json' },
+   458→        body: JSON.stringify({ zoneId }),
+   459→      })
+   460→      if (res.ok) {
+   461→        await loadProjectDetail(selectedProjectId)
+   462→        await loadProjects()
+   463→      } else {
+   464→        const data = await res.json()
+   465→        alert(data.error || 'Error al eliminar zona')
+   466→      }
+   467→    } catch (error) {
+   468→      console.error('Error deleting zone:', error)
+   469→    }
+   470→  }
+   471→
+   472→  const handleZoneBoardConfig = async (zoneId: string, boardConfigId: string) => {
+   473→    if (!selectedProjectId) return
+   474→    try {
+   475→      const res = await fetch(`/api/projects/${selectedProjectId}/zones`, {
+   476→        method: 'PATCH',
+   477→        headers: { 'Content-Type': 'application/json' },
+   478→        body: JSON.stringify({ zoneId, boardConfigId }),
+   479→      })
+   480→      if (res.ok) {
+   481→        // Update local state
+   482→        setProjectZones(prev => prev.map(z => {
+   483→          if (z.id === zoneId) {
+   484→            const config = boardConfigs.find(c => c.id === boardConfigId)
+   485→            return { ...z, boardConfigId: boardConfigId || null, boardConfig: config ? { id: config.id, name: config.name } : null }
+   486→          }
+   487→          return z
+   488→        }))
+   489→      }
+   490→    } catch (error) {
+   491→      console.error('Error updating zone board config:', error)
+   492→    }
+   493→  }
+   494→
+   495→  const handleAddMember = async () => {
+   496→    if (!selectedProjectId) return
+   497→    try {
+   498→      if (addMemberMode === 'existing') {
+   499→        // Add existing user to project
+   500→        const selectedUser = users.find(u => u.id === selectedExistingUserId)
+   501→        if (!selectedUser) return
+   502→
+   503→        const body: any = {
+   504→          email: selectedUser.email,
+   505→          name: selectedUser.name,
+   506→          role: newMemberRole,
+   507→          zoneIds: newMemberZones.length > 0 ? newMemberZones : undefined,
+   508→        }
+   509→        const res = await fetch(`/api/projects/${selectedProjectId}/members`, {
+   510→          method: 'POST',
+   511→          headers: { 'Content-Type': 'application/json' },
+   512→          body: JSON.stringify(body),
+   513→        })
+   514→        if (res.ok) {
+   515→          setSelectedExistingUserId('')
+   516→          setNewMemberRole('empleado')
+   517→          setNewMemberZones([])
+   518→          await loadProjectDetail(selectedProjectId)
+   519→        }
+   520→      } else {
+   521→        // Create new user and add to project
+   522→        if (!newMemberName.trim() || !newMemberEmail.trim()) return
+   523→        const body: any = {
+   524→          email: newMemberEmail,
+   525→          name: newMemberName,
+   526→          role: newMemberRole,
+   527→          zoneIds: newMemberZones.length > 0 ? newMemberZones : undefined,
+   528→        }
+   529→        if (newMemberPassword && newMemberPassword.length >= 6) {
+   530→          body.password = newMemberPassword
+   531→        }
+   532→        const res = await fetch(`/api/projects/${selectedProjectId}/members`, {
+   533→          method: 'POST',
+   534→          headers: { 'Content-Type': 'application/json' },
+   535→          body: JSON.stringify(body),
+   536→        })
+   537→        if (res.ok) {
+   538→          setNewMemberName('')
+   539→          setNewMemberEmail('')
+   540→          setNewMemberRole('empleado')
+   541→          setNewMemberZones([])
+   542→          setNewMemberPassword('')
+   543→          await loadProjectDetail(selectedProjectId)
+   544→        }
+   545→      }
+   546→    } catch (error) {
+   547→      console.error('Error adding member:', error)
+   548→    }
+   549→  }
+   550→
+   551→  const handleRemoveMember = async (memberId: string, memberName: string) => {
+   552→    if (!selectedProjectId) return
+   553→    if (!confirm(`¿Estás seguro de eliminar a "${memberName}" de este proyecto?`)) return
+   554→    try {
+   555→      const res = await fetch(`/api/projects/${selectedProjectId}/members`, {
+   556→        method: 'DELETE',
+   557→        headers: { 'Content-Type': 'application/json' },
+   558→        body: JSON.stringify({ memberId }),
+   559→      })
+   560→      if (res.ok) {
+   561→        await loadProjectDetail(selectedProjectId)
+   562→        await loadProjects()
+   563→        await loadUsers()
+   564→      } else {
+   565→        const data = await res.json()
+   566→        alert(data.error || 'Error al eliminar miembro')
+   567→      }
+   568→    } catch (error) {
+   569→      console.error('Error removing member:', error)
+   570→    }
+   571→  }
+   572→
+   573→  // ─── Company actions ────────────────────────────────────────────────────
+   574→  const handleCreateCompany = async () => {
+   575→    if (!newCompanyName.trim()) return
+   576→    try {
+   577→      const res = await fetch('/api/companies', {
+   578→        method: 'POST',
+   579→        headers: { 'Content-Type': 'application/json' },
+   580→        body: JSON.stringify({ name: newCompanyName, description: newCompanyDesc || undefined }),
+   581→      })
+   582→      if (res.ok) {
+   583→        setShowNewCompany(false)
+   584→        setNewCompanyName('')
+   585→        setNewCompanyDesc('')
+   586→        await loadCompanies()
+   587→        await fetchCompanies()
+   588→      } else {
+   589→        const data = await res.json()
+   590→        alert(data.error || 'Error al crear empresa')
+   591→      }
+   592→    } catch (error) {
+   593→      console.error('Error creating company:', error)
+   594→    }
+   595→  }
+   596→
+   597→  const handleUpdateCompany = async (companyId: string) => {
+   598→    try {
+   599→      const res = await fetch(`/api/companies/${companyId}`, {
+   600→        method: 'PUT',
+   601→        headers: { 'Content-Type': 'application/json' },
+   602→        body: JSON.stringify(editCompanyData),
+   603→      })
+   604→      if (res.ok) {
+   605→        setEditingCompany(null)
+   606→        await loadCompanies()
+   607→        await fetchCompanies()
+   608→      } else {
+   609→        const data = await res.json()
+   610→        alert(data.error || 'Error al actualizar empresa')
+   611→      }
+   612→    } catch (error) {
+   613→      console.error('Error updating company:', error)
+   614→    }
+   615→  }
+   616→
+   617→  const handleDeleteCompany = async (companyId: string) => {
+   618→    if (!confirm('¿Estás seguro de eliminar esta empresa?')) return
+   619→    try {
+   620→      const res = await fetch(`/api/companies/${companyId}`, { method: 'DELETE' })
+   621→      if (res.ok) {
+   622→        await loadCompanies()
+   623→        await fetchCompanies()
+   624→      } else {
+   625→        const data = await res.json()
+   626→        alert(data.error || 'Error al eliminar empresa')
+   627→      }
+   628→    } catch (error) {
+   629→      console.error('Error deleting company:', error)
+   630→    }
+   631→  }
+   632→
+   633→  const handleAddGerente = async () => {
+   634→    if (!expandedCompanyId || !addGerenteUserId) return
+   635→    try {
+   636→      const res = await fetch(`/api/companies/${expandedCompanyId}/members`, {
+   637→        method: 'POST',
+   638→        headers: { 'Content-Type': 'application/json' },
+   639→        body: JSON.stringify({ userId: addGerenteUserId, role: 'gerente' }),
+   640→      })
+   641→      if (res.ok) {
+   642→        setAddGerenteUserId('')
+   643→        await loadCompanyDetail(expandedCompanyId)
+   644→        await loadCompanies()
+   645→      } else {
+   646→        const data = await res.json()
+   647→        alert(data.error || 'Error al asignar gerente')
+   648→      }
+   649→    } catch (error) {
+   650→      console.error('Error adding gerente:', error)
+   651→    }
+   652→  }
+   653→
+   654→  const handleRemoveCompanyMember = async (userId: string, userName: string) => {
+   655→    if (!expandedCompanyId) return
+   656→    if (!confirm(`¿Estás seguro de eliminar a "${userName}" de esta empresa?`)) return
+   657→    try {
+   658→      const res = await fetch(`/api/companies/${expandedCompanyId}/members`, {
+   659→        method: 'DELETE',
+   660→        headers: { 'Content-Type': 'application/json' },
+   661→        body: JSON.stringify({ memberUserId: userId }),
+   662→      })
+   663→      if (res.ok) {
+   664→        await loadCompanyDetail(expandedCompanyId)
+   665→        await loadCompanies()
+   666→      } else {
+   667→        const data = await res.json()
+   668→        alert(data.error || 'Error al eliminar miembro')
+   669→      }
+   670→    } catch (error) {
+   671→      console.error('Error removing company member:', error)
+   672→    }
+   673→  }
+   674→
+   675→  // ─── User actions ────────────────────────────────────────────────────────
+   676→  const handleCreateUser = async () => {
+   677→    if (!newUserName.trim() || !newUserEmail.trim() || !newUserPassword.trim()) return
+   678→    try {
+   679→      const res = await fetch('/api/users', {
+   680→        method: 'POST',
+   681→        headers: { 'Content-Type': 'application/json' },
+   682→        body: JSON.stringify({
+   683→          name: newUserName,
+   684→          email: newUserEmail,
+   685→          password: newUserPassword,
+   686→          role: newUserRole,
+   687→        }),
+   688→      })
+   689→      if (res.ok) {
+   690→        setShowNewUser(false)
+   691→        setNewUserName('')
+   692→        setNewUserEmail('')
+   693→        setNewUserPassword('')
+   694→        setNewUserRole('empleado')
+   695→        await loadUsers()
+   696→      } else {
+   697→        const data = await res.json()
+   698→        alert(data.error || 'Error al crear usuario')
+   699→      }
+   700→    } catch (error) {
+   701→      console.error('Error creating user:', error)
+   702→    }
+   703→  }
+   704→
+   705→  const handleUpdateUser = async (userId: string) => {
+   706→    try {
+   707→      const res = await fetch('/api/users', {
+   708→        method: 'PUT',
+   709→        headers: { 'Content-Type': 'application/json' },
+   710→        body: JSON.stringify({ id: userId, ...editUserData }),
+   711→      })
+   712→      if (res.ok) {
+   713→        setEditingUser(null)
+   714→        await loadUsers()
+   715→      } else {
+   716→        const data = await res.json()
+   717→        alert(data.error || 'Error al actualizar usuario')
+   718→      }
+   719→    } catch (error) {
+   720→      console.error('Error updating user:', error)
+   721→    }
+   722→  }
+   723→
+   724→  const handleResetPassword = async (userId: string) => {
+   725→    if (!newPassword || newPassword.length < 6) {
+   726→      alert('La contraseña debe tener al menos 6 caracteres')
+   727→      return
+   728→    }
+   729→    try {
+   730→      const res = await fetch('/api/users', {
+   731→        method: 'PUT',
+   732→        headers: { 'Content-Type': 'application/json' },
+   733→        body: JSON.stringify({ id: userId, password: newPassword }),
+   734→      })
+   735→      if (res.ok) {
+   736→        setResetPasswordUserId(null)
+   737→        setNewPassword('')
+   738→        alert('Contraseña actualizada correctamente')
+   739→      }
+   740→    } catch (error) {
+   741→      console.error('Error resetting password:', error)
+   742→    }
+   743→  }
+   744→
+   745→  const handleToggleActive = async (userId: string, currentActive: boolean) => {
+   746→    try {
+   747→      const res = await fetch('/api/users', {
+   748→        method: 'PUT',
+   749→        headers: { 'Content-Type': 'application/json' },
+   750→        body: JSON.stringify({ id: userId, active: !currentActive }),
+   751→      })
+   752→      if (res.ok) {
+   753→        await loadUsers()
+   754→      }
+   755→    } catch (error) {
+   756→      console.error('Error toggling user active:', error)
+   757→    }
+   758→  }
+   759→
+   760→  const handleDeleteUser = async (userId: string) => {
+   761→    if (!confirm('¿Estás seguro de eliminar este usuario?')) return
+   762→    try {
+   763→      const res = await fetch(`/api/users?id=${userId}`, { method: 'DELETE' })
+   764→      if (res.ok) {
+   765→        await loadUsers()
+   766→      } else {
+   767→        const data = await res.json()
+   768→        alert(data.error || 'Error al eliminar usuario')
+   769→      }
+   770→    } catch (error) {
+   771→      console.error('Error deleting user:', error)
+   772→    }
+   773→  }
+   774→
+   775→  // ─── Render ──────────────────────────────────────────────────────────────
+   776→  return (
+   777→    <div className={`flex flex-col h-full bg-gradient-to-b from-gray-50 to-white`}>
+   778→      {/* Header - only shown in standalone mode */}
+   779→      {!embedded && (
+   780→        <header className="border-b bg-white/80 backdrop-blur-sm shrink-0 z-10">
+   781→          <div className="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
+   782→            <div className="flex items-center gap-3">
+   783→              <Button variant="ghost" size="sm" onClick={() => {
+   784→                if (!currentProject && allProjects.length > 0) {
+   785→                  setCurrentProject(allProjects[0])
+   786→                }
+   787→                setCurrentView('board')
+   788→              }} className="gap-1.5">
+   789→                <ArrowLeft className="h-4 w-4" />
+   790→                Volver al Tablero
+   791→              </Button>
+   792→              <div className="w-px h-6 bg-gray-200" />
+   793→              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-purple-600 flex items-center justify-center text-white font-bold text-sm">
+   794→                A
+   795→              </div>
+   796→              <h1 className="text-lg font-bold text-gray-900">Panel de Administración</h1>
+   797→            </div>
+   798→          </div>
+   799→        </header>
+   800→      )}
+   801→
+   802→      {/* Tabs — Order: Empresas / Usuarios / Proyectos / Plantillas */}
+   803→      <div className="border-b bg-white shrink-0">
+   804→        <div className={`flex gap-1 ${embedded ? '' : 'max-w-5xl mx-auto px-4'}`}>
+   805→          <button
+   806→            onClick={() => { setActiveTab('companies'); setSelectedProjectId(null) }}
+   807→            className={`flex items-center gap-2 px-5 py-3 text-sm font-medium border-b-2 transition-colors ${
+   808→              activeTab === 'companies'
+   809→                ? 'border-purple-500 text-purple-600'
+   810→                : 'border-transparent text-muted-foreground hover:text-foreground'
+   811→            }`}
+   812→          >
+   813→            <Building2 className="h-4 w-4" />
+   814→            Empresas
+   815→          </button>
+   816→          <button
+   817→            onClick={() => { setActiveTab('users'); setSelectedProjectId(null) }}
+   818→            className={`flex items-center gap-2 px-5 py-3 text-sm font-medium border-b-2 transition-colors ${
+   819→              activeTab === 'users'
+   820→                ? 'border-purple-500 text-purple-600'
+   821→                : 'border-transparent text-muted-foreground hover:text-foreground'
+   822→            }`}
+   823→          >
+   824→            <Users className="h-4 w-4" />
+   825→            Usuarios
+   826→          </button>
+   827→          <button
+   828→            onClick={() => { setActiveTab('projects'); setSelectedProjectId(null) }}
+   829→            className={`flex items-center gap-2 px-5 py-3 text-sm font-medium border-b-2 transition-colors ${
+   830→              activeTab === 'projects'
+   831→                ? 'border-purple-500 text-purple-600'
+   832→                : 'border-transparent text-muted-foreground hover:text-foreground'
+   833→            }`}
+   834→          >
+   835→            <Building2 className="h-4 w-4" />
+   836→            Proyectos
+   837→          </button>
+   838→
+   839→          <button
+   840→            onClick={() => { setActiveTab('plantillas'); setSelectedProjectId(null) }}
+   841→            className={`flex items-center gap-2 px-5 py-3 text-sm font-medium border-b-2 transition-colors ${
+   842→              activeTab === 'plantillas'
+   843→                ? 'border-green-500 text-green-600'
+   844→                : 'border-transparent text-muted-foreground hover:text-foreground'
+   845→            }`}
+   846→          >
+   847→            <BookOpen className="h-4 w-4" />
+   848→            Plantillas
+   849→          </button>
+   850→
+   851→          <button
+   852→            onClick={() => { setActiveTab('tablero5s'); setSelectedProjectId(null) }}
+   853→            className={`flex items-center gap-2 px-5 py-3 text-sm font-medium border-b-2 transition-colors ${
+   854→              activeTab === 'tablero5s'
+   855→                ? 'border-indigo-500 text-indigo-600'
+   856→                : 'border-transparent text-muted-foreground hover:text-foreground'
+   857→            }`}
+   858→          >
+   859→            <LayoutGrid className="h-4 w-4" />
+   860→            Configuración de Tableros
+   861→          </button>
+   862→
+   863→          <button
+   864→            onClick={() => { setActiveTab('mejora'); setSelectedProjectId(null) }}
+   865→            className={`flex items-center gap-2 px-5 py-3 text-sm font-medium border-b-2 transition-colors ${
+   866→              activeTab === 'mejora'
+   867→                ? 'border-amber-500 text-amber-600'
+   868→                : 'border-transparent text-muted-foreground hover:text-foreground'
+   869→            }`}
+   870→          >
+   871→            <Sparkles className="h-4 w-4" />
+   872→            Mejora Continua
+   873→          </button>
+   874→        </div>
+   875→      </div>
+   876→
+   877→      {/* Content */}
+   878→      <main className={`flex-1 min-h-0 overflow-auto w-full px-4 py-6 ${activeTab === 'tablero5s' || activeTab === 'mejora' ? 'max-w-7xl mx-auto' : embedded ? '' : 'max-w-5xl mx-auto'}`}>
+   879→        <AnimatePresence mode="wait">
+   880→          {/* ═══ PROJECTS TAB ═══ */}
+   881→          {activeTab === 'projects' && (
+   882→            <motion.div key="projects" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="space-y-4">
+   883→              {/* New project button */}
+   884→              <div className="flex justify-between items-center">
+   885→                <p className="text-sm text-muted-foreground">
+   886→                  Gestiona los proyectos de implementación 5S
+   887→                </p>
+   888→                <Button
+   889→                  onClick={() => setShowNewProject(true)}
+   890→                  className="bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white"
+   891→                  size="sm"
+   892→                >
+   893→                  <Plus className="h-4 w-4 mr-1" /> Nuevo Proyecto
+   894→                </Button>
+   895→              </div>
+   896→
+   897→              {/* New project form */}
+   898→              {showNewProject && (
+   899→                <Card className="border-purple-200 bg-purple-50/30">
+   900→                  <CardHeader className="pb-3">
+   901→                    <CardTitle className="text-sm flex items-center gap-2">
+   902→                      <Plus className="h-4 w-4 text-purple-500" />
+   903→                      Crear Nuevo Proyecto
+   904→                    </CardTitle>
+   905→                  </CardHeader>
+   906→                  <CardContent className="space-y-3">
+   907→                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+   908→                      <div className="space-y-1">
+   909→                        <Label className="text-xs">Nombre del Proyecto *</Label>
+   910→                        <Input placeholder="Nombre" value={newProjectName} onChange={e => setNewProjectName(e.target.value)} />
+   911→                      </div>
+   912→                      <div className="space-y-1">
+   913→                        <Label className="text-xs">Empresa *</Label>
+   914→                        {companies.length > 0 && !isNewCompanyCustom ? (
+   915→                          <div className="space-y-1">
+   916→                            <Select
+   917→                              value={newProjectCompany ? (companies.find(c => c.name === newProjectCompany)?.id || '') : undefined}
+   918→                              onValueChange={val => {
+   919→                                if (val === '__custom__') {
+   920→                                  setNewProjectCompany('')
+   921→                                  setIsNewCompanyCustom(true)
+   922→                                } else {
+   923→                                  const comp = companies.find(c => c.id === val)
+   924→                                  if (comp) setNewProjectCompany(comp.name)
+   925→                                }
+   926→                              }}
+   927→                            >
+   928→                              <SelectTrigger>
+   929→                                <SelectValue placeholder="Seleccionar empresa" />
+   930→                              </SelectTrigger>
+   931→                              <SelectContent>
+   932→                                {companies.map(c => (
+   933→                                  <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+   934→                                ))}
+   935→                                <SelectItem value="__custom__">+ Otra empresa...</SelectItem>
+   936→                              </SelectContent>
+   937→                            </Select>
+   938→                          </div>
+   939→                        ) : (
+   940→                          <div className="space-y-1">
+   941→                            <Input placeholder="Nombre de la nueva empresa" value={newProjectCompany} onChange={e => setNewProjectCompany(e.target.value)} />
+   942→                            {companies.length > 0 && (
+   943→                              <Button variant="ghost" size="sm" onClick={() => { setIsNewCompanyCustom(false); setNewProjectCompany('') }} className="h-6 text-xs text-purple-600 p-0">
+   944→                                ← Seleccionar empresa existente
+   945→                              </Button>
+   946→                            )}
+   947→                          </div>
+   948→                        )}
+   949→                      </div>
+   950→                    </div>
+   951→                    <div className="space-y-1">
+   952→                      <Label className="text-xs">Descripción</Label>
+   953→                      <Input placeholder="Descripción del proyecto (opcional)" value={newProjectDesc} onChange={e => setNewProjectDesc(e.target.value)} />
+   954→                    </div>
+   955→                    <div className="space-y-2">
+   956→                      <div className="flex items-center justify-between">
+   957→                        <Label className="text-xs">Zonas *</Label>
+   958→                        <Button variant="ghost" size="sm" onClick={() => setNewProjectZones([...newProjectZones, { name: '', color: PRESET_COLORS[newProjectZones.length % PRESET_COLORS.length] }])} className="h-6 text-xs text-purple-600">
+   959→                          <Plus className="h-3 w-3 mr-1" /> Agregar zona
+   960→                        </Button>
+   961→                      </div>
+   962→                      {newProjectZones.map((zone, idx) => (
+   963→                        <div key={idx} className="flex items-center gap-2">
+   964→                          <button
+   965→                            type="button"
+   966→                            className="w-6 h-6 rounded-full border-2 flex-shrink-0"
+   967→                            style={{ backgroundColor: zone.color, borderColor: zone.color }}
+   968→                            onClick={() => {
+   969→                              const next = PRESET_COLORS[(PRESET_COLORS.indexOf(zone.color) + 1) % PRESET_COLORS.length]
+   970→                              const updated = [...newProjectZones]
+   971→                              updated[idx] = { ...updated[idx], color: next }
+   972→                              setNewProjectZones(updated)
+   973→                            }}
+   974→                          />
+   975→                          <Input
+   976→                            placeholder="Nombre de la zona"
+   977→                            value={zone.name}
+   978→                            onChange={e => {
+   979→                              const updated = [...newProjectZones]
+   980→                              updated[idx] = { ...updated[idx], name: e.target.value }
+   981→                              setNewProjectZones(updated)
+   982→                            }}
+   983→                            className="flex-1"
+   984→                          />
+   985→                          {newProjectZones.length > 1 && (
+   986→                            <Button variant="ghost" size="sm" onClick={() => setNewProjectZones(newProjectZones.filter((_, i) => i !== idx))} className="h-8 w-8 p-0 text-red-400 hover:text-red-600">
+   987→                              <X className="h-4 w-4" />
+   988→                            </Button>
+   989→                          )}
+   990→                        </div>
+   991→                      ))}
+   992→                    </div>
+   993→                    <div className="flex gap-2 justify-end">
+   994→                      <Button variant="outline" size="sm" onClick={() => setShowNewProject(false)}>Cancelar</Button>
+   995→                      <Button
+   996→                        size="sm"
+   997→                        onClick={handleCreateProject}
+   998→                        disabled={!newProjectName.trim() || !newProjectCompany.trim() || newProjectZones.filter(z => z.name.trim()).length === 0}
+   999→                        className="bg-gradient-to-r from-purple-500 to-purple-600 text-white"
+  1000→                      >
+  1001→                        Crear Proyecto
+  1002→                      </Button>
+  1003→                    </div>
+  1004→                  </CardContent>
+  1005→                </Card>
+  1006→              )}
+  1007→
+  1008→              {/* Projects list */}
+  1009→              {isLoadingProjects ? (
+  1010→                <div className="flex justify-center py-12"><Loader2 className="h-8 w-8 text-purple-500 animate-spin" /></div>
+  1011→              ) : allProjects.length === 0 ? (
+  1012→                <div className="text-center py-12 text-muted-foreground">
+  1013→                  <Building2 className="h-12 w-12 mx-auto mb-3 opacity-30" />
+  1014→                  <p className="text-sm">No hay proyectos creados</p>
+  1015→                  <p className="text-xs mt-1">Crea un proyecto para comenzar la implementación 5S</p>
+  1016→                </div>
+  1017→              ) : (
+  1018→                <div className="space-y-3">
+  1019→                  {allProjects.map(project => (
+  1020→                    <Card key={project.id} className={`transition-all ${selectedProjectId === project.id ? 'border-purple-300 shadow-md' : 'hover:border-gray-300'}`}>
+  1021→                      <CardContent className="p-4">
+  1022→                        {/* Project header row */}
+  1023→                        <div className="flex items-center justify-between">
+  1024→                          <div className="flex items-center gap-3 cursor-pointer flex-1" onClick={() => handleSelectProject(project.id)}>
+  1025→                            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-purple-100 to-purple-50 flex items-center justify-center">
+  1026→                              <Building2 className="h-5 w-5 text-purple-500" />
+  1027→                            </div>
+  1028→                            <div className="flex-1">
+  1029→                              {editingProject === project.id ? (
+  1030→                                <div className="space-y-2" onClick={e => e.stopPropagation()}>
+  1031→                                  <div className="grid grid-cols-2 gap-2">
+  1032→                                    <Input value={editProjectData.name} onChange={e => setEditProjectData(d => ({ ...d, name: e.target.value }))} className="text-sm" />
+  1033→                                    <Input value={editProjectData.company} onChange={e => setEditProjectData(d => ({ ...d, company: e.target.value }))} className="text-sm" />
+  1034→                                  </div>
+  1035→                                  <Input value={editProjectData.description} onChange={e => setEditProjectData(d => ({ ...d, description: e.target.value }))} className="text-sm" placeholder="Descripción" />
+  1036→                                  <div className="flex gap-2">
+  1037→                                    <Button size="sm" onClick={() => handleUpdateProject(project.id)} className="bg-purple-600 text-white h-7"><Check className="h-3 w-3 mr-1" />Guardar</Button>
+  1038→                                    <Button size="sm" variant="outline" onClick={() => setEditingProject(null)} className="h-7">Cancelar</Button>
+  1039→                                  </div>
+  1040→                                </div>
+  1041→                              ) : (
+  1042→                                <>
+  1043→                                  <h3 className="font-semibold text-sm">{project.name}</h3>
+  1044→                                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+  1045→                                    <span>{project.company}</span>
+  1046→                                    <span>·</span>
+  1047→                                    <span>{project.zones.length} zonas</span>
+  1048→                                    <span>·</span>
+  1049→                                    <span>{project.memberCount} miembros</span>
+  1050→                                    {!project.active && <Badge className="bg-red-100 text-red-700 border border-red-200 ml-1">Inactivo</Badge>}
+  1051→                                  </div>
+  1052→                                </>
+  1053→                              )}
+  1054→                            </div>
+  1055→                          </div>
+  1056→                          {editingProject !== project.id && (
+  1057→                            <div className="flex items-center gap-1">
+  1058→                              <Button
+  1059→                                variant="ghost" size="sm" className="h-8 w-8 p-0 text-blue-500 hover:text-blue-700"
+  1060→                                onClick={() => {
+  1061→                                  setEditingProject(project.id)
+  1062→                                  setEditProjectData({ name: project.name, description: project.description || '', company: project.company })
+  1063→                                }}
+  1064→                                title="Editar proyecto"
+  1065→                              >
+  1066→                                <Edit3 className="h-4 w-4" />
+  1067→                              </Button>
+  1068→                              <Button
+  1069→                                variant="ghost" size="sm" className="h-8 w-8 p-0 text-red-400 hover:text-red-600"
+  1070→                                onClick={() => handleDeleteProject(project.id)}
+  1071→                                title="Eliminar proyecto"
+  1072→                              >
+  1073→                                <Trash2 className="h-4 w-4" />
+  1074→                              </Button>
+  1075→                            </div>
+  1076→                          )}
+  1077→                        </div>
+  1078→
+  1079→                        {/* Expanded project detail */}
+  1080→                        <AnimatePresence>
+  1081→                          {selectedProjectId === project.id && (
+  1082→                            <motion.div
+  1083→                              initial={{ height: 0, opacity: 0 }}
+  1084→                              animate={{ height: 'auto', opacity: 1 }}
+  1085→                              exit={{ height: 0, opacity: 0 }}
+  1086→                              transition={{ duration: 0.2 }}
+  1087→                              className="overflow-hidden"
+  1088→                            >
+  1089→                              <div className="mt-4 pt-4 border-t space-y-4">
+  1090→                                {isLoadingDetail ? (
+  1091→                                  <div className="flex justify-center py-4"><Loader2 className="h-5 w-5 text-purple-500 animate-spin" /></div>
+  1092→                                ) : (
+  1093→                                  <>
+  1094→                                    {/* Zones */}
+  1095→                                    <div>
+  1096→                                      <h4 className="text-xs font-semibold text-muted-foreground uppercase mb-2 flex items-center gap-1">
+  1097→                                        <MapPin className="h-3 w-3" /> Zonas
+  1098→                                      </h4>
+  1099→                                      <div className="flex flex-wrap gap-2 mb-2">
+  1100→                                        {projectZones.map(zone => (
+  1101→                                          <div key={zone.id} className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border bg-white text-xs">
+  1102→                                            <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: zone.color }} />
+  1103→                                            <span className="font-medium">{zone.name}</span>
+  1104→                                            {/* Board config selector */}
+  1105→                                            <select
+  1106→                                              value={zone.boardConfigId || ''}
+  1107→                                              onChange={e => handleZoneBoardConfig(zone.id, e.target.value)}
+  1108→                                              className="h-6 text-[10px] border rounded px-1 bg-gray-50 ml-1"
+  1109→                                            >
+  1110→                                              <option value="">— Sin tablero —</option>
+  1111→                                              {boardConfigs.map(bc => (
+  1112→                                                <option key={bc.id} value={bc.id}>
+  1113→                                                  {bc.name}{bc.isDefault ? ' ★' : ''}
+  1114→                                                </option>
+  1115→                                              ))}
+  1116→                                            </select>
+  1117→                                            {zone.boardConfig && (
+  1118→                                              <Badge className="text-[9px] px-1 py-0 bg-indigo-100 text-indigo-700 border-0">
+  1119→                                                {zone.boardConfig.name}
+  1120→                                              </Badge>
+  1121→                                            )}
+  1122→                                            <button onClick={() => handleDeleteZone(zone.id, zone.name)} className="text-red-400 hover:text-red-600 ml-1" title="Eliminar zona"><Trash2 className="h-3 w-3" /></button>
+  1123→                                          </div>
+  1124→                                        ))}
+  1125→                                      </div>
+  1126→                                      <div className="flex items-center gap-2">
+  1127→                                        <div className="flex gap-1">
+  1128→                                          {PRESET_COLORS.map(c => (
+  1129→                                            <button key={c} type="button" className={`w-5 h-5 rounded-full border-2 ${newZoneColor === c ? 'border-gray-800' : 'border-transparent'}`} style={{ backgroundColor: c }} onClick={() => setNewZoneColor(c)} />
+  1130→                                          ))}
+  1131→                                        </div>
+  1132→                                        <Input placeholder="Nueva zona" value={newZoneName} onChange={e => setNewZoneName(e.target.value)} className="h-8 text-xs max-w-[200px]" />
+  1133→                                        <Button size="sm" onClick={handleAddZone} disabled={!newZoneName.trim()} className="h-8 text-xs bg-purple-600 text-white">
+  1134→                                          <Plus className="h-3 w-3 mr-1" /> Agregar
+  1135→                                        </Button>
+  1136→                                      </div>
+  1137→                                    </div>
+  1138→
+  1139→                                    {/* Members */}
+  1140→                                    <div>
+  1141→                                      <h4 className="text-xs font-semibold text-muted-foreground uppercase mb-2 flex items-center gap-1">
+  1142→                                        <Users className="h-3 w-3" /> Miembros del Proyecto
+  1143→                                      </h4>
+  1144→
+  1145→                                      {/* Add member form */}
+  1146→                                      <Card className="mb-3 border-gray-200">
+  1147→                                        <CardContent className="p-3">
+  1148→                                          {/* Mode toggle */}
+  1149→                                          <div className="flex gap-2 mb-3">
+  1150→                                            <button
+  1151→                                              type="button"
+  1152→                                              onClick={() => setAddMemberMode('existing')}
+  1153→                                              className={`flex-1 text-xs px-3 py-1.5 rounded-md font-medium transition-colors ${
+  1154→                                                addMemberMode === 'existing'
+  1155→                                                  ? 'bg-purple-100 text-purple-700 border border-purple-200'
+  1156→                                                  : 'bg-gray-50 text-gray-500 border border-gray-200 hover:bg-gray-100'
+  1157→                                              }`}
+  1158→                                            >
+  1159→                                              <UserPlus className="h-3 w-3 inline mr-1" />
+  1160→                                              Usuario Existente
+  1161→                                            </button>
+  1162→                                            <button
+  1163→                                              type="button"
+  1164→                                              onClick={() => setAddMemberMode('new')}
+  1165→                                              className={`flex-1 text-xs px-3 py-1.5 rounded-md font-medium transition-colors ${
+  1166→                                                addMemberMode === 'new'
+  1167→                                                  ? 'bg-purple-100 text-purple-700 border border-purple-200'
+  1168→                                                  : 'bg-gray-50 text-gray-500 border border-gray-200 hover:bg-gray-100'
+  1169→                                              }`}
+  1170→                                            >
+  1171→                                              <Plus className="h-3 w-3 inline mr-1" />
+  1172→                                              Nuevo Usuario
+  1173→                                            </button>
+  1174→                                          </div>
+  1175→
+  1176→                                          {addMemberMode === 'existing' ? (
+  1177→                                            /* Existing user selection */
+  1178→                                            <div className="space-y-2">
+  1179→                                              <Select value={selectedExistingUserId} onValueChange={setSelectedExistingUserId}>
+  1180→                                                <SelectTrigger className="h-8 text-xs">
+  1181→                                                  <SelectValue placeholder="Seleccionar usuario existente..." />
+  1182→                                                </SelectTrigger>
+  1183→                                                <SelectContent>
+  1184→                                                  {users
+  1185→                                                    .filter(u => !projectMembers.some(m => m.user.id === u.id))
+  1186→                                                    .map(u => (
+  1187→                                                      <SelectItem key={u.id} value={u.id}>
+  1188→                                                        <div className="flex items-center gap-2">
+  1189→                                                          <span>{u.name}</span>
+  1190→                                                          <span className="text-muted-foreground">({u.email})</span>
+  1191→                                                          <Badge className={`${ROLE_COLORS[u.role] || ''} border text-[9px] py-0`}>
+  1192→                                                            {ROLE_LABELS[u.role] || u.role}
+  1193→                                                          </Badge>
+  1194→                                                          {u.projects.length === 0 && (
+  1195→                                                            <Badge className="bg-amber-100 text-amber-700 border border-amber-200 text-[9px] py-0">
+  1196→                                                              Sin proyecto
+  1197→                                                            </Badge>
+  1198→                                                          )}
+  1199→                                                        </div>
+  1200→                                                      </SelectItem>
+  1201→                                                    ))}
+  1202→                                                </SelectContent>
+  1203→                                              </Select>
+  1204→                                              <div className="grid grid-cols-2 gap-2">
+  1205→                                                <Select value={newMemberRole} onValueChange={setNewMemberRole}>
+  1206→                                                  <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+  1207→                                                  <SelectContent>
+  1208→                                                    <SelectItem value="admin">Administrador</SelectItem>
+  1209→                                                    <SelectItem value="gerente">Gerente</SelectItem>
+  1210→                                                    <SelectItem value="responsable">Responsable</SelectItem>
+  1211→                                                    <SelectItem value="empleado">Empleado</SelectItem>
+  1212→                                                    <SelectItem value="auditor">Auditor</SelectItem>
+  1213→                                                  </SelectContent>
+  1214→                                                </Select>
+  1215→                                                <div className="space-y-1">
+  1216→                                                  <p className="text-[10px] text-muted-foreground font-medium">Zonas asignadas</p>
+  1217→                                                  <div className="space-y-0.5 max-h-32 overflow-y-auto">
+  1218→                                                    {projectZones.map(z => (
+  1219→                                                      <label key={z.id} className="flex items-center gap-1.5 text-xs cursor-pointer hover:bg-gray-50 rounded px-1 py-0.5">
+  1220→                                                        <Checkbox
+  1221→                                                          checked={newMemberZones.includes(z.id)}
+  1222→                                                          onCheckedChange={(checked) => {
+  1223→                                                            if (checked) {
+  1224→                                                              setNewMemberZones([...newMemberZones, z.id])
+  1225→                                                            } else {
+  1226→                                                              setNewMemberZones(newMemberZones.filter(id => id !== z.id))
+  1227→                                                            }
+  1228→                                                          }}
+  1229→                                                          className="h-3.5 w-3.5"
+  1230→                                                        />
+  1231→                                                        <div className="w-2 h-2 rounded-full" style={{ backgroundColor: z.color }} />
+  1232→                                                        <span>{z.name}</span>
+  1233→                                                      </label>
+  1234→                                                    ))}
+  1235→                                                  </div>
+  1236→                                                </div>
+  1237→                                              </div>
+  1238→                                              <Button size="sm" onClick={handleAddMember} disabled={!selectedExistingUserId} className="w-full h-8 text-xs bg-purple-600 text-white">
+  1239→                                                <UserPlus className="h-3 w-3 mr-1" /> Asignar al Proyecto
+  1240→                                              </Button>
+  1241→                                            </div>
+  1242→                                          ) : (
+  1243→                                            /* New user form */
+  1244→                                            <>
+  1245→                                              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+  1246→                                                <Input placeholder="Nombre" value={newMemberName} onChange={e => setNewMemberName(e.target.value)} className="h-8 text-xs" />
+  1247→                                                <Input placeholder="Email" type="email" value={newMemberEmail} onChange={e => setNewMemberEmail(e.target.value)} className="h-8 text-xs" />
+  1248→                                                <Input placeholder="Contraseña (mín. 6 chars)" type="password" value={newMemberPassword} onChange={e => setNewMemberPassword(e.target.value)} className="h-8 text-xs" />
+  1249→                                              </div>
+  1250→                                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-2">
+  1251→                                                <Select value={newMemberRole} onValueChange={setNewMemberRole}>
+  1252→                                                  <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+  1253→                                                  <SelectContent>
+  1254→                                                    <SelectItem value="admin">Administrador</SelectItem>
+  1255→                                                    <SelectItem value="gerente">Gerente</SelectItem>
+  1256→                                                    <SelectItem value="responsable">Responsable</SelectItem>
+  1257→                                                    <SelectItem value="empleado">Empleado</SelectItem>
+  1258→                                                    <SelectItem value="auditor">Auditor</SelectItem>
+  1259→                                                  </SelectContent>
+  1260→                                                </Select>
+  1261→                                                <div className="space-y-1">
+  1262→                                                  <p className="text-[10px] text-muted-foreground font-medium">Zonas asignadas</p>
+  1263→                                                  <div className="space-y-0.5 max-h-32 overflow-y-auto">
+  1264→                                                    {projectZones.map(z => (
+  1265→                                                      <label key={z.id} className="flex items-center gap-1.5 text-xs cursor-pointer hover:bg-gray-50 rounded px-1 py-0.5">
+  1266→                                                        <Checkbox
+  1267→                                                          checked={newMemberZones.includes(z.id)}
+  1268→                                                          onCheckedChange={(checked) => {
+  1269→                                                            if (checked) {
+  1270→                                                              setNewMemberZones([...newMemberZones, z.id])
+  1271→                                                            } else {
+  1272→                                                              setNewMemberZones(newMemberZones.filter(id => id !== z.id))
+  1273→                                                            }
+  1274→                                                          }}
+  1275→                                                          className="h-3.5 w-3.5"
+  1276→                                                        />
+  1277→                                                        <div className="w-2 h-2 rounded-full" style={{ backgroundColor: z.color }} />
+  1278→                                                        <span>{z.name}</span>
+  1279→                                                      </label>
+  1280→                                                    ))}
+  1281→                                                  </div>
+  1282→                                                </div>
+  1283→                                              </div>
+  1284→                                              <Button size="sm" onClick={handleAddMember} disabled={!newMemberName.trim() || !newMemberEmail.trim()} className="w-full h-8 text-xs bg-purple-600 text-white mt-2">
+  1285→                                                <Plus className="h-3 w-3 mr-1" /> Crear y Añadir
+  1286→                                              </Button>
+  1287→                                            </>
+  1288→                                          )}
+  1289→                                        </CardContent>
+  1290→                                      </Card>
+  1291→
+  1292→                                      {/* Members table */}
+  1293→                                      {projectMembers.length === 0 ? (
+  1294→                                        <p className="text-xs text-muted-foreground text-center py-4">No hay miembros en este proyecto</p>
+  1295→                                      ) : (
+  1296→                                        <div className="rounded-lg border overflow-hidden">
+  1297→                                          <Table>
+  1298→                                            <TableHeader>
+  1299→                                              <TableRow>
+  1300→                                                <TableHead className="text-xs">Nombre</TableHead>
+  1301→                                                <TableHead className="text-xs">Email</TableHead>
+  1302→                                                <TableHead className="text-xs">Rol</TableHead>
+  1303→                                                <TableHead className="text-xs">Zona</TableHead>
+  1304→                                                <TableHead className="text-xs text-center">Acciones</TableHead>
+  1305→                                              </TableRow>
+  1306→                                            </TableHeader>
+  1307→                                            <TableBody>
+  1308→                                              {projectMembers.map(member => (
+  1309→                                                <TableRow key={member.id}>
+  1310→                                                  <TableCell className="text-xs font-medium">{member.user.name}</TableCell>
+  1311→                                                  <TableCell className="text-xs text-muted-foreground">{member.user.email}</TableCell>
+  1312→                                                  <TableCell>
+  1313→                                                    <Badge className={`${ROLE_COLORS[member.role] || ''} border text-[10px]`}>
+  1314→                                                      {ROLE_LABELS[member.role] || member.role}
+  1315→                                                    </Badge>
+  1316→                                                  </TableCell>
+  1317→                                                  <TableCell className="text-xs">
+  1318→                                                    {member.zones.length > 0 ? (
+  1319→                                                      <div className="flex flex-wrap gap-1">
+  1320→                                                        {member.zones.map(z => (
+  1321→                                                          <span key={z.id} className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-gray-50 border text-[10px]">
+  1322→                                                            <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: z.color }} />
+  1323→                                                            {z.name}
+  1324→                                                          </span>
+  1325→                                                        ))}
+  1326→                                                      </div>
+  1327→                                                    ) : <span className="text-muted-foreground">-</span>}
+  1328→                                                  </TableCell>
+  1329→                                                  <TableCell className="text-center">
+  1330→                                                    <Button variant="outline" size="sm" className="h-7 text-[10px] text-red-500 border-red-200 hover:bg-red-50 hover:text-red-700 hover:border-red-300 gap-1" onClick={() => handleRemoveMember(member.id, member.user.name)} title="Eliminar miembro del proyecto">
+  1331→                                                      <Trash2 className="h-3 w-3" />
+  1332→                                                      Eliminar
+  1333→                                                    </Button>
+  1334→                                                  </TableCell>
+  1335→                                                </TableRow>
+  1336→                                              ))}
+  1337→                                            </TableBody>
+  1338→                                          </Table>
+  1339→                                        </div>
+  1340→                                      )}
+  1341→                                    </div>
+  1342→                                  </>
+  1343→                                )}
+  1344→                              </div>
+  1345→                            </motion.div>
+  1346→                          )}
+  1347→                        </AnimatePresence>
+  1348→                      </CardContent>
+  1349→                    </Card>
+  1350→                  ))}
+  1351→                </div>
+  1352→              )}
+  1353→
+  1354→              {/* ═══ USERS TAB ═══ */}
+  1355→            </motion.div>
+  1356→          )}
+  1357→
+  1358→          {activeTab === 'users' && (
+  1359→            <motion.div key="users" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="space-y-4">
+  1360→              {/* New user button */}
+  1361→              <div className="flex justify-between items-center">
+  1362→                <p className="text-sm text-muted-foreground">
+  1363→                  Gestiona los usuarios del sistema y sus accesos
+  1364→                </p>
+  1365→                <Button
+  1366→                  onClick={() => setShowNewUser(true)}
+  1367→                  className="bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white"
+  1368→                  size="sm"
+  1369→                >
+  1370→                  <UserPlus className="h-4 w-4 mr-1" /> Nuevo Usuario
+  1371→                </Button>
+  1372→              </div>
+  1373→
+  1374→              {/* New user form */}
+  1375→              {showNewUser && (
+  1376→                <Card className="border-purple-200 bg-purple-50/30">
+  1377→                  <CardHeader className="pb-3">
+  1378→                    <CardTitle className="text-sm flex items-center gap-2">
+  1379→                      <UserPlus className="h-4 w-4 text-purple-500" />
+  1380→                      Crear Nuevo Usuario
+  1381→                    </CardTitle>
+  1382→                  </CardHeader>
+  1383→                  <CardContent className="space-y-3">
+  1384→                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+  1385→                      <div className="space-y-1">
+  1386→                        <Label className="text-xs">Nombre completo *</Label>
+  1387→                        <div className="relative">
+  1388→                          <User className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+  1389→                          <Input placeholder="Juan Pérez" value={newUserName} onChange={e => setNewUserName(e.target.value)} className="pl-9 h-9" />
+  1390→                        </div>
+  1391→                      </div>
+  1392→                      <div className="space-y-1">
+  1393→                        <Label className="text-xs">Email *</Label>
+  1394→                        <div className="relative">
+  1395→                          <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+  1396→                          <Input placeholder="email@ejemplo.com" type="email" value={newUserEmail} onChange={e => setNewUserEmail(e.target.value)} className="pl-9 h-9" />
+  1397→                        </div>
+  1398→                      </div>
+  1399→                      <div className="space-y-1">
+  1400→                        <Label className="text-xs">Contraseña *</Label>
+  1401→                        <div className="relative">
+  1402→                          <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+  1403→                          <Input placeholder="Mínimo 6 caracteres" type="password" value={newUserPassword} onChange={e => setNewUserPassword(e.target.value)} className="pl-9 h-9" />
+  1404→                        </div>
+  1405→                      </div>
+  1406→                      <div className="space-y-1">
+  1407→                        <Label className="text-xs">Rol</Label>
+  1408→                        <Select value={newUserRole} onValueChange={setNewUserRole}>
+  1409→                          <SelectTrigger className="h-9">
+  1410→                            <Shield className="h-3.5 w-3.5 mr-2 text-muted-foreground" />
+  1411→                            <SelectValue />
+  1412→                          </SelectTrigger>
+  1413→                          <SelectContent>
+  1414→                            <SelectItem value="admin">Administrador</SelectItem>
+  1415→                            <SelectItem value="gerente">Gerente</SelectItem>
+  1416→                            <SelectItem value="responsable">Responsable</SelectItem>
+  1417→                            <SelectItem value="empleado">Empleado</SelectItem>
+  1418→                            <SelectItem value="auditor">Auditor</SelectItem>
+  1419→                          </SelectContent>
+  1420→                        </Select>
+  1421→                      </div>
+  1422→                    </div>
+  1423→                    <div className="flex gap-2 justify-end">
+  1424→                      <Button variant="outline" size="sm" onClick={() => setShowNewUser(false)}>Cancelar</Button>
+  1425→                      <Button size="sm" onClick={handleCreateUser} disabled={!newUserName.trim() || !newUserEmail.trim() || !newUserPassword.trim() || newUserPassword.length < 6} className="bg-purple-600 text-white">
+  1426→                        Crear Usuario
+  1427→                      </Button>
+  1428→                    </div>
+  1429→                  </CardContent>
+  1430→                </Card>
+  1431→              )}
+  1432→
+  1433→              {/* Users table */}
+  1434→              {isLoadingUsers ? (
+  1435→                <div className="flex justify-center py-12"><Loader2 className="h-8 w-8 text-purple-500 animate-spin" /></div>
+  1436→              ) : users.length === 0 ? (
+  1437→                <div className="text-center py-12 text-muted-foreground">
+  1438→                  <Users className="h-12 w-12 mx-auto mb-3 opacity-30" />
+  1439→                  <p className="text-sm">No hay usuarios en el sistema</p>
+  1440→                </div>
+  1441→              ) : (
+  1442→                <div className="rounded-lg border overflow-hidden">
+  1443→                  <Table>
+  1444→                    <TableHeader>
+  1445→                      <TableRow>
+  1446→                        <TableHead className="text-xs">Nombre</TableHead>
+  1447→                        <TableHead className="text-xs">Email</TableHead>
+  1448→                        <TableHead className="text-xs">Rol</TableHead>
+  1449→                        <TableHead className="text-xs">Estado</TableHead>
+  1450→                        <TableHead className="text-xs">Proyectos</TableHead>
+  1451→                        <TableHead className="text-xs">Acciones</TableHead>
+  1452→                      </TableRow>
+  1453→                    </TableHeader>
+  1454→                    <TableBody>
+  1455→                      {users.map(user => (
+  1456→                        <TableRow key={user.id} className={!user.active ? 'opacity-50' : ''}>
+  1457→                          <TableCell className="text-xs font-medium">
+  1458→                            {editingUser === user.id ? (
+  1459→                              <Input value={editUserData.name} onChange={e => setEditUserData(d => ({ ...d, name: e.target.value }))} className="h-7 text-xs" />
+  1460→                            ) : (
+  1461→                              user.name
+  1462→                            )}
+  1463→                          </TableCell>
+  1464→                          <TableCell className="text-xs text-muted-foreground">
+  1465→                            {editingUser === user.id ? (
+  1466→                              <Input value={editUserData.email} onChange={e => setEditUserData(d => ({ ...d, email: e.target.value }))} className="h-7 text-xs" />
+  1467→                            ) : (
+  1468→                              user.email
+  1469→                            )}
+  1470→                          </TableCell>
+  1471→                          <TableCell>
+  1472→                            {editingUser === user.id ? (
+  1473→                              <Select value={editUserData.role} onValueChange={v => setEditUserData(d => ({ ...d, role: v }))}>
+  1474→                                <SelectTrigger className="h-7 text-xs"><SelectValue /></SelectTrigger>
+  1475→                                <SelectContent>
+  1476→                                  <SelectItem value="admin">Administrador</SelectItem>
+  1477→                                  <SelectItem value="gerente">Gerente</SelectItem>
+  1478→                                  <SelectItem value="responsable">Responsable</SelectItem>
+  1479→                                  <SelectItem value="empleado">Empleado</SelectItem>
+  1480→                                  <SelectItem value="auditor">Auditor</SelectItem>
+  1481→                                </SelectContent>
+  1482→                              </Select>
+  1483→                            ) : (
+  1484→                              <Badge className={`${ROLE_COLORS[user.role] || ''} border text-[10px]`}>
+  1485→                                {ROLE_LABELS[user.role] || user.role}
+  1486→                              </Badge>
+  1487→                            )}
+  1488→                          </TableCell>
+  1489→                          <TableCell>
+  1490→                            {editingUser === user.id ? (
+  1491→                              <Select value={editUserData.active ? 'true' : 'false'} onValueChange={v => setEditUserData(d => ({ ...d, active: v === 'true' }))}>
+  1492→                                <SelectTrigger className="h-7 text-xs"><SelectValue /></SelectTrigger>
+  1493→                                <SelectContent>
+  1494→                                  <SelectItem value="true">Activo</SelectItem>
+  1495→                                  <SelectItem value="false">Inactivo</SelectItem>
+  1496→                                </SelectContent>
+  1497→                              </Select>
+  1498→                            ) : (
+  1499→                              <Badge className={user.active ? 'bg-green-100 text-green-700 border-green-200' : 'bg-red-100 text-red-700 border-red-200'} variant="outline">
+  1500→                                {user.active ? 'Activo' : 'Inactivo'}
+  1501→                              </Badge>
+  1502→                            )}
+  1503→                          </TableCell>
+  1504→                          <TableCell className="text-xs">
+  1505→                            {user.projects.length === 0 ? (
+  1506→                              <span className="text-muted-foreground">Ninguno</span>
+  1507→                            ) : (
+  1508→                              <div className="space-y-0.5">
+  1509→                                {user.projects.map((p, i) => (
+  1510→                                  <div key={i} className="flex items-center gap-1 flex-wrap">
+  1511→                                    <span>{p.projectName}</span>
+  1512→                                    <Badge className={`${ROLE_COLORS[p.role] || ''} border text-[9px] px-1 py-0`}>
+  1513→                                      {ROLE_LABELS[p.role]}
+  1514→                                    </Badge>
+  1515→                                    {p.zones.length > 0 && (
+  1516→                                      <span className="text-[9px] text-muted-foreground">
+  1517→                                        ({p.zones.map(z => z.name).join(', ')})
+  1518→                                      </span>
+  1519→                                    )}
+  1520→                                  </div>
+  1521→                                ))}
+  1522→                              </div>
+  1523→                            )}
+  1524→                          </TableCell>
+  1525→                          <TableCell>
+  1526→                            <div className="flex items-center gap-1">
+  1527→                              {editingUser === user.id ? (
+  1528→                                <>
+  1529→                                  <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-green-500" onClick={() => handleUpdateUser(user.id)}><Check className="h-3.5 w-3.5" /></Button>
+  1530→                                  <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => setEditingUser(null)}><X className="h-3.5 w-3.5" /></Button>
+  1531→                                </>
+  1532→                              ) : (
+  1533→                                <>
+  1534→                                  <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-blue-500" onClick={() => { setEditingUser(user.id); setEditUserData({ name: user.name, email: user.email, role: user.role, active: user.active }) }} title="Editar">
+  1535→                                    <Edit3 className="h-3.5 w-3.5" />
+  1536→                                  </Button>
+  1537→                                  <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-amber-500" onClick={() => { setResetPasswordUserId(user.id); setNewPassword('') }} title="Cambiar contraseña">
+  1538→                                    <Key className="h-3.5 w-3.5" />
+  1539→                                  </Button>
+  1540→                                  <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => handleToggleActive(user.id, user.active)} title={user.active ? 'Desactivar' : 'Activar'}>
+  1541→                                    {user.active ? <EyeOff className="h-3.5 w-3.5 text-muted-foreground" /> : <Eye className="h-3.5 w-3.5 text-green-500" />}
+  1542→                                  </Button>
+  1543→                                  <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-red-400 hover:text-red-600" onClick={() => handleDeleteUser(user.id)} title="Eliminar">
+  1544→                                    <Trash2 className="h-3.5 w-3.5" />
+  1545→                                  </Button>
+  1546→                                </>
+  1547→                              )}
+  1548→                            </div>
+  1549→                          </TableCell>
+  1550→                        </TableRow>
+  1551→                      ))}
+  1552→                    </TableBody>
+  1553→                  </Table>
+  1554→                </div>
+  1555→              )}
+  1556→            </motion.div>
+  1557→          )}
+  1558→
+  1559→          {/* ═══ COMPANIES TAB ═══ */}
+  1560→          {activeTab === 'companies' && (
+  1561→            <motion.div key="companies" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="space-y-4">
+  1562→              <div className="flex justify-between items-center">
+  1563→                <p className="text-sm text-muted-foreground">
+  1564→                  Gestiona las empresas y asigna gerentes
+  1565→                </p>
+  1566→                <Button
+  1567→                  onClick={() => setShowNewCompany(true)}
+  1568→                  className="bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white"
+  1569→                  size="sm"
+  1570→                >
+  1571→                  <Plus className="h-4 w-4 mr-1" /> Nueva Empresa
+  1572→                </Button>
+  1573→              </div>
+  1574→
+  1575→              {/* New company form */}
+  1576→              {showNewCompany && (
+  1577→                <Card className="border-purple-200 bg-purple-50/30">
+  1578→                  <CardHeader className="pb-3">
+  1579→                    <CardTitle className="text-sm flex items-center gap-2">
+  1580→                      <Plus className="h-4 w-4 text-purple-500" />
+  1581→                      Crear Nueva Empresa
+  1582→                    </CardTitle>
+  1583→                  </CardHeader>
+  1584→                  <CardContent className="space-y-3">
+  1585→                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+  1586→                      <div className="space-y-1">
+  1587→                        <Label className="text-xs">Nombre de la Empresa *</Label>
+  1588→                        <Input placeholder="Nombre" value={newCompanyName} onChange={e => setNewCompanyName(e.target.value)} />
+  1589→                      </div>
+  1590→                      <div className="space-y-1">
+  1591→                        <Label className="text-xs">Descripción</Label>
+  1592→                        <Input placeholder="Descripción (opcional)" value={newCompanyDesc} onChange={e => setNewCompanyDesc(e.target.value)} />
+  1593→                      </div>
+  1594→                    </div>
+  1595→                    <div className="flex gap-2 justify-end">
+  1596→                      <Button variant="outline" size="sm" onClick={() => setShowNewCompany(false)}>Cancelar</Button>
+  1597→                      <Button size="sm" onClick={handleCreateCompany} disabled={!newCompanyName.trim()} className="bg-gradient-to-r from-purple-500 to-purple-600 text-white">
+  1598→                        Crear Empresa
+  1599→                      </Button>
+  1600→                    </div>
+  1601→                  </CardContent>
+  1602→                </Card>
+  1603→              )}
+  1604→
+  1605→              {/* Companies list */}
+  1606→              {isLoadingCompanies ? (
+  1607→                <div className="flex justify-center py-12"><Loader2 className="h-8 w-8 text-purple-500 animate-spin" /></div>
+  1608→              ) : companies.length === 0 ? (
+  1609→                <div className="text-center py-12 text-muted-foreground">
+  1610→                  <Building2 className="h-12 w-12 mx-auto mb-3 opacity-30" />
+  1611→                  <p className="text-sm">No hay empresas creadas</p>
+  1612→                  <p className="text-xs mt-1">Crea una empresa para organizar los proyectos por organización</p>
+  1613→                </div>
+  1614→              ) : (
+  1615→                <div className="space-y-3">
+  1616→                  {companies.map(company => (
+  1617→                    <Card key={company.id} className={`transition-all ${expandedCompanyId === company.id ? 'border-purple-300 shadow-md' : 'hover:border-gray-300'}`}>
+  1618→                      <CardContent className="p-4">
+  1619→                        <div className="flex items-center justify-between">
+  1620→                          <div className="flex items-center gap-3 cursor-pointer flex-1" onClick={() => setExpandedCompanyId(expandedCompanyId === company.id ? null : company.id)}>
+  1621→                            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-teal-100 to-teal-50 flex items-center justify-center">
+  1622→                              <Building2 className="h-5 w-5 text-teal-600" />
+  1623→                            </div>
+  1624→                            <div className="flex-1">
+  1625→                              {editingCompany === company.id ? (
+  1626→                                <div className="space-y-2" onClick={e => e.stopPropagation()}>
+  1627→                                  <div className="grid grid-cols-2 gap-2">
+  1628→                                    <Input value={editCompanyData.name} onChange={e => setEditCompanyData(d => ({ ...d, name: e.target.value }))} className="text-sm" />
+  1629→                                    <Input value={editCompanyData.description} onChange={e => setEditCompanyData(d => ({ ...d, description: e.target.value }))} className="text-sm" placeholder="Descripción" />
+  1630→                                  </div>
+  1631→                                  <div className="flex gap-2">
+  1632→                                    <Button size="sm" onClick={() => handleUpdateCompany(company.id)} className="bg-purple-600 text-white h-7"><Check className="h-3 w-3 mr-1" />Guardar</Button>
+  1633→                                    <Button size="sm" variant="outline" onClick={() => setEditingCompany(null)} className="h-7">Cancelar</Button>
+  1634→                                  </div>
+  1635→                                </div>
+  1636→                              ) : (
+  1637→                                <>
+  1638→                                  <h3 className="font-semibold text-sm">{company.name}</h3>
+  1639→                                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+  1640→                                    <span>{company.projectCount} proyectos</span>
+  1641→                                    <span>·</span>
+  1642→                                    <span>{company.memberCount} gerentes</span>
+  1643→                                    {!company.active && <Badge className="bg-red-100 text-red-700 border border-red-200 ml-1">Inactiva</Badge>}
+  1644→                                  </div>
+  1645→                                </>
+  1646→                              )}
+  1647→                            </div>
+  1648→                          </div>
+  1649→                          {editingCompany !== company.id && (
+  1650→                            <div className="flex items-center gap-1">
+  1651→                              <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-blue-500 hover:text-blue-700" onClick={() => { setEditingCompany(company.id); setEditCompanyData({ name: company.name, description: company.description || '' }) }} title="Editar empresa"><Edit3 className="h-4 w-4" /></Button>
+  1652→                              <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-red-400 hover:text-red-600" onClick={() => handleDeleteCompany(company.id)} title="Eliminar empresa"><Trash2 className="h-4 w-4" /></Button>
+  1653→                            </div>
+  1654→                          )}
+  1655→                        </div>
+  1656→
+  1657→                        {/* Expanded company detail: gerentes */}
+  1658→                        <AnimatePresence>
+  1659→                          {expandedCompanyId === company.id && (
+  1660→                            <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.2 }} className="overflow-hidden">
+  1661→                              <div className="mt-4 pt-4 border-t space-y-4">
+  1662→                                {isLoadingCompanyDetail ? (
+  1663→                                  <div className="flex justify-center py-4"><Loader2 className="h-5 w-5 text-purple-500 animate-spin" /></div>
+  1664→                                ) : (
+  1665→                                  <>
+  1666→                                    <div>
+  1667→                                      <h4 className="text-xs font-semibold text-muted-foreground uppercase mb-2 flex items-center gap-1">
+  1668→                                        <Shield className="h-3 w-3" /> Gerentes asignados
+  1669→                                      </h4>
+  1670→                                      {companyMembers.length > 0 ? (
+  1671→                                        <div className="space-y-1.5 mb-3">
+  1672→                                          {companyMembers.map((m) => (
+  1673→                                            <div key={m.id} className="flex items-center justify-between p-2 rounded-lg border bg-white text-xs">
+  1674→                                              <div className="flex items-center gap-2">
+  1675→                                                <div className="w-7 h-7 rounded-full bg-teal-100 flex items-center justify-center text-teal-700 font-bold text-xs">{m.user.name.charAt(0)}</div>
+  1676→                                                <div>
+  1677→                                                  <p className="font-medium">{m.user.name}</p>
+  1678→                                                  <p className="text-muted-foreground">{m.user.email}</p>
+  1679→                                                </div>
+  1680→                                                <Badge className={`${ROLE_COLORS[m.role] || ROLE_COLORS.gerente} border text-[9px] py-0`}>
+  1681→                                                  {ROLE_LABELS[m.role] || m.role}
+  1682→                                                </Badge>
+  1683→                                              </div>
+  1684→                                              <Button variant="ghost" size="sm" className="h-6 w-6 p-0 text-red-400 hover:text-red-600" onClick={() => handleRemoveCompanyMember(m.userId, m.user.name)}>
+  1685→                                                <X className="h-3 w-3" />
+  1686→                                              </Button>
+  1687→                                            </div>
+  1688→                                          ))}
+  1689→                                        </div>
+  1690→                                      ) : (
+  1691→                                        <p className="text-xs text-muted-foreground mb-3">No hay gerentes asignados a esta empresa</p>
+  1692→                                      )}
+  1693→
+  1694→                                      {/* Add gerente */}
+  1695→                                      <div className="flex items-center gap-2">
+  1696→                                        <Select value={addGerenteUserId || undefined} onValueChange={setAddGerenteUserId}>
+  1697→                                          <SelectTrigger className="h-8 text-xs flex-1">
+  1698→                                            <SelectValue placeholder="Seleccionar usuario para asignar..." />
+  1699→                                          </SelectTrigger>
+  1700→                                          <SelectContent>
+  1701→                                            {users
+  1702→                                              .filter(u => u.active && !companyMembers.some(m => m.userId === u.id))
+  1703→                                              .map(u => (
+  1704→                                                <SelectItem key={u.id} value={u.id}>
+  1705→                                                  <div className="flex items-center gap-2">
+  1706→                                                    <span>{u.name}</span>
+  1707→                                                    <span className="text-muted-foreground">({u.email})</span>
+  1708→                                                    <Badge className={`${ROLE_COLORS[u.role] || ''} border text-[9px] py-0`}>
+  1709→                                                      {ROLE_LABELS[u.role] || u.role}
+  1710→                                                    </Badge>
+  1711→                                                  </div>
+  1712→                                                </SelectItem>
+  1713→                                              ))}
+  1714→                                          </SelectContent>
+  1715→                                        </Select>
+  1716→                                        <Button size="sm" onClick={handleAddGerente} disabled={!addGerenteUserId} className="h-8 text-xs bg-purple-600 text-white">
+  1717→                                          <UserPlus className="h-3 w-3 mr-1" /> Asignar
+  1718→                                        </Button>
+  1719→                                      </div>
+  1720→                                    </div>
+  1721→                                  </>
+  1722→                                )}
+  1723→                              </div>
+  1724→                            </motion.div>
+  1725→                          )}
+  1726→                        </AnimatePresence>
+  1727→                      </CardContent>
+  1728→                    </Card>
+  1729→                  ))}
+  1730→                </div>
+  1731→              )}
+  1732→            </motion.div>
+  1733→          )}
+  1734→
+  1735→          {/* ═══ 5S Y PASOS TAB ═══ */}
+  1736→          {/* 5S y Pasos tab removed - scores now shown on the board above steps 4/5 dots */}
+  1737→          {false && (
+  1738→            <motion.div key="5s-steps" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="space-y-4">
+  1739→              <div className="flex justify-between items-center">
+  1740→                <div>
+  1741→                  <p className="text-sm text-muted-foreground">
+  1742→                    Gestiona las puntuaciones de Autoevaluación (Paso 4) y Auditoría (Paso 5) de cada S
+  1743→                  </p>
+  1744→                </div>
+  1745→              </div>
+  1746→
+  1747→              {/* Project & Zone selectors */}
+  1748→              <div className="flex gap-3 items-end">
+  1749→                <div className="space-y-1 flex-1">
+  1750→                  <Label className="text-xs">Proyecto</Label>
+  1751→                  <Select
+  1752→                    value={selected5SProjectId || ''}
+  1753→                    onValueChange={val => {
+  1754→                      setSelected5SProjectId(val || null)
+  1755→                      setSelected5SZoneId(null)
+  1756→                    }}
+  1757→                  >
+  1758→                    <SelectTrigger>
+  1759→                      <SelectValue placeholder="Seleccionar proyecto" />
+  1760→                    </SelectTrigger>
+  1761→                    <SelectContent>
+  1762→                      {allProjects.map(p => (
+  1763→                        <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+  1764→                      ))}
+  1765→                    </SelectContent>
+  1766→                  </Select>
+  1767→                </div>
+  1768→                <div className="space-y-1 flex-1">
+  1769→                  <Label className="text-xs">Zona (opcional)</Label>
+  1770→                  <Select
+  1771→                    value={selected5SZoneId || '__all__'}
+  1772→                    onValueChange={val => setSelected5SZoneId(val === '__all__' ? null : val)}
+  1773→                  >
+  1774→                    <SelectTrigger>
+  1775→                      <SelectValue placeholder="Todas las zonas" />
+  1776→                    </SelectTrigger>
+  1777→                    <SelectContent>
+  1778→                      <SelectItem value="__all__">Todas las zonas</SelectItem>
+  1779→                      {allProjects.find(p => p.id === selected5SProjectId)?.zones.map(z => (
+  1780→                        <SelectItem key={z.id} value={z.id}>{z.name}</SelectItem>
+  1781→                      ))}
+  1782→                    </SelectContent>
+  1783→                  </Select>
+  1784→                </div>
+  1785→              </div>
+  1786→
+  1787→              {!selected5SProjectId ? (
+  1788→                <div className="text-center py-12 text-muted-foreground">
+  1789→                  <CheckSquare className="h-12 w-12 mx-auto mb-3 opacity-30" />
+  1790→                  <p className="text-sm">Selecciona un proyecto para ver las puntuaciones</p>
+  1791→                </div>
+  1792→              ) : isLoading5S ? (
+  1793→                <div className="flex justify-center py-12"><Loader2 className="h-8 w-8 text-purple-500 animate-spin" /></div>
+  1794→              ) : (
+  1795→                <div className="space-y-4">
+  1796→                  {/* S Steps table */}
+  1797→                  {['S1 Seiri', 'S2 Seiton', 'S3 Seiso', 'S4 Seiketsu', 'S5 Shitsuke'].map((sLabel, sIdx) => {
+  1798→                    const sStep = sIdx + 1
+  1799→                    const sColors = ['#8B5CF6', '#EAB308', '#3B82F6', '#F43F5E', '#F97316']
+  1800→                    const color = sColors[sIdx]
+  1801→
+  1802→                    // Filter progress for this S and selected zone
+  1803→                    const sProgress = progress5S.filter(p =>
+  1804→                      p.sStep === sStep &&
+  1805→                      (!selected5SZoneId || p.zoneId === selected5SZoneId)
+  1806→                    )
+  1807→
+  1808→                    const step4Records = sProgress.filter(p => p.miniStep === 4)
+  1809→                    const step5Records = sProgress.filter(p => p.miniStep === 5)
+  1810→
+  1811→                    return (
+  1812→                      <Card key={sStep} className="overflow-hidden">
+  1813→                        <div
+  1814→                          className="flex items-center gap-3 px-4 py-3"
+  1815→                          style={{ backgroundColor: `${color}10`, borderLeft: `4px solid ${color}` }}
+  1816→                        >
+  1817→                          <div
+  1818→                            className="w-8 h-8 rounded-lg flex items-center justify-center text-white text-sm font-bold"
+  1819→                            style={{ backgroundColor: color }}
+  1820→                          >
+  1821→                            S{sStep}
+  1822→                          </div>
+  1823→                          <div>
+  1824→                            <h3 className="font-semibold text-sm" style={{ color }}>{sLabel}</h3>
+  1825→                            <p className="text-xs text-muted-foreground">
+  1826→                              {step4Records.length} autoevaluación(es) · {step5Records.length} auditoría(s)
+  1827→                            </p>
+  1828→                          </div>
+  1829→                        </div>
+  1830→                        <CardContent className="p-0">
+  1831→                          <Table>
+  1832→                            <TableHeader>
+  1833→                              <TableRow>
+  1834→                                <TableHead className="text-xs">Zona</TableHead>
+  1835→                                <TableHead className="text-xs">Paso</TableHead>
+  1836→                                <TableHead className="text-xs">Estado</TableHead>
+  1837→                                <TableHead className="text-xs">Puntuación</TableHead>
+  1838→                                <TableHead className="text-xs">Notas</TableHead>
+  1839→                                <TableHead className="text-xs w-20">Acciones</TableHead>
+  1840→                              </TableRow>
+  1841→                            </TableHeader>
+  1842→                            <TableBody>
+  1843→                              {/* Step 4 rows */}
+  1844→                              {step4Records.length === 0 && step5Records.length === 0 && (
+  1845→                                <TableRow>
+  1846→                                  <TableCell colSpan={6} className="text-center text-xs text-muted-foreground py-4">
+  1847→                                    Sin registros para esta S
+  1848→                                  </TableCell>
+  1849→                                </TableRow>
+  1850→                              )}
+  1851→                              {step4Records.map(record => (
+  1852→                                <TableRow key={record.id}>
+  1853→                                  <TableCell className="text-xs">{record.zoneName || 'Sin zona'}</TableCell>
+  1854→                                  <TableCell className="text-xs">
+  1855→                                    <div className="flex items-center gap-1">
+  1856→                                      <CheckSquare className="h-3 w-3" style={{ color }} />
+  1857→                                      <span>4 - Autoevaluación</span>
+  1858→                                    </div>
+  1859→                                  </TableCell>
+  1860→                                  <TableCell>
+  1861→                                    <Badge className={record.completed ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}>
+  1862→                                      {record.completed ? 'Completado' : 'Pendiente'}
+  1863→                                    </Badge>
+  1864→                                  </TableCell>
+  1865→                                  <TableCell>
+  1866→                                    {editingScore === record.id ? (
+  1867→                                      <div className="flex items-center gap-1">
+  1868→                                        <Input
+  1869→                                          type="number"
+  1870→                                          min={0}
+  1871→                                          max={100}
+  1872→                                          value={editScoreValue}
+  1873→                                          onChange={e => setEditScoreValue(e.target.value)}
+  1874→                                          className="w-16 h-7 text-xs"
+  1875→                                        />
+  1876→                                        <Button
+  1877→                                          size="sm"
+  1878→                                          variant="ghost"
+  1879→                                          className="h-7 w-7 p-0 text-green-600"
+  1880→                                          onClick={async () => {
+  1881→                                            const newScore = parseInt(editScoreValue)
+  1882→                                            if (isNaN(newScore) || newScore < 0 || newScore > 100) return
+  1883→                                            try {
+  1884→                                              const res = await fetch(`/api/progress/step?sStep=${sStep}&miniStep=4`, {
+  1885→                                                method: 'PUT',
+  1886→                                                headers: { 'Content-Type': 'application/json' },
+  1887→                                                body: JSON.stringify({
+  1888→                                                  score: newScore,
+  1889→                                                  completed: newScore >= 70,
+  1890→                                                  notes: editNotesValue,
+  1891→                                                  projectId: selected5SProjectId,
+  1892→                                                  zoneId: record.zoneId,
+  1893→                                                }),
+  1894→                                              })
+  1895→                                              if (res.ok) {
+  1896→                                                setEditingScore(null)
+  1897→                                                await load5SProgress()
+  1898→                                              }
+  1899→                                            } catch (error) {
+  1900→                                              console.error('Error updating score:', error)
+  1901→                                            }
+  1902→                                          }}
+  1903→                                        >
+  1904→                                          <Save className="h-3 w-3" />
+  1905→                                        </Button>
+  1906→                                        <Button
+  1907→                                          size="sm"
+  1908→                                          variant="ghost"
+  1909→                                          className="h-7 w-7 p-0 text-red-400"
+  1910→                                          onClick={() => setEditingScore(null)}
+  1911→                                        >
+  1912→                                          <X className="h-3 w-3" />
+  1913→                                        </Button>
+  1914→                                      </div>
+  1915→                                    ) : (
+  1916→                                      <span className="font-bold text-sm">
+  1917→                                        {record.score !== null ? `${record.score}%` : '—'}
+  1918→                                      </span>
+  1919→                                    )}
+  1920→                                  </TableCell>
+  1921→                                  <TableCell className="text-xs text-muted-foreground">
+  1922→                                    {editingScore === record.id ? (
+  1923→                                      <Input
+  1924→                                        value={editNotesValue}
+  1925→                                        onChange={e => setEditNotesValue(e.target.value)}
+  1926→                                        placeholder="Notas..."
+  1927→                                        className="h-7 text-xs w-32"
+  1928→                                      />
+  1929→                                    ) : (
+  1930→                                      <span title={record.notes || ''}>
+  1931→                                        {record.notes ? (record.notes.length > 30 ? record.notes.slice(0, 30) + '…' : record.notes) : '—'}
+  1932→                                      </span>
+  1933→                                    )}
+  1934→                                  </TableCell>
+  1935→                                  <TableCell>
+  1936→                                    <Button
+  1937→                                      variant="ghost"
+  1938→                                      size="sm"
+  1939→                                      className="h-7 w-7 p-0"
+  1940→                                      onClick={() => {
+  1941→                                        setEditingScore(record.id)
+  1942→                                        setEditScoreValue(record.score !== null ? String(record.score) : '')
+  1943→                                        setEditNotesValue(record.notes || '')
+  1944→                                      }}
+  1945→                                    >
+  1946→                                      <Edit3 className="h-3 w-3 text-blue-500" />
+  1947→                                    </Button>
+  1948→                                  </TableCell>
+  1949→                                </TableRow>
+  1950→                              ))}
+  1951→                              {/* Step 5 rows */}
+  1952→                              {step5Records.map(record => (
+  1953→                                <TableRow key={record.id}>
+  1954→                                  <TableCell className="text-xs">{record.zoneName || 'Sin zona'}</TableCell>
+  1955→                                  <TableCell className="text-xs">
+  1956→                                    <div className="flex items-center gap-1">
+  1957→                                      <ShieldCheck className="h-3 w-3" style={{ color }} />
+  1958→                                      <span>5 - Auditoría</span>
+  1959→                                    </div>
+  1960→                                  </TableCell>
+  1961→                                  <TableCell>
+  1962→                                    <Badge className={record.completed ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}>
+  1963→                                      {record.completed ? 'Apto' : 'No Apto'}
+  1964→                                    </Badge>
+  1965→                                  </TableCell>
+  1966→                                  <TableCell>
+  1967→                                    {editingScore === record.id ? (
+  1968→                                      <div className="flex items-center gap-1">
+  1969→                                        <Input
+  1970→                                          type="number"
+  1971→                                          min={0}
+  1972→                                          max={100}
+  1973→                                          value={editScoreValue}
+  1974→                                          onChange={e => setEditScoreValue(e.target.value)}
+  1975→                                          className="w-16 h-7 text-xs"
+  1976→                                        />
+  1977→                                        <Button
+  1978→                                          size="sm"
+  1979→                                          variant="ghost"
+  1980→                                          className="h-7 w-7 p-0 text-green-600"
+  1981→                                          onClick={async () => {
+  1982→                                            const newScore = parseInt(editScoreValue)
+  1983→                                            if (isNaN(newScore) || newScore < 0 || newScore > 100) return
+  1984→                                            try {
+  1985→                                              const res = await fetch(`/api/progress/step?sStep=${sStep}&miniStep=5`, {
+  1986→                                                method: 'PUT',
+  1987→                                                headers: { 'Content-Type': 'application/json' },
+  1988→                                                body: JSON.stringify({
+  1989→                                                  score: newScore,
+  1990→                                                  completed: newScore >= 75,
+  1991→                                                  notes: editNotesValue,
+  1992→                                                  projectId: selected5SProjectId,
+  1993→                                                  zoneId: record.zoneId,
+  1994→                                                }),
+  1995→                                              })
+  1996→                                              if (res.ok) {
+  1997→                                                setEditingScore(null)
+  1998→                                                await load5SProgress()
+  1999→                                              }
+  2000→                                            } catch (error) {
+
+[showing lines 1-2000 of 2130; use offset=2001 with limit to continue reading]

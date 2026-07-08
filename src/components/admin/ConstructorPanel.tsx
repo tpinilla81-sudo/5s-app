@@ -444,27 +444,14 @@ export default function ConstructorPanel() {
             </div>
             <div>
               <h1 className="text-lg font-bold bg-gradient-to-r from-violet-300 to-purple-200 bg-clip-text text-transparent">
-                Constructor Panel
+                Panel de Gestión
               </h1>
-              <p className="text-xs text-violet-400">Super Administrador de Plataforma</p>
+              <p className="text-xs text-violet-400">Dueño de la Plataforma 5S</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                if (!currentProject && projects.length > 0) {
-                  setCurrentProject(projects[0])
-                }
-                setCurrentView('board')
-              }}
-              className="gap-1.5 border-violet-700/50 text-violet-300 hover:bg-violet-900/30 hover:text-violet-200"
-            >
-              ← Vista App
-            </Button>
             <Badge className="bg-gradient-to-r from-violet-600 to-purple-600 text-white border-0 px-3 py-1">
-              <Crown className="h-3 w-3 mr-1" /> CONSTRUCTOR
+              <Crown className="h-3 w-3 mr-1" /> GESTOR (DUEÑO)
             </Badge>
           </div>
         </div>
