@@ -54,3 +54,4 @@ skills/
 
 # worklog
 worklog.md
+.env*
