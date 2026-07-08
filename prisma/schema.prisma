@@ -15,7 +15,7 @@ model User {
   email     String   @unique
   name      String
   password  String
-  role      String   @default("empleado") // "admin", "gerente", "responsable", "empleado", "auditor"
+  role      String   @default("empleado") // "gestor", "admin", "gerente", "responsable", "empleado", "auditor"
   avatar    String?
   active    Boolean  @default(true)
   createdAt DateTime @default(now())
@@ -90,7 +90,7 @@ model ProjectMember {
   id        String   @id @default(cuid())
   userId    String
   projectId String
-  role      String // "admin", "gerente", "responsable", "empleado", "auditor"
+  role      String // "gestor", "admin", "gerente", "responsable", "empleado", "auditor"
   joinedAt  DateTime @default(now())
 
   user    User         @relation(fields: [userId], references: [id], onDelete: Cascade)
