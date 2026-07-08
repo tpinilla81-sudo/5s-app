@@ -47,8 +47,13 @@ Después del primer deploy, la BD estará vacía. Para crear las tablas y datos 
 4. La app ejecuta el seed automáticamente en el primer acceso
 
 ### Credenciales por defecto
-- **Email**: `admin@5s.com`
-- **Contraseña**: `admin123`
+- **Gestor (Dueño de la app)**: `gestor@cincos.com` / `gestor123`
+- **Admin de Empresa**: `admin@5s.com` / `admin123`
+
+### Roles del sistema
+- **Gestor**: Dueño de la plataforma. Solo ve el tab "Gestión" donde crea/elimina empresas y gestiona la plataforma.
+- **Admin de Empresa**: Administrador de una empresa específica. Ve las pantallas operativas (Tablero 5S, Gerencia, Admin, Mejora Continua).
+- **Gerente, Responsable, Empleado, Auditor**: Roles operativos dentro de una empresa.
 
 ### Notas importantes
 - El schema usa **PostgreSQL** (no SQLite) para funcionar en Vercel serverless
