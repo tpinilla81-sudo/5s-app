@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 
-// GET /api/companies/[companyId]/members - List company members (gerentes)
+// GET /api/companies/[companyId]/members - List company members
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ companyId: string }> }
@@ -43,7 +43,8 @@ export async function GET(
   }
 }
 
-// POST /api/companies/[companyId]/members - Add member to company (assign gerente)
+// POST /api/companies/[companyId]/members - Add member to company (assign admin/gerente)
+// ✅ UPDATED: Ahora también permite al GESTOR (dueño de la app) asignar administradores
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ companyId: string }> }
@@ -56,8 +57,29 @@ export async function POST(
     }
 
     const user = await db.user.findUnique({ where: { id: sessionId } })
-    if (!user || user.role !== 'admin') {
-      return NextResponse.json({ success: false, error: 'Solo administradores pueden asignar gerentes' }, { status: 403 })
+    if (!user) {
+      return NextResponse.json({ success: false, error: 'No autenticado' }, { status: 401 })
+    }
+
+    // ✅ Permite: gestor (dueño app) o admin (admin de empresa)
+    if (user.role !== 'gestor' && user.role !== 'admin') {
+      return NextResponse.json(
+        { success: false, error: 'Solo el gestor o administradores pueden asignar miembros' },
+        { status: 403 }
+      )
+    }
+
+    // Si es admin, solo puede asignar en empresas donde es miembro
+    if (user.role === 'admin') {
+      const membership = await db.companyMember.findFirst({
+        where: { companyId, userId: user.id },
+      })
+      if (!membership) {
+        return NextResponse.json(
+          { success: false, error: 'Solo puedes administrar empresas donde eres miembro' },
+          { status: 403 }
+        )
+      }
     }
 
     const body = await request.json()
@@ -67,10 +89,19 @@ export async function POST(
       return NextResponse.json({ success: false, error: 'userId es requerido' }, { status: 400 })
     }
 
-    // Check user exists and has gerente role
+    // Check user exists
     const targetUser = await db.user.findUnique({ where: { id: userId } })
     if (!targetUser) {
       return NextResponse.json({ success: false, error: 'Usuario no encontrado' }, { status: 404 })
+    }
+
+    // Si el gestor está asignando un admin, asegurar que el usuario tenga rol 'admin'
+    const targetRole = role || 'gerente'
+    if (user.role === 'gestor' && targetRole === 'admin_empresa' && targetUser.role !== 'admin') {
+      await db.user.update({
+        where: { id: userId },
+        data: { role: 'admin' },
+      })
     }
 
     // Upsert membership
@@ -81,10 +112,10 @@ export async function POST(
       create: {
         userId,
         companyId,
-        role: role || 'gerente',
+        role: targetRole,
       },
       update: {
-        role: role || 'gerente',
+        role: targetRole,
       },
       include: {
         user: { select: { id: true, name: true, email: true, role: true, active: true } },
@@ -109,6 +140,7 @@ export async function POST(
 }
 
 // DELETE /api/companies/[companyId]/members - Remove member from company
+// ✅ UPDATED: Ahora también permite al GESTOR eliminar miembros
 export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ companyId: string }> }
@@ -121,8 +153,29 @@ export async function DELETE(
     }
 
     const user = await db.user.findUnique({ where: { id: sessionId } })
-    if (!user || user.role !== 'admin') {
-      return NextResponse.json({ success: false, error: 'Solo administradores pueden eliminar miembros' }, { status: 403 })
+    if (!user) {
+      return NextResponse.json({ success: false, error: 'No autenticado' }, { status: 401 })
+    }
+
+    // ✅ Permite: gestor o admin
+    if (user.role !== 'gestor' && user.role !== 'admin') {
+      return NextResponse.json(
+        { success: false, error: 'Solo el gestor o administradores pueden eliminar miembros' },
+        { status: 403 }
+      )
+    }
+
+    // Si es admin, solo puede eliminar en empresas donde es miembro
+    if (user.role === 'admin') {
+      const membership = await db.companyMember.findFirst({
+        where: { companyId, userId: user.id },
+      })
+      if (!membership) {
+        return NextResponse.json(
+          { success: false, error: 'Solo puedes administrar empresas donde eres miembro' },
+          { status: 403 }
+        )
+      }
     }
 
     const body = await request.json()

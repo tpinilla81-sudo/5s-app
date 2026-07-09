@@ -7,9 +7,24 @@ function hashPassword(password: string): string {
 }
 
 // GET /api/users - List all users with their project memberships
-export async function GET() {
+// ✅ UPDATED: Soporta ?search=email para búsqueda (utilizado por el panel de gestor)
+export async function GET(request: NextRequest) {
   try {
+    const { searchParams } = new URL(request.url)
+    const search = searchParams.get('search')?.trim()
+
+    // If search parameter provided, filter by email/name
+    const where = search && search.length >= 3
+      ? {
+          OR: [
+            { email: { contains: search.toLowerCase() } },
+            { name: { contains: search, mode: 'insensitive' as const } },
+          ],
+        }
+      : {}
+
     const users = await db.user.findMany({
+      where,
       include: {
         memberships: {
           include: {
@@ -25,9 +40,15 @@ export async function GET() {
               orderBy: { assignedAt: 'asc' },
             }
           }
+        },
+        companyMemberships: {
+          include: {
+            company: { select: { id: true, name: true } }
+          }
         }
       },
       orderBy: { createdAt: 'desc' },
+      take: search ? 20 : undefined, // Limit results when searching
     })
 
     const result = users.map(user => ({
@@ -38,6 +59,11 @@ export async function GET() {
       avatar: user.avatar,
       active: user.active,
       createdAt: user.createdAt,
+      companies: user.companyMemberships.map(cm => ({
+        id: cm.company.id,
+        name: cm.company.name,
+        role: cm.role,
+      })),
       projects: user.memberships.map(m => ({
         projectId: m.projectId,
         projectName: m.project.name,
