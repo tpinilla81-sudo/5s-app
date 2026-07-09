@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 
 // GET /api/platform-stats - Platform-wide statistics for Gestor (dueño de la app)
+// ✅ UPDATED: Ahora incluye `adminUser` en cada empresa (el primer admin_empresa encontrado)
 export async function GET(request: NextRequest) {
   try {
     // Verify the user is a gestor
@@ -50,23 +51,50 @@ export async function GET(request: NextRequest) {
       roleDistribution[entry.role] = entry._count.id
     }
 
-    // Companies with details
+    // ✅ Companies with details + admin user (first member with role 'admin_empresa' or 'admin')
     const companies = await db.company.findMany({
       include: {
         _count: { select: { projects: true, members: true } },
+        members: {
+          where: {
+            OR: [
+              { role: 'admin_empresa' },
+              { role: 'admin' },
+            ],
+          },
+          include: {
+            user: {
+              select: { id: true, name: true, email: true, role: true, active: true },
+            },
+          },
+          orderBy: { joinedAt: 'asc' },
+          take: 1,
+        },
       },
       orderBy: { createdAt: 'desc' },
     })
 
-    const companiesWithDetails = companies.map(c => ({
-      id: c.id,
-      name: c.name,
-      description: c.description,
-      active: c.active,
-      createdAt: c.createdAt,
-      projectCount: c._count.projects,
-      memberCount: c._count.members,
-    }))
+    const companiesWithDetails = companies.map(c => {
+      const adminMember = c.members[0]
+      return {
+        id: c.id,
+        name: c.name,
+        description: c.description,
+        active: c.active,
+        createdAt: c.createdAt,
+        projectCount: c._count.projects,
+        memberCount: c._count.members,
+        // ✅ Nuevo campo: admin user info
+        adminUser: adminMember
+          ? {
+              id: adminMember.user.id,
+              name: adminMember.user.name,
+              email: adminMember.user.email,
+              active: adminMember.user.active,
+            }
+          : null,
+      }
+    })
 
     // Recent users (last 10)
     const recentUsers = await db.user.findMany({
