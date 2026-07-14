@@ -118,14 +118,6 @@ interface PlatformStats {
  }>
 }
 
-interface PlatformConfigItem {
- id: string
- key: string
- value: string
- createdAt: string
- updatedAt: string
-}
-
 interface Subscription {
  id: string
  companyId: string
@@ -193,7 +185,7 @@ const PLAN_DEFAULTS: Record<string, { maxUsers: number; maxProjects: number; pri
 
 type ConstructorTab = 'empresas' | 'configuracion' | 'administracion'
 
-type ConfigSubTab = 'plantillas' | 'roles' | 'general'
+type ConfigSubTab = 'plantillas' | 'roles'
 
 // Permission display definitions for the matrix
 const PROJECT_PERMISSION_LABELS: Record<string, string> = {
@@ -292,14 +284,6 @@ export default function ConstructorPanel() {
  // Company admins map: companyId → admin user info
  const [companyAdmins, setCompanyAdmins] = useState<Record<string, { name: string; email: string }>>({})
 
- // Platform config
- const [configs, setConfigs] = useState<PlatformConfigItem[]>([])
- const [isLoadingConfigs, setIsLoadingConfigs] = useState(false)
- const [newConfigKey, setNewConfigKey] = useState('')
- const [newConfigValue, setNewConfigValue] = useState('')
- const [editingConfigKey, setEditingConfigKey] = useState<string | null>(null)
- const [editConfigValue, setEditConfigValue] = useState('')
-
  // Password reset
  const [resetPasswordUserId, setResetPasswordUserId] = useState<string | null>(null)
  const [newPassword, setNewPassword] = useState('')
@@ -339,21 +323,6 @@ export default function ConstructorPanel() {
    console.error('Error loading users:', error)
   } finally {
    setIsLoadingUsers(false)
-  }
- }, [])
-
- const loadConfigs = useCallback(async () => {
-  setIsLoadingConfigs(true)
-  try {
-   const res = await fetch('/api/platform-config')
-   const data = await res.json()
-   if (data.success) {
-    setConfigs(data.configs || [])
-   }
-  } catch (error) {
-   console.error('Error loading platform config:', error)
-  } finally {
-   setIsLoadingConfigs(false)
   }
  }, [])
 
@@ -409,17 +378,15 @@ export default function ConstructorPanel() {
 
  useEffect(() => {
   loadStats()
- }, [loadStats])
+  loadPermissions() // Pre-load permissions so they're always available
+ }, [loadStats, loadPermissions])
 
  useEffect(() => {
   if (activeTab === 'administracion') {
    loadUsers()
    loadSubscriptions()
-  } else if (activeTab === 'configuracion') {
-   if (configSubTab === 'general') loadConfigs()
-   if (configSubTab === 'roles') loadPermissions()
   }
- }, [activeTab, configSubTab, loadUsers, loadSubscriptions, loadConfigs, loadPermissions])
+ }, [activeTab, loadUsers, loadSubscriptions])
 
  useEffect(() => {
   if (stats?.companies && stats.companies.length > 0 && activeTab === 'empresas') {
@@ -678,53 +645,6 @@ export default function ConstructorPanel() {
    }
   } catch (error) {
    console.error('Error searching users:', error)
-  }
- }
-
- // ─── Config actions ─────────────────────────────────────────────────────
- const handleSaveConfig = async () => {
-  if (!newConfigKey.trim() || !newConfigValue.trim()) return
-  try {
-   const res = await fetch('/api/platform-config', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ key: newConfigKey, value: newConfigValue }),
-   })
-   if (res.ok) {
-    setNewConfigKey('')
-    setNewConfigValue('')
-    await loadConfigs()
-   }
-  } catch (error) {
-   console.error('Error saving config:', error)
-  }
- }
-
- const handleUpdateConfig = async (key: string) => {
-  try {
-   const res = await fetch('/api/platform-config', {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ key, value: editConfigValue }),
-   })
-   if (res.ok) {
-    setEditingConfigKey(null)
-    await loadConfigs()
-   }
-  } catch (error) {
-   console.error('Error updating config:', error)
-  }
- }
-
- const handleDeleteConfig = async (key: string) => {
-  if (!confirm(`¿Eliminar la configuración "${key}"?`)) return
-  try {
-   const res = await fetch(`/api/platform-config?key=${encodeURIComponent(key)}`, { method: 'DELETE' })
-   if (res.ok) {
-    await loadConfigs()
-   }
-  } catch (error) {
-   console.error('Error deleting config:', error)
   }
  }
 
@@ -1155,99 +1075,6 @@ export default function ConstructorPanel() {
         )}
 
         {/* Configuración General */}
-        {configSubTab === 'general' && (
-         <motion.div key="general" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-4">
-          <div className="flex items-center gap-2">
-           <Settings className="h-4 w-4 text-violet-500" />
-           <span className="text-sm text-violet-700">Variables de configuración de la plataforma</span>
-          </div>
-
-          {/* Add new config */}
-          <Card className="bg-white border-violet-100 shadow-sm hover:shadow-md transition-shadow">
-           <CardHeader className="pb-3">
-            <CardTitle className="text-sm text-violet-700 flex items-center gap-2">
-             <Plus className="h-4 w-4 text-violet-500" /> Nueva Configuración
-            </CardTitle>
-           </CardHeader>
-           <CardContent>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-             <div className="space-y-1">
-              <Label className="text-xs text-slate-600">Clave (key)</Label>
-              <Input placeholder="platform.name" value={newConfigKey} onChange={e => setNewConfigKey(e.target.value)} className="bg-white border-slate-300 text-slate-800 text-sm" />
-             </div>
-             <div className="space-y-1">
-              <Label className="text-xs text-slate-600">Valor</Label>
-              <Input placeholder="5S Audit Platform" value={newConfigValue} onChange={e => setNewConfigValue(e.target.value)} className="bg-white border-slate-300 text-slate-800 text-sm" />
-             </div>
-             <div className="flex items-end">
-              <Button onClick={handleSaveConfig} disabled={!newConfigKey.trim() || !newConfigValue.trim()} className="bg-gradient-to-r from-violet-600 to-purple-600 text-white w-full">
-               <Save className="h-4 w-4 mr-1" /> Guardar
-              </Button>
-             </div>
-            </div>
-           </CardContent>
-          </Card>
-
-          {/* Existing configs */}
-          {isLoadingConfigs ? (
-           <div className="flex justify-center py-8"><Loader2 className="h-6 w-6 text-violet-500 animate-spin" /></div>
-          ) : (
-           <Card className="bg-white border-violet-100 shadow-sm hover:shadow-md transition-shadow">
-            <CardContent className="p-0">
-             <Table>
-              <TableHeader>
-               <TableRow className="border-slate-200 hover:bg-transparent">
-                <TableHead className="text-slate-600 text-xs">Clave</TableHead>
-                <TableHead className="text-slate-600 text-xs">Valor</TableHead>
-                <TableHead className="text-slate-600 text-xs">Actualizado</TableHead>
-                <TableHead className="text-slate-600 text-xs">Acciones</TableHead>
-               </TableRow>
-              </TableHeader>
-              <TableBody>
-               {configs.map(config => (
-                <TableRow key={config.id} className="border-slate-100 hover:bg-violet-50">
-                 <TableCell className="text-xs font-mono text-violet-700">{config.key}</TableCell>
-                 <TableCell>
-                  {editingConfigKey === config.key ? (
-                   <Input value={editConfigValue} onChange={e => setEditConfigValue(e.target.value)} className="bg-white border-slate-300 text-slate-800 text-xs h-7" />
-                  ) : (
-                   <span className="text-xs text-slate-800">{config.value}</span>
-                  )}
-                 </TableCell>
-                 <TableCell className="text-[10px] text-slate-500">{new Date(config.updatedAt).toLocaleString('es-ES')}</TableCell>
-                 <TableCell>
-                  <div className="flex items-center gap-1">
-                   {editingConfigKey === config.key ? (
-                    <>
-                     <Button size="sm" onClick={() => handleUpdateConfig(config.key)} className="bg-violet-600 text-white h-6 w-6 p-0"><Check className="h-3 w-3" /></Button>
-                     <Button size="sm" variant="ghost" onClick={() => setEditingConfigKey(null)} className="text-violet-500 h-6 w-6 p-0"><X className="h-3 w-3" /></Button>
-                    </>
-                   ) : (
-                    <>
-                     <Button variant="ghost" size="sm" onClick={() => { setEditingConfigKey(config.key); setEditConfigValue(config.value) }} className="h-6 w-6 p-0 text-violet-500 hover:bg-violet-50">
-                      <Edit3 className="h-3 w-3" />
-                     </Button>
-                     <Button variant="ghost" size="sm" onClick={() => handleDeleteConfig(config.key)} className="h-6 w-6 p-0 text-red-500 hover:bg-red-100">
-                      <Trash2 className="h-3 w-3" />
-                     </Button>
-                    </>
-                   )}
-                  </div>
-                 </TableCell>
-                </TableRow>
-               ))}
-               {configs.length === 0 && (
-                <TableRow>
-                 <TableCell colSpan={4} className="text-center py-6 text-slate-400 text-xs">No hay configuraciones. Agrega la primera arriba.</TableCell>
-                </TableRow>
-               )}
-              </TableBody>
-             </Table>
-            </CardContent>
-           </Card>
-          )}
-         </motion.div>
-        )}
        </AnimatePresence>
       </motion.div>
      )}
