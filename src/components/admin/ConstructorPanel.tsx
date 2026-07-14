@@ -55,8 +55,10 @@ import {
   Save,
   Trash2,
   Key,
+  BookOpen,
 } from 'lucide-react'
-// TemplateManager and Tablero5S removed — those are managed by company admins, not gestor
+import TemplateManager from './TemplateManager'
+// Tablero5S removed — the board is defined and is what it is
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -191,7 +193,7 @@ const PLAN_DEFAULTS: Record<string, { maxUsers: number; maxProjects: number; pri
 
 type ConstructorTab = 'empresas' | 'configuracion' | 'administracion'
 
-type ConfigSubTab = 'roles' | 'general'
+type ConfigSubTab = 'plantillas' | 'roles' | 'general'
 
 // Permission display definitions for the matrix
 const PROJECT_PERMISSION_LABELS: Record<string, string> = {
@@ -242,7 +244,7 @@ const PLATFORM_PERMISSION_LABELS: Record<string, string> = {
 export default function ConstructorPanel() {
   const { setCurrentView, fetchProjects, fetchCompanies, projects, setCurrentProject, currentProject } = use5SStore()
   const [activeTab, setActiveTab] = useState<ConstructorTab>('empresas')
-  const [configSubTab, setConfigSubTab] = useState<ConfigSubTab>('roles')
+  const [configSubTab, setConfigSubTab] = useState<ConfigSubTab>('plantillas')
 
   // Platform stats
   const [stats, setStats] = useState<PlatformStats | null>(null)
@@ -792,6 +794,7 @@ export default function ConstructorPanel() {
   ]
 
   const configSubTabs: { key: ConfigSubTab; label: string; icon: React.ReactNode }[] = [
+    { key: 'plantillas', label: 'Plantillas', icon: <BookOpen className="h-4 w-4" /> },
     { key: 'roles', label: 'Roles y Permisos', icon: <Shield className="h-4 w-4" /> },
     { key: 'general', label: 'Config. General', icon: <Settings className="h-4 w-4" /> },
   ]
@@ -1019,6 +1022,19 @@ export default function ConstructorPanel() {
 
               {/* Sub-tab content */}
               <AnimatePresence mode="wait">
+                {/* Plantillas */}
+                {configSubTab === 'plantillas' && (
+                  <motion.div key="plantillas" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                    <div className="flex items-center gap-2 mb-3">
+                      <BookOpen className="h-4 w-4 text-violet-400" />
+                      <span className="text-sm text-violet-300">Plantillas genéricas 5S — el administrador de cada empresa las puede adaptar</span>
+                    </div>
+                    <div className="bg-slate-900/60 rounded-lg border border-violet-700/20 p-4">
+                      <TemplateManager />
+                    </div>
+                  </motion.div>
+                )}
+
                 {/* Roles y Permisos */}
                 {configSubTab === 'roles' && (
                   <motion.div key="roles" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-4">
