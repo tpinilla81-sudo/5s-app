@@ -5,14 +5,14 @@ import { motion } from 'framer-motion';
 import { S_STEPS, MINI_STEPS } from '@/lib/5s-constants';
 import { use5SStore } from '@/lib/store';
 import MiniStepCard from './MiniStepCard';
-import { ArrowLeft, Trophy, ChevronDown, ChevronRight, ShieldCheck, AlertTriangle, AlertCircle } from 'lucide-react';
+import { ArrowLeft, Trophy, ChevronDown, ChevronRight, ShieldCheck, AlertTriangle, AlertCircle, Camera } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import QuesitoDisplay from './QuesitoDisplay';
 
-export type ModalType = 'formacion' | 'fotos' | 'inventario' | 'actionplan' | 'autoevaluacion' | 'auditoria' | 'globalActionPlan' | 'globalInventory' | 'auditResults';
+export type ModalType = 'formacion' | 'fotos' | 'inventario' | 'actionplan' | 'autoevaluacion' | 'auditoria' | 'globalActionPlan' | 'globalInventory' | 'auditResults' | 'photoLibrary';
 
 interface AuditHistoryItem {
   id: string;
@@ -212,6 +212,16 @@ export default function SStepDetail({ sStep, onBack, onOpenModal }: SStepDetailP
             {sStepData.description}
           </p>
         </div>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => onOpenModal('photoLibrary', 2)}
+          className="gap-1.5 shrink-0"
+          style={{ borderColor: sStepData.color + '60', color: sStepData.color }}
+        >
+          <Camera className="h-4 w-4" />
+          <span className="text-xs">Biblioteca</span>
+        </Button>
       </div>
 
       {/* TASK 8: Overdue actions banner */}

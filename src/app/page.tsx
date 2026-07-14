@@ -257,7 +257,7 @@ export default function HomePage() {
   const isAdmin = currentUser?.role === 'admin';
   const canSeeGerentePanel = hasPermission('view_progress') || hasPermission('edit_project');
 
-  const isGlobalModal = activeModal === 'globalActionPlan' || activeModal === 'globalInventory';
+  const isGlobalModal = activeModal === 'globalActionPlan' || activeModal === 'globalInventory' || activeModal === 'photoLibrary' || activeModal === 'standardsLibrary' || activeModal === 'auditResults';
   const ActiveModalComponent = !isGlobalModal && activeModal ? MODAL_MAP[activeModal] : null;
 
   // Available tabs based on role
@@ -478,6 +478,16 @@ export default function HomePage() {
                 title="Activos (Necesarios)">
                 <BoxSelect className="h-3 w-3" />
                 <span className="hidden sm:inline">Activos</span>
+              </Button>
+            )}
+            {/* 📸 Biblioteca de Fotos */}
+            {canSeeNotifications && (
+              <Button variant="outline" size="sm"
+                className="gap-1 text-[10px] h-7 border-purple-300 text-purple-600 hover:bg-purple-50"
+                onClick={() => openModal('photoLibrary', 2)}
+                title="Biblioteca de Fotos">
+                <Camera className="h-3 w-3" />
+                <span className="hidden sm:inline">Fotos</span>
               </Button>
             )}
             {/* Free navigation lock */}
@@ -1081,7 +1091,7 @@ export default function HomePage() {
 
       {/* Photo Library Modal */}
       {activeModal === 'photoLibrary' && (
-        <PhotoLibrary open={true} onClose={closeModal} />
+        <PhotoLibrary open={true} onClose={closeModal} initialSStep={selectedSStep || undefined} />
       )}
 
       {/* Team Management Modal */}
