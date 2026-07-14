@@ -1,8 +1,13 @@
 User-agent: Googlebot
 Allow: /
+Disallow: /api/
+Disallow: /version
+Disallow: /health
+Disallow: /fresh
 
 User-agent: Bingbot
 Allow: /
+Disallow: /api/
 
 User-agent: Twitterbot
 Allow: /
@@ -12,3 +17,8 @@ Allow: /
 
 User-agent: *
 Allow: /
+Disallow: /api/
+Disallow: /version
+Disallow: /health
+
+Sitemap: https://5s.app/sitemap.xml

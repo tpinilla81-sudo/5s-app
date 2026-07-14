@@ -1,12 +1,12 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
-const BUILD_VERSION = 'v2.0-jun2026';
+const BUILD_VERSION = 'v2.1-jul2026';
 
 export function middleware(request: NextRequest) {
   const url = request.nextUrl;
 
-  // 1. Redirección especial para limpiar caché manual (/fresh)
+  // 1. Redirección para limpiar caché manual (/fresh)
   if (url.pathname === '/fresh') {
     const timestamp = Date.now();
     const redirectUrl = new URL('/', request.url);
@@ -30,25 +30,50 @@ export function middleware(request: NextRequest) {
     });
   }
 
-  // 3. Modificar las cabeceras de caché SIN romper las cookies que vienen del servidor
+  // 3. Health check para monitoring
+  if (url.pathname === '/health') {
+    return new NextResponse(JSON.stringify({ status: 'ok', version: BUILD_VERSION }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+
+  // 4. Procesar request normal
   const response = NextResponse.next();
 
-  if (!url.pathname.startsWith('/_next/static/')) {
+  // Security headers para producción
+  // X-Frame-Options: evitar clickjacking (la app no se embebe en iframes)
+  response.headers.set('X-Frame-Options', 'DENY');
+  // X-Content-Type-Options: evitar MIME-type sniffing
+  response.headers.set('X-Content-Type-Options', 'nosniff');
+  // Referrer-Policy: control de información de referencia
+  response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
+  // Permissions-Policy: limitar APIs del navegador
+  response.headers.set('Permissions-Policy', 'camera=(self), microphone=(), geolocation=()');
+  // X-XSS-Protection: protección legacy contra XSS
+  response.headers.set('X-XSS-Protection', '1; mode=block');
+
+  // Cache control: no cachear páginas dinámicas, pero sí assets estáticos
+  if (!url.pathname.startsWith('/_next/static/') && !url.pathname.startsWith('/_next/image/')) {
     response.headers.set('Cache-Control', 'no-cache, no-store, must-revalidate, proxy-revalidate');
     response.headers.set('Pragma', 'no-cache');
     response.headers.set('Expires', '0');
     response.headers.set('Surrogate-Control', 'no-store');
     response.headers.set('X-Accel-Expires', '0');
-    response.headers.set('X-Build-Version', BUILD_VERSION);
     response.headers.delete('ETag');
+  } else {
+    // Assets estáticos: caché agresivo (1 año, inmutable)
+    response.headers.set('Cache-Control', 'public, max-age=31536000, immutable');
   }
+
+  response.headers.set('X-Build-Version', BUILD_VERSION);
 
   return response;
 }
 
-// Ignoramos archivos estáticos y assets de la carpeta public para evitar sobrecargar el middleware
+// Matcher: ignorar archivos estáticos y assets
 export const config = {
   matcher: [
-    '/((?!_next/static|_next/image|favicon.ico|5s-logo.png|.*\\.png|.*\\.jpg|.*\\.svg).*)'
+    '/((?!_next/static|_next/image|favicon.ico|5s-logo.png|manifest.json|robots.txt|sw.js|.*\\.png|.*\\.jpg|.*\\.svg|.*\\.ico|.*\\.woff2?).*)'
   ],
 };

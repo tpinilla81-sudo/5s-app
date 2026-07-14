@@ -1,0 +1,27 @@
+{
+  "name": "5S App — Metodología 5S Digital",
+  "short_name": "5S App",
+  "description": "Plataforma digital para la implementación y seguimiento de la metodología 5S en empresas",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#8B5CF6",
+  "orientation": "any",
+  "lang": "es",
+  "categories": ["business", "productivity"],
+  "icons": [
+    {
+      "src": "/5s-logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/favicon.ico",
+      "sizes": "32x32",
+      "type": "image/x-icon"
+    }
+  ],
+  "screenshots": [],
+  "prefer_related_applications": false
+}
