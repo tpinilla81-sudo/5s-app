@@ -8,7 +8,7 @@ generator client {
 datasource db {
   provider  = "postgresql"
   url       = env("DATABASE_URL")
-  directUrl = env("DIRECT_URL")
+  directUrl = env("DATABASE_URL_UNPOOLED")
 }
 
 model User {
@@ -26,6 +26,7 @@ model User {
   companyMemberships CompanyMember[]
   employeeProgress   EmployeeProgress[]
   responsableZones   Zone[] // Zones where this user is the responsable
+  sessions           Session[]
 }
 
 model Project {
@@ -521,4 +522,18 @@ model Notification {
 
   @@index([userId, read])
   @@index([projectId])
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  token     String   @unique // Crypto-random session token
+  userId    String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([token])
+  @@index([userId])
+  @@index([expiresAt])
 }

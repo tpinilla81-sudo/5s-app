@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
+import { getAuthUser } from '@/lib/auth-helpers'
 
 // GET /api/companies/[companyId]/members - List company members
 export async function GET(
@@ -8,12 +9,7 @@ export async function GET(
 ) {
   try {
     const { companyId } = await params
-    const sessionId = request.cookies.get('5s_session')?.value
-    if (!sessionId) {
-      return NextResponse.json({ success: false, error: 'No autenticado' }, { status: 401 })
-    }
-
-    const user = await db.user.findUnique({ where: { id: sessionId } })
+    const user = await getAuthUser(request)
     if (!user) {
       return NextResponse.json({ success: false, error: 'No autenticado' }, { status: 401 })
     }
@@ -51,12 +47,7 @@ export async function POST(
 ) {
   try {
     const { companyId } = await params
-    const sessionId = request.cookies.get('5s_session')?.value
-    if (!sessionId) {
-      return NextResponse.json({ success: false, error: 'No autenticado' }, { status: 401 })
-    }
-
-    const user = await db.user.findUnique({ where: { id: sessionId } })
+    const user = await getAuthUser(request)
     if (!user) {
       return NextResponse.json({ success: false, error: 'No autenticado' }, { status: 401 })
     }
@@ -147,12 +138,7 @@ export async function DELETE(
 ) {
   try {
     const { companyId } = await params
-    const sessionId = request.cookies.get('5s_session')?.value
-    if (!sessionId) {
-      return NextResponse.json({ success: false, error: 'No autenticado' }, { status: 401 })
-    }
-
-    const user = await db.user.findUnique({ where: { id: sessionId } })
+    const user = await getAuthUser(request)
     if (!user) {
       return NextResponse.json({ success: false, error: 'No autenticado' }, { status: 401 })
     }

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
+import { getAuthUser } from '@/lib/auth-helpers'
 
 // GET /api/companies/[companyId] - Get company with projects and members
 export async function GET(
@@ -8,12 +9,7 @@ export async function GET(
 ) {
   try {
     const { companyId } = await params
-    const sessionId = request.cookies.get('5s_session')?.value
-    if (!sessionId) {
-      return NextResponse.json({ success: false, error: 'No autenticado' }, { status: 401 })
-    }
-
-    const user = await db.user.findUnique({ where: { id: sessionId } })
+    const user = await getAuthUser(request)
     if (!user) {
       return NextResponse.json({ success: false, error: 'No autenticado' }, { status: 401 })
     }
@@ -94,13 +90,11 @@ export async function PUT(
 ) {
   try {
     const { companyId } = await params
-    const sessionId = request.cookies.get('5s_session')?.value
-    if (!sessionId) {
+    const user = await getAuthUser(request)
+    if (!user) {
       return NextResponse.json({ success: false, error: 'No autenticado' }, { status: 401 })
     }
-
-    const user = await db.user.findUnique({ where: { id: sessionId } })
-    if (!user || (user.role !== 'gestor' && user.role !== 'admin')) {
+    if (user.role !== 'gestor' && user.role !== 'admin') {
       return NextResponse.json({ success: false, error: 'Sin permisos para editar empresas' }, { status: 403 })
     }
 
@@ -164,13 +158,11 @@ export async function DELETE(
 ) {
   try {
     const { companyId } = await params
-    const sessionId = request.cookies.get('5s_session')?.value
-    if (!sessionId) {
+    const user = await getAuthUser(request)
+    if (!user) {
       return NextResponse.json({ success: false, error: 'No autenticado' }, { status: 401 })
     }
-
-    const user = await db.user.findUnique({ where: { id: sessionId } })
-    if (!user || user.role !== 'gestor') {
+    if (user.role !== 'gestor') {
       return NextResponse.json({ success: false, error: 'Solo el gestor (dueño de la app) puede eliminar empresas' }, { status: 403 })
     }
 

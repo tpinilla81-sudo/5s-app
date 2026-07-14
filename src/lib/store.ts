@@ -723,31 +723,51 @@ export const use5SStore = create<FiveSState>((set, get) => ({
         return false
       }
 
+      if (!data.user) {
+        set({ isLoginLoading: false, authError: 'Error inesperado al iniciar sesión' })
+        return false
+      }
+
       set({ currentUser: data.user, isLoginLoading: false, authError: null })
 
       // Load permissions after login
-      await get().fetchPermissions()
-
-      // Check for projects after login
-      await get().fetchProjects()
-      const { projects } = get()
+      try {
+        await get().fetchPermissions()
+      } catch (e) {
+        console.error('Error loading permissions after login:', e)
+      }
 
       // Gestor (dueño de la app) goes directly to management panel
-      if (currentUser?.role === 'gestor') {
+      if (data.user.role === 'gestor') {
         set({ authView: 'board', activeTab: 'gestion' })
-        await get().fetchCompanies()
+        try {
+          await get().fetchCompanies()
+        } catch (e) {
+          console.error('Error fetching companies after login:', e)
+        }
         return true
       }
+
+      // Check for projects after login
+      try {
+        await get().fetchProjects()
+      } catch (e) {
+        console.error('Error fetching projects after login:', e)
+      }
+      const { projects } = get()
 
       if (projects.length > 0) {
         set({ currentProject: projects[0], authView: 'board' })
         // Fetch user's assigned zones after login
-        await get().fetchUserZones()
+        try {
+          await get().fetchUserZones()
+        } catch (e) {
+          console.error('Error fetching user zones after login:', e)
+        }
       } else {
         // Only admin can create projects via setup wizard
         // Non-admin users see a waiting screen
-        const { currentUser } = get()
-        if (currentUser?.role === 'admin') {
+        if (data.user.role === 'admin') {
           set({ authView: 'setup' })
         } else {
           set({ authView: 'no_projects' })

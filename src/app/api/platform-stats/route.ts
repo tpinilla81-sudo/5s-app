@@ -1,17 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
+import { getAuthUser } from '@/lib/auth-helpers'
 
 // GET /api/platform-stats - Platform-wide statistics for Gestor (dueño de la app)
 // ✅ UPDATED: Ahora incluye `adminUser` en cada empresa (el primer admin_empresa encontrado)
 export async function GET(request: NextRequest) {
   try {
     // Verify the user is a gestor
-    const sessionId = request.cookies.get('5s_session')?.value
-    if (!sessionId) {
+    const user = await getAuthUser(request)
+    if (!user) {
       return NextResponse.json({ success: false, error: 'No autenticado' }, { status: 401 })
     }
-    const user = await db.user.findUnique({ where: { id: sessionId } })
-    if (!user || user.role !== 'gestor') {
+    if (user.role !== 'gestor') {
       return NextResponse.json({ success: false, error: 'Solo el gestor puede ver estadísticas de la plataforma' }, { status: 403 })
     }
 

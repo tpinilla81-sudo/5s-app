@@ -1,17 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
-
-const SESSION_COOKIE = '5s_session'
-
-async function getSessionUser(request: NextRequest) {
-  const sessionId = request.cookies.get(SESSION_COOKIE)?.value
-  if (!sessionId) return null
-  const user = await db.user.findUnique({
-    where: { id: sessionId },
-    select: { id: true, role: true, active: true },
-  })
-  return user && user.active ? user : null
-}
+import { getAuthUser } from '@/lib/auth-helpers'
 
 export async function GET(request: NextRequest) {
   try {
@@ -53,7 +42,7 @@ export async function POST(request: NextRequest) {
     } = body
 
     // Server-side permission check: verify user has audit permission
-    const sessionUser = await getSessionUser(request)
+    const sessionUser = await getAuthUser(request)
     if (!sessionUser) {
       return NextResponse.json({ success: false, error: 'No autenticado' }, { status: 401 })
     }

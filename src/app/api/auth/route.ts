@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createHash } from 'crypto'
+import { createHash, randomBytes } from 'crypto'
 import { db } from '@/lib/db'
+import { getAuthUser, SESSION_COOKIE, getSessionExpiry } from '@/lib/auth-helpers'
 
-const SESSION_COOKIE = '5s_session'
 const COOKIE_MAX_AGE = 60 * 60 * 24 * 7 // 7 days
 
 function hashPasswordSync(password: string): string {
@@ -12,25 +12,9 @@ function hashPasswordSync(password: string): string {
 // GET /api/auth - Get current session user
 export async function GET(request: NextRequest) {
   try {
-    const sessionId = request.cookies.get(SESSION_COOKIE)?.value
+    const user = await getAuthUser(request)
 
-    if (!sessionId) {
-      return NextResponse.json({ user: null }, { status: 200 })
-    }
-
-    const user = await db.user.findUnique({
-      where: { id: sessionId },
-      select: {
-        id: true,
-        email: true,
-        name: true,
-        role: true,
-        avatar: true,
-        active: true,
-      },
-    })
-
-    if (!user || !user.active) {
+    if (!user) {
       const response = NextResponse.json({ user: null }, { status: 200 })
       response.cookies.set(SESSION_COOKIE, '', { path: '/', maxAge: 0 })
       return response
@@ -83,6 +67,26 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Create a secure session token
+    const token = randomBytes(32).toString('hex')
+    const expiresAt = getSessionExpiry()
+
+    await db.session.create({
+      data: {
+        token,
+        userId: user.id,
+        expiresAt,
+      },
+    })
+
+    // Clean up old expired sessions for this user
+    await db.session.deleteMany({
+      where: {
+        userId: user.id,
+        expiresAt: { lt: new Date() },
+      },
+    }).catch(() => {})
+
     const response = NextResponse.json(
       {
         user: {
@@ -97,11 +101,12 @@ export async function POST(request: NextRequest) {
       { status: 200 }
     )
 
-    response.cookies.set(SESSION_COOKIE, user.id, {
+    response.cookies.set(SESSION_COOKIE, token, {
       httpOnly: true,
       path: '/',
       maxAge: COOKIE_MAX_AGE,
       sameSite: 'lax',
+      secure: process.env.NODE_ENV === 'production',
     })
 
     return response
@@ -153,6 +158,18 @@ export async function PUT(request: NextRequest) {
       },
     })
 
+    // Create a secure session token for auto-login
+    const token = randomBytes(32).toString('hex')
+    const expiresAt = getSessionExpiry()
+
+    await db.session.create({
+      data: {
+        token,
+        userId: user.id,
+        expiresAt,
+      },
+    })
+
     const response = NextResponse.json(
       {
         user: {
@@ -168,11 +185,12 @@ export async function PUT(request: NextRequest) {
     )
 
     // Auto-login after registration
-    response.cookies.set(SESSION_COOKIE, user.id, {
+    response.cookies.set(SESSION_COOKIE, token, {
       httpOnly: true,
       path: '/',
       maxAge: COOKIE_MAX_AGE,
       sameSite: 'lax',
+      secure: process.env.NODE_ENV === 'production',
     })
 
     return response
@@ -186,7 +204,20 @@ export async function PUT(request: NextRequest) {
 }
 
 // DELETE /api/auth - Logout
-export async function DELETE() {
+export async function DELETE(request: NextRequest) {
+  try {
+    const sessionToken = request.cookies.get(SESSION_COOKIE)?.value
+
+    // Delete the session from database
+    if (sessionToken) {
+      await db.session.deleteMany({
+        where: { token: sessionToken },
+      }).catch(() => {})
+    }
+  } catch (error) {
+    console.error('Logout cleanup error:', error)
+  }
+
   const response = NextResponse.json(
     { message: 'Sesión cerrada' },
     { status: 200 }

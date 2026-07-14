@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
+import { getAuthUser } from '@/lib/auth-helpers'
 
 // Helper: check if user has a specific permission via rolePermissionConfig
 async function hasPermission(role: string, permission: string): Promise<boolean> {
@@ -12,17 +13,8 @@ async function hasPermission(role: string, permission: string): Promise<boolean>
 // GET /api/auth/zones - Get the zones assigned to the current logged-in user (permission-driven)
 export async function GET(request: NextRequest) {
   try {
-    const sessionId = request.cookies.get('5s_session')?.value
-    if (!sessionId) {
-      return NextResponse.json({ zones: [] }, { status: 200 })
-    }
-
-    const user = await db.user.findUnique({
-      where: { id: sessionId },
-      select: { id: true, role: true, active: true },
-    })
-
-    if (!user || !user.active) {
+    const user = await getAuthUser(request)
+    if (!user) {
       return NextResponse.json({ zones: [] }, { status: 200 })
     }
 
