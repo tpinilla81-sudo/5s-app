@@ -1020,7 +1020,7 @@ export default function HomePage() {
               {/* ═══ TAB: GESTIÓN (Solo Gestor - Dueño de la app) ═══ */}
               {activeTab === 'gestion' && isGestor && (
                 <motion.div key="gestion" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex-1 min-h-0 overflow-auto p-4">
-                  <ConstructorPanel embedded />
+                  <ConstructorPanel />
                 </motion.div>
               )}
 

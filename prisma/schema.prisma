@@ -351,8 +351,30 @@ model Company {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  projects Project[]
-  members  CompanyMember[]
+  projects     Project[]
+  members      CompanyMember[]
+  subscription Subscription?
+}
+
+model Subscription {
+  id            String   @id @default(cuid())
+  companyId     String   @unique
+  plan          String   @default("gratuito") // "gratuito", "basico", "profesional", "enterprise"
+  status        String   @default("activa") // "activa", "prueba", "vencida", "cancelada"
+  maxUsers      Int      @default(5)
+  maxProjects   Int      @default(1)
+  price         Float    @default(0) // Precio mensual en euros
+  startDate     DateTime @default(now())
+  endDate       DateTime? // null = sin límite
+  trialEndsAt   DateTime? // Fecha fin del periodo de prueba
+  notes         String? // Notas internas del gestor
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@index([status])
+  @@index([plan])
 }
 
 model CompanyMember {

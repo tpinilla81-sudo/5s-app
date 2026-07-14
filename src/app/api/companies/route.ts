@@ -18,6 +18,11 @@ export async function GET(request: NextRequest) {
         where: { active: true },
         include: {
           _count: { select: { projects: true, members: true } },
+          subscription: true,
+          members: {
+            where: { role: 'admin_empresa' },
+            include: { user: { select: { id: true, name: true, email: true, active: true } } },
+          },
         },
         orderBy: { createdAt: 'desc' },
       })
@@ -37,7 +42,7 @@ export async function GET(request: NextRequest) {
       companies = []
     }
 
-    const result = companies.map((c) => ({
+    const result = companies.map((c: any) => ({
       id: c.id,
       name: c.name,
       description: c.description,
@@ -46,6 +51,8 @@ export async function GET(request: NextRequest) {
       updatedAt: c.updatedAt,
       projectCount: c._count.projects,
       memberCount: c._count.members,
+      subscription: c.subscription || null,
+      admin: c.members?.[0]?.user || null,
     }))
 
     return NextResponse.json({ success: true, companies: result })
