@@ -366,7 +366,7 @@ const AUDIT_TEMPLATES: Record<number, { criteria: Array<{ criterion: string; wei
 
 export async function POST() {
   try {
-    // Create gestor (dueño de la app) user if not exists
+    // Only create gestor (app owner) — no demo data, no admin user
     const existingGestor = await db.user.findUnique({ where: { email: 'gestor@cincos.com' } })
     if (!existingGestor) {
       await db.user.create({
@@ -380,95 +380,7 @@ export async function POST() {
       })
     }
 
-    // Create admin (admin de empresa) user if not exists
-    const existingAdmin = await db.user.findUnique({ where: { email: 'admin@5s.com' } })
-    if (!existingAdmin) {
-      await db.user.create({
-        data: {
-          email: 'admin@5s.com',
-          name: 'Admin de Empresa',
-          password: hashPassword('admin123'),
-          role: 'admin',
-          active: true,
-        },
-      })
-    }
-
-    // Create demo project if no projects exist
-    let projects = await db.project.findMany()
-    let demoProjectId: string
-
-    // Create demo company if not exists
-    let demoCompany = await db.company.findUnique({ where: { name: 'Empresa Demo' } })
-    if (!demoCompany) {
-      demoCompany = await db.company.create({
-        data: {
-          name: 'Empresa Demo',
-          description: 'Empresa de demostración para la metodología 5S',
-        },
-      })
-    }
-
-    if (projects.length === 0) {
-      const demoProject = await db.project.create({
-        data: {
-          name: 'Proyecto Demo 5S',
-          description: 'Proyecto de demostración de la metodología 5S',
-          company: 'Empresa Demo',
-          companyId: demoCompany.id,
-          active: true,
-        },
-      })
-      demoProjectId = demoProject.id
-
-      // Create default zones
-      const zones = [
-        { name: 'Taller Principal', description: 'Zona de producción principal', color: '#8B5CF6' },
-        { name: 'Almacén A', description: 'Almacén de materiales', color: '#3B82F6' },
-        { name: 'Oficinas', description: 'Área administrativa', color: '#EAB308' },
-        { name: 'Nave 2', description: 'Zona de montaje secundaria', color: '#F43F5E' },
-      ]
-      for (const zone of zones) {
-        await db.zone.create({
-          data: { ...zone, projectId: demoProjectId },
-        })
-      }
-
-      // Link admin to project
-      const admin = await db.user.findUnique({ where: { email: 'admin@5s.com' } })
-      if (admin) {
-        await db.projectMember.create({
-          data: { userId: admin.id, projectId: demoProjectId, role: 'admin' },
-        })
-        // Also add admin as company member
-        const existingCompanyMember = await db.companyMember.findFirst({
-          where: { userId: admin.id, companyId: demoCompany.id }
-        })
-        if (!existingCompanyMember) {
-          await db.companyMember.create({
-            data: { userId: admin.id, companyId: demoCompany.id, role: 'admin' },
-          })
-        }
-      }
-    } else {
-      demoProjectId = projects[0].id
-      // Ensure existing projects are linked to the demo company if they don't have one
-      for (const project of projects) {
-        if (!project.companyId) {
-          await db.project.update({
-            where: { id: project.id },
-            data: { companyId: demoCompany.id },
-          })
-        }
-      }
-    }
-
-    // Permissions are now auto-seeded by GET /api/permissions with the correct per-S format.
-    // Old-format permissions (complete_steps, manage_users, etc.) are NO LONGER created here
-    // because they triggered the auto-reseed in /api/permissions which wiped all customizations.
-    // The GET endpoint will create any missing permissions using UPSERT (preserving custom edits).
-
-    // Clear existing templates and recreate
+    // Templates are essential for the app to function — recreate them
     try {
       await db.template.deleteMany({})
     } catch {
@@ -551,39 +463,17 @@ export async function POST() {
       })
     }
 
-    // Create 25 progress records (5 S × 5 mini-steps) for each project
-    projects = await db.project.findMany()
-    const projectIds = projects.length > 0 ? projects.map(p => p.id) : [demoProjectId]
-
-    for (const projectId of projectIds) {
-      for (let s = 1; s <= 5; s++) {
-        for (let m = 1; m <= 5; m++) {
-          // Since unique constraint was removed, use findFirst + create pattern
-          const existing = await db.progress.findFirst({
-            where: { sStep: s, miniStep: m, projectId, zoneId: null },
-          })
-          if (!existing) {
-            await db.progress.create({
-              data: { sStep: s, miniStep: m, completed: false, score: null, projectId, zoneId: null },
-            })
-          }
-        }
-      }
-    }
-
     const templates = await db.template.findMany()
-    const progressCount = await db.progress.count()
     const userCount = await db.user.count()
     const projectCount = await db.project.count()
     return NextResponse.json({
       success: true,
       data: {
-        message: 'Base de datos inicializada correctamente',
+        message: 'Base de datos inicializada correctamente (solo gestor + plantillas)',
         templatesCreated: templates.length,
-        progressRecords: progressCount,
         users: userCount,
         projects: projectCount,
-        adminCredentials: 'admin@5s.com / admin123',
+        gestorCredentials: 'gestor@cincos.com / gestor123',
       },
     })
   } catch (error) {
