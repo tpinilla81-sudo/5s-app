@@ -35,7 +35,7 @@ import {
   Users,
   CreditCard,
   Settings,
-  BookOpen,
+
   Plus,
   Edit3,
   Check,
@@ -50,14 +50,13 @@ import {
   Eye,
   EyeOff,
   BarChart3,
-  Globe,
+
   Zap,
   Save,
   Trash2,
   Key,
 } from 'lucide-react'
-import TemplateManager from './TemplateManager'
-import Tablero5S from './Tablero5S'
+// TemplateManager and Tablero5S removed — those are managed by company admins, not gestor
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -192,7 +191,7 @@ const PLAN_DEFAULTS: Record<string, { maxUsers: number; maxProjects: number; pri
 
 type ConstructorTab = 'empresas' | 'configuracion' | 'administracion'
 
-type ConfigSubTab = 'plantillas' | 'roles' | 'tablero5s' | 'general'
+type ConfigSubTab = 'roles' | 'general'
 
 // Permission display definitions for the matrix
 const PROJECT_PERMISSION_LABELS: Record<string, string> = {
@@ -243,7 +242,7 @@ const PLATFORM_PERMISSION_LABELS: Record<string, string> = {
 export default function ConstructorPanel() {
   const { setCurrentView, fetchProjects, fetchCompanies, projects, setCurrentProject, currentProject } = use5SStore()
   const [activeTab, setActiveTab] = useState<ConstructorTab>('empresas')
-  const [configSubTab, setConfigSubTab] = useState<ConfigSubTab>('plantillas')
+  const [configSubTab, setConfigSubTab] = useState<ConfigSubTab>('roles')
 
   // Platform stats
   const [stats, setStats] = useState<PlatformStats | null>(null)
@@ -793,9 +792,7 @@ export default function ConstructorPanel() {
   ]
 
   const configSubTabs: { key: ConfigSubTab; label: string; icon: React.ReactNode }[] = [
-    { key: 'plantillas', label: 'Plantillas', icon: <BookOpen className="h-4 w-4" /> },
     { key: 'roles', label: 'Roles y Permisos', icon: <Shield className="h-4 w-4" /> },
-    { key: 'tablero5s', label: 'Tablero 5S', icon: <Globe className="h-4 w-4" /> },
     { key: 'general', label: 'Config. General', icon: <Settings className="h-4 w-4" /> },
   ]
 
@@ -1022,19 +1019,6 @@ export default function ConstructorPanel() {
 
               {/* Sub-tab content */}
               <AnimatePresence mode="wait">
-                {/* Plantillas */}
-                {configSubTab === 'plantillas' && (
-                  <motion.div key="plantillas" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-                    <div className="flex items-center gap-2 mb-3">
-                      <BookOpen className="h-4 w-4 text-violet-400" />
-                      <span className="text-sm text-violet-300">Plantillas globales visibles para todas las empresas</span>
-                    </div>
-                    <div className="bg-slate-900/60 rounded-lg border border-violet-700/20 p-4">
-                      <TemplateManager />
-                    </div>
-                  </motion.div>
-                )}
-
                 {/* Roles y Permisos */}
                 {configSubTab === 'roles' && (
                   <motion.div key="roles" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-4">
@@ -1151,19 +1135,6 @@ export default function ConstructorPanel() {
                         </Card>
                       </div>
                     )}
-                  </motion.div>
-                )}
-
-                {/* Tablero 5S */}
-                {configSubTab === 'tablero5s' && (
-                  <motion.div key="tablero5s" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-                    <div className="flex items-center gap-2 mb-3">
-                      <Globe className="h-4 w-4 text-violet-400" />
-                      <span className="text-sm text-violet-300">Configuración del Tablero 5S a nivel de plataforma</span>
-                    </div>
-                    <div className="bg-slate-900/60 rounded-lg border border-violet-700/20 p-4">
-                      <Tablero5S />
-                    </div>
                   </motion.div>
                 )}
 
