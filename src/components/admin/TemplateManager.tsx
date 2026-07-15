@@ -51,10 +51,10 @@ const S_COLORS: Record<number, string> = { 1: '#8B5CF6', 2: '#EAB308', 3: '#3B82
 
 const MINI_STEPS_LABELS: Record<number, string> = {
   1: 'Formación y Exámenes',
-  2: 'Plan de Acción',
+  2: 'Fotografías (Antes/Después)',
   3: 'Inventario / Estándar',
   4: 'Autoevaluación',
-  5: 'Auditoría',
+  5: 'Auditoría Externa',
 }
 
 // ═══════════════════════════════════════════════════════
@@ -191,6 +191,45 @@ function getDefaultChecklistContent(sStep: number) {
 function getDefaultInventoryContent(sStep: number) {
   const cfg = INVENTORY_CONFIGS[sStep]
   if (!cfg) return { categories: [], extraFields: [] }
+
+  // S2: Use the comprehensive Seiton template matching the user's Excel structure
+  // (categories by element type with hierarchical subcategories + traceability codes)
+  if (sStep === 2) {
+    return {
+      title: 'Inventario de Necesarios',
+      subtitle: 'SEITON — Organiza los elementos necesarios en su ubicación correcta',
+      templateName: 'S2_Inventario_Necesarios_Seiton.xlsx',
+      categories: [
+        { value: 'materiales', label: 'MATERIALES', color: 'bg-blue-100 text-blue-800' },
+        { value: 'maquinas_equipos', label: 'MÁQUINAS Y EQUIPOS', color: 'bg-purple-100 text-purple-800' },
+        { value: 'mobiliario', label: 'MOBILIARIO', color: 'bg-amber-100 text-amber-800' },
+        { value: 'informacion', label: 'INFORMACIÓN', color: 'bg-teal-100 text-teal-800' },
+        { value: 'transporte_almacenaje', label: 'TRANSPORTE Y ALMACENAJE', color: 'bg-orange-100 text-orange-800' },
+      ],
+      extraFields: [
+        { key: 'codigo', label: 'Código de Trazabilidad', type: 'text' },
+        { key: 'subcategoria', label: 'Subcategoría', type: 'select', options: [
+          'Consumibles', 'Materia Prima', 'Producto en proceso', 'Producto acabado',
+          'Máquinas de trabajo', 'Utillajes de trabajo', 'Equipos y accesorios de Elevación',
+          'Equipos de ensayo y verificación', 'Herramientas de ensamblaje', 'Equipos informáticos', 'Equipos de limpieza',
+          'Bancos de trabajo', 'Paneles herramienta', 'Armarios o taquillas', 'Sillas, mesas', 'Paneles u otros soportes para información',
+          'Planos, instrucciones, boletines de trabajo', 'Posters u otra información divulgativa', 'Información referente a indicadores', 'Carpeta o bandejas con documentación', 'Información de seguridad',
+          'Máquinas de transporte', 'Utillajes de transporte, Pallets, embalajes de madera, cajas', 'Estanterías, gavetas, contenedores', 'Bolsas, plásticos, protecciones, elementos de flejado', 'Carros de transporte',
+        ]},
+        { key: 'zona_destino', label: 'Zona Actual / Destino', type: 'text' },
+        { key: 'responsable', label: 'Responsable / Área', type: 'text' },
+        { key: 'estado', label: 'Estado de Conservación', type: 'select', options: ['Excelente', 'Bueno', 'Regular', 'Requiere Mantenimiento'] },
+      ],
+      desplegables_jerarquicos: {
+        'MATERIALES': { prefijo_codigo: 'MAT', subcategorias: ['Consumibles', 'Materia Prima', 'Producto en proceso', 'Producto acabado'] },
+        'MÁQUINAS Y EQUIPOS': { prefijo_codigo: 'MAQ', subcategorias: ['Máquinas de trabajo', 'Utillajes de trabajo', 'Equipos y accesorios de Elevación', 'Equipos de ensayo y verificación', 'Herramientas de ensamblaje', 'Equipos informáticos', 'Equipos de limpieza'] },
+        'MOBILIARIO': { prefijo_codigo: 'MOB', subcategorias: ['Bancos de trabajo', 'Paneles herramienta', 'Armarios o taquillas', 'Sillas, mesas', 'Paneles u otros soportes para información'] },
+        'INFORMACIÓN': { prefijo_codigo: 'INF', subcategorias: ['Planos, instrucciones, boletines de trabajo', 'Posters u otra información divulgativa', 'Información referente a indicadores', 'Carpeta o bandejas con documentación', 'Información de seguridad'] },
+        'TRANSPORTE Y ALMACENAJE': { prefijo_codigo: 'TRA', subcategorias: ['Máquinas de transporte', 'Utillajes de transporte, Pallets, embalajes de madera, cajas', 'Estanterías, gavetas, contenedores', 'Bolsas, plásticos, protecciones, elementos de flejado', 'Carros de transporte'] },
+      },
+    }
+  }
+
   return {
     categories: cfg.categories.map(c => ({ value: c.value, label: c.label, color: c.color })),
     extraFields: cfg.extraFields.map(f => ({
@@ -1218,13 +1257,27 @@ export default function TemplateManager() {
     } catch (e) { console.error(e) }
   }
 
+  // All template types across all tabs — used by seed to create everything at once
+  const ALL_TEMPLATE_TYPES = ['formacion', 'examen', 'fotos', 'inventario', 'estandar', 'autoevaluacion', 'auditoria'] as const
+
   const handleSeedDefaults = async () => {
-    if (!confirm('¿Crear plantillas por defecto para todas las S que no tengan?')) return
+    if (!confirm('¿Crear plantillas por defecto para TODAS las S y TODOS los tipos? Esto creará las que falten.')) return
     setIsSaving(true)
     try {
+      // Load ALL existing templates (including inactive) across all types
+      const allExisting: TemplateData[] = []
+      for (const type of ALL_TEMPLATE_TYPES) {
+        try {
+          const res = await fetch(`/api/templates?type=${type}&includeInactive=true`)
+          const data = await res.json()
+          if (data.success && data.data) allExisting.push(...data.data)
+        } catch (e) { console.error(`Error fetching ${type} templates:`, e) }
+      }
+
+      let created = 0
       for (const s of S_STEPS) {
-        for (const type of tabConfig.types) {
-          const existing = templates.find(t => t.sStep === s.id && t.type === type && t.active)
+        for (const type of ALL_TEMPLATE_TYPES) {
+          const existing = allExisting.find(t => t.sStep === s.id && t.type === type && t.active)
           if (!existing) {
             let content = '{}'
             let title = ''
@@ -1265,15 +1318,19 @@ export default function TemplateManager() {
               nota = 0
               miniStep = 3
             }
-            await fetch('/api/templates', {
+            const res = await fetch('/api/templates', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ type, sStep: s.id, miniStep, title, content, notaMinima: nota }),
             })
+            const data = await res.json()
+            if (data.success) created++
+            else console.error(`Error creating ${type} S${s.id}:`, data.error)
           }
         }
       }
       fetchTemplates()
+      alert(`✅ ${created} plantilla(s) creada(s). Las plantillas existentes no se modificaron.`)
     } catch (e) { console.error(e) }
     finally { setIsSaving(false) }
   }

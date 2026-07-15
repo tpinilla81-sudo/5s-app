@@ -240,6 +240,35 @@ const INVENTORY_TEMPLATES: Record<number, { items: Array<{ name: string; locatio
       { name: 'Documentación archivo muerto', location: 'Archivo exterior', category: 'raro', quantity: 8, price: 48.00, action: 'Almacén exterior', extra: { ubicacionAsignada: 'Archivo exterior nave 3', metodoIdentificacion: 'Etiqueta', cercania: 'Poco accesible' } },
       { name: 'Contenedores de residuos', location: 'Salida trasera', category: 'frecuente', quantity: 3, price: 75.00, action: 'Codificar por color', extra: { ubicacionAsignada: 'Zona residuos señalizada', metodoIdentificacion: 'Código color', cercania: 'Cerca (1-3 pasos)' } },
     ],
+    // Comprehensive Seiton template matching the user's Excel structure
+    categories: [
+      { value: 'materiales', label: 'MATERIALES', color: 'bg-blue-100 text-blue-800' },
+      { value: 'maquinas_equipos', label: 'MÁQUINAS Y EQUIPOS', color: 'bg-purple-100 text-purple-800' },
+      { value: 'mobiliario', label: 'MOBILIARIO', color: 'bg-amber-100 text-amber-800' },
+      { value: 'informacion', label: 'INFORMACIÓN', color: 'bg-teal-100 text-teal-800' },
+      { value: 'transporte_almacenaje', label: 'TRANSPORTE Y ALMACENAJE', color: 'bg-orange-100 text-orange-800' },
+    ],
+    extraFields: [
+      { key: 'codigo', label: 'Código de Trazabilidad', type: 'text' },
+      { key: 'subcategoria', label: 'Subcategoría', type: 'select', options: [
+        'Consumibles', 'Materia Prima', 'Producto en proceso', 'Producto acabado',
+        'Máquinas de trabajo', 'Utillajes de trabajo', 'Equipos y accesorios de Elevación',
+        'Equipos de ensayo y verificación', 'Herramientas de ensamblaje', 'Equipos informáticos', 'Equipos de limpieza',
+        'Bancos de trabajo', 'Paneles herramienta', 'Armarios o taquillas', 'Sillas, mesas', 'Paneles u otros soportes para información',
+        'Planos, instrucciones, boletines de trabajo', 'Posters u otra información divulgativa', 'Información referente a indicadores', 'Carpeta o bandejas con documentación', 'Información de seguridad',
+        'Máquinas de transporte', 'Utillajes de transporte, Pallets, embalajes de madera, cajas', 'Estanterías, gavetas, contenedores', 'Bolsas, plásticos, protecciones, elementos de flejado', 'Carros de transporte',
+      ]},
+      { key: 'zona_destino', label: 'Zona Actual / Destino', type: 'text' },
+      { key: 'responsable', label: 'Responsable / Área', type: 'text' },
+      { key: 'estado', label: 'Estado de Conservación', type: 'select', options: ['Excelente', 'Bueno', 'Regular', 'Requiere Mantenimiento'] },
+    ],
+    desplegables_jerarquicos: {
+      'MATERIALES': { prefijo_codigo: 'MAT', subcategorias: ['Consumibles', 'Materia Prima', 'Producto en proceso', 'Producto acabado'] },
+      'MÁQUINAS Y EQUIPOS': { prefijo_codigo: 'MAQ', subcategorias: ['Máquinas de trabajo', 'Utillajes de trabajo', 'Equipos y accesorios de Elevación', 'Equipos de ensayo y verificación', 'Herramientas de ensamblaje', 'Equipos informáticos', 'Equipos de limpieza'] },
+      'MOBILIARIO': { prefijo_codigo: 'MOB', subcategorias: ['Bancos de trabajo', 'Paneles herramienta', 'Armarios o taquillas', 'Sillas, mesas', 'Paneles u otros soportes para información'] },
+      'INFORMACIÓN': { prefijo_codigo: 'INF', subcategorias: ['Planos, instrucciones, boletines de trabajo', 'Posters u otra información divulgativa', 'Información referente a indicadores', 'Carpeta o bandejas con documentación', 'Información de seguridad'] },
+      'TRANSPORTE Y ALMACENAJE': { prefijo_codigo: 'TRA', subcategorias: ['Máquinas de transporte', 'Utillajes de transporte, Pallets, embalajes de madera, cajas', 'Estanterías, gavetas, contenedores', 'Bolsas, plásticos, protecciones, elementos de flejado', 'Carros de transporte'] },
+    },
   },
   3: {
     items: [
@@ -457,6 +486,42 @@ export async function POST() {
               { key: 'responsable', label: 'Quién lo ha hecho', type: 'text', required: true },
               { key: 'contacto', label: 'Contacto', type: 'text', required: true },
               { key: 'mejoraTipo', label: 'Tipo de Mejora', type: 'select', options: ['seguridad', 'calidad', 'proceso', 'logistica'], required: true },
+            ],
+          }),
+        },
+      })
+
+      // Fotos template (Paso 2 — Fotografías Antes/Después)
+      const fotosDescriptions: Record<number, string> = {
+        1: 'Fotografía la zona para ver qué elementos innecesarios hay antes de clasificar',
+        2: 'Fotografía la zona para ver cómo está organizada antes de reordenar',
+        3: 'Fotografía la zona para documentar los puntos de suciedad antes de limpiar',
+        4: 'Fotografía la zona para documentar el estado actual antes de estandarizar',
+        5: 'Fotografía la zona para documentar el nivel de cumplimiento de los estándares',
+      }
+      await db.template.create({
+        data: {
+          type: 'fotos',
+          sStep: s,
+          miniStep: 2,
+          title: `Fotos S${s} - ${S_JAPANESE[s - 1]}`,
+          description: `Plantilla de fotografías para ${S_NAMES[s - 1]} (${S_JAPANESE[s - 1]})`,
+          content: JSON.stringify({
+            sections: [
+              {
+                title: 'Fotografías Antes',
+                description: fotosDescriptions[s] || 'Documenta el estado actual con fotografías',
+                minPhotos: 3,
+                photoTypes: ['antes'],
+                instructions: 'Toma un mínimo de 3 fotografías del estado actual de la zona. Incluye vistas generales y detalles de los problemas detectados.',
+              },
+              {
+                title: 'Fotografías Después',
+                description: 'Fotografía el resultado tras aplicar las mejoras',
+                minPhotos: 3,
+                photoTypes: ['despues'],
+                instructions: 'Toma fotografías desde los mismos ángulos que las fotos "antes" para poder comparar el antes y el después.',
+              },
             ],
           }),
         },
