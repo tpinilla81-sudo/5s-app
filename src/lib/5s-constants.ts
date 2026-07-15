@@ -65,6 +65,85 @@ export const S_STEPS: SStep[] = [
   },
 ];
 
+// ─── Phase 6: Mejora Continua (PDCA / Ciclo de Deming) ──────────────────────
+export interface PDCAStep {
+  id: number;       // 1=D, 2=P, 3=C, 4=A
+  letter: string;   // D, P, C, A
+  name: string;     // Do, Plan, Check, Act
+  spanishName: string;
+  color: string;
+  bgColor: string;
+  icon: string;
+  description: string;
+}
+
+export const PDCA_STEPS: PDCAStep[] = [
+  {
+    id: 1,
+    letter: 'D',
+    name: 'Do',
+    spanishName: 'Hacer',
+    color: '#2563EB',
+    bgColor: '#DBEAFE',
+    icon: 'Play',
+    description: 'Ejecutar las acciones planificadas. Implementar las mejoras identificadas y llevar a cabo las actividades del plan de acción.',
+  },
+  {
+    id: 2,
+    letter: 'P',
+    name: 'Plan',
+    spanishName: 'Planificar',
+    color: '#7C3AED',
+    bgColor: '#EDE9FE',
+    icon: 'ClipboardList',
+    description: 'Planificar las mejoras. Identificar oportunidades de mejora, establecer objetivos, definir acciones y asignar responsables.',
+  },
+  {
+    id: 3,
+    letter: 'C',
+    name: 'Check',
+    spanishName: 'Verificar',
+    color: '#059669',
+    bgColor: '#D1FAE5',
+    icon: 'SearchCheck',
+    description: 'Verificar los resultados. Comparar los resultados obtenidos con los objetivos planificados mediante indicadores y auditorías.',
+  },
+  {
+    id: 4,
+    letter: 'A',
+    name: 'Act',
+    spanishName: 'Actuar',
+    color: '#DC2626',
+    bgColor: '#FEE2E2',
+    icon: 'Rocket',
+    description: 'Actuar sobre las diferencias. Estandarizar los éxitos, corregir las desviaciones y comenzar un nuevo ciclo de mejora.',
+  },
+];
+
+// Templates available in the PDCA phase
+export const PDCA_TEMPLATES = {
+  pdca_board: {
+    name: 'Tablero PDCA',
+    description: 'Tablero visual del ciclo de Deming para seguimiento de mejoras',
+    applyTo: [1, 2, 3, 4] as number[], // Available in all PDCA steps
+  },
+  plan_accion: {
+    name: 'Plan de Acción',
+    description: 'Plan de acción con responsables, plazos y seguimiento',
+    applyTo: [1, 2] as number[], // Do + Plan
+  },
+  realizacion_estandar: {
+    name: 'B - Realización de Estándar',
+    description: 'Plantilla para la realización y documentación de estándares',
+    applyTo: [2, 4] as number[], // Plan + Act
+  },
+  kpi: {
+    name: 'KPIs de Mejora',
+    description: 'Indicadores clave de rendimiento para medir la mejora continua',
+    applyTo: [2, 3] as number[], // Plan + Check
+  },
+} as const;
+
 export const MINI_STEPS: MiniStep[] = [
   {
     id: 1,

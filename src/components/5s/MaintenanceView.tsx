@@ -5,9 +5,11 @@ import { motion } from 'framer-motion';
 import { use5SStore } from '@/lib/store';
 import {
   S_STEPS,
+  PDCA_STEPS,
+  PDCA_TEMPLATES,
   AUDIT_PASS_THRESHOLD,
 } from '@/lib/5s-constants';
-import type { AuditSection } from '@/lib/5s-constants';
+import type { AuditSection, PDCAStep } from '@/lib/5s-constants';
 import { fetchAllChecklistTemplates } from '@/lib/checklist-templates';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -42,9 +44,25 @@ import {
   ListChecks,
   User,
   SprayCan,
+  Play,
+  SearchCheck,
+  Rocket,
+  RotateCcw,
+  BookOpen,
+  Target,
+  Camera,
+  Standard as StandardIcon,
 } from 'lucide-react';
 import QuarterlyAuditModal from './QuarterlyAuditModal';
 import PeriodicAuditModal from './PeriodicAuditModal';
+
+// Icon map for PDCA steps
+const PDCA_ICONS: Record<string, React.ReactNode> = {
+  D: <Play className="h-4 w-4" />,
+  P: <ClipboardList className="h-4 w-4" />,
+  C: <SearchCheck className="h-4 w-4" />,
+  A: <Rocket className="h-4 w-4" />,
+};
 
 interface AuditRecord {
   id: string;
@@ -66,13 +84,57 @@ interface ActionItemData {
   prioridad: string;
   estado: string;
   fechaLimite: string | null;
-  source: string;
+  source?: string;
   createdAt: string;
 }
 
 interface MaintenanceViewProps {
   embedded?: boolean;
 }
+
+// KPI interface
+interface KPIData {
+  id: string;
+  name: string;
+  objective: string;
+  actual: number;
+  target: number;
+  unit: string;
+  pdcaStep: number; // 1=D, 2=P, 3=C, 4=A
+  frequency: string;
+  responsable: string;
+  trend: 'up' | 'down' | 'stable';
+}
+
+// PDCA Board Item
+interface PDCAItem {
+  id: string;
+  letter: string; // D, P, C, A
+  title: string;
+  description: string;
+  responsable: string;
+  status: 'pending' | 'in_progress' | 'completed';
+  dueDate: string | null;
+  createdAt: string;
+}
+
+const PRIORIDAD_COLORS: Record<string, string> = {
+  alta: 'bg-red-100 text-red-800',
+  media: 'bg-amber-100 text-amber-800',
+  baja: 'bg-green-100 text-green-800',
+};
+const ESTADO_COLORS: Record<string, string> = {
+  abierta: 'bg-red-100 text-red-700',
+  en_proceso: 'bg-amber-100 text-amber-700',
+  resuelta: 'bg-green-100 text-green-700',
+  cerrada: 'bg-gray-100 text-gray-600',
+};
+const ESTADO_LABELS: Record<string, string> = {
+  abierta: 'Abierta',
+  en_proceso: 'En proceso',
+  resuelta: 'Resuelta',
+  cerrada: 'Cerrada',
+};
 
 export default function MaintenanceView({ embedded }: MaintenanceViewProps = {}) {
   const { setCurrentView, currentProject, currentZone, fetchProgress } = use5SStore();
@@ -91,11 +153,22 @@ export default function MaintenanceView({ embedded }: MaintenanceViewProps = {})
   const [actionStats, setActionStats] = useState({ abierta: 0, en_proceso: 0, resuelta: 0, cerrada: 0 });
   const [stats, setStats] = useState<any>(null);
   const [isLoadingHistory, setIsLoadingHistory] = useState(true);
-  const [activeTab, setActiveTab] = useState<'overview' | 'weekly' | 'monthly' | 'quarterly' | 'actions' | 'counters'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'weekly' | 'monthly' | 'quarterly' | 'actions' | 'counters' | 'pdca'>('overview');
+  const [selectedPDCAStep, setSelectedPDCAStep] = useState<number>(1); // 1=D, 2=P, 3=C, 4=A
 
   // Action plan form
   const [showNewAction, setShowNewAction] = useState(false);
   const [newAction, setNewAction] = useState({ descripcion: '', responsable: '', prioridad: 'media', fechaLimite: '' });
+
+  // PDCA board items
+  const [pdcaItems, setPdcaItems] = useState<PDCAItem[]>([]);
+  const [showNewPdcaItem, setShowNewPdcaItem] = useState(false);
+  const [newPdcaItem, setNewPdcaItem] = useState({ title: '', description: '', responsable: '', dueDate: '' });
+
+  // KPIs
+  const [kpis, setKpis] = useState<KPIData[]>([]);
+  const [showNewKpi, setShowNewKpi] = useState(false);
+  const [newKpi, setNewKpi] = useState({ name: '', objective: '', actual: 0, target: 100, unit: '%', frequency: 'mensual', responsable: '' });
 
   useEffect(() => {
     loadData();
@@ -105,19 +178,14 @@ export default function MaintenanceView({ embedded }: MaintenanceViewProps = {})
   useEffect(() => {
     const loadChecklists = async () => {
       const templatesMap = await fetchAllChecklistTemplates('auditoria');
-      // Weekly: only S3 (Seiso/cleaning) sections
       const s3Sections = templatesMap[3] || [];
       setWeeklySections(s3Sections);
       setWeeklyTotalItems(s3Sections.reduce((sum, s) => sum + s.items.length, 0));
-      // Monthly: first 2 items from each section across all S
       const monthlyList: AuditSection[] = [];
       for (let s = 1; s <= 5; s++) {
         const sSections = templatesMap[s] || [];
         for (const section of sSections) {
-          monthlyList.push({
-            ...section,
-            items: section.items.slice(0, 2),
-          });
+          monthlyList.push({ ...section, items: section.items.slice(0, 2) });
         }
       }
       setMonthlySections(monthlyList);
@@ -141,9 +209,7 @@ export default function MaintenanceView({ embedded }: MaintenanceViewProps = {})
         const sorted = data.audits.sort((a: any, b: any) => new Date(b.auditDate).getTime() - new Date(a.auditDate).getTime());
         setAuditHistory(sorted);
       }
-    } catch (error) {
-      console.error('Error loading audit history:', error);
-    }
+    } catch (error) { console.error('Error loading audit history:', error); }
   };
 
   const loadActionItems = async () => {
@@ -159,9 +225,7 @@ export default function MaintenanceView({ embedded }: MaintenanceViewProps = {})
         });
         setActionStats(counts);
       }
-    } catch (error) {
-      console.error('Error loading action items:', error);
-    }
+    } catch (error) { console.error('Error loading action items:', error); }
   };
 
   const loadStats = async () => {
@@ -170,21 +234,29 @@ export default function MaintenanceView({ embedded }: MaintenanceViewProps = {})
       const res = await fetch(`/api/stats${params}`);
       const data = await res.json();
       if (data.success) setStats(data.data);
-    } catch (error) {
-      console.error('Error loading stats:', error);
-    }
+    } catch (error) { console.error('Error loading stats:', error); }
+  };
+
+  const handleAuditComplete = async () => {
+    setShowQuarterlyAudit(false);
+    setShowWeeklyAudit(false);
+    setShowMonthlyAudit(false);
+    await loadData();
+    if (fetchProgress) fetchProgress();
   };
 
   const handleAddAction = async () => {
-    if (!newAction.descripcion.trim()) return;
+    if (!newAction.descripcion.trim() || !currentProject) return;
     try {
-      await fetch('/api/actions', {
+      const res = await fetch('/api/actions', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          sStep: 0,
+          projectId: currentProject.id,
+          zoneId: currentZone?.id || null,
+          sStep: 0, // 0 = mejora continua
           miniStep: 0,
-          itemId: `MC-${Date.now()}`,
+          itemId: `mc_${Date.now()}`,
           itemDescription: newAction.descripcion,
           hallazgo: newAction.descripcion,
           responsable: newAction.responsable || null,
@@ -192,112 +264,139 @@ export default function MaintenanceView({ embedded }: MaintenanceViewProps = {})
           estado: 'abierta',
           fechaLimite: newAction.fechaLimite || null,
           source: 'mejora_continua',
-          projectId: currentProject?.id,
-          zoneId: currentZone?.id || null,
         }),
       });
-      setNewAction({ descripcion: '', responsable: '', prioridad: 'media', fechaLimite: '' });
-      setShowNewAction(false);
-      await loadActionItems();
-    } catch (error) {
-      console.error('Error adding action:', error);
-    }
+      if (res.ok) {
+        setNewAction({ descripcion: '', responsable: '', prioridad: 'media', fechaLimite: '' });
+        setShowNewAction(false);
+        await loadActionItems();
+      }
+    } catch (error) { console.error('Error adding action:', error); }
   };
 
-  const handleUpdateActionEstado = async (id: string, estado: string) => {
+  const handleUpdateActionEstado = async (actionId: string, newEstado: string) => {
     try {
-      await fetch(`/api/actions?id=${id}`, {
+      const res = await fetch('/api/actions', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ estado }),
+        body: JSON.stringify({ id: actionId, estado: newEstado }),
       });
-      await loadActionItems();
-    } catch (error) {
-      console.error('Error updating action:', error);
-    }
+      if (res.ok) await loadActionItems();
+    } catch (error) { console.error('Error updating action:', error); }
   };
 
-  const handleDeleteAction = async (id: string) => {
+  const handleDeleteAction = async (actionId: string) => {
     try {
-      await fetch(`/api/actions?id=${id}`, { method: 'DELETE' });
-      await loadActionItems();
-    } catch (error) {
-      console.error('Error deleting action:', error);
-    }
+      const res = await fetch(`/api/actions?id=${actionId}`, { method: 'DELETE' });
+      if (res.ok) await loadActionItems();
+    } catch (error) { console.error('Error deleting action:', error); }
   };
 
-  const totalActions = actionStats.abierta + actionStats.en_proceso + actionStats.resuelta + actionStats.cerrada;
-
+  // ─── Derived data ────────────────────────────────────────────────────────
   const weeklyAudits = auditHistory.filter(a => a.auditType === 'weekly');
   const monthlyAudits = auditHistory.filter(a => a.auditType === 'monthly');
-  const quarterlyAudits = auditHistory.filter(a => a.auditType === 'quarterly' || (!a.auditType && a.score !== undefined && a.auditorName));
-
-  // Calculate next audit dates
-  const getNextAuditDate = (audits: AuditRecord[], months: number) => {
-    if (audits.length === 0) return 'Pendiente';
-    const lastAudit = new Date(audits[0].auditDate);
-    const nextDate = new Date(lastAudit);
-    nextDate.setMonth(nextDate.getMonth() + months);
-    const today = new Date();
-    const diffDays = Math.ceil((nextDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-    if (diffDays < 0) return `¡Vencida hace ${Math.abs(diffDays)} días!`;
-    if (diffDays === 0) return '¡Hoy!';
-    return `En ${diffDays} días (${nextDate.toLocaleDateString('es-ES')})`;
-  };
+  const quarterlyAudits = auditHistory.filter(a => a.auditType === 'quarterly');
+  const totalActions = Object.values(actionStats).reduce((a, b) => a + b, 0);
 
   const getNextWeeklyDate = () => {
     if (weeklyAudits.length === 0) return 'Pendiente';
-    const lastAudit = new Date(weeklyAudits[0].auditDate);
-    const nextDate = new Date(lastAudit);
-    nextDate.setDate(nextDate.getDate() + 7);
-    const today = new Date();
-    const diffDays = Math.ceil((nextDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-    if (diffDays < 0) return `¡Vencida hace ${Math.abs(diffDays)} días!`;
-    if (diffDays === 0) return '¡Hoy!';
-    return `En ${diffDays} días`;
+    const last = new Date(weeklyAudits[0].auditDate);
+    const next = new Date(last.getTime() + 7 * 24 * 60 * 60 * 1000);
+    const diff = Math.ceil((next.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+    if (diff <= 0) return '¡Vencida!';
+    if (diff === 1) return 'Mañana';
+    return `En ${diff} días`;
+  };
+
+  const getNextAuditDate = (audits: AuditRecord[], months: number) => {
+    if (audits.length === 0) return 'Pendiente';
+    const last = new Date(audits[0].auditDate);
+    const next = new Date(last.getTime() + months * 30 * 24 * 60 * 60 * 1000);
+    const diff = Math.ceil((next.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+    if (diff <= 0) return '¡Vencida!';
+    if (diff <= 30) return `En ${diff} días`;
+    return next.toLocaleDateString('es-ES', { day: 'numeric', month: 'long' });
   };
 
   const isWeeklyOverdue = () => {
     if (weeklyAudits.length === 0) return true;
-    const lastAudit = new Date(weeklyAudits[0].auditDate);
-    const nextDate = new Date(lastAudit);
-    nextDate.setDate(nextDate.getDate() + 7);
-    return nextDate < new Date();
+    const last = new Date(weeklyAudits[0].auditDate);
+    return Date.now() - last.getTime() > 7 * 24 * 60 * 60 * 1000;
   };
 
-  const isMonthlyOverdue = () => getNextAuditDate(monthlyAudits, 1).includes('Vencida');
-  const isQuarterlyOverdue = () => getNextAuditDate(quarterlyAudits, 3).includes('Vencida');
-
-  const handleAuditComplete = () => {
-    setShowQuarterlyAudit(false);
-    setShowWeeklyAudit(false);
-    setShowMonthlyAudit(false);
-    loadData();
-    fetchProgress();
+  const isMonthlyOverdue = () => {
+    if (monthlyAudits.length === 0) return true;
+    const last = new Date(monthlyAudits[0].auditDate);
+    return Date.now() - last.getTime() > 30 * 24 * 60 * 60 * 1000;
   };
 
-  const PRIORIDAD_COLORS: Record<string, string> = {
-    alta: 'bg-red-100 text-red-800',
-    media: 'bg-amber-100 text-amber-800',
-    baja: 'bg-green-100 text-green-800',
+  const isQuarterlyOverdue = () => {
+    if (quarterlyAudits.length === 0) return true;
+    const last = new Date(quarterlyAudits[0].auditDate);
+    return Date.now() - last.getTime() > 90 * 24 * 60 * 60 * 1000;
   };
 
-  const ESTADO_COLORS: Record<string, string> = {
-    abierta: 'bg-gray-100 text-gray-800',
-    en_proceso: 'bg-blue-100 text-blue-800',
-    resuelta: 'bg-green-100 text-green-800',
-    cerrada: 'bg-gray-100 text-gray-600',
+  // ─── PDCA handlers ────────────────────────────────────────────────────────
+  const handleAddPdcaItem = () => {
+    const step = PDCA_STEPS.find(s => s.id === selectedPDCAStep);
+    if (!step || !newPdcaItem.title.trim()) return;
+    const item: PDCAItem = {
+      id: `pdca_${Date.now()}`,
+      letter: step.letter,
+      title: newPdcaItem.title,
+      description: newPdcaItem.description,
+      responsable: newPdcaItem.responsable,
+      status: 'pending',
+      dueDate: newPdcaItem.dueDate || null,
+      createdAt: new Date().toISOString(),
+    };
+    setPdcaItems(prev => [...prev, item]);
+    setNewPdcaItem({ title: '', description: '', responsable: '', dueDate: '' });
+    setShowNewPdcaItem(false);
   };
 
-  const ESTADO_LABELS: Record<string, string> = {
-    abierta: 'Abierta',
-    en_proceso: 'En proceso',
-    resuelta: 'Resuelta',
-    cerrada: 'Cerrada',
+  const handleUpdatePdcaStatus = (id: string, status: 'pending' | 'in_progress' | 'completed') => {
+    setPdcaItems(prev => prev.map(i => i.id === id ? { ...i, status } : i));
   };
 
+  const handleDeletePdcaItem = (id: string) => {
+    setPdcaItems(prev => prev.filter(i => i.id !== id));
+  };
+
+  const handleAddKpi = () => {
+    if (!newKpi.name.trim()) return;
+    const kpi: KPIData = {
+      id: `kpi_${Date.now()}`,
+      name: newKpi.name,
+      objective: newKpi.objective,
+      actual: newKpi.actual,
+      target: newKpi.target,
+      unit: newKpi.unit,
+      pdcaStep: selectedPDCAStep,
+      frequency: newKpi.frequency,
+      responsable: newKpi.responsable,
+      trend: 'stable',
+    };
+    setKpis(prev => [...prev, kpi]);
+    setNewKpi({ name: '', objective: '', actual: 0, target: 100, unit: '%', frequency: 'mensual', responsable: '' });
+    setShowNewKpi(false);
+  };
+
+  const handleDeleteKpi = (id: string) => {
+    setKpis(prev => prev.filter(k => k.id !== id));
+  };
+
+  // Get PDCA items for current step
+  const currentPdcaItems = pdcaItems.filter(i => i.letter === PDCA_STEPS.find(s => s.id === selectedPDCAStep)?.letter);
+  const currentKpis = kpis.filter(k => k.pdcaStep === selectedPDCAStep);
+
+  // Get templates available for current PDCA step
+  const availableTemplates = Object.entries(PDCA_TEMPLATES).filter(([, t]) => t.applyTo.includes(selectedPDCAStep));
+
+  // ─── Tab configuration ──────────────────────────────────────────────────────
   const tabs = [
     { key: 'overview', label: 'Resumen', icon: BarChart3 },
+    { key: 'pdca', label: 'Ciclo PDCA', icon: RotateCcw },
     { key: 'weekly', label: 'Semanal', icon: SprayCan },
     { key: 'monthly', label: 'Mensual', icon: Calendar },
     { key: 'quarterly', label: 'Trimestral', icon: ShieldCheck },
@@ -319,22 +418,26 @@ export default function MaintenanceView({ embedded }: MaintenanceViewProps = {})
         </motion.div>
       )}
 
+      {/* ─── Phase 6 Header ─── */}
       <Card className="border-green-200 bg-gradient-to-r from-green-50 to-emerald-50">
-        <CardContent className="p-6">
+        <CardContent className="p-4 sm:p-6">
           <div className="flex items-center gap-4">
-            <div className="w-16 h-16 rounded-full bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center text-white shadow-lg">
-              <Trophy className="h-8 w-8" />
+            <div className="w-14 h-14 rounded-full bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center text-white shadow-lg">
+              <Trophy className="h-7 w-7" />
             </div>
             <div className="flex-1">
-              <h2 className="text-xl font-bold text-green-900">Fase de Mejora Continua</h2>
+              <div className="flex items-center gap-2">
+                <h2 className="text-lg sm:text-xl font-bold text-green-900">Fase 6 — Mejora Continua</h2>
+                <Badge className="bg-green-100 text-green-800 border-green-200 text-[10px]">1/6</Badge>
+              </div>
               <p className="text-sm text-green-700 mt-1">
-                Taller de implementación completado. La zona está en <strong>mejora continua permanente</strong> con auditorías periódicas, plan de acción y contadores.
+                Ciclo de Deming <strong>(D-P-C-A)</strong>: Do, Plan, Check, Act. Mejora continua mediante auditorías periódicas, plan de acción y KPIs.
               </p>
             </div>
             <div className="hidden sm:flex items-center gap-1">
-              {S_STEPS.map(s => (
-                <div key={s.id} className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold" style={{ backgroundColor: s.color }}>
-                  S{s.id}
+              {PDCA_STEPS.map(s => (
+                <div key={s.id} className="w-9 h-9 rounded-full flex items-center justify-center text-white text-xs font-bold" style={{ backgroundColor: s.color }} title={`${s.letter} — ${s.spanishName}`}>
+                  {s.letter}
                 </div>
               ))}
             </div>
@@ -360,9 +463,40 @@ export default function MaintenanceView({ embedded }: MaintenanceViewProps = {})
         ))}
       </div>
 
-      {/* OVERVIEW TAB */}
+      {/* ─── OVERVIEW TAB ─── */}
       {activeTab === 'overview' && (
         <div className="space-y-4">
+          {/* PDCA cycle visual */}
+          <Card className="border-emerald-100">
+            <CardContent className="p-4">
+              <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
+                <RotateCcw className="h-4 w-4 text-emerald-600" />
+                Ciclo de Deming — PDCA
+              </h3>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                {PDCA_STEPS.map(step => (
+                  <button
+                    key={step.id}
+                    onClick={() => { setSelectedPDCAStep(step.id); setActiveTab('pdca'); }}
+                    className="p-3 rounded-xl border-2 transition-all hover:shadow-md text-left"
+                    style={{ borderColor: step.color, backgroundColor: step.bgColor }}
+                  >
+                    <div className="flex items-center gap-2 mb-1">
+                      <div className="w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-bold" style={{ backgroundColor: step.color }}>
+                        {step.letter}
+                      </div>
+                      <div>
+                        <p className="text-xs font-bold" style={{ color: step.color }}>{step.name}</p>
+                        <p className="text-[10px] text-muted-foreground">{step.spanishName}</p>
+                      </div>
+                    </div>
+                    <p className="text-[10px] text-muted-foreground leading-tight">{step.description.slice(0, 60)}...</p>
+                  </button>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+
           {/* Key metrics */}
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
             <Card className={isWeeklyOverdue() ? 'border-red-200 bg-red-50' : 'border-blue-100'}>
@@ -459,10 +593,386 @@ export default function MaintenanceView({ embedded }: MaintenanceViewProps = {})
         </div>
       )}
 
-      {/* WEEKLY TAB */}
+      {/* ─── PDCA TAB (Ciclo de Deming) ─── */}
+      {activeTab === 'pdca' && (
+        <div className="space-y-4">
+          {/* PDCA Step selector */}
+          <div className="grid grid-cols-4 gap-2">
+            {PDCA_STEPS.map(step => (
+              <button
+                key={step.id}
+                onClick={() => setSelectedPDCAStep(step.id)}
+                className={`relative p-3 rounded-xl border-2 transition-all text-center ${
+                  selectedPDCAStep === step.id
+                    ? 'shadow-lg scale-[1.02]'
+                    : 'opacity-70 hover:opacity-100'
+                }`}
+                style={{
+                  borderColor: selectedPDCAStep === step.id ? step.color : `${step.color}40`,
+                  backgroundColor: selectedPDCAStep === step.id ? step.bgColor : 'white',
+                }}
+              >
+                <div className="w-10 h-10 rounded-full flex items-center justify-center text-white text-lg font-bold mx-auto mb-1" style={{ backgroundColor: step.color }}>
+                  {step.letter}
+                </div>
+                <p className="text-xs font-bold" style={{ color: step.color }}>{step.name}</p>
+                <p className="text-[10px] text-muted-foreground">{step.spanishName}</p>
+                {selectedPDCAStep === step.id && (
+                  <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-4 h-1 rounded-full" style={{ backgroundColor: step.color }} />
+                )}
+              </button>
+            ))}
+          </div>
+
+          {/* Current PDCA step info */}
+          {(() => {
+            const step = PDCA_STEPS.find(s => s.id === selectedPDCAStep)!;
+            return (
+              <Card style={{ borderColor: step.color }}>
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="w-12 h-12 rounded-full flex items-center justify-center text-white text-xl font-bold" style={{ backgroundColor: step.color }}>
+                      {step.letter}
+                    </div>
+                    <div>
+                      <h3 className="font-bold text-lg" style={{ color: step.color }}>{step.name} — {step.spanishName}</h3>
+                      <p className="text-xs text-muted-foreground">{step.description}</p>
+                    </div>
+                  </div>
+
+                  {/* Templates available in this step */}
+                  <div className="mt-3">
+                    <p className="text-xs font-medium text-muted-foreground mb-2">Plantillas disponibles:</p>
+                    <div className="flex flex-wrap gap-2">
+                      {availableTemplates.map(([key, t]) => (
+                        <Badge key={key} className="text-[10px] py-1" style={{ backgroundColor: step.bgColor, color: step.color, borderColor: step.color }}>
+                          {t.name}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })()}
+
+          {/* PDCA Board (Tablero PDCA) — Always visible */}
+          <Card className="border-dashed">
+            <CardHeader className="pb-2">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-sm font-medium flex items-center gap-2">
+                  <RotateCcw className="h-4 w-4 text-emerald-500" />
+                  Tablero PDCA — {PDCA_STEPS.find(s => s.id === selectedPDCAStep)?.letter}
+                </CardTitle>
+                <Button size="sm" onClick={() => setShowNewPdcaItem(true)} className="gap-1 h-7 text-[10px]" style={{ backgroundColor: PDCA_STEPS.find(s => s.id === selectedPDCAStep)?.color }}>
+                  <Plus className="h-3 w-3" /> Nuevo Item
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {showNewPdcaItem && (
+                <div className="mb-3 p-3 rounded-lg border bg-gray-50 space-y-2">
+                  <div>
+                    <label className="text-xs font-medium">Título *</label>
+                    <Input placeholder="Título del item..." value={newPdcaItem.title} onChange={e => setNewPdcaItem(p => ({ ...p, title: e.target.value }))} className="mt-1 h-8 text-xs" />
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium">Descripción</label>
+                    <Textarea placeholder="Describe el item..." value={newPdcaItem.description} onChange={e => setNewPdcaItem(p => ({ ...p, description: e.target.value }))} className="mt-1 text-xs" rows={2} />
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="text-xs font-medium">Responsable</label>
+                      <Input placeholder="Nombre" value={newPdcaItem.responsable} onChange={e => setNewPdcaItem(p => ({ ...p, responsable: e.target.value }))} className="mt-1 h-8 text-xs" />
+                    </div>
+                    <div>
+                      <label className="text-xs font-medium">Fecha límite</label>
+                      <Input type="date" value={newPdcaItem.dueDate} onChange={e => setNewPdcaItem(p => ({ ...p, dueDate: e.target.value }))} className="mt-1 h-8 text-xs" />
+                    </div>
+                  </div>
+                  <div className="flex justify-end gap-2">
+                    <Button variant="outline" size="sm" onClick={() => setShowNewPdcaItem(false)} className="h-7 text-xs">Cancelar</Button>
+                    <Button size="sm" onClick={handleAddPdcaItem} disabled={!newPdcaItem.title.trim()} className="h-7 text-xs" style={{ backgroundColor: PDCA_STEPS.find(s => s.id === selectedPDCAStep)?.color, color: 'white' }}>Agregar</Button>
+                  </div>
+                </div>
+              )}
+
+              {currentPdcaItems.length === 0 ? (
+                <div className="text-center py-6">
+                  <RotateCcw className="h-8 w-8 text-muted-foreground/30 mx-auto mb-2" />
+                  <p className="text-xs text-muted-foreground">No hay items en este paso del ciclo PDCA</p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {currentPdcaItems.map(item => (
+                    <div key={item.id} className="flex items-center gap-3 p-2 rounded-lg border bg-white">
+                      <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold ${
+                        item.status === 'completed' ? 'bg-green-100 text-green-700' :
+                        item.status === 'in_progress' ? 'bg-amber-100 text-amber-700' :
+                        'bg-gray-100 text-gray-600'
+                      }`}>
+                        {item.status === 'completed' ? <CheckCircle className="h-3.5 w-3.5" /> :
+                         item.status === 'in_progress' ? <Clock className="h-3.5 w-3.5" /> :
+                         <Plus className="h-3.5 w-3.5" />}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className={`text-xs font-medium ${item.status === 'completed' ? 'line-through text-muted-foreground' : ''}`}>{item.title}</p>
+                        {item.description && <p className="text-[10px] text-muted-foreground truncate">{item.description}</p>}
+                        <div className="flex items-center gap-2 mt-0.5">
+                          {item.responsable && <span className="text-[10px] text-muted-foreground"><User className="h-2.5 w-2.5 inline mr-0.5" />{item.responsable}</span>}
+                          {item.dueDate && <span className="text-[10px] text-muted-foreground"><Calendar className="h-2.5 w-2.5 inline mr-0.5" />{new Date(item.dueDate).toLocaleDateString('es-ES')}</span>}
+                        </div>
+                      </div>
+                      <Select value={item.status} onValueChange={val => handleUpdatePdcaStatus(item.id, val as any)}>
+                        <SelectTrigger className="h-6 w-24 text-[10px]">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="pending">Pendiente</SelectItem>
+                          <SelectItem value="in_progress">En curso</SelectItem>
+                          <SelectItem value="completed">Completado</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <Button variant="ghost" size="sm" className="h-6 w-6 p-0 text-destructive" onClick={() => handleDeletePdcaItem(item.id)}>
+                        <Trash2 className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Plan de Acción (D + P steps) */}
+          {(selectedPDCAStep === 1 || selectedPDCAStep === 2) && (
+            <Card className="border-orange-100">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium flex items-center gap-2">
+                  <Zap className="h-4 w-4 text-orange-500" />
+                  Plan de Acción
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center justify-between mb-3">
+                  <p className="text-xs text-muted-foreground">
+                    {actionItems.length} acciones · {actionStats.abierta} abiertas · {actionStats.en_proceso} en proceso
+                  </p>
+                  <Button size="sm" onClick={() => setShowNewAction(!showNewAction)} className="gap-1 bg-orange-500 hover:bg-orange-600 text-white h-7 text-[10px]">
+                    <Plus className="h-3 w-3" /> Nueva
+                  </Button>
+                </div>
+
+                {showNewAction && (
+                  <div className="mb-3 p-3 rounded-lg border bg-orange-50/30 space-y-2">
+                    <div>
+                      <label className="text-xs font-medium">Descripción *</label>
+                      <Textarea placeholder="Describa la acción..." value={newAction.descripcion} onChange={e => setNewAction(prev => ({ ...prev, descripcion: e.target.value }))} className="mt-1 text-xs" rows={2} />
+                    </div>
+                    <div className="grid grid-cols-3 gap-2">
+                      <div>
+                        <label className="text-xs font-medium">Responsable</label>
+                        <Input placeholder="Nombre" value={newAction.responsable} onChange={e => setNewAction(prev => ({ ...prev, responsable: e.target.value }))} className="mt-1 h-8 text-xs" />
+                      </div>
+                      <div>
+                        <label className="text-xs font-medium">Prioridad</label>
+                        <Select value={newAction.prioridad} onValueChange={val => setNewAction(prev => ({ ...prev, prioridad: val }))}>
+                          <SelectTrigger className="mt-1 h-8 text-xs"><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="alta">Alta</SelectItem>
+                            <SelectItem value="media">Media</SelectItem>
+                            <SelectItem value="baja">Baja</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div>
+                        <label className="text-xs font-medium">Fecha límite</label>
+                        <Input type="date" value={newAction.fechaLimite} onChange={e => setNewAction(prev => ({ ...prev, fechaLimite: e.target.value }))} className="mt-1 h-8 text-xs" />
+                      </div>
+                    </div>
+                    <div className="flex justify-end gap-2">
+                      <Button variant="outline" size="sm" onClick={() => setShowNewAction(false)} className="h-7 text-xs">Cancelar</Button>
+                      <Button size="sm" onClick={handleAddAction} disabled={!newAction.descripcion.trim()} className="bg-orange-500 hover:bg-orange-600 text-white h-7 text-xs">Agregar</Button>
+                    </div>
+                  </div>
+                )}
+
+                {actionItems.length === 0 ? (
+                  <p className="text-xs text-muted-foreground text-center py-4">No hay acciones de mejora</p>
+                ) : (
+                  <div className="space-y-2 max-h-60 overflow-y-auto">
+                    {actionItems.slice(0, 10).map(action => (
+                      <div key={action.id} className="flex items-center gap-2 p-2 rounded-lg border bg-white text-xs">
+                        <Badge className={`${PRIORIDAD_COLORS[action.prioridad] || 'bg-gray-100'} text-[9px] py-0`}>{action.prioridad}</Badge>
+                        <span className="flex-1 truncate">{action.hallazgo || action.itemDescription}</span>
+                        <Badge className={`${ESTADO_COLORS[action.estado] || 'bg-gray-100'} text-[9px] py-0`}>{ESTADO_LABELS[action.estado] || action.estado}</Badge>
+                        <Select value={action.estado} onValueChange={val => handleUpdateActionEstado(action.id, val)}>
+                          <SelectTrigger className="h-6 w-20 text-[10px]"><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="abierta">Abierta</SelectItem>
+                            <SelectItem value="en_proceso">En proceso</SelectItem>
+                            <SelectItem value="resuelta">Resuelta</SelectItem>
+                            <SelectItem value="cerrada">Cerrada</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Realización de Estándar (P + A steps) */}
+          {(selectedPDCAStep === 2 || selectedPDCAStep === 4) && (
+            <Card className="border-indigo-100">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium flex items-center gap-2">
+                  <BookOpen className="h-4 w-4 text-indigo-500" />
+                  B — Realización de Estándar
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-xs text-muted-foreground mb-3">
+                  {selectedPDCAStep === 2
+                    ? 'Planificar los estándares a implementar. Definir criterios, procedimientos y métodos de verificación.'
+                    : 'Estandarizar las mejoras logradas. Documentar y establecer como norma los procesos que funcionaron.'}
+                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="p-3 rounded-lg border bg-indigo-50/30">
+                    <p className="text-xs font-semibold text-indigo-700 mb-1">Proceso</p>
+                    <ol className="text-[10px] text-muted-foreground space-y-1 list-decimal list-inside">
+                      <li>Identificar el proceso a estandarizar</li>
+                      <li>Documentar el método actual (mejor práctica)</li>
+                      <li>Definir criterios de calidad y medición</li>
+                      <li>Establecer puntos de verificación</li>
+                      <li>Formar al personal en el estándar</li>
+                    </ol>
+                  </div>
+                  <div className="p-3 rounded-lg border bg-indigo-50/30">
+                    <p className="text-xs font-semibold text-indigo-700 mb-1">Verificación</p>
+                    <ul className="text-[10px] text-muted-foreground space-y-1">
+                      <li className="flex items-center gap-1"><CheckCircle className="h-3 w-3 text-green-500" /> ¿El estándar está documentado?</li>
+                      <li className="flex items-center gap-1"><CheckCircle className="h-3 w-3 text-green-500" /> ¿El personal está formado?</li>
+                      <li className="flex items-center gap-1"><CheckCircle className="h-3 w-3 text-green-500" /> ¿Se puede medir el cumplimiento?</li>
+                      <li className="flex items-center gap-1"><CheckCircle className="h-3 w-3 text-green-500" /> ¿Hay fecha de revisión?</li>
+                    </ul>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* KPIs (P + C steps) */}
+          {(selectedPDCAStep === 2 || selectedPDCAStep === 3) && (
+            <Card className="border-teal-100">
+              <CardHeader className="pb-2">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-sm font-medium flex items-center gap-2">
+                    <Target className="h-4 w-4 text-teal-500" />
+                    KPIs de Mejora
+                  </CardTitle>
+                  <Button size="sm" onClick={() => setShowNewKpi(true)} className="gap-1 h-7 text-[10px] bg-teal-500 hover:bg-teal-600 text-white">
+                    <Plus className="h-3 w-3" /> Nuevo KPI
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {showNewKpi && (
+                  <div className="mb-3 p-3 rounded-lg border bg-teal-50/30 space-y-2">
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="text-xs font-medium">Nombre del KPI *</label>
+                        <Input placeholder="Ej: Tasa de cumplimiento" value={newKpi.name} onChange={e => setNewKpi(p => ({ ...p, name: e.target.value }))} className="mt-1 h-8 text-xs" />
+                      </div>
+                      <div>
+                        <label className="text-xs font-medium">Objetivo</label>
+                        <Input placeholder="Descripción del objetivo" value={newKpi.objective} onChange={e => setNewKpi(p => ({ ...p, objective: e.target.value }))} className="mt-1 h-8 text-xs" />
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-4 gap-2">
+                      <div>
+                        <label className="text-xs font-medium">Actual</label>
+                        <Input type="number" value={newKpi.actual} onChange={e => setNewKpi(p => ({ ...p, actual: Number(e.target.value) }))} className="mt-1 h-8 text-xs" />
+                      </div>
+                      <div>
+                        <label className="text-xs font-medium">Meta</label>
+                        <Input type="number" value={newKpi.target} onChange={e => setNewKpi(p => ({ ...p, target: Number(e.target.value) }))} className="mt-1 h-8 text-xs" />
+                      </div>
+                      <div>
+                        <label className="text-xs font-medium">Unidad</label>
+                        <Select value={newKpi.unit} onValueChange={val => setNewKpi(p => ({ ...p, unit: val }))}>
+                          <SelectTrigger className="mt-1 h-8 text-xs"><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="%">%</SelectItem>
+                            <SelectItem value="uds">Unidades</SelectItem>
+                            <SelectItem value="pts">Puntos</SelectItem>
+                            <SelectItem value="€">Euros</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div>
+                        <label className="text-xs font-medium">Frecuencia</label>
+                        <Select value={newKpi.frequency} onValueChange={val => setNewKpi(p => ({ ...p, frequency: val }))}>
+                          <SelectTrigger className="mt-1 h-8 text-xs"><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="semanal">Semanal</SelectItem>
+                            <SelectItem value="mensual">Mensual</SelectItem>
+                            <SelectItem value="trimestral">Trimestral</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                    <div className="flex justify-end gap-2">
+                      <Button variant="outline" size="sm" onClick={() => setShowNewKpi(false)} className="h-7 text-xs">Cancelar</Button>
+                      <Button size="sm" onClick={handleAddKpi} disabled={!newKpi.name.trim()} className="bg-teal-500 hover:bg-teal-600 text-white h-7 text-xs">Agregar</Button>
+                    </div>
+                  </div>
+                )}
+
+                {currentKpis.length === 0 ? (
+                  <div className="text-center py-4">
+                    <Target className="h-8 w-8 text-muted-foreground/30 mx-auto mb-2" />
+                    <p className="text-xs text-muted-foreground">No hay KPIs definidos para este paso</p>
+                    <p className="text-[10px] text-muted-foreground mt-1">
+                      {selectedPDCAStep === 2 ? 'Define indicadores para medir el éxito de las mejoras planificadas' : 'Verifica el cumplimiento de los KPIs definidos en la fase de Planificación'}
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {currentKpis.map(kpi => {
+                      const pct = kpi.target > 0 ? Math.round((kpi.actual / kpi.target) * 100) : 0;
+                      return (
+                        <div key={kpi.id} className="flex items-center gap-3 p-2 rounded-lg border bg-white">
+                          <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ${
+                            pct >= 100 ? 'bg-green-100 text-green-700' :
+                            pct >= 70 ? 'bg-amber-100 text-amber-700' :
+                            'bg-red-100 text-red-700'
+                          }`}>
+                            {pct}%
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs font-medium">{kpi.name}</p>
+                            <p className="text-[10px] text-muted-foreground">
+                              {kpi.actual} / {kpi.target} {kpi.unit} · {kpi.frequency}
+                            </p>
+                          </div>
+                          <Button variant="ghost" size="sm" className="h-6 w-6 p-0 text-destructive" onClick={() => handleDeleteKpi(kpi.id)}>
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
+        </div>
+      )}
+
+      {/* ─── WEEKLY TAB ─── */}
       {activeTab === 'weekly' && (
         <div className="space-y-4">
-          {/* Weekly audit info */}
           <Card className="border-blue-100">
             <CardContent className="p-4">
               <div className="flex items-center gap-3 mb-3">
@@ -490,8 +1000,6 @@ export default function MaintenanceView({ embedded }: MaintenanceViewProps = {})
               </div>
             </CardContent>
           </Card>
-
-          {/* Weekly audit history */}
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium flex items-center gap-2">
@@ -521,11 +1029,9 @@ export default function MaintenanceView({ embedded }: MaintenanceViewProps = {})
                           </p>
                         </div>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <Badge className={audit.score >= AUDIT_PASS_THRESHOLD ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}>
-                          {audit.score}%
-                        </Badge>
-                      </div>
+                      <Badge className={audit.score >= AUDIT_PASS_THRESHOLD ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}>
+                        {audit.score}%
+                      </Badge>
                     </div>
                   ))}
                 </div>
@@ -535,7 +1041,7 @@ export default function MaintenanceView({ embedded }: MaintenanceViewProps = {})
         </div>
       )}
 
-      {/* MONTHLY TAB */}
+      {/* ─── MONTHLY TAB ─── */}
       {activeTab === 'monthly' && (
         <div className="space-y-4">
           <Card className="border-purple-100">
@@ -565,7 +1071,6 @@ export default function MaintenanceView({ embedded }: MaintenanceViewProps = {})
               </div>
             </CardContent>
           </Card>
-
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium flex items-center gap-2">
@@ -595,11 +1100,9 @@ export default function MaintenanceView({ embedded }: MaintenanceViewProps = {})
                           </p>
                         </div>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <Badge className={audit.score >= AUDIT_PASS_THRESHOLD ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}>
-                          {audit.score}%
-                        </Badge>
-                      </div>
+                      <Badge className={audit.score >= AUDIT_PASS_THRESHOLD ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}>
+                        {audit.score}%
+                      </Badge>
                     </div>
                   ))}
                 </div>
@@ -609,7 +1112,7 @@ export default function MaintenanceView({ embedded }: MaintenanceViewProps = {})
         </div>
       )}
 
-      {/* QUARTERLY TAB */}
+      {/* ─── QUARTERLY TAB ─── */}
       {activeTab === 'quarterly' && (
         <div className="space-y-4">
           <Card className={isQuarterlyOverdue() ? 'border-red-200 bg-red-50/30' : 'border-orange-100'}>
@@ -636,7 +1139,6 @@ export default function MaintenanceView({ embedded }: MaintenanceViewProps = {})
               </Button>
             </CardContent>
           </Card>
-
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium flex items-center gap-2">
@@ -686,7 +1188,7 @@ export default function MaintenanceView({ embedded }: MaintenanceViewProps = {})
         </div>
       )}
 
-      {/* ACTIONS TAB */}
+      {/* ─── ACTIONS TAB ─── */}
       {activeTab === 'actions' && (
         <div className="space-y-4">
           <Card className="border-orange-100">
@@ -702,8 +1204,6 @@ export default function MaintenanceView({ embedded }: MaintenanceViewProps = {})
                   <Plus className="h-4 w-4" /> Nueva Acción
                 </Button>
               </div>
-
-              {/* Stats */}
               <div className="grid grid-cols-4 gap-3 text-center">
                 <div className="p-2 rounded-lg bg-red-50">
                   <p className="text-lg font-bold text-red-600">{actionStats.abierta}</p>
@@ -724,41 +1224,23 @@ export default function MaintenanceView({ embedded }: MaintenanceViewProps = {})
               </div>
             </CardContent>
           </Card>
-
-          {/* New action form */}
           {showNewAction && (
             <Card className="border-orange-200 bg-orange-50/30">
               <CardContent className="p-4 space-y-3">
                 <h4 className="text-sm font-semibold">Nueva Acción de Mejora</h4>
                 <div>
                   <label className="text-xs font-medium">Descripción *</label>
-                  <Textarea
-                    placeholder="Describa la acción..."
-                    value={newAction.descripcion}
-                    onChange={e => setNewAction(prev => ({ ...prev, descripcion: e.target.value }))}
-                    className="mt-1"
-                    rows={2}
-                  />
+                  <Textarea placeholder="Describa la acción..." value={newAction.descripcion} onChange={e => setNewAction(prev => ({ ...prev, descripcion: e.target.value }))} className="mt-1" rows={2} />
                 </div>
                 <div className="grid grid-cols-3 gap-3">
                   <div>
                     <label className="text-xs font-medium">Responsable</label>
-                    <Input
-                      placeholder="Nombre"
-                      value={newAction.responsable}
-                      onChange={e => setNewAction(prev => ({ ...prev, responsable: e.target.value }))}
-                      className="mt-1"
-                    />
+                    <Input placeholder="Nombre" value={newAction.responsable} onChange={e => setNewAction(prev => ({ ...prev, responsable: e.target.value }))} className="mt-1" />
                   </div>
                   <div>
                     <label className="text-xs font-medium">Prioridad</label>
-                    <Select
-                      value={newAction.prioridad}
-                      onValueChange={val => setNewAction(prev => ({ ...prev, prioridad: val }))}
-                    >
-                      <SelectTrigger className="mt-1">
-                        <SelectValue />
-                      </SelectTrigger>
+                    <Select value={newAction.prioridad} onValueChange={val => setNewAction(prev => ({ ...prev, prioridad: val }))}>
+                      <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="alta">Alta</SelectItem>
                         <SelectItem value="media">Media</SelectItem>
@@ -768,25 +1250,16 @@ export default function MaintenanceView({ embedded }: MaintenanceViewProps = {})
                   </div>
                   <div>
                     <label className="text-xs font-medium">Fecha límite</label>
-                    <Input
-                      type="date"
-                      value={newAction.fechaLimite}
-                      onChange={e => setNewAction(prev => ({ ...prev, fechaLimite: e.target.value }))}
-                      className="mt-1"
-                    />
+                    <Input type="date" value={newAction.fechaLimite} onChange={e => setNewAction(prev => ({ ...prev, fechaLimite: e.target.value }))} className="mt-1" />
                   </div>
                 </div>
                 <div className="flex justify-end gap-2">
                   <Button variant="outline" size="sm" onClick={() => setShowNewAction(false)}>Cancelar</Button>
-                  <Button size="sm" onClick={handleAddAction} disabled={!newAction.descripcion.trim()} className="bg-orange-500 hover:bg-orange-600 text-white">
-                    Agregar
-                  </Button>
+                  <Button size="sm" onClick={handleAddAction} disabled={!newAction.descripcion.trim()} className="bg-orange-500 hover:bg-orange-600 text-white">Agregar</Button>
                 </div>
               </CardContent>
             </Card>
           )}
-
-          {/* Actions list */}
           <div className="space-y-2">
             {actionItems.length === 0 ? (
               <Card>
@@ -797,17 +1270,13 @@ export default function MaintenanceView({ embedded }: MaintenanceViewProps = {})
                 </CardContent>
               </Card>
             ) : (
-              actionItems.map((action, idx) => (
+              actionItems.map((action) => (
                 <Card key={action.id} className={`overflow-hidden ${action.estado === 'resuelta' || action.estado === 'cerrada' ? 'opacity-60' : ''}`}>
                   <CardContent className="p-3">
                     <div className="flex items-start gap-3">
                       <div className="flex flex-col items-center gap-1 mt-0.5">
-                        <Badge className={PRIORIDAD_COLORS[action.prioridad] || 'bg-gray-100'}>
-                          {action.prioridad}
-                        </Badge>
-                        <Badge className={ESTADO_COLORS[action.estado] || 'bg-gray-100'}>
-                          {ESTADO_LABELS[action.estado] || action.estado}
-                        </Badge>
+                        <Badge className={PRIORIDAD_COLORS[action.prioridad] || 'bg-gray-100'}>{action.prioridad}</Badge>
+                        <Badge className={ESTADO_COLORS[action.estado] || 'bg-gray-100'}>{ESTADO_LABELS[action.estado] || action.estado}</Badge>
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className={`text-sm font-medium ${action.estado === 'resuelta' || action.estado === 'cerrada' ? 'line-through text-muted-foreground' : ''}`}>
@@ -833,13 +1302,8 @@ export default function MaintenanceView({ embedded }: MaintenanceViewProps = {})
                         </div>
                       </div>
                       <div className="flex items-center gap-1.5 shrink-0">
-                        <Select
-                          value={action.estado}
-                          onValueChange={val => handleUpdateActionEstado(action.id, val)}
-                        >
-                          <SelectTrigger className="h-7 w-28 text-xs">
-                            <SelectValue />
-                          </SelectTrigger>
+                        <Select value={action.estado} onValueChange={val => handleUpdateActionEstado(action.id, val)}>
+                          <SelectTrigger className="h-7 w-28 text-xs"><SelectValue /></SelectTrigger>
                           <SelectContent>
                             <SelectItem value="abierta">Abierta</SelectItem>
                             <SelectItem value="en_proceso">En proceso</SelectItem>
@@ -847,12 +1311,7 @@ export default function MaintenanceView({ embedded }: MaintenanceViewProps = {})
                             <SelectItem value="cerrada">Cerrada</SelectItem>
                           </SelectContent>
                         </Select>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-7 w-7 p-0 text-destructive hover:text-red-600"
-                          onClick={() => handleDeleteAction(action.id)}
-                        >
+                        <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-destructive hover:text-red-600" onClick={() => handleDeleteAction(action.id)}>
                           <Trash2 className="h-3.5 w-3.5" />
                         </Button>
                       </div>
@@ -865,7 +1324,7 @@ export default function MaintenanceView({ embedded }: MaintenanceViewProps = {})
         </div>
       )}
 
-      {/* COUNTERS TAB */}
+      {/* ─── COUNTERS TAB ─── */}
       {activeTab === 'counters' && (
         <div className="space-y-4">
           <Card className="border-green-100">
@@ -874,10 +1333,8 @@ export default function MaintenanceView({ embedded }: MaintenanceViewProps = {})
               <p className="text-xs text-muted-foreground mb-4">
                 Los contadores siguen activos desde el taller de implementación y continúan durante la mejora continua.
               </p>
-
               {stats ? (
                 <div className="space-y-4">
-                  {/* Global counters */}
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                     <div className="p-3 rounded-lg bg-blue-50 border border-blue-100 text-center">
                       <FileText className="h-5 w-5 text-blue-500 mx-auto mb-1" />
@@ -910,8 +1367,6 @@ export default function MaintenanceView({ embedded }: MaintenanceViewProps = {})
                       <p className="text-[10px] text-pink-600 font-medium">Aud. Periódicas</p>
                     </div>
                   </div>
-
-                  {/* Per-S counters */}
                   <h4 className="text-sm font-semibold mt-4">Contadores por S</h4>
                   <div className="space-y-2">
                     {S_STEPS.map(s => {
@@ -941,11 +1396,7 @@ export default function MaintenanceView({ embedded }: MaintenanceViewProps = {})
       )}
 
       {/* Audit modals */}
-      <QuarterlyAuditModal
-        open={showQuarterlyAudit}
-        onClose={handleAuditComplete}
-      />
-
+      <QuarterlyAuditModal open={showQuarterlyAudit} onClose={handleAuditComplete} />
       <PeriodicAuditModal
         open={showWeeklyAudit}
         onClose={handleAuditComplete}
@@ -957,7 +1408,6 @@ export default function MaintenanceView({ embedded }: MaintenanceViewProps = {})
         color="#3B82F6"
         icon={<SprayCan className="h-5 w-5 text-blue-500" />}
       />
-
       <PeriodicAuditModal
         open={showMonthlyAudit}
         onClose={handleAuditComplete}

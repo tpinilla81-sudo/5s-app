@@ -283,9 +283,8 @@ export default function HomePage() {
     if (isAdmin) {
       availableTabs.push({ key: 'admin', label: 'Admin', icon: <Shield className="h-3.5 w-3.5" /> });
     }
-    if (is5SCompleted()) {
-      availableTabs.push({ key: 'maintenance', label: 'Mejora Continua', icon: <Sparkles className="h-3.5 w-3.5" /> });
-    }
+    // Mejora Continua: always visible (Phase 6 / PDCA)
+    availableTabs.push({ key: 'maintenance', label: 'Mejora Continua', icon: <Sparkles className="h-3.5 w-3.5" /> });
   }
 
   // Loading screen
@@ -494,6 +493,26 @@ export default function HomePage() {
                 title="Biblioteca de Fotos">
                 <Camera className="h-3 w-3" />
                 <span className="hidden sm:inline">Fotos</span>
+              </Button>
+            )}
+            {/* 📚 Biblioteca de Estándares */}
+            {canSeeNotifications && (
+              <Button variant="outline" size="sm"
+                className="gap-1 text-[10px] h-7 border-indigo-300 text-indigo-600 hover:bg-indigo-50"
+                onClick={() => openModal('standards', 3)}
+                title="Biblioteca de Estándares">
+                <BookOpen className="h-3 w-3" />
+                <span className="hidden sm:inline">Estándares</span>
+              </Button>
+            )}
+            {/* 📋 Plan de Acción General */}
+            {canSeeNotifications && (
+              <Button variant="outline" size="sm"
+                className="gap-1 text-[10px] h-7 border-orange-300 text-orange-600 hover:bg-orange-50"
+                onClick={() => setActiveTab('actionplan')}
+                title="Plan de Acción General">
+                <ListChecks className="h-3 w-3" />
+                <span className="hidden sm:inline">Plan Acc.</span>
               </Button>
             )}
             {/* Free navigation lock */}
@@ -1062,7 +1081,7 @@ export default function HomePage() {
               )}
 
               {/* ═══ TAB: MAINTENANCE / MEJORA CONTINUA ═══ */}
-              {activeTab === 'maintenance' && is5SCompleted() && (
+              {activeTab === 'maintenance' && (
                 <motion.div key="maintenance" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex-1 min-h-0 overflow-auto p-4">
                   <MaintenanceView embedded />
                 </motion.div>
