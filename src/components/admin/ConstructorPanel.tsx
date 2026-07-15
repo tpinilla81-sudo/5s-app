@@ -651,7 +651,8 @@ const handleSaveGestorProfile = async () => {
         body: JSON.stringify({ email: gestorProfileData.email.trim().toLowerCase(), password: gestorProfileData.currentPassword }),
       })
       const verifyData = await verifyRes.json()
-      if (!verifyData.success) {
+      // API /api/auth returns { user: {...} } on success, { error: '...' } on failure
+      if (!verifyData.user) {
         setProfileMessage({ type: 'error', text: 'La contraseña actual es incorrecta' })
         setIsSavingProfile(false)
         return
