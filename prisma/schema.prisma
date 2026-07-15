@@ -378,11 +378,12 @@ model Subscription {
 }
 
 model CompanyMember {
-  id        String   @id @default(cuid())
-  userId    String
-  companyId String
-  role      String   @default("gerente") // "gerente", "admin_empresa"
-  joinedAt  DateTime @default(now())
+  id                   String    @id @default(cuid())
+  userId               String
+  companyId            String
+  role                 String    @default("gerente") // "gerente", "admin_empresa"
+  joinedAt             DateTime  @default(now())
+  invitationEmailSent  Boolean   @default(false) // Whether the invitation/welcome email has been sent
 
   user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
   company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)

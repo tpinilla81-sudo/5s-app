@@ -91,6 +91,7 @@ export async function GET(request: NextRequest) {
               name: adminMember.user.name,
               email: adminMember.user.email,
               active: adminMember.user.active,
+              invitationEmailSent: adminMember.invitationEmailSent,
             }
           : null,
       }

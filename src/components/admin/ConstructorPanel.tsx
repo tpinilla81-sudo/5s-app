@@ -56,6 +56,8 @@ import {
  Trash2,
  Key,
  BookOpen,
+ Mail,
+ Send,
 } from 'lucide-react'
 import TemplateManager from './TemplateManager'
 // Tablero5S removed — the board is defined and is what it is
@@ -283,6 +285,9 @@ export default function ConstructorPanel() {
 
  // Company admins map: companyId → admin user info
  const [companyAdmins, setCompanyAdmins] = useState<Record<string, { name: string; email: string }>>({})
+
+ // Email sending state
+ const [sendingEmailFor, setSendingEmailFor] = useState<string | null>(null) // companyId being sent
 
  // Delete company confirmation
  const [deletingCompany, setDeletingCompany] = useState<{ id: string; name: string; projectCount: number } | null>(null)
@@ -514,25 +519,8 @@ export default function ConstructorPanel() {
     }),
    })
 
-   // Step 5: Send welcome email to admin + notification to gestor
-   if (adminMode === 'create' && adminUserId) {
-    try {
-     await fetch('/api/email', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-       type: 'admin_welcome',
-       adminName: newAdminName,
-       adminEmail: newAdminEmail,
-       adminPassword: newAdminPassword,
-       companyName: newCompanyName,
-       gestorEmail: currentUser?.email || undefined,
-      }),
-     })
-    } catch (emailErr) {
-     console.error('Error sending welcome email (non-blocking):', emailErr)
-    }
-   }
+   // Note: Welcome email is NOT sent automatically.
+   // The gestor can send it manually using the "Enviar Email" button on the company card.
 
    setShowNewCompany(false)
    resetNewCompanyForm()
@@ -601,6 +589,49 @@ export default function ConstructorPanel() {
   } catch (error) {
    console.error('Error deleting company:', error)
    alert('Error al eliminar la empresa')
+  }
+ }
+
+ // ─── Email sending actions ────────────────────────────────────────────────
+const handleSendInvitationEmail = async (companyId: string) => {
+  const company = stats?.companies.find(c => c.id === companyId)
+  if (!company) return
+
+  const admin = companyAdmins[companyId]
+  if (!admin) {
+   alert('Esta empresa no tiene administrador asignado')
+   return
+  }
+
+  setSendingEmailFor(companyId)
+  try {
+   const res = await fetch('/api/email', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+     type: 'admin_welcome',
+     companyId,
+     adminName: admin.name,
+     adminEmail: admin.email,
+     adminPassword: '', // Password not stored — email will say "contact gestor"
+     companyName: company.name,
+     gestorEmail: currentUser?.email || undefined, // CC to gestor
+    }),
+   })
+   const data = await res.json()
+   if (data.success) {
+    alert(`Email de invitación enviado a ${admin.email} con copia a ${currentUser?.email}`)
+    // Reload stats to refresh invitationEmailSent flag
+    await loadStats()
+    await loadCompanyAdmins()
+   } else {
+    alert(data.error || 'Error al enviar el email. Verifica la configuración de RESEND_API_KEY.')
+   }
+  } catch (error) {
+   console.error('Error sending invitation email:', error)
+   alert('Error al enviar el email de invitación')
+  } finally {
+   setSendingEmailFor(null)
   }
  }
 
@@ -990,7 +1021,10 @@ const handleSaveGestorProfile = async () => {
         <div className="grid gap-4">
          {stats?.companies.map(company => {
           const admin = companyAdmins[company.id]
+          const adminUser = company.adminUser // From platform-stats, includes invitationEmailSent
           const sub = getSubForCompany(company.id)
+          const emailSent = adminUser?.invitationEmailSent || false
+          const isSendingEmail = sendingEmailFor === company.id
           return (
            <Card key={company.id} className={`bg-white shadow-sm hover:shadow-md transition-shadow ${company.active ? 'border-violet-100' : 'border-red-200 opacity-60'}`}>
             <CardContent className="p-4">
@@ -1041,7 +1075,7 @@ const handleSaveGestorProfile = async () => {
                 {/* Admin info */}
                 <div className="flex items-center gap-2 bg-slate-50 rounded-lg p-2.5">
                  <Users className="h-4 w-4 text-slate-500 shrink-0" />
-                 <div className="min-w-0">
+                 <div className="min-w-0 flex-1">
                   <p className="text-[10px] text-slate-500 uppercase tracking-wider">Administrador</p>
                   {admin ? (
                    <div className="min-w-0">
@@ -1052,6 +1086,29 @@ const handleSaveGestorProfile = async () => {
                    <Badge className="bg-orange-100 text-orange-600 border-orange-200 border text-[10px]">Sin administrador</Badge>
                   )}
                  </div>
+                 {/* Send invitation email button */}
+                 {admin && (
+                  <Button
+                   variant="ghost"
+                   size="sm"
+                   onClick={() => handleSendInvitationEmail(company.id)}
+                   disabled={isSendingEmail}
+                   className={`h-7 px-2 text-[10px] shrink-0 ${
+                    emailSent
+                     ? 'text-green-600 hover:bg-green-50'
+                     : 'text-violet-600 hover:bg-violet-50'
+                   }`}
+                   title={emailSent ? 'Email ya enviado. Click para reenviar.' : 'Enviar email de invitación con copia al gestor'}
+                  >
+                   {isSendingEmail ? (
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                   ) : emailSent ? (
+                    <><Mail className="h-3 w-3 mr-1" />Enviado</>
+                   ) : (
+                    <><Send className="h-3 w-3 mr-1" />Enviar</>
+                   )}
+                  </Button>
+                 )}
                 </div>
 
                 {/* Subscription info */}

@@ -1,29 +1,36 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { sendAdminWelcomeEmail, sendCompanyCreatedEmail, sendEmail } from '@/lib/email'
+import { sendAdminWelcomeEmail, sendCompanyCreatedEmail } from '@/lib/email'
 import { db } from '@/lib/db'
+import { getAuthUser } from '@/lib/auth-helpers'
 
 /**
  * POST /api/email
- * Sends welcome/notifications emails when a company + admin is created.
- * Called from the GestorPanel when the gestor clicks "Enviar Email" button.
+ * Sends welcome/invitation emails to company admins.
+ * Called manually by the gestor from the ConstructorPanel "Enviar Email" button.
  *
  * Body: {
  *   type: 'admin_welcome' | 'company_created',
+ *   companyId: string,            // Required: to find and mark the CompanyMember
  *   adminName: string,
  *   adminEmail: string,
- *   adminPassword: string,       // only for admin_welcome (empty if not available)
+ *   adminPassword?: string,       // Optional: for admin_welcome with credentials
  *   companyName: string,
- *   gestorEmail?: string,         // CC recipient
- *   sendCopy?: boolean,           // if true, send a copy to gestorEmail
+ *   gestorEmail?: string,         // CC recipient (always sent copy when provided)
  * }
  */
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { type, adminName, adminEmail, adminPassword, companyName, gestorEmail, sendCopy } = body
+    const { type, companyId, adminName, adminEmail, adminPassword, companyName, gestorEmail } = body
 
     if (!type || !adminName || !adminEmail || !companyName) {
       return NextResponse.json({ success: false, error: 'Faltan campos requeridos' }, { status: 400 })
+    }
+
+    // Verify the user is a gestor
+    const user = await getAuthUser(request)
+    if (!user || user.role !== 'gestor') {
+      return NextResponse.json({ success: false, error: 'Solo el gestor puede enviar emails de invitación' }, { status: 403 })
     }
 
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://5s-app-one.vercel.app'
@@ -38,8 +45,8 @@ export async function POST(request: NextRequest) {
         appUrl,
       })
 
-      // Also send copy to gestor if requested
-      if (sendCopy && gestorEmail) {
+      // Always send copy to gestor if gestorEmail provided
+      if (gestorEmail) {
         await sendCompanyCreatedEmail({
           gestorEmail,
           companyName,
@@ -47,6 +54,25 @@ export async function POST(request: NextRequest) {
           adminEmail,
           appUrl,
         })
+      }
+
+      // Mark invitationEmailSent on the CompanyMember if email was sent successfully
+      if (result.success && companyId) {
+        try {
+          await db.companyMember.updateMany({
+            where: {
+              companyId,
+              OR: [
+                { role: 'admin_empresa' },
+                { role: 'admin' },
+              ],
+            },
+            data: { invitationEmailSent: true },
+          })
+        } catch (dbErr) {
+          console.error('Error marking invitationEmailSent:', dbErr)
+          // Don't fail the request — email was sent successfully
+        }
       }
 
       return NextResponse.json(result)
