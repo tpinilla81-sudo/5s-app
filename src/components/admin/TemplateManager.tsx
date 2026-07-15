@@ -1144,7 +1144,31 @@ export default function TemplateManager() {
         const data = await res.json()
         if (data.success && data.data) allTemplates.push(...data.data)
       }
-      setTemplates(allTemplates)
+
+      // Auto-seed: if no templates exist, call the seed endpoint and re-fetch
+      if (allTemplates.length === 0) {
+        try {
+          const seedRes = await fetch('/api/seed/templates', { method: 'POST' })
+          const seedData = await seedRes.json()
+          if (seedData.success) {
+            // Re-fetch after seeding
+            const seeded: TemplateData[] = []
+            for (const type of ALL_TYPES) {
+              const res2 = await fetch(`/api/templates?type=${type}&includeInactive=true`)
+              const data2 = await res2.json()
+              if (data2.success && data2.data) seeded.push(...data2.data)
+            }
+            setTemplates(seeded)
+          } else {
+            setTemplates(allTemplates)
+          }
+        } catch (e) {
+          console.error('Auto-seed error:', e)
+          setTemplates(allTemplates)
+        }
+      } else {
+        setTemplates(allTemplates)
+      }
     } catch (e) { console.error('Error fetching templates:', e) }
     finally { setIsLoading(false) }
   }, [])
@@ -1256,84 +1280,6 @@ export default function TemplateManager() {
       await fetch(`/api/templates?id=${id}`, { method: 'DELETE' })
       fetchTemplates()
     } catch (e) { console.error(e) }
-  }
-
-  // Reuse ALL_TYPES for seed
-  const ALL_TEMPLATE_TYPES = ALL_TYPES
-
-  const handleSeedDefaults = async () => {
-    if (!confirm('¿Crear plantillas por defecto para TODAS las S y TODOS los tipos? Esto creará las que falten.')) return
-    setIsSaving(true)
-    try {
-      // Load ALL existing templates (including inactive) across all types
-      const allExisting: TemplateData[] = []
-      for (const type of ALL_TEMPLATE_TYPES) {
-        try {
-          const res = await fetch(`/api/templates?type=${type}&includeInactive=true`)
-          const data = await res.json()
-          if (data.success && data.data) allExisting.push(...data.data)
-        } catch (e) { console.error(`Error fetching ${type} templates:`, e) }
-      }
-
-      let created = 0
-      for (const s of S_STEPS) {
-        for (const type of ALL_TEMPLATE_TYPES) {
-          const existing = allExisting.find(t => t.sStep === s.id && t.type === type && t.active)
-          if (!existing) {
-            let content = '{}'
-            let title = ''
-            let nota = EXAM_PASS_THRESHOLD
-            let miniStep = 1
-            if (type === 'formacion') {
-              content = JSON.stringify(getDefaultFormationContent(s.id))
-              title = `Formación S${s.id} - ${s.japaneseName}`
-              miniStep = 1
-            } else if (type === 'examen') {
-              content = JSON.stringify(getDefaultExamContent(s.id))
-              title = `Examen S${s.id} - ${s.japaneseName}`
-              nota = EXAM_PASS_THRESHOLD
-              miniStep = 1
-            } else if (type === 'autoevaluacion') {
-              content = JSON.stringify(getDefaultChecklistContent(s.id))
-              title = `Autoevaluación S${s.id} - ${s.japaneseName}`
-              nota = SELF_EVAL_THRESHOLD
-              miniStep = 4
-            } else if (type === 'auditoria') {
-              content = JSON.stringify(getDefaultChecklistContent(s.id))
-              title = `Auditoría S${s.id} - ${s.japaneseName}`
-              nota = AUDIT_PASS_THRESHOLD
-              miniStep = 5
-            } else if (type === 'inventario') {
-              content = JSON.stringify(getDefaultInventoryContent(s.id))
-              title = `Inventario S${s.id} - ${s.japaneseName}`
-              nota = 0
-              miniStep = 3
-            } else if (type === 'fotos') {
-              content = JSON.stringify(getDefaultFotosContent(s.id))
-              title = `Fotos S${s.id} - ${s.japaneseName}`
-              nota = 0
-              miniStep = 2
-            } else if (type === 'estandar') {
-              content = JSON.stringify(getDefaultStandardContent())
-              title = `Estándar S${s.id} - ${s.japaneseName}`
-              nota = 0
-              miniStep = 3
-            }
-            const res = await fetch('/api/templates', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ type, sStep: s.id, miniStep, title, content, notaMinima: nota }),
-            })
-            const data = await res.json()
-            if (data.success) created++
-            else console.error(`Error creating ${type} S${s.id}:`, data.error)
-          }
-        }
-      }
-      fetchTemplates()
-      alert(`✅ ${created} plantilla(s) creada(s). Las plantillas existentes no se modificaron.`)
-    } catch (e) { console.error(e) }
-    finally { setIsSaving(false) }
   }
 
   // Full template export format (includes metadata + content)
@@ -1513,11 +1459,6 @@ export default function TemplateManager() {
             <ClipboardPaste className="h-3.5 w-3.5" />
             Pegar plantilla
           </Button>
-          <Button variant="outline" size="sm" onClick={handleSeedDefaults} disabled={isSaving}
-            className="gap-1 text-xs border-green-300 text-green-600 hover:bg-green-50">
-            <RotateCcw className="h-3.5 w-3.5" />
-            Crear plantillas por defecto
-          </Button>
         </div>
       </div>
 
@@ -1685,7 +1626,7 @@ export default function TemplateManager() {
 
                         {sTotal === 0 && (
                           <div className="text-center py-6 text-muted-foreground text-sm">
-                            No hay plantillas para S{s.id}. Pulsa &quot;Crear plantillas por defecto&quot; para generarlas todas.
+                            No hay plantillas para S{s.id}. Las plantillas por defecto se crean automáticamente.
                           </div>
                         )}
                       </div>
