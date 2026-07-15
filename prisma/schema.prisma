@@ -348,6 +348,32 @@ model Company {
   name        String   @unique
   description String?
   active      Boolean  @default(true)
+
+  // Company details (filled by gestor or admin)
+  nif         String?  // NIF/CIF de la empresa
+  sector      String?  // Sector/Industria
+  address     String?  // Dirección
+  city        String?  // Ciudad
+  province    String?  // Provincia
+  postalCode  String?  // Código Postal
+  country     String?  // País (default: España)
+  phone       String?  // Teléfono de la empresa
+  website     String?  // Sitio web
+
+  // Billing details (filled by admin for subscription)
+  billingEmail String? // Email de facturación
+  billingName  String? // Nombre/Razón social para facturación
+  billingNif   String? // NIF de facturación (puede ser diferente al de la empresa)
+  billingAddress String? // Dirección de facturación
+  billingCity   String? // Ciudad de facturación
+  billingPostalCode String? // CP de facturación
+  iban         String? // IBAN para domiciliación
+
+  // Contact person
+  contactName  String? // Persona de contacto
+  contactEmail String? // Email de contacto
+  contactPhone String? // Teléfono de contacto
+
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 

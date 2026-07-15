@@ -261,6 +261,10 @@ export default function ConstructorPanel() {
  // New company form
  const [newCompanyName, setNewCompanyName] = useState('')
  const [newCompanyDesc, setNewCompanyDesc] = useState('')
+ const [newCompanyNif, setNewCompanyNif] = useState('')
+ const [newCompanySector, setNewCompanySector] = useState('')
+ const [newCompanyCity, setNewCompanyCity] = useState('')
+ const [newCompanyPhone, setNewCompanyPhone] = useState('')
  const [adminMode, setAdminMode] = useState<'create' | 'assign'>('create')
  const [newAdminName, setNewAdminName] = useState('')
  const [newAdminEmail, setNewAdminEmail] = useState('')
@@ -417,6 +421,10 @@ export default function ConstructorPanel() {
  const resetNewCompanyForm = () => {
   setNewCompanyName('')
   setNewCompanyDesc('')
+  setNewCompanyNif('')
+  setNewCompanySector('')
+  setNewCompanyCity('')
+  setNewCompanyPhone('')
   setAdminMode('create')
   setNewAdminName('')
   setNewAdminEmail('')
@@ -444,7 +452,7 @@ export default function ConstructorPanel() {
    const companyRes = await fetch('/api/companies', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ name: newCompanyName, description: newCompanyDesc || undefined }),
+    body: JSON.stringify({ name: newCompanyName, description: newCompanyDesc || undefined, nif: newCompanyNif || undefined, sector: newCompanySector || undefined, city: newCompanyCity || undefined, phone: newCompanyPhone || undefined }),
    })
    const companyData = await companyRes.json()
    if (!companyRes.ok) {
@@ -1751,6 +1759,22 @@ const handleSaveGestorProfile = async () => {
         <div className="space-y-1">
          <Label className="text-xs text-slate-600">Nombre *</Label>
          <Input placeholder="Nombre de la empresa" value={newCompanyName} onChange={e => setNewCompanyName(e.target.value)} className="bg-white border-slate-300 text-slate-800" />
+        </div>
+        <div className="space-y-1">
+         <Label className="text-xs text-slate-600">NIF / CIF</Label>
+         <Input placeholder="Ej: B12345678" value={newCompanyNif} onChange={e => setNewCompanyNif(e.target.value)} className="bg-white border-slate-300 text-slate-800" />
+        </div>
+        <div className="space-y-1">
+         <Label className="text-xs text-slate-600">Sector</Label>
+         <Input placeholder="Ej: Manufactura" value={newCompanySector} onChange={e => setNewCompanySector(e.target.value)} className="bg-white border-slate-300 text-slate-800" />
+        </div>
+        <div className="space-y-1">
+         <Label className="text-xs text-slate-600">Ciudad</Label>
+         <Input placeholder="Ej: Madrid" value={newCompanyCity} onChange={e => setNewCompanyCity(e.target.value)} className="bg-white border-slate-300 text-slate-800" />
+        </div>
+        <div className="space-y-1">
+         <Label className="text-xs text-slate-600">Teléfono</Label>
+         <Input placeholder="Ej: +34 91 123 4567" value={newCompanyPhone} onChange={e => setNewCompanyPhone(e.target.value)} className="bg-white border-slate-300 text-slate-800" />
         </div>
         <div className="space-y-1">
          <Label className="text-xs text-slate-600">Descripción</Label>

@@ -74,7 +74,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { name, description } = body
+    const { name, description, nif, sector, address, city, province, postalCode, country, phone, website } = body
 
     if (!name || !name.trim()) {
       return NextResponse.json({ success: false, error: 'El nombre de la empresa es requerido' }, { status: 400 })
@@ -90,6 +90,15 @@ export async function POST(request: NextRequest) {
       data: {
         name: name.trim(),
         description: description?.trim() || null,
+        nif: nif?.trim() || null,
+        sector: sector?.trim() || null,
+        address: address?.trim() || null,
+        city: city?.trim() || null,
+        province: province?.trim() || null,
+        postalCode: postalCode?.trim() || null,
+        country: country?.trim() || null,
+        phone: phone?.trim() || null,
+        website: website?.trim() || null,
       },
       include: {
         _count: { select: { projects: true, members: true } },
