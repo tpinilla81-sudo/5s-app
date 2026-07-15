@@ -58,7 +58,9 @@ import {
  BookOpen,
  Mail,
  Send,
+ MailWarning,
 } from 'lucide-react'
+import { toast } from 'sonner'
 import TemplateManager from './TemplateManager'
 // Tablero5S removed — the board is defined and is what it is
 
@@ -292,6 +294,7 @@ export default function ConstructorPanel() {
 
  // Email sending state
  const [sendingEmailFor, setSendingEmailFor] = useState<string | null>(null) // companyId being sent
+ const [emailConfigStatus, setEmailConfigStatus] = useState<'checking' | 'ok' | 'not_configured'>('checking')
 
  // Delete company confirmation
  const [deletingCompany, setDeletingCompany] = useState<{ id: string; name: string; projectCount: number } | null>(null)
@@ -402,6 +405,11 @@ export default function ConstructorPanel() {
   loadPermissions() // Pre-load permissions so they're always available
   // Run schema migration once on load (adds missing columns like invitationEmailSent)
   fetch('/api/migrate/schema', { method: 'POST' }).catch(() => {})
+  // Check email configuration status
+  fetch('/api/email/config')
+   .then(r => r.json())
+   .then(data => setEmailConfigStatus(data.configured ? 'ok' : 'not_configured'))
+   .catch(() => setEmailConfigStatus('not_configured'))
  }, [loadStats, loadPermissions])
 
  useEffect(() => {
@@ -456,7 +464,7 @@ export default function ConstructorPanel() {
    })
    const companyData = await companyRes.json()
    if (!companyRes.ok) {
-    alert(companyData.error || 'Error al crear empresa')
+    toast.error('Error al crear empresa', { description: companyData.error || 'Error desconocido', duration: 5000 })
     return
    }
    companyId = companyData.company?.id || companyData.id
@@ -465,7 +473,7 @@ export default function ConstructorPanel() {
    let adminUserId: string | null = null
    if (adminMode === 'create') {
     if (!newAdminName.trim() || !newAdminEmail.trim() || !newAdminPassword.trim()) {
-     alert('Complete los datos del administrador')
+     toast.warning('Datos incompletos', { description: 'Complete los datos del administrador', duration: 4000 })
      // Company was created but admin data is missing — still close dialog and refresh
      setShowNewCompany(false)
      resetNewCompanyForm()
@@ -487,7 +495,7 @@ export default function ConstructorPanel() {
     })
     const userData = await userRes.json()
     if (!userRes.ok) {
-     alert(userData.error || 'Error al crear usuario admin')
+     toast.error('Error al crear admin', { description: userData.error || 'Error desconocido', duration: 5000 })
      // Company was created but admin creation failed — still close dialog and refresh
      setShowNewCompany(false)
      resetNewCompanyForm()
@@ -499,7 +507,7 @@ export default function ConstructorPanel() {
    } else {
     // Assign existing user
     if (!assignUserId) {
-     alert('Seleccione un usuario para asignar como administrador')
+     toast.warning('Seleccionar usuario', { description: 'Seleccione un usuario para asignar como administrador', duration: 4000 })
      setShowNewCompany(false)
      resetNewCompanyForm()
      await loadStats()
@@ -562,7 +570,7 @@ export default function ConstructorPanel() {
    await fetchCompanies()
   } catch (error) {
    console.error('Error creating company with admin:', error)
-   alert('Error al crear la empresa. Revise la consola para detalles.')
+   toast.error('Error al crear empresa', { description: 'Revise la consola para detalles', duration: 5000 })
    // Still refresh data even on error — the company might have been created
    await loadStats()
    await fetchCompanies()
@@ -584,7 +592,7 @@ export default function ConstructorPanel() {
     await fetchCompanies()
    } else {
     const data = await res.json()
-    alert(data.error || 'Error al actualizar empresa')
+    toast.error('Error al actualizar', { description: data.error || 'Error desconocido', duration: 5000 })
    }
   } catch (error) {
    console.error('Error updating company:', error)
@@ -619,13 +627,13 @@ export default function ConstructorPanel() {
     await fetchCompanies()
     await loadCompanyAdmins()
     await loadUsers() // Refresh users list since admins may have been deleted
-    alert(data.message || 'Empresa eliminada')
+    toast.success('Empresa eliminada', { description: data.message || 'La empresa ha sido eliminada', duration: 4000 })
    } else {
-    alert(data.error || 'Error al eliminar empresa')
+    toast.error('Error al eliminar', { description: data.error || 'Error desconocido', duration: 5000 })
    }
   } catch (error) {
    console.error('Error deleting company:', error)
-   alert('Error al eliminar la empresa')
+   toast.error('Error', { description: 'Error al eliminar la empresa', duration: 5000 })
   }
  }
 
@@ -636,7 +644,7 @@ const handleSendInvitationEmail = async (companyId: string) => {
 
   const admin = companyAdmins[companyId]
   if (!admin) {
-   alert('Esta empresa no tiene administrador asignado')
+   toast.warning('Sin administrador', { description: 'Esta empresa no tiene administrador asignado', duration: 4000 })
    return
   }
 
@@ -657,16 +665,35 @@ const handleSendInvitationEmail = async (companyId: string) => {
    })
    const data = await res.json()
    if (data.success) {
-    alert(`Email de invitación enviado a ${admin.email} con copia a ${currentUser?.email}`)
+    toast.success('Email enviado', {
+     description: `Invitación enviada a ${admin.email} con copia a ${currentUser?.email}`,
+     duration: 5000,
+    })
     // Reload stats to refresh invitationEmailSent flag
     await loadStats()
     await loadCompanyAdmins()
    } else {
-    alert(data.error || 'Error al enviar el email. Verifica la configuración de RESEND_API_KEY en Vercel.')
+    const errorMsg = data.error || 'Error al enviar el email'
+    const isConfigError = errorMsg.includes('RESEND_API_KEY') || errorMsg.includes('API key')
+    if (isConfigError) {
+     toast.error('Email no configurado', {
+      description: 'La API key de Resend no está configurada en Vercel. Ve a Vercel → Settings → Environment Variables y añade RESEND_API_KEY con una clave válida (empieza con "re_").',
+      duration: 10000,
+     })
+     setEmailConfigStatus('not_configured')
+    } else {
+     toast.error('Error al enviar email', {
+      description: errorMsg,
+      duration: 6000,
+     })
+    }
    }
   } catch (error) {
    console.error('Error sending invitation email:', error)
-   alert('Error de conexión al enviar el email. Inténtalo de nuevo.')
+   toast.error('Error de conexión', {
+    description: 'No se pudo conectar con el servidor para enviar el email.',
+    duration: 5000,
+   })
   } finally {
    setSendingEmailFor(null)
   }
@@ -789,7 +816,7 @@ const handleSaveGestorProfile = async () => {
     await loadSubscriptions()
    } else {
     const data = await res.json()
-    alert(data.error || 'Error al actualizar suscripción')
+    toast.error('Error de suscripción', { description: data.error || 'Error desconocido', duration: 5000 })
    }
   } catch (error) {
    console.error('Error updating subscription:', error)
@@ -801,7 +828,7 @@ const handleSaveGestorProfile = async () => {
   try {
    // Validate email if changing
    if (editUserData.email && !editUserData.email.trim()) {
-    alert('El email no puede estar vacío')
+    toast.warning('Email vacío', { description: 'El email no puede estar vacío', duration: 4000 })
     return
    }
    const res = await fetch('/api/users', {
@@ -823,7 +850,7 @@ const handleSaveGestorProfile = async () => {
     }
    } else {
     const data = await res.json()
-    alert(data.error || 'Error al actualizar usuario')
+    toast.error('Error al actualizar', { description: data.error || 'Error desconocido', duration: 5000 })
    }
   } catch (error) {
    console.error('Error updating user:', error)
@@ -848,7 +875,7 @@ const handleSaveGestorProfile = async () => {
 
  const handleResetPassword = async (userId: string) => {
   if (!newPassword || newPassword.length < 6) {
-   alert('La contraseña debe tener al menos 6 caracteres')
+   toast.warning('Contraseña corta', { description: 'La contraseña debe tener al menos 6 caracteres', duration: 4000 })
    return
   }
   try {
@@ -860,7 +887,7 @@ const handleSaveGestorProfile = async () => {
    if (res.ok) {
     setResetPasswordUserId(null)
     setNewPassword('')
-    alert('Contraseña actualizada correctamente')
+    toast.success('Contraseña actualizada', { description: 'La contraseña se ha actualizado correctamente', duration: 3000 })
    }
   } catch (error) {
    console.error('Error resetting password:', error)
@@ -876,11 +903,11 @@ const handleSaveGestorProfile = async () => {
     await loadUsers()
     await loadStats()
    } else {
-    alert(data.error || 'Error al eliminar usuario')
+    toast.error('Error al eliminar', { description: data.error || 'Error desconocido', duration: 5000 })
    }
   } catch (error) {
    console.error('Error deleting user:', error)
-   alert('Error al eliminar usuario')
+   toast.error('Error', { description: 'Error al eliminar usuario', duration: 5000 })
   }
  }
 
@@ -922,10 +949,10 @@ const handleSaveGestorProfile = async () => {
     body: JSON.stringify({ permissions }),
    })
    if (res.ok) {
-    alert('Permisos guardados correctamente')
+    toast.success('Permisos guardados', { description: 'Los permisos se han guardado correctamente', duration: 3000 })
    } else {
     const data = await res.json()
-    alert(data.error || 'Error al guardar permisos')
+    toast.error('Error de permisos', { description: data.error || 'Error desconocido', duration: 5000 })
    }
   } catch (error) {
    console.error('Error saving permissions:', error)
@@ -941,7 +968,7 @@ const handleSaveGestorProfile = async () => {
    if (res.ok) {
     const data = await res.json()
     setPermissions(data.permissions)
-    alert('Permisos restaurados')
+    toast.success('Permisos restaurados', { description: 'Los permisos han sido restaurados a los valores por defecto', duration: 3000 })
    }
   } catch (error) {
    console.error('Error resetting permissions:', error)
@@ -1041,6 +1068,21 @@ const handleSaveGestorProfile = async () => {
      {/* ═══ EMPRESAS TAB ═══ */}
      {activeTab === 'empresas' && (
       <motion.div key="empresas" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="space-y-4">
+       {/* Email config warning */}
+       {emailConfigStatus === 'not_configured' && (
+        <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 flex items-center gap-3">
+         <MailWarning className="h-5 w-5 text-amber-500 shrink-0" />
+         <div className="flex-1">
+          <p className="text-sm font-medium text-amber-800">Email no configurado</p>
+          <p className="text-xs text-amber-600">Los correos de invitación no se pueden enviar. Configura <code className="bg-amber-100 px-1 rounded">RESEND_API_KEY</code> en Vercel → Settings → Environment Variables (clave válida de <a href="https://resend.com" target="_blank" rel="noopener noreferrer" className="underline font-medium">resend.com</a> que empieza con "re_").</p>
+         </div>
+         <a href="https://vercel.com/dashboard" target="_blank" rel="noopener noreferrer">
+          <Button size="sm" variant="outline" className="border-amber-300 text-amber-700 hover:bg-amber-100 h-7 text-xs">
+           Ir a Vercel
+          </Button>
+         </a>
+        </div>
+       )}
        <div className="flex justify-between items-center">
         <p className="text-sm text-slate-500">Gestiona empresas, administradores y suscripciones</p>
         <Button
