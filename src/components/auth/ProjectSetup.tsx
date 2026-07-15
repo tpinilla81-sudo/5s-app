@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { use5SStore } from '@/lib/store'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -24,6 +24,13 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+import {
   Loader2,
   Plus,
   Trash2,
@@ -34,6 +41,12 @@ import {
   MapPin,
   Users,
   ClipboardCheck,
+  LogOut,
+  ChevronDown,
+  Bell,
+  BellRing,
+  FileText,
+  Lock as LockIcon,
 } from 'lucide-react'
 import { Checkbox } from '@/components/ui/checkbox'
 
@@ -55,10 +68,25 @@ interface MemberInput {
   zoneIds: string[]
 }
 
+interface CompanyData {
+  id: string
+  name: string
+  nif: string | null
+  sector: string | null
+  address: string | null
+  city: string | null
+  active: boolean
+}
+
 export default function ProjectSetup() {
-  const { createProject, currentUser } = use5SStore()
+  const { createProject, currentUser, logout } = use5SStore()
   const [step, setStep] = useState(1)
   const [isCreating, setIsCreating] = useState(false)
+  const [myCompany, setMyCompany] = useState<CompanyData | null>(null)
+  const [isLoadingCompany, setIsLoadingCompany] = useState(true)
+  const [unreadNotifs, setUnreadNotifs] = useState(0)
+  const [showNotifs, setShowNotifs] = useState(false)
+  const [notifs, setNotifs] = useState<any[]>([])
 
   // Step 1: Project Info
   const [projectName, setProjectName] = useState('')
@@ -78,6 +106,49 @@ export default function ProjectSetup() {
     role: 'empleado',
     zoneIds: [],
   })
+
+  // Fetch the admin's company data on mount
+  useEffect(() => {
+    const fetchMyCompany = async () => {
+      setIsLoadingCompany(true)
+      try {
+        const res = await fetch('/api/my-company')
+        const data = await res.json()
+        if (data.success && data.company) {
+          setMyCompany(data.company)
+          // Pre-fill company name from the company assigned by the gestor
+          setCompanyName(data.company.name)
+        }
+      } catch (err) {
+        console.error('Error fetching my company:', err)
+      } finally {
+        setIsLoadingCompany(false)
+      }
+    }
+    fetchMyCompany()
+  }, [])
+
+  // Fetch notifications
+  useEffect(() => {
+    if (currentUser?.id) {
+      const fetchNotifs = async () => {
+        try {
+          const res = await fetch(`/api/notifications?userId=${currentUser.id}&unread=true`)
+          const data = await res.json()
+          if (data.success) {
+            setUnreadNotifs(data.data?.length || 0)
+          }
+        } catch (e) { console.error('Error fetching notifications:', e) }
+      }
+      fetchNotifs()
+      const interval = setInterval(fetchNotifs, 30000)
+      return () => clearInterval(interval)
+    }
+  }, [currentUser?.id])
+
+  const handleLogout = async () => {
+    await logout()
+  }
 
   const canGoNext = () => {
     switch (step) {
@@ -196,18 +267,119 @@ export default function ProjectSetup() {
 
   return (
     <div className="min-h-screen flex flex-col bg-gradient-to-br from-green-50 via-white to-emerald-50">
-      {/* Header */}
-      <header className="border-b bg-white/80 backdrop-blur-sm sticky top-0 z-10">
-        <div className="max-w-3xl mx-auto px-4 py-3 flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center text-white font-bold text-lg shadow-md">
-            5S
+      {/* ── Top Navigation Bar ── */}
+      <header className="border-b bg-white/90 backdrop-blur-sm sticky top-0 z-20">
+        <div className="px-4 py-2 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8">
+              <img src="/5s-logo.png" alt="5S" className="w-full h-full object-contain" />
+            </div>
+            <div>
+              <h1 className="text-sm font-black text-gray-900 leading-tight tracking-wide">5S</h1>
+              <span className="text-[10px] font-semibold text-green-600">Configurar Proyecto</span>
+            </div>
           </div>
-          <div>
-            <h1 className="text-lg font-bold text-gray-900">Configurar Proyecto</h1>
-            <p className="text-xs text-muted-foreground">Crea tu primer proyecto 5S</p>
+
+          <div className="flex items-center gap-1.5">
+            {/* Notifications */}
+            <Button variant={unreadNotifs > 0 ? 'default' : 'outline'} size="sm"
+              className={`relative gap-1 text-[10px] h-7 ${unreadNotifs > 0 ? 'bg-orange-500 hover:bg-orange-600 text-white border-orange-500' : 'border-orange-300 text-orange-600 hover:bg-orange-50'}`}
+              onClick={async () => {
+                if (currentUser?.id) {
+                  try {
+                    const res = await fetch(`/api/notifications?userId=${currentUser.id}&unread=true`)
+                    const data = await res.json()
+                    if (data.success) setNotifs(data.data || [])
+                  } catch (e) { console.error(e) }
+                }
+                setShowNotifs(!showNotifs)
+              }}>
+              {unreadNotifs > 0 ? <BellRing className="h-3.5 w-3.5" /> : <Bell className="h-3 w-3" />}
+              <span className="hidden sm:inline">{unreadNotifs > 0 ? `${unreadNotifs} avisos` : 'Avisos'}</span>
+              {unreadNotifs > 0 && (
+                <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-[8px] font-bold rounded-full flex items-center justify-center animate-pulse">{unreadNotifs > 9 ? '9+' : unreadNotifs}</span>
+              )}
+            </Button>
+            {/* Manual */}
+            <Button variant="ghost" size="sm" onClick={async () => {
+              try {
+                const res = await fetch('/api/manual')
+                if (!res.ok) throw new Error('Download failed')
+                const blob = await res.blob()
+                const url = window.URL.createObjectURL(blob)
+                const link = document.createElement('a')
+                link.href = url; link.download = 'Manual_Usuario_5S.pdf'
+                document.body.appendChild(link); link.click()
+                document.body.removeChild(link)
+                window.URL.revokeObjectURL(url)
+              } catch { window.open('/Manual_Usuario_5S.pdf', '_blank') }
+            }} className="text-purple-600 hover:text-purple-700 h-7 px-1.5">
+              <FileText className="h-3.5 w-3.5" />
+              <span className="text-[10px] hidden sm:inline">Manual</span>
+            </Button>
+            {/* User menu */}
+            {currentUser && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm" className="gap-1 h-7 px-2">
+                    <div className="w-5 h-5 rounded-full bg-purple-100 flex items-center justify-center text-purple-700 text-[9px] font-bold">
+                      {currentUser.name.charAt(0).toUpperCase()}
+                    </div>
+                    <span className="text-[10px] font-medium max-w-[60px] truncate hidden sm:inline">{currentUser.name}</span>
+                    <ChevronDown className="h-2.5 w-2.5 text-muted-foreground" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-48">
+                  <div className="px-2 py-1.5">
+                    <p className="text-xs font-medium">{currentUser.name}</p>
+                    <p className="text-[10px] text-muted-foreground">{currentUser.email}</p>
+                    <Badge className={`${getRoleBadgeColor('admin')} border mt-1 text-[10px]`}>
+                      Administrador
+                    </Badge>
+                    {myCompany && (
+                      <p className="text-[10px] text-muted-foreground mt-1">{myCompany.name}</p>
+                    )}
+                  </div>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={handleLogout} className="text-red-600 cursor-pointer text-xs">
+                    <LogOut className="h-3 w-3 mr-1" /> Cerrar Sesión
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
           </div>
         </div>
       </header>
+
+      {/* Notification dropdown */}
+      {showNotifs && (
+        <div className="fixed top-12 right-16 z-50 w-80 bg-white border rounded-lg shadow-xl max-h-96 overflow-y-auto">
+          <div className="p-3 border-b flex items-center justify-between">
+            <span className="text-sm font-semibold">Notificaciones</span>
+            {notifs.length > 0 && (
+              <button className="text-[10px] text-blue-600 hover:underline" onClick={async () => {
+                if (currentUser?.id) {
+                  await fetch('/api/notifications', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ markAllRead: true, userId: currentUser.id }) })
+                  setUnreadNotifs(0)
+                  setNotifs(notifs.map(n => ({ ...n, read: true })))
+                }
+              }}>Marcar todo como leído</button>
+            )}
+          </div>
+          {notifs.length === 0 ? (
+            <div className="p-4 text-center text-sm text-muted-foreground">No hay notificaciones</div>
+          ) : (
+            <div className="divide-y">
+              {notifs.map((n: any) => (
+                <div key={n.id} className={`p-3 text-xs ${!n.read ? 'bg-blue-50' : ''}`}>
+                  <p className="font-medium">{n.title || n.type}</p>
+                  <p className="text-muted-foreground mt-0.5">{n.message}</p>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Step Indicator */}
       <div className="max-w-3xl mx-auto w-full px-4 pt-6">
@@ -268,6 +440,27 @@ export default function ProjectSetup() {
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
+                  {/* Company info banner - show if company was pre-filled */}
+                  {isLoadingCompany ? (
+                    <div className="flex items-center gap-2 p-3 rounded-lg bg-green-50 border border-green-200">
+                      <Loader2 className="h-4 w-4 text-green-500 animate-spin" />
+                      <span className="text-sm text-green-700">Cargando datos de tu empresa...</span>
+                    </div>
+                  ) : myCompany ? (
+                    <div className="p-3 rounded-lg bg-green-50 border border-green-200">
+                      <div className="flex items-center gap-2 mb-1">
+                        <Building2 className="h-4 w-4 text-green-600" />
+                        <span className="text-sm font-medium text-green-800">Empresa asignada</span>
+                      </div>
+                      <div className="space-y-1 text-sm">
+                        <p className="text-green-700"><strong>{myCompany.name}</strong></p>
+                        {myCompany.nif && <p className="text-green-600 text-xs">NIF: {myCompany.nif}</p>}
+                        {myCompany.sector && <p className="text-green-600 text-xs">Sector: {myCompany.sector}</p>}
+                        {myCompany.city && <p className="text-green-600 text-xs">{myCompany.address && `${myCompany.address}, `}{myCompany.city}</p>}
+                      </div>
+                    </div>
+                  ) : null}
+
                   <div className="space-y-2">
                     <Label htmlFor="project-name">Nombre del Proyecto *</Label>
                     <Input
@@ -284,7 +477,12 @@ export default function ProjectSetup() {
                       placeholder="Ej: Manufacturas ABC S.A."
                       value={companyName}
                       onChange={(e) => setCompanyName(e.target.value)}
+                      readOnly={!!myCompany}
+                      className={myCompany ? 'bg-gray-50 cursor-not-allowed' : ''}
                     />
+                    {myCompany && (
+                      <p className="text-xs text-muted-foreground">Esta empresa te fue asignada por el gestor de la plataforma</p>
+                    )}
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="description">Descripción (opcional)</Label>
@@ -687,15 +885,26 @@ export default function ProjectSetup() {
         
         {/* Navigation buttons */}
         <div className="flex justify-between mt-6">
-          <Button
-            variant="outline"
-            onClick={() => setStep(step - 1)}
-            disabled={step === 1 || isCreating}
-            className="gap-1"
-          >
-            <ChevronLeft className="h-4 w-4" />
-            Anterior
-          </Button>
+          {step > 1 ? (
+            <Button
+              variant="outline"
+              onClick={() => setStep(step - 1)}
+              disabled={isCreating}
+              className="gap-1"
+            >
+              <ChevronLeft className="h-4 w-4" />
+              Anterior
+            </Button>
+          ) : (
+            <Button
+              variant="ghost"
+              onClick={handleLogout}
+              className="gap-1 text-red-600 hover:text-red-700 hover:bg-red-50"
+            >
+              <LogOut className="h-4 w-4" />
+              Salir
+            </Button>
+          )}
 
           {step < 4 && (
             <Button
