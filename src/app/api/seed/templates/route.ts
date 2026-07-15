@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { db } from '@/lib/db'
+import { db, ensureSystemConfigTable } from '@/lib/db'
 
 /**
  * POST /api/seed/templates
@@ -10,6 +10,9 @@ import { db } from '@/lib/db'
  */
 export async function POST(request: NextRequest) {
   try {
+    // Auto-migrate: ensure SystemConfig table exists before querying it
+    await ensureSystemConfigTable()
+
     const url = new URL(request.url)
     const forceSeed = url.searchParams.get('force') === 'true'
 
