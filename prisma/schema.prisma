@@ -164,7 +164,7 @@ model EmployeeProgress {
 
 model Template {
   id          String   @id @default(cuid())
-  type        String // "formacion", "examen", "fotos", "inventario", "autoevaluacion", "auditoria", "estandar"
+  type        String // "formacion", "examen", "fotos", "inventario", "autoevaluacion", "auditoria", "estandar", "plan_accion"
   sStep       Int // 1-5 (a qué S pertenece)
   miniStep    Int @default(3) // 1-5 (a qué paso dentro de la S pertenece)
   title       String

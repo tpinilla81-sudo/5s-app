@@ -19,6 +19,7 @@ export async function POST() {
       inventario: 3,
       estandar: 3,
       autoevaluacion: 4,
+      plan_accion: 4,
       auditoria: 5,
     }
 
@@ -200,6 +201,41 @@ export async function POST() {
             description: `Checklist de autoevaluación para ${S_NAMES[s - 1]}`,
             content: JSON.stringify({ sections: [] }),
             notaMinima: 70,
+          },
+        })
+        created++
+      }
+
+      // ─── Plan de Acción (Paso 4) ───
+      if (!exists(s, 'plan_accion')) {
+        await db.template.create({
+          data: {
+            type: 'plan_accion',
+            sStep: s,
+            miniStep: 4,
+            title: `Plan de Acción S${s} - ${S_JAPANESE[s - 1]}`,
+            description: `Registro de deficiencias detectadas en autoevaluaciones y auditorías de ${S_NAMES[s - 1]}. Incluye acciones correctivas, preventivas, responsable y seguimiento del progreso.`,
+            content: JSON.stringify({
+              tableType: 'plan_accion',
+              description: `Plan de Acción para ${S_JAPANESE[s - 1]} (${S_NAMES[s - 1]}). Registro de deficiencias encontradas en las autoevaluaciones y auditorías, con las acciones correctivas y preventivas propuestas, responsables y fechas de realización.`,
+              columns: [
+                { key: 'numeroEntrada', label: 'Nº Entrada', type: 'text', width: '100px', description: 'Zona + S de origen + número correlativo', required: true, placeholder: 'Ej: A-S1-001' },
+                { key: 'fechaInicial', label: 'Fecha Inicial', type: 'date', width: '110px', description: 'Fecha en la que entra la deficiencia', required: true },
+                { key: 'auditor', label: 'Auditor', type: 'text', width: '120px', description: 'Quién ha hecho la auditoría o la autoevaluación', required: true },
+                { key: 'semana', label: 'Semana', type: 'text', width: '80px', description: 'La semana de la fecha inicial' },
+                { key: 'zona', label: 'Zona', type: 'text', width: '100px', description: 'Qué zona es la afectada', required: true },
+                { key: 'descripcion', label: 'Descripción', type: 'textarea', width: '200px', description: 'Descripción de la deficiencia encontrada', required: true },
+                { key: 'accionCorrectiva', label: 'Acción Correctiva', type: 'textarea', width: '180px', description: 'Lo que se va a hacer ahora para corregir', required: true },
+                { key: 'accionesPreventivas', label: 'Acciones Preventivas', type: 'textarea', width: '180px', description: 'Lo que se va a hacer para que no ocurra otra vez' },
+                { key: 'semanaPrevista', label: 'Semana Prevista', type: 'text', width: '100px', description: 'La semana prevista para llevar las acciones preventivas' },
+                { key: 'personaResponsable', label: 'Persona Responsable', type: 'text', width: '130px', description: 'Quién es el responsable', required: true },
+                { key: 'estado', label: 'Estado', type: 'select', width: '110px', description: 'Progreso: Empezado (25%), Medio (50%), Casi Hecho (75%), Finalizado (100%)', options: ['Empezado (25%)', 'Medio (50%)', 'Casi Hecho (75%)', 'Finalizado (100%)'] },
+                { key: 'progreso', label: 'Progreso %', type: 'number', width: '80px', description: 'Progreso en %: 25, 50, 75 o 100', min: 0, max: 100 },
+                { key: 'semanaReal', label: 'Semana Real', type: 'text', width: '100px', description: 'Semana real de la finalización' },
+              ],
+              sourceTypes: ['autoevaluacion', 'auditoria'],
+              sStep: s,
+            }),
           },
         })
         created++

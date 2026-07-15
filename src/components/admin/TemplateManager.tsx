@@ -44,7 +44,7 @@ const MINI_STEPS_LABELS: Record<number, string> = {
   1: 'Formación y Exámenes',
   2: 'Fotografías (Antes/Después)',
   3: 'Inventario / Estándar',
-  4: 'Autoevaluación',
+  4: 'Autoevaluación / Plan de Acción',
   5: 'Auditoría Externa',
 }
 
@@ -239,6 +239,32 @@ function getDefaultStandardContent() {
       { key: 'contacto', label: 'Contacto', type: 'text', required: true },
       { key: 'mejoraTipo', label: 'Tipo de Mejora', type: 'select', options: ['Seguridad', 'Calidad', 'Proceso', 'Logística'], required: true },
     ],
+  }
+}
+
+function getDefaultPlanAccionContent(sStep: number) {
+  const S_JAPANESE = ['Seiri', 'Seiton', 'Seiso', 'Seiketsu', 'Shitsuke']
+  const S_NAMES = ['Revisar', 'Ordenar', 'Limpiar', 'Estandarizar', 'Mantener']
+  return {
+    tableType: 'plan_accion',
+    description: `Plan de Acción para ${S_JAPANESE[sStep - 1]} (${S_NAMES[sStep - 1]}). Registro de deficiencias encontradas en las autoevaluaciones y auditorías, con las acciones correctivas y preventivas propuestas, responsables y fechas de realización.`,
+    columns: [
+      { key: 'numeroEntrada', label: 'Nº Entrada', type: 'text', width: '100px', description: 'Zona + S de origen + número correlativo', required: true, placeholder: 'Ej: A-S1-001' },
+      { key: 'fechaInicial', label: 'Fecha Inicial', type: 'date', width: '110px', description: 'Fecha en la que entra la deficiencia', required: true },
+      { key: 'auditor', label: 'Auditor', type: 'text', width: '120px', description: 'Quién ha hecho la auditoría o la autoevaluación', required: true },
+      { key: 'semana', label: 'Semana', type: 'text', width: '80px', description: 'La semana de la fecha inicial' },
+      { key: 'zona', label: 'Zona', type: 'text', width: '100px', description: 'Qué zona es la afectada', required: true },
+      { key: 'descripcion', label: 'Descripción', type: 'textarea', width: '200px', description: 'Descripción de la deficiencia encontrada', required: true },
+      { key: 'accionCorrectiva', label: 'Acción Correctiva', type: 'textarea', width: '180px', description: 'Lo que se va a hacer ahora para corregir', required: true },
+      { key: 'accionesPreventivas', label: 'Acciones Preventivas', type: 'textarea', width: '180px', description: 'Lo que se va a hacer para que no ocurra otra vez' },
+      { key: 'semanaPrevista', label: 'Semana Prevista', type: 'text', width: '100px', description: 'La semana prevista para llevar las acciones preventivas' },
+      { key: 'personaResponsable', label: 'Persona Responsable', type: 'text', width: '130px', description: 'Quién es el responsable', required: true },
+      { key: 'estado', label: 'Estado', type: 'select', width: '110px', description: 'Progreso: Empezado (25%), Medio (50%), Casi Hecho (75%), Finalizado (100%)', options: ['Empezado (25%)', 'Medio (50%)', 'Casi Hecho (75%)', 'Finalizado (100%)'] },
+      { key: 'progreso', label: 'Progreso %', type: 'number', width: '80px', description: 'Progreso en %: 25, 50, 75 o 100', min: 0, max: 100 },
+      { key: 'semanaReal', label: 'Semana Real', type: 'text', width: '100px', description: 'Semana real de la finalización' },
+    ],
+    sourceTypes: ['autoevaluacion', 'auditoria'],
+    sStep: sStep,
   }
 }
 
@@ -1097,13 +1123,221 @@ function StandardTemplateEditor({ content, onChange }: { content: string; onChan
 }
 
 // ═══════════════════════════════════════════════════════
+// VISUAL EDITOR: PlanAccionEditor (plan_accion)
+// ═══════════════════════════════════════════════════════
+interface PlanAccionColumn {
+  key: string; label: string; type: string; width?: string; description?: string;
+  required?: boolean; placeholder?: string; options?: string[]; min?: number; max?: number;
+}
+
+function PlanAccionEditor({ content, onChange }: { content: string; onChange: (v: string) => void }) {
+  let parsed: { tableType: string; description?: string; columns: PlanAccionColumn[]; sourceTypes?: string[] }
+  try {
+    parsed = JSON.parse(content)
+  } catch {
+    return (
+      <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-sm text-red-600">
+        El JSON no es válido. Corrígelo en modo JSON o carga el contenido por defecto.
+      </div>
+    )
+  }
+
+  const columns = parsed.columns || []
+
+  const update = (newData: Partial<typeof parsed>) => {
+    onChange(JSON.stringify({ ...parsed, ...newData }, null, 2))
+  }
+
+  const addColumn = () => {
+    update({ columns: [...columns, { key: '', label: '', type: 'text' }] })
+  }
+
+  const removeColumn = (idx: number) => {
+    update({ columns: columns.filter((_, i) => i !== idx) })
+  }
+
+  const updateColumn = (idx: number, field: string, value: string | boolean | number) => {
+    const updated = [...columns]
+    updated[idx] = { ...updated[idx], [field]: value }
+    // Remove options if type is not select
+    if (field === 'type' && value !== 'select') {
+      const { options, ...rest } = updated[idx]
+      updated[idx] = rest as PlanAccionColumn
+    }
+    update({ columns: updated })
+  }
+
+  const moveColumn = (idx: number, dir: -1 | 1) => {
+    const target = idx + dir
+    if (target < 0 || target >= columns.length) return
+    const updated = [...columns]
+    ;[updated[idx], updated[target]] = [updated[target], updated[idx]]
+    update({ columns: updated })
+  }
+
+  const addOption = (cIdx: number) => {
+    const updated = [...columns]
+    const opts = [...(updated[cIdx].options || []), '']
+    updated[cIdx] = { ...updated[cIdx], options: opts }
+    update({ columns: updated })
+  }
+
+  const removeOption = (cIdx: number, oIdx: number) => {
+    const updated = [...columns]
+    const opts = (updated[cIdx].options || []).filter((_, i) => i !== oIdx)
+    updated[cIdx] = { ...updated[cIdx], options: opts }
+    update({ columns: updated })
+  }
+
+  const updateOption = (cIdx: number, oIdx: number, value: string) => {
+    const updated = [...columns]
+    const opts = [...(updated[cIdx].options || [])]
+    opts[oIdx] = value
+    updated[cIdx] = { ...updated[cIdx], options: opts }
+    update({ columns: updated })
+  }
+
+  const TYPE_LABELS: Record<string, string> = { text: 'Texto', textarea: 'Texto largo', number: 'Número', date: 'Fecha', select: 'Selección' }
+
+  return (
+    <div className="space-y-4">
+      {/* Description */}
+      <div>
+        <Label className="text-sm font-semibold text-rose-700">Descripción del Plan de Acción</Label>
+        <textarea
+          value={parsed.description || ''}
+          onChange={(e) => update({ description: e.target.value })}
+          className="w-full h-20 p-3 border rounded-lg text-sm mt-1 resize-y focus:ring-2 focus:ring-rose-300 focus:border-rose-400"
+          placeholder="Descripción del plan de acción..."
+        />
+      </div>
+
+      {/* Info banner */}
+      <div className="bg-rose-50 border border-rose-200 rounded-lg p-3">
+        <p className="text-xs text-rose-700">
+          <strong>Plan de Acción:</strong> Registro de deficiencias detectadas en las autoevaluaciones y auditorías.
+          Cada columna define un campo de la tabla donde se registrarán las acciones correctivas/preventivas, responsables y seguimiento del progreso.
+        </p>
+      </div>
+
+      {/* Columns */}
+      <div>
+        <h4 className="text-sm font-bold text-rose-700 mb-2 flex items-center gap-2">
+          <Badge className="bg-rose-100 text-rose-800">Columnas de la tabla</Badge>
+          {columns.length} columna(s)
+        </h4>
+        <div className="space-y-2">
+          {columns.map((col, cIdx) => (
+            <div key={cIdx} className="border-2 rounded-lg overflow-hidden bg-white shadow-sm">
+              <div className="flex items-center gap-2 px-3 py-2 bg-rose-50 border-b border-rose-200">
+                <div className="flex flex-col gap-0.5">
+                  <button onClick={() => moveColumn(cIdx, -1)} className="text-gray-300 hover:text-gray-500 leading-none">
+                    <ChevronUp className="h-3.5 w-3.5" />
+                  </button>
+                  <button onClick={() => moveColumn(cIdx, 1)} className="text-gray-300 hover:text-gray-500 leading-none">
+                    <ChevronDown className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+                <Badge className="bg-rose-200 text-rose-800 shrink-0 text-[10px] px-1.5 py-0.5">Col {cIdx + 1}</Badge>
+                <Input value={col.key} onChange={e => updateColumn(cIdx, 'key', e.target.value)}
+                  className="w-32 h-7 text-xs font-mono" placeholder="key (ej: zona)" />
+                <Input value={col.label} onChange={e => updateColumn(cIdx, 'label', e.target.value)}
+                  className="flex-1 h-7 text-xs" placeholder="Etiqueta (ej: Zona)" />
+                <select value={col.type} onChange={e => updateColumn(cIdx, 'type', e.target.value)}
+                  className="h-7 text-xs border rounded px-2">
+                  <option value="text">Texto</option>
+                  <option value="textarea">Texto largo</option>
+                  <option value="number">Número</option>
+                  <option value="date">Fecha</option>
+                  <option value="select">Selección</option>
+                </select>
+                <label className="flex items-center gap-1 text-[10px] text-muted-foreground whitespace-nowrap cursor-pointer">
+                  <input type="checkbox" checked={col.required || false}
+                    onChange={e => updateColumn(cIdx, 'required', e.target.checked)}
+                    className="rounded border-gray-300 h-3.5 w-3.5" />
+                  Oblig.
+                </label>
+                <Button variant="ghost" size="sm" onClick={() => removeColumn(cIdx)}
+                  className="h-7 w-7 p-0 text-red-400 hover:text-red-500">
+                  <Trash2 className="h-3.5 w-3.5" />
+                </Button>
+              </div>
+              <div className="px-3 py-2 space-y-1.5">
+                <div className="flex gap-2">
+                  <div className="flex-1">
+                    <Label className="text-[10px] text-muted-foreground">Descripción / Ayuda</Label>
+                    <Input value={col.description || ''} onChange={e => updateColumn(cIdx, 'description', e.target.value)}
+                      className="h-7 text-xs mt-0.5" placeholder="Texto de ayuda para este campo" />
+                  </div>
+                  <div className="w-28">
+                    <Label className="text-[10px] text-muted-foreground">Ancho</Label>
+                    <Input value={col.width || ''} onChange={e => updateColumn(cIdx, 'width', e.target.value)}
+                      className="h-7 text-xs mt-0.5" placeholder="100px" />
+                  </div>
+                  {col.type === 'text' && (
+                    <div className="w-32">
+                      <Label className="text-[10px] text-muted-foreground">Placeholder</Label>
+                      <Input value={col.placeholder || ''} onChange={e => updateColumn(cIdx, 'placeholder', e.target.value)}
+                        className="h-7 text-xs mt-0.5" placeholder="Ej: A-S1-001" />
+                    </div>
+                  )}
+                </div>
+                {col.type === 'select' && (
+                  <div>
+                    <Label className="text-[10px] text-muted-foreground">Opciones:</Label>
+                    <div className="flex flex-wrap gap-1 mt-1">
+                      {(col.options || []).map((opt, oIdx) => (
+                        <div key={oIdx} className="flex items-center gap-1">
+                          <Input value={opt} onChange={e => updateOption(cIdx, oIdx, e.target.value)}
+                            className="h-7 text-xs w-32" placeholder={`Opción ${oIdx + 1}`} />
+                          <Button variant="ghost" size="sm" onClick={() => removeOption(cIdx, oIdx)}
+                            className="h-7 w-7 p-0 text-red-300 hover:text-red-500">
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      ))}
+                      <Button variant="ghost" size="sm" onClick={() => addOption(cIdx)}
+                        className="h-7 text-xs text-rose-600 hover:text-rose-700 gap-1 px-2">
+                        <Plus className="h-3 w-3" /> Añadir
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          ))}
+          <Button variant="outline" onClick={addColumn} size="sm"
+            className="w-full border-dashed border-2 text-rose-600 hover:bg-rose-50 hover:border-rose-400 gap-1">
+            <Plus className="h-4 w-4" /> Añadir columna
+          </Button>
+        </div>
+      </div>
+
+      {/* Source types info */}
+      <div className="bg-gray-50 border rounded-lg p-3">
+        <p className="text-xs text-gray-500">
+          <strong>Tipos de origen:</strong> {(parsed.sourceTypes || []).join(', ') || 'autoevaluacion, auditoria'}
+        </p>
+        <p className="text-xs text-gray-400 mt-1">
+          Las deficiencias se alimentan automáticamente desde las autoevaluaciones y auditorías de este mismo paso S.
+        </p>
+      </div>
+
+      <div className="text-sm text-muted-foreground text-center">
+        {columns.length} columna(s) · {columns.filter(c => c.required).length} obligatoria(s)
+      </div>
+    </div>
+  )
+}
+
+// ═══════════════════════════════════════════════════════
 // PASO DEFINITIONS — which template types belong to each paso
 // ═══════════════════════════════════════════════════════
 const PASO_CONFIG: { paso: number; label: string; icon: React.ComponentType<{ className?: string }>; types: string[] }[] = [
   { paso: 1, label: 'Formación y Exámenes', icon: BookOpen, types: ['formacion', 'examen'] },
   { paso: 2, label: 'Fotografías (Antes/Después)', icon: Camera, types: ['fotos'] },
   { paso: 3, label: 'Inventario / Estándar', icon: ClipboardList, types: ['inventario', 'estandar'] },
-  { paso: 4, label: 'Autoevaluación', icon: ClipboardCheck, types: ['autoevaluacion'] },
+  { paso: 4, label: 'Autoevaluación / Plan de Acción', icon: ClipboardCheck, types: ['autoevaluacion', 'plan_accion'] },
   { paso: 5, label: 'Auditoría Externa', icon: FileCheck, types: ['auditoria'] },
 ]
 
@@ -1133,7 +1367,7 @@ export default function TemplateManager() {
   const [formActive, setFormActive] = useState(true)
 
   // Fetch ALL templates at once (all types)
-  const ALL_TYPES = ['formacion', 'examen', 'fotos', 'inventario', 'estandar', 'autoevaluacion', 'auditoria'] as const
+  const ALL_TYPES = ['formacion', 'examen', 'fotos', 'inventario', 'estandar', 'autoevaluacion', 'plan_accion', 'auditoria'] as const
 
   const seedDoneRef = useRef(false)
 
@@ -1191,6 +1425,10 @@ export default function TemplateManager() {
     setFormActive(true)
     setEditorMode('visual')
 
+    // Auto-set miniStep based on type
+    const autoMiniStep = type === 'formacion' || type === 'examen' ? 1 : type === 'fotos' ? 2 : type === 'inventario' || type === 'estandar' ? 3 : type === 'autoevaluacion' || type === 'plan_accion' ? 4 : type === 'auditoria' ? 5 : miniStep
+    setFormMiniStep(autoMiniStep)
+
     if (type === 'formacion') {
       setFormContent(JSON.stringify(getDefaultFormationContent(sStep), null, 2))
     } else if (type === 'examen') {
@@ -1201,6 +1439,8 @@ export default function TemplateManager() {
       setFormContent(JSON.stringify(getDefaultInventoryContent(sStep), null, 2))
     } else if (type === 'estandar') {
       setFormContent(JSON.stringify(getDefaultStandardContent(), null, 2))
+    } else if (type === 'plan_accion') {
+      setFormContent(JSON.stringify(getDefaultPlanAccionContent(sStep), null, 2))
     } else {
       setFormContent(JSON.stringify(getDefaultChecklistContent(sStep), null, 2))
     }
@@ -1437,6 +1677,7 @@ export default function TemplateManager() {
     try {
       const data = typeof template.content === 'string' ? JSON.parse(template.content) : template.content
       if (data.questions) return `${data.questions.length} pregunta(s)`
+      if (data.columns) return `${data.columns.length} columna(s)`
       if (data.fields) return `${data.fields.length} campo(s)`
       if (data.categories || data.extraFields) return `${(data.categories || []).length} cat. / ${(data.extraFields || []).length} campos`
       if (data.sections) {
@@ -1542,7 +1783,7 @@ export default function TemplateManager() {
                                         style={{ borderColor: S_COLORS[s.id] + '40', color: S_COLORS[s.id] }}
                                         onClick={() => startCreate(s.id, type, pasoConfig.paso)}>
                                         <Plus className="h-3 w-3" />
-                                        {type === 'formacion' ? 'Formación' : type === 'examen' ? 'Examen' : type === 'autoevaluacion' ? 'Autoevaluación' : type === 'auditoria' ? 'Aud. Ext.' : type === 'inventario' ? 'Inventario' : type === 'fotos' ? 'Fotos' : 'Estándar'}
+                                        {type === 'formacion' ? 'Formación' : type === 'examen' ? 'Examen' : type === 'autoevaluacion' ? 'Autoevaluación' : type === 'auditoria' ? 'Aud. Ext.' : type === 'inventario' ? 'Inventario' : type === 'fotos' ? 'Fotos' : type === 'plan_accion' ? 'Plan Acción' : 'Estándar'}
                                       </Button>
                                     ))}
                                   </div>
@@ -1571,10 +1812,10 @@ export default function TemplateManager() {
                                             <div className="flex items-center justify-between">
                                               <div className="flex items-center gap-3 flex-1 min-w-0">
                                                 <Badge className="shrink-0" style={{
-                                                  backgroundColor: tpl.type === 'formacion' ? '#DBEAFE' : tpl.type === 'examen' ? '#FEF3C7' : tpl.type === 'autoevaluacion' ? '#D1FAE5' : tpl.type === 'auditoria' ? '#FED7AA' : tpl.type === 'inventario' ? '#FFEDD5' : tpl.type === 'fotos' ? '#E0F2FE' : '#EDE9FE',
-                                                  color: tpl.type === 'formacion' ? '#1D4ED8' : tpl.type === 'examen' ? '#92400E' : tpl.type === 'autoevaluacion' ? '#065F46' : tpl.type === 'auditoria' ? '#9A3412' : tpl.type === 'inventario' ? '#9A3412' : tpl.type === 'fotos' ? '#0369A1' : '#6D28D9',
+                                                  backgroundColor: tpl.type === 'formacion' ? '#DBEAFE' : tpl.type === 'examen' ? '#FEF3C7' : tpl.type === 'autoevaluacion' ? '#D1FAE5' : tpl.type === 'auditoria' ? '#FED7AA' : tpl.type === 'inventario' ? '#FFEDD5' : tpl.type === 'fotos' ? '#E0F2FE' : tpl.type === 'plan_accion' ? '#FFE4E6' : '#EDE9FE',
+                                                  color: tpl.type === 'formacion' ? '#1D4ED8' : tpl.type === 'examen' ? '#92400E' : tpl.type === 'autoevaluacion' ? '#065F46' : tpl.type === 'auditoria' ? '#9A3412' : tpl.type === 'inventario' ? '#9A3412' : tpl.type === 'fotos' ? '#0369A1' : tpl.type === 'plan_accion' ? '#9F1239' : '#6D28D9',
                                                 }}>
-                                                  {tpl.type === 'formacion' ? 'Formación' : tpl.type === 'examen' ? 'Examen' : tpl.type === 'autoevaluacion' ? 'Aut. Int.' : tpl.type === 'auditoria' ? 'Aud. Ext.' : tpl.type === 'inventario' ? 'Inventario' : tpl.type === 'fotos' ? 'Fotos' : 'Estándar'}
+                                                  {tpl.type === 'formacion' ? 'Formación' : tpl.type === 'examen' ? 'Examen' : tpl.type === 'autoevaluacion' ? 'Aut. Int.' : tpl.type === 'auditoria' ? 'Aud. Ext.' : tpl.type === 'inventario' ? 'Inventario' : tpl.type === 'fotos' ? 'Fotos' : tpl.type === 'plan_accion' ? 'Plan Acción' : 'Estándar'}
                                                 </Badge>
                                                 <div className="min-w-0">
                                                   <p className="text-sm font-medium truncate">{tpl.title}</p>
@@ -1716,6 +1957,7 @@ export default function TemplateManager() {
                       <SelectItem value="auditoria">Auditoría Externa</SelectItem>
                       <SelectItem value="inventario">Inventario</SelectItem>
                       <SelectItem value="estandar">Estándar</SelectItem>
+                      <SelectItem value="plan_accion">Plan de Acción</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -1839,6 +2081,13 @@ export default function TemplateManager() {
                         Cargar estándar por defecto
                       </Button>
                     )}
+                    {formType === 'plan_accion' && (
+                      <Button variant="outline" size="sm" className="text-xs"
+                        onClick={() => setFormContent(JSON.stringify(getDefaultPlanAccionContent(formSStep), null, 2))}>
+                        <RotateCcw className="h-3.5 w-3.5 mr-1" />
+                        Cargar plan de acción por defecto
+                      </Button>
+                    )}
 
                     {/* Upload JSON */}
                     <Button variant="outline" size="sm" className="text-xs" onClick={handleUploadJson}>
@@ -1885,6 +2134,9 @@ export default function TemplateManager() {
                     )}
                     {formType === 'estandar' && (
                       <StandardTemplateEditor content={formContent} onChange={setFormContent} />
+                    )}
+                    {formType === 'plan_accion' && (
+                      <PlanAccionEditor content={formContent} onChange={setFormContent} />
                     )}
                   </div>
                 ) : (
