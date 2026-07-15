@@ -438,6 +438,7 @@ export default function ConstructorPanel() {
  const handleCreateCompanyFull = async () => {
   if (!newCompanyName.trim()) return
   setIsCreatingCompany(true)
+  let companyId: string | null = null
   try {
    // Step 1: Create company
    const companyRes = await fetch('/api/companies', {
@@ -450,13 +451,18 @@ export default function ConstructorPanel() {
     alert(companyData.error || 'Error al crear empresa')
     return
    }
-   const companyId = companyData.company?.id || companyData.id
+   companyId = companyData.company?.id || companyData.id
 
    // Step 2: Create or assign admin
    let adminUserId: string | null = null
    if (adminMode === 'create') {
     if (!newAdminName.trim() || !newAdminEmail.trim() || !newAdminPassword.trim()) {
      alert('Complete los datos del administrador')
+     // Company was created but admin data is missing — still close dialog and refresh
+     setShowNewCompany(false)
+     resetNewCompanyForm()
+     await loadStats()
+     await fetchCompanies()
      return
     }
     // Create user with role 'admin' via /api/users
@@ -474,6 +480,11 @@ export default function ConstructorPanel() {
     const userData = await userRes.json()
     if (!userRes.ok) {
      alert(userData.error || 'Error al crear usuario admin')
+     // Company was created but admin creation failed — still close dialog and refresh
+     setShowNewCompany(false)
+     resetNewCompanyForm()
+     await loadStats()
+     await fetchCompanies()
      return
     }
     adminUserId = userData.user?.id
@@ -481,6 +492,10 @@ export default function ConstructorPanel() {
     // Assign existing user
     if (!assignUserId) {
      alert('Seleccione un usuario para asignar como administrador')
+     setShowNewCompany(false)
+     resetNewCompanyForm()
+     await loadStats()
+     await fetchCompanies()
      return
     }
     adminUserId = assignUserId
@@ -496,30 +511,39 @@ export default function ConstructorPanel() {
    }
 
    // Step 3: Add admin to company as admin_empresa
-   if (adminUserId) {
-    await fetch(`/api/companies/${companyId}/members`, {
+   if (adminUserId && companyId) {
+    const memberRes = await fetch(`/api/companies/${companyId}/members`, {
      method: 'POST',
      headers: { 'Content-Type': 'application/json' },
      body: JSON.stringify({ userId: adminUserId, role: 'admin_empresa' }),
     })
+    if (!memberRes.ok) {
+     const memberData = await memberRes.json()
+     console.error('Error adding admin to company:', memberData.error)
+    }
    }
 
    // Step 4: Create subscription
-   await fetch('/api/subscriptions', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-     companyId,
-     plan: newSubPlan,
-     status: newSubStatus,
-     maxUsers: newSubMaxUsers,
-     maxProjects: newSubMaxProjects,
-     price: newSubPrice,
-     endDate: newSubEndDate || undefined,
-     trialEndsAt: newSubTrialEndsAt || undefined,
-     notes: newSubNotes || undefined,
-    }),
-   })
+   if (companyId) {
+    const subRes = await fetch('/api/subscriptions', {
+     method: 'POST',
+     headers: { 'Content-Type': 'application/json' },
+     body: JSON.stringify({
+      companyId,
+      plan: newSubPlan,
+      status: newSubStatus,
+      maxUsers: newSubMaxUsers,
+      maxProjects: newSubMaxProjects,
+      price: newSubPrice,
+      endDate: newSubEndDate || undefined,
+      trialEndsAt: newSubTrialEndsAt || undefined,
+      notes: newSubNotes || undefined,
+     }),
+    })
+    if (!subRes.ok) {
+     console.error('Error creating subscription')
+    }
+   }
 
    // Note: Welcome email is NOT sent automatically.
    // The gestor can send it manually using the "Enviar Email" button on the company card.
@@ -531,6 +555,9 @@ export default function ConstructorPanel() {
   } catch (error) {
    console.error('Error creating company with admin:', error)
    alert('Error al crear la empresa. Revise la consola para detalles.')
+   // Still refresh data even on error — the company might have been created
+   await loadStats()
+   await fetchCompanies()
   } finally {
    setIsCreatingCompany(false)
   }
