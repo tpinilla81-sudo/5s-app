@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAuthUser } from '@/lib/auth-helpers'
-import { execSync } from 'child_process'
+import { db } from '@/lib/db'
 
 /**
  * POST /api/migrate/schema
- * Runs `prisma db push` to sync the Prisma schema with the database.
+ * Adds missing columns to the database schema.
  * Only accessible by gestor (platform owner).
- * This is a one-time operation to add new columns like invitationEmailSent.
+ * Safe to call multiple times — checks if column exists before adding.
  */
 export async function POST(request: NextRequest) {
   try {
@@ -15,21 +15,33 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: 'Solo el gestor puede ejecutar migraciones' }, { status: 403 })
     }
 
-    console.log('[MIGRATE] Running prisma db push...')
-    const output = execSync('npx prisma db push --accept-data-loss', {
-      cwd: process.cwd(),
-      encoding: 'utf-8',
-      timeout: 60000,
-      env: { ...process.env },
-    })
+    const results: string[] = []
 
-    console.log('[MIGRATE] Output:', output)
-    return NextResponse.json({ success: true, message: 'Esquema de base de datos actualizado correctamente', output })
+    // Add invitationEmailSent column to CompanyMember if it doesn't exist
+    try {
+      // Try to select the column to see if it exists
+      await db.$queryRaw`SELECT "invitationEmailSent" FROM "CompanyMember" LIMIT 1`
+      results.push('invitationEmailSent column already exists')
+    } catch {
+      // Column doesn't exist — add it
+      try {
+        await db.$executeRaw`ALTER TABLE "CompanyMember" ADD COLUMN "invitationEmailSent" BOOLEAN NOT NULL DEFAULT false`
+        results.push('invitationEmailSent column added successfully')
+      } catch (alterErr: any) {
+        results.push(`Error adding invitationEmailSent: ${alterErr.message || String(alterErr)}`)
+      }
+    }
+
+    return NextResponse.json({
+      success: true,
+      message: 'Migración completada',
+      results,
+    })
   } catch (error: any) {
     console.error('[MIGRATE] Error:', error)
     return NextResponse.json({
       success: false,
-      error: 'Error al actualizar el esquema',
+      error: 'Error al ejecutar migración',
       details: error.message || String(error),
     }, { status: 500 })
   }

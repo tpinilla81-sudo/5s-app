@@ -396,6 +396,8 @@ export default function ConstructorPanel() {
  useEffect(() => {
   loadStats()
   loadPermissions() // Pre-load permissions so they're always available
+  // Run schema migration once on load (adds missing columns like invitationEmailSent)
+  fetch('/api/migrate/schema', { method: 'POST' }).catch(() => {})
  }, [loadStats, loadPermissions])
 
  useEffect(() => {
