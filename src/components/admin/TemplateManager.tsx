@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { use5SStore } from '@/lib/store'
 import { Button } from '@/components/ui/button'
@@ -15,7 +15,7 @@ import {
   Plus, Trash2, Edit3, Save, Loader2, BookOpen, FileCheck, ClipboardCheck, Camera,
   ChevronDown, ChevronUp, AlertTriangle, Copy, RotateCcw, X,
   Eye, Code, GripVertical, Download, Upload, ClipboardList, Award,
-  ClipboardPaste, ClipboardCopy, Check,
+  ClipboardPaste, ClipboardCopy, Check, ArrowRightLeft,
 } from 'lucide-react'
 import { S_STEPS, AUDIT_CHECKLISTS, EXAM_PASS_THRESHOLD, SELF_EVAL_THRESHOLD, AUDIT_PASS_THRESHOLD, INVENTORY_CONFIGS } from '@/lib/5s-constants'
 
@@ -1135,45 +1135,34 @@ export default function TemplateManager() {
   // Fetch ALL templates at once (all types)
   const ALL_TYPES = ['formacion', 'examen', 'fotos', 'inventario', 'estandar', 'autoevaluacion', 'auditoria'] as const
 
-  const fetchTemplates = useCallback(async () => {
+  const seedDoneRef = useRef(false)
+
+  const fetchTemplates = useCallback(async (withSeed = false) => {
     setIsLoading(true)
     try {
+      // Auto-seed: only on first load to fix miniStep + create missing
+      if (withSeed && !seedDoneRef.current) {
+        try {
+          await fetch('/api/seed/templates', { method: 'POST' })
+          seedDoneRef.current = true
+        } catch (e) {
+          console.error('Auto-seed error:', e)
+        }
+      }
+
+      // Fetch all templates
       const allTemplates: TemplateData[] = []
       for (const type of ALL_TYPES) {
         const res = await fetch(`/api/templates?type=${type}&includeInactive=true`)
         const data = await res.json()
         if (data.success && data.data) allTemplates.push(...data.data)
       }
-
-      // Auto-seed: if no templates exist, call the seed endpoint and re-fetch
-      if (allTemplates.length === 0) {
-        try {
-          const seedRes = await fetch('/api/seed/templates', { method: 'POST' })
-          const seedData = await seedRes.json()
-          if (seedData.success) {
-            // Re-fetch after seeding
-            const seeded: TemplateData[] = []
-            for (const type of ALL_TYPES) {
-              const res2 = await fetch(`/api/templates?type=${type}&includeInactive=true`)
-              const data2 = await res2.json()
-              if (data2.success && data2.data) seeded.push(...data2.data)
-            }
-            setTemplates(seeded)
-          } else {
-            setTemplates(allTemplates)
-          }
-        } catch (e) {
-          console.error('Auto-seed error:', e)
-          setTemplates(allTemplates)
-        }
-      } else {
-        setTemplates(allTemplates)
-      }
+      setTemplates(allTemplates)
     } catch (e) { console.error('Error fetching templates:', e) }
     finally { setIsLoading(false) }
   }, [])
 
-  useEffect(() => { fetchTemplates() }, [fetchTemplates])
+  useEffect(() => { fetchTemplates(true) }, [fetchTemplates])
 
   const resetForm = () => {
     setFormType('formacion')
@@ -1280,6 +1269,25 @@ export default function TemplateManager() {
       await fetch(`/api/templates?id=${id}`, { method: 'DELETE' })
       fetchTemplates()
     } catch (e) { console.error(e) }
+  }
+
+  const handleMovePaso = async (templateId: string, newMiniStep: number) => {
+    try {
+      const res = await fetch('/api/templates', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: templateId, miniStep: newMiniStep }),
+      })
+      const data = await res.json()
+      if (data.success) {
+        fetchTemplates()
+      } else {
+        alert('Error al mover la plantilla: ' + data.error)
+      }
+    } catch (e) {
+      console.error(e)
+      alert('Error al mover la plantilla')
+    }
   }
 
   // Full template export format (includes metadata + content)
@@ -1591,6 +1599,23 @@ export default function TemplateManager() {
                                                 )}
                                               </div>
                                               <div className="flex items-center gap-1 shrink-0 ml-2">
+                                                {/* Move to Paso dropdown */}
+                                                <div className="relative" onClick={(e) => e.stopPropagation()}>
+                                                  <select
+                                                    value={tpl.miniStep || 3}
+                                                    onChange={(e) => handleMovePaso(tpl.id, Number(e.target.value))}
+                                                    className="h-7 text-[10px] rounded border border-gray-200 bg-white px-1.5 pr-5 cursor-pointer hover:border-blue-300 focus:border-blue-400 focus:ring-1 focus:ring-blue-200 appearance-none"
+                                                    style={{ color: S_COLORS[tpl.sStep] }}
+                                                    title="Mover a otro paso"
+                                                  >
+                                                    {[1, 2, 3, 4, 5].map(step => (
+                                                      <option key={step} value={step}>
+                                                        P{step}
+                                                      </option>
+                                                    ))}
+                                                  </select>
+                                                  <ArrowRightLeft className="absolute right-0.5 top-1/2 -translate-y-1/2 h-2.5 w-2.5 text-gray-400 pointer-events-none" />
+                                                </div>
                                                 <Button variant="ghost" size="sm" onClick={() => handleCopyTemplate(tpl)}
                                                   className="h-7 w-7 p-0 text-purple-500 hover:text-purple-700 hover:bg-purple-50" title="Copiar al portapapeles">
                                                   {copiedId === tpl.id ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}

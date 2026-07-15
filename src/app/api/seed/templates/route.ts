@@ -3,7 +3,7 @@ import { db } from '@/lib/db'
 
 /**
  * POST /api/seed/templates
- * Non-destructive seed: creates ONLY missing templates (does NOT delete existing ones).
+ * Non-destructive seed: creates ONLY missing templates AND fixes wrong miniStep values.
  * Creates templates for ALL S steps (1-5) and ALL types.
  */
 export async function POST() {
@@ -11,16 +11,40 @@ export async function POST() {
     const S_JAPANESE = ['Seiri', 'Seiton', 'Seiso', 'Seiketsu', 'Shitsuke']
     const S_NAMES = ['Revisar', 'Ordenar', 'Limpiar', 'Estandarizar', 'Mantener']
 
-    // Get all existing templates to check what's already there
-    const existing = await db.template.findMany({ select: { sStep: true, type: true, active: true } })
+    // Correct miniStep mapping by type
+    const CORRECT_MINI_STEP: Record<string, number> = {
+      formacion: 1,
+      examen: 1,
+      fotos: 2,
+      inventario: 3,
+      estandar: 3,
+      autoevaluacion: 4,
+      auditoria: 5,
+    }
 
-    const exists = (sStep: number, type: string) =>
-      existing.some(t => t.sStep === sStep && t.type === type && t.active)
+    // Get all existing templates (full records, not just select)
+    const existing = await db.template.findMany()
 
     let created = 0
+    let fixed = 0
+
+    // Fix wrong miniStep values on existing templates
+    for (const tpl of existing) {
+      const correctStep = CORRECT_MINI_STEP[tpl.type]
+      if (correctStep && tpl.miniStep !== correctStep) {
+        await db.template.update({
+          where: { id: tpl.id },
+          data: { miniStep: correctStep },
+        })
+        fixed++
+      }
+    }
+
+    const exists = (sStep: number, type: string) =>
+      existing.some(t => t.sStep === sStep && t.type === type)
 
     for (let s = 1; s <= 5; s++) {
-      // ─── Formación ───
+      // ─── Formación (Paso 1) ───
       if (!exists(s, 'formacion')) {
         await db.template.create({
           data: {
@@ -36,7 +60,7 @@ export async function POST() {
         created++
       }
 
-      // ─── Examen ───
+      // ─── Examen (Paso 1) ───
       if (!exists(s, 'examen')) {
         await db.template.create({
           data: {
@@ -93,11 +117,10 @@ export async function POST() {
 
       // ─── Inventario (Paso 3) ───
       if (!exists(s, 'inventario')) {
-        // S2: Use the comprehensive Seiton template with proper categories
         const inventoryContent = s === 2
           ? {
               title: 'Inventario de Necesarios',
-              subtitle: 'SEITON — Organiza los elementos necesarios en su ubicación correcta',
+              subtitle: 'SEITEN — Organiza los elementos necesarios en su ubicación correcta',
               templateName: 'S2_Inventario_Necesarios_Seiton.xlsx',
               categories: [
                 { value: 'materiales', label: 'MATERIALES', color: 'bg-blue-100 text-blue-800' },
@@ -204,8 +227,9 @@ export async function POST() {
     return NextResponse.json({
       success: true,
       data: {
-        message: `Seed completado: ${created} plantilla(s) creada(s), ${existing.length} ya existían`,
+        message: `Seed completado: ${created} creada(s), ${fixed} corregida(s), ${existing.length} ya existían`,
         templatesCreated: created,
+        templatesFixed: fixed,
         templatesExisting: existing.length,
         templatesTotal: totalTemplates,
       },
