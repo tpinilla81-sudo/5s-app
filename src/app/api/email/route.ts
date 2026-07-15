@@ -1,25 +1,26 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { sendAdminWelcomeEmail, sendCompanyCreatedEmail } from '@/lib/email'
+import { sendAdminWelcomeEmail, sendCompanyCreatedEmail, sendEmail } from '@/lib/email'
 import { db } from '@/lib/db'
 
 /**
  * POST /api/email
  * Sends welcome/notifications emails when a company + admin is created.
- * Called from the GestorPanel after successful creation.
+ * Called from the GestorPanel when the gestor clicks "Enviar Email" button.
  *
  * Body: {
  *   type: 'admin_welcome' | 'company_created',
  *   adminName: string,
  *   adminEmail: string,
- *   adminPassword: string,       // only for admin_welcome
+ *   adminPassword: string,       // only for admin_welcome (empty if not available)
  *   companyName: string,
- *   gestorEmail?: string,         // only for company_created
+ *   gestorEmail?: string,         // CC recipient
+ *   sendCopy?: boolean,           // if true, send a copy to gestorEmail
  * }
  */
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { type, adminName, adminEmail, adminPassword, companyName, gestorEmail } = body
+    const { type, adminName, adminEmail, adminPassword, companyName, gestorEmail, sendCopy } = body
 
     if (!type || !adminName || !adminEmail || !companyName) {
       return NextResponse.json({ success: false, error: 'Faltan campos requeridos' }, { status: 400 })
@@ -28,20 +29,17 @@ export async function POST(request: NextRequest) {
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://5s-app-one.vercel.app'
 
     if (type === 'admin_welcome') {
-      if (!adminPassword) {
-        return NextResponse.json({ success: false, error: 'Contraseña requerida para email de bienvenida' }, { status: 400 })
-      }
-
+      // Send welcome email to the admin
       const result = await sendAdminWelcomeEmail({
         adminName,
         adminEmail,
-        adminPassword,
+        adminPassword: adminPassword || '',
         companyName,
         appUrl,
       })
 
-      // Also send notification to gestor if provided
-      if (gestorEmail) {
+      // Also send copy to gestor if requested
+      if (sendCopy && gestorEmail) {
         await sendCompanyCreatedEmail({
           gestorEmail,
           companyName,

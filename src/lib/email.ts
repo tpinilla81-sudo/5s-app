@@ -62,6 +62,46 @@ export async function sendAdminWelcomeEmail(params: {
 }): Promise<{ success: boolean; error?: string }> {
   const { adminName, adminEmail, adminPassword, companyName, appUrl } = params
 
+  const hasPassword = adminPassword && adminPassword.length > 0
+
+  const credentialsSection = hasPassword
+    ? `
+              <!-- Credentials Box -->
+              <table width="100%" cellpadding="0" cellspacing="0" style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;margin:0 0 24px;">
+                <tr>
+                  <td style="padding:20px 24px;">
+                    <p style="margin:0 0 12px;color:#166534;font-size:14px;font-weight:600;">Tus credenciales:</p>
+                    <table cellpadding="0" cellspacing="0">
+                      <tr>
+                        <td style="padding:4px 0;color:#374151;font-size:15px;"><strong>Email:</strong></td>
+                        <td style="padding:4px 12px;color:#059669;font-size:15px;font-weight:600;">${adminEmail}</td>
+                      </tr>
+                      <tr>
+                        <td style="padding:4px 0;color:#374151;font-size:15px;"><strong>Contraseña:</strong></td>
+                        <td style="padding:4px 12px;color:#059669;font-size:15px;font-weight:600;">${adminPassword}</td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+
+              <p style="margin:0 0 16px;color:#6b7280;font-size:14px;line-height:1.5;">
+                <strong>Recomendación:</strong> Cambia tu contraseña después de iniciar sesión por primera vez.
+              </p>`
+    : `
+              <!-- No password - reset instructions -->
+              <table width="100%" cellpadding="0" cellspacing="0" style="background:#fef3c7;border:1px solid #fde68a;border-radius:8px;margin:0 0 24px;">
+                <tr>
+                  <td style="padding:20px 24px;">
+                    <p style="margin:0 0 8px;color:#92400e;font-size:14px;font-weight:600;">Acceso a la plataforma:</p>
+                    <p style="margin:0 0 8px;color:#78350f;font-size:15px;"><strong>Email:</strong> ${adminEmail}</p>
+                    <p style="margin:0;color:#78350f;font-size:14px;line-height:1.5;">
+                      Tu contraseña inicial te será comunicada por el gestor de la plataforma. Si ya la tienes, inicia sesión con ella.
+                    </p>
+                  </td>
+                </tr>
+              </table>`
+
   const html = `
 <!DOCTYPE html>
 <html lang="es">
@@ -89,28 +129,8 @@ export async function sendAdminWelcomeEmail(params: {
               <p style="margin:0 0 20px;color:#4b5563;font-size:16px;line-height:1.6;">
                 Has sido registrado como <strong>administrador</strong> de la empresa <strong>${companyName}</strong> en la plataforma 5S App.
               </p>
-              <p style="margin:0 0 24px;color:#4b5563;font-size:16px;line-height:1.6;">
-                A continuación encontrarás tus credenciales de acceso:
-              </p>
 
-              <!-- Credentials Box -->
-              <table width="100%" cellpadding="0" cellspacing="0" style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;margin:0 0 24px;">
-                <tr>
-                  <td style="padding:20px 24px;">
-                    <p style="margin:0 0 12px;color:#166534;font-size:14px;font-weight:600;">Tus credenciales:</p>
-                    <table cellpadding="0" cellspacing="0">
-                      <tr>
-                        <td style="padding:4px 0;color:#374151;font-size:15px;"><strong>Email:</strong></td>
-                        <td style="padding:4px 12px;color:#059669;font-size:15px;font-weight:600;">${adminEmail}</td>
-                      </tr>
-                      <tr>
-                        <td style="padding:4px 0;color:#374151;font-size:15px;"><strong>Contraseña:</strong></td>
-                        <td style="padding:4px 12px;color:#059669;font-size:15px;font-weight:600;">${adminPassword}</td>
-                      </tr>
-                    </table>
-                  </td>
-                </tr>
-              </table>
+              ${credentialsSection}
 
               <!-- CTA Button -->
               <table cellpadding="0" cellspacing="0" style="margin:0 0 24px;">
@@ -123,9 +143,6 @@ export async function sendAdminWelcomeEmail(params: {
                 </tr>
               </table>
 
-              <p style="margin:0 0 16px;color:#6b7280;font-size:14px;line-height:1.5;">
-                <strong>Recomendación:</strong> Cambia tu contraseña después de iniciar sesión por primera vez.
-              </p>
               <p style="margin:0;color:#6b7280;font-size:14px;line-height:1.5;">
                 Como administrador de <strong>${companyName}</strong>, podrás crear proyectos, zonas, asignar usuarios y gestionar toda la implementación 5S de tu empresa.
               </p>

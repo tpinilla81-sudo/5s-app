@@ -145,6 +145,9 @@ export default function GestorPanel() {
   const [showCreateUser, setShowCreateUser] = useState(false)
   const [newAdminData, setNewAdminData] = useState({ name: '', email: '', password: '' })
   const [isAssigning, setIsAssigning] = useState(false)
+  const [sendingEmailFor, setSendingEmailFor] = useState<string | null>(null) // company id being sent email
+  const [emailSentFor, setEmailSentFor] = useState<Set<string>>(new Set()) // company ids where email was already sent
+  const [pendingCredentials, setPendingCredentials] = useState<Record<string, { name: string; email: string; password: string }>>({}) // companyId -> credentials
 
   // ─── Data loading ────────────────────────────────────────────────────────
   const loadStats = useCallback(async () => {
@@ -334,21 +337,15 @@ export default function GestorPanel() {
       })
 
       if (assignRes.ok) {
-        // 3. Send welcome email to the new admin (non-blocking)
-        const company = stats?.companies?.find(c => c.id === assigningAdminTo)
-        const companyName = company?.name || 'la empresa'
-        fetch('/api/email', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            type: 'admin_welcome',
-            adminName: newAdminData.name,
-            adminEmail: newAdminData.email,
-            adminPassword: newAdminData.password,
-            companyName,
-            gestorEmail: undefined, // could add gestor email here later
-          }),
-        }).catch(e => console.error('Email send error (non-critical):', e))
+        // Store credentials temporarily so the gestor can send them via email later
+        setPendingCredentials(prev => ({
+          ...prev,
+          [assigningAdminTo]: {
+            name: newAdminData.name,
+            email: newAdminData.email,
+            password: newAdminData.password,
+          },
+        }))
 
         setAssigningAdminTo(null)
         setShowCreateUser(false)
@@ -389,6 +386,65 @@ export default function GestorPanel() {
     { key: 'empresas', label: 'Empresas', icon: <Building2 className="h-4 w-4" /> },
     { key: 'admins', label: 'Administradores', icon: <Shield className="h-4 w-4" /> },
   ]
+
+  // ─── Send invitation email manually ────────────────────────────────────
+  const handleSendInvitationEmail = async (companyId: string) => {
+    const company = stats?.companies?.find(c => c.id === companyId)
+    if (!company?.adminUser) {
+      alert('Esta empresa no tiene administrador asignado')
+      return
+    }
+
+    const adminName = company.adminUser.name
+    const adminEmail = company.adminUser.email
+    const companyName = company.name
+    const gestorEmail = currentUser?.email
+
+    // Check if we have the plain-text password from creation
+    const credentials = pendingCredentials[companyId]
+    const adminPassword = credentials?.password
+
+    const hasPassword = !!adminPassword
+    const confirmMsg = hasPassword
+      ? `¿Enviar email de inscripción a ${adminName} (${adminEmail}) con sus credenciales?\nSe enviará copia al gestor (${gestorEmail}).`
+      : `¿Enviar email de inscripción a ${adminName} (${adminEmail})?\n\nNota: No se dispone de la contraseña en texto plano. El email indicará que debe restablecerla.\nSe enviará copia al gestor (${gestorEmail}).`
+
+    if (!confirm(confirmMsg)) return
+
+    setSendingEmailFor(companyId)
+    try {
+      const res = await fetch('/api/email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: 'admin_welcome',
+          adminName,
+          adminEmail,
+          adminPassword: adminPassword || '',
+          companyName,
+          gestorEmail,
+          sendCopy: true,
+        }),
+      })
+      const data = await res.json()
+      if (data.success) {
+        setEmailSentFor(prev => new Set(prev).add(companyId))
+        // Clear stored credentials after sending
+        setPendingCredentials(prev => {
+          const next = { ...prev }
+          delete next[companyId]
+          return next
+        })
+      } else {
+        alert(data.error || 'Error al enviar el email')
+      }
+    } catch (error) {
+      console.error('Error sending invitation email:', error)
+      alert('Error al enviar el email')
+    } finally {
+      setSendingEmailFor(null)
+    }
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-950 via-violet-950/20 to-slate-950 text-white">
@@ -804,14 +860,40 @@ export default function GestorPanel() {
 
                             {/* Action buttons */}
                             {company.adminUser ? (
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => handleRemoveAdmin(company.id, company.adminUser!.id)}
-                                className="border-red-700/50 text-red-400 hover:bg-red-900/30 h-7 text-xs"
-                              >
-                                <X className="h-3 w-3 mr-1" /> Quitar
-                              </Button>
+                              <div className="flex items-center gap-2">
+                                {pendingCredentials[company.id] && !emailSentFor.has(company.id) && (
+                                  <Badge className="bg-amber-900/40 text-amber-300 border-amber-700/30 border text-[9px] animate-pulse">
+                                    Credenciales pendientes
+                                  </Badge>
+                                )}
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => handleSendInvitationEmail(company.id)}
+                                  disabled={sendingEmailFor === company.id}
+                                  className={`border-emerald-700/50 h-7 text-xs ${
+                                    emailSentFor.has(company.id)
+                                      ? 'bg-emerald-900/30 text-emerald-400'
+                                      : 'text-emerald-400 hover:bg-emerald-900/30'
+                                  }`}
+                                >
+                                  {sendingEmailFor === company.id ? (
+                                    <><Loader2 className="h-3 w-3 mr-1 animate-spin" /> Enviando...</>
+                                  ) : emailSentFor.has(company.id) ? (
+                                    <><CheckCircle2 className="h-3 w-3 mr-1" /> Enviado</>
+                                  ) : (
+                                    <><Mail className="h-3 w-3 mr-1" /> Enviar Email</>
+                                  )}
+                                </Button>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => handleRemoveAdmin(company.id, company.adminUser!.id)}
+                                  className="border-red-700/50 text-red-400 hover:bg-red-900/30 h-7 text-xs"
+                                >
+                                  <X className="h-3 w-3 mr-1" /> Quitar
+                                </Button>
+                              </div>
                             ) : (
                               <Button
                                 size="sm"
