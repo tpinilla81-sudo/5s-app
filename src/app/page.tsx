@@ -23,6 +23,7 @@ import AdminPanel from '@/components/admin/AdminPanel';
 import ConstructorPanel from '@/components/admin/ConstructorPanel';
 import MaintenanceView from '@/components/5s/MaintenanceView';
 import GerentePanel from '@/components/auth/GerentePanel';
+import PlanDeAccionView from '@/components/5s/PlanDeAccionView';
 import JaulaModal from '@/components/5s/JaulaModal';
 import ActivosModal from '@/components/5s/ActivosModal';
 import { Button } from '@/components/ui/button';
@@ -263,7 +264,7 @@ export default function HomePage() {
   // Available tabs based on role
   // GESTOR (dueño de la app): ONLY sees "Gestión" tab (company management platform)
   // ADMIN (admin de empresa): sees operational tabs (board, gerencia, admin, mejora continua)
-  const availableTabs: { key: 'board' | 'gerente' | 'admin' | 'maintenance' | 'gestion'; label: string; icon: React.ReactNode }[] = [];
+  const availableTabs: { key: 'board' | 'gerente' | 'admin' | 'maintenance' | 'gestion' | 'actionplan'; label: string; icon: React.ReactNode }[] = [];
 
   if (isGestor) {
     // Gestor ONLY sees the platform management tab
@@ -271,6 +272,11 @@ export default function HomePage() {
   } else {
     // All other roles see the operational tabs
     availableTabs.push({ key: 'board', label: 'Tablero 5S', icon: <LayoutDashboard className="h-3.5 w-3.5" /> });
+    // Plan de Acción: visible to all EXCEPT auditor
+    const isAuditor = currentUser?.role === 'auditor';
+    if (!isAuditor) {
+      availableTabs.push({ key: 'actionplan', label: 'Plan de Acción', icon: <ListChecks className="h-3.5 w-3.5" /> });
+    }
     if (canSeeGerentePanel) {
       availableTabs.push({ key: 'gerente', label: 'Gerencia', icon: <BarChart3 className="h-3.5 w-3.5" /> });
     }
@@ -1024,6 +1030,13 @@ export default function HomePage() {
                     </div>
                   </div>
                   )}
+                </motion.div>
+              )}
+
+              {/* ═══ TAB: PLAN DE ACCIÓN ═══ */}
+              {activeTab === 'actionplan' && currentUser?.role !== 'auditor' && (
+                <motion.div key="actionplan" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex-1 min-h-0 overflow-hidden">
+                  <PlanDeAccionView />
                 </motion.div>
               )}
 

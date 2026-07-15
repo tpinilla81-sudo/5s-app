@@ -94,7 +94,7 @@ interface FiveSState {
   progress: ProgressItem[]
   employeeProgress: EmployeeProgressItem[]
   currentView: 'board' | 'detail' | 'admin' | 'maintenance' | 'gerente'
-  activeTab: 'board' | 'gerente' | 'admin' | 'maintenance' | 'gestion'
+  activeTab: 'board' | 'gerente' | 'admin' | 'maintenance' | 'gestion' | 'actionplan'
   selectedSStep: number | null
   activeModal: 'formacion' | 'fotos' | 'inventario' | 'actionplan' | 'autoevaluacion' | 'auditoria' | 'globalActionPlan' | 'globalInventory' | 'auditResults' | 'standardsLibrary' | 'photoLibrary' | null
   activeMiniStep: number | null
@@ -123,7 +123,7 @@ interface FiveSState {
   fetchEmployeeProgress: (projectId: string, zoneId?: string) => Promise<void>
   selectSStep: (s: number | null) => void
   setCurrentView: (view: 'board' | 'detail' | 'admin' | 'maintenance' | 'gerente') => void
-  setActiveTab: (tab: 'board' | 'gerente' | 'admin' | 'maintenance') => void
+  setActiveTab: (tab: 'board' | 'gerente' | 'admin' | 'maintenance' | 'gestion' | 'actionplan') => void
   openModal: (type: 'formacion' | 'fotos' | 'inventario' | 'actionplan' | 'autoevaluacion' | 'auditoria' | 'globalActionPlan' | 'globalInventory' | 'auditResults' | 'standardsLibrary' | 'photoLibrary', miniStep: number) => void
   closeModal: () => void
   seedDatabase: () => Promise<void>
@@ -163,7 +163,7 @@ export const use5SStore = create<FiveSState>((set, get) => ({
   progress: [],
   employeeProgress: [],
   currentView: 'board',
-  activeTab: 'board' as const,
+  activeTab: 'board' as 'board' | 'gerente' | 'admin' | 'maintenance' | 'gestion' | 'actionplan',
   selectedSStep: null,
   activeModal: null,
   activeMiniStep: null,
