@@ -36,18 +36,9 @@ interface TemplateData {
   updatedAt: string
 }
 
-type TemplateTab = 'formacion' | 'fotos' | 'inventarios' | 'estandares' | 'auditoria_interna' | 'auditoria_externa'
+// TemplateTab and TEMPLATE_TABS removed — now organized by S-step → Paso
 
-const TEMPLATE_TABS: { key: TemplateTab; label: string; icon: React.ComponentType<{ className?: string }>; types: string[] }[] = [
-  { key: 'formacion', label: 'Formación y Exámenes', icon: BookOpen, types: ['formacion', 'examen'] },
-  { key: 'fotos', label: 'Fotografías (Paso 2)', icon: Camera, types: ['fotos'] },
-  { key: 'inventarios', label: 'Inventarios (Paso 3)', icon: ClipboardList, types: ['inventario'] },
-  { key: 'estandares', label: 'Estándares (Paso 3)', icon: Award, types: ['estandar'] },
-  { key: 'auditoria_interna', label: 'Auditorías Internas (Paso 4)', icon: ClipboardCheck, types: ['autoevaluacion'] },
-  { key: 'auditoria_externa', label: 'Auditorías Externas (Paso 5)', icon: FileCheck, types: ['auditoria'] },
-]
-
-const S_COLORS: Record<number, string> = { 1: '#8B5CF6', 2: '#EAB308', 3: '#3B82F6', 4: '#F43F5E', 5: '#22C55E' }
+const S_COLORS: Record<number, string> = { 1: '#8B5CF6', 2: '#EAB308', 3: '#3B82F6', 4: '#F43F5E', 5: '#F97316' }
 
 const MINI_STEPS_LABELS: Record<number, string> = {
   1: 'Formación y Exámenes',
@@ -1106,17 +1097,28 @@ function StandardTemplateEditor({ content, onChange }: { content: string; onChan
 }
 
 // ═══════════════════════════════════════════════════════
+// PASO DEFINITIONS — which template types belong to each paso
+// ═══════════════════════════════════════════════════════
+const PASO_CONFIG: { paso: number; label: string; icon: React.ComponentType<{ className?: string }>; types: string[] }[] = [
+  { paso: 1, label: 'Formación y Exámenes', icon: BookOpen, types: ['formacion', 'examen'] },
+  { paso: 2, label: 'Fotografías (Antes/Después)', icon: Camera, types: ['fotos'] },
+  { paso: 3, label: 'Inventario / Estándar', icon: ClipboardList, types: ['inventario', 'estandar'] },
+  { paso: 4, label: 'Autoevaluación', icon: ClipboardCheck, types: ['autoevaluacion'] },
+  { paso: 5, label: 'Auditoría Externa', icon: FileCheck, types: ['auditoria'] },
+]
+
+// ═══════════════════════════════════════════════════════
 // COMPONENT
 // ═══════════════════════════════════════════════════════
 export default function TemplateManager() {
   const { currentProject } = use5SStore()
-  const [activeTab, setActiveTab] = useState<TemplateTab>('formacion')
   const [templates, setTemplates] = useState<TemplateData[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [editingTemplate, setEditingTemplate] = useState<TemplateData | null>(null)
   const [isCreating, setIsCreating] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
   const [expandedS, setExpandedS] = useState<number | null>(null)
+  const [expandedPaso, setExpandedPaso] = useState<string | null>(null) // 'S2-P3' format
   const [editorMode, setEditorMode] = useState<'visual' | 'json'>('visual')
 
   // Form state
@@ -1130,14 +1132,14 @@ export default function TemplateManager() {
   const [notaMinimaAplica, setNotaMinimaAplica] = useState(true)
   const [formActive, setFormActive] = useState(true)
 
-  const tabConfig = TEMPLATE_TABS.find(t => t.key === activeTab)!
+  // Fetch ALL templates at once (all types)
+  const ALL_TYPES = ['formacion', 'examen', 'fotos', 'inventario', 'estandar', 'autoevaluacion', 'auditoria'] as const
 
   const fetchTemplates = useCallback(async () => {
     setIsLoading(true)
     try {
-      const types = tabConfig.types
       const allTemplates: TemplateData[] = []
-      for (const type of types) {
+      for (const type of ALL_TYPES) {
         const res = await fetch(`/api/templates?type=${type}&includeInactive=true`)
         const data = await res.json()
         if (data.success && data.data) allTemplates.push(...data.data)
@@ -1145,23 +1147,22 @@ export default function TemplateManager() {
       setTemplates(allTemplates)
     } catch (e) { console.error('Error fetching templates:', e) }
     finally { setIsLoading(false) }
-  }, [tabConfig.types])
+  }, [])
 
   useEffect(() => { fetchTemplates() }, [fetchTemplates])
 
   const resetForm = () => {
-    setFormType(tabConfig.types[0])
+    setFormType('formacion')
     setFormSStep(1)
-    setFormMiniStep(3)
+    setFormMiniStep(1)
     setFormTitle('')
     setFormDescription('')
     setFormContent('')
-    setFormNotaMinima(activeTab === 'formacion' ? EXAM_PASS_THRESHOLD : activeTab === 'auditoria_interna' ? SELF_EVAL_THRESHOLD : activeTab === 'auditoria_externa' ? AUDIT_PASS_THRESHOLD : 0)
+    setFormNotaMinima(EXAM_PASS_THRESHOLD)
     setFormActive(true)
     setEditingTemplate(null)
     setIsCreating(false)
     setEditorMode('visual')
-    // resetForm complete
   }
 
   const startCreate = (sStep: number, type: string, miniStep: number = 3) => {
@@ -1257,8 +1258,8 @@ export default function TemplateManager() {
     } catch (e) { console.error(e) }
   }
 
-  // All template types across all tabs — used by seed to create everything at once
-  const ALL_TEMPLATE_TYPES = ['formacion', 'examen', 'fotos', 'inventario', 'estandar', 'autoevaluacion', 'auditoria'] as const
+  // Reuse ALL_TYPES for seed
+  const ALL_TEMPLATE_TYPES = ALL_TYPES
 
   const handleSeedDefaults = async () => {
     if (!confirm('¿Crear plantillas por defecto para TODAS las S y TODOS los tipos? Esto creará las que falten.')) return
@@ -1471,8 +1472,13 @@ export default function TemplateManager() {
   }
 
   const templatesByS = (sStep: number) => templates.filter(t => t.sStep === sStep)
+  const templatesBySAndPaso = (sStep: number, miniStep: number) => templates.filter(t => t.sStep === sStep && t.miniStep === miniStep)
 
-  // Count summary for a template
+  // Count total templates for an S-step
+  const countForS = (sStep: number) => templates.filter(t => t.sStep === sStep).length
+
+  // Count templates for a specific paso within an S-step
+  const countForPaso = (sStep: number, paso: number) => templates.filter(t => t.sStep === sStep && t.miniStep === paso).length
   const getTemplateSummary = (template: TemplateData) => {
     try {
       const data = typeof template.content === 'string' ? JSON.parse(template.content) : template.content
@@ -1492,29 +1498,14 @@ export default function TemplateManager() {
   // ═══════════════════════════════════════════════════════
   return (
     <div className="flex flex-col h-full">
-      {/* Tab selector — fixed */}
-      <div className="flex gap-2 border-b pb-2 shrink-0">
-        {TEMPLATE_TABS.map(tab => {
-          const Icon = tab.icon
-          return (
-            <button key={tab.key} onClick={() => { setActiveTab(tab.key); setExpandedS(null) }}
-              className={`flex items-center gap-2 px-4 py-2 rounded-t-lg text-sm font-semibold transition-all ${
-                activeTab === tab.key
-                  ? 'bg-green-50 text-green-700 border-b-2 border-green-500'
-                  : 'text-muted-foreground hover:text-foreground hover:bg-gray-50'
-              }`}>
-              <Icon className="h-4 w-4" />
-              {tab.label}
-            </button>
-          )
-        })}
-      </div>
-
-      {/* Header actions — fixed */}
-      <div className="flex items-center justify-between shrink-0">
+      {/* Header — title + actions */}
+      <div className="flex items-center justify-between shrink-0 mb-3">
         <h2 className="text-lg font-bold flex items-center gap-2">
-          {(() => { const Icon = tabConfig.icon; return <Icon className="h-5 w-5 text-green-600" /> })()}
-          Plantillas de {tabConfig.label}
+          <BookOpen className="h-5 w-5 text-green-600" />
+          Plantillas Genéricas
+          <Badge variant="outline" className="text-xs ml-2">
+            {templates.length} plantilla{templates.length !== 1 ? 's' : ''} en total
+          </Badge>
         </h2>
         <div className="flex items-center gap-2">
           <Button variant="outline" size="sm" onClick={handlePasteTemplate}
@@ -1530,7 +1521,7 @@ export default function TemplateManager() {
         </div>
       </div>
 
-      {/* S-Step cards — scrollable */}
+      {/* S-Step cards — organized by 5 pasos */}
       {isLoading ? (
         <div className="flex items-center justify-center py-12">
           <Loader2 className="h-8 w-8 text-green-500 animate-spin" />
@@ -1538,7 +1529,7 @@ export default function TemplateManager() {
       ) : (
         <div className="flex-1 min-h-0 overflow-auto space-y-3">
           {S_STEPS.map(s => {
-            const sTemplates = templatesByS(s.id)
+            const sTotal = countForS(s.id)
             const isExpanded = expandedS === s.id
             return (
               <div key={s.id} className="rounded-xl border-2 overflow-hidden"
@@ -1555,113 +1546,146 @@ export default function TemplateManager() {
                     <div>
                       <span className="font-bold" style={{ color: S_COLORS[s.id] }}>{s.japaneseName}</span>
                       <span className="text-sm text-muted-foreground ml-2">({s.spanishName})</span>
+                      <span className="text-xs text-muted-foreground ml-2">— {s.name}</span>
                     </div>
                   </div>
                   <div className="flex items-center gap-3">
                     <Badge variant="outline" style={{ color: S_COLORS[s.id], borderColor: S_COLORS[s.id] + '40' }}>
-                      {sTemplates.length} plantilla{sTemplates.length !== 1 ? 's' : ''}
+                      {sTotal} plantilla{sTotal !== 1 ? 's' : ''}
                     </Badge>
                     {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
                   </div>
                 </div>
 
-                {/* Expanded */}
+                {/* Expanded — show 5 Pasos */}
                 <AnimatePresence>
                   {isExpanded && (
                     <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }}
                       className="overflow-hidden">
                       <div className="p-4 space-y-3">
-                        {/* Create buttons */}
-                        <div className="flex gap-2 mb-3">
-                          {tabConfig.types.map(type => {
-                            const defaultMiniStep = type === 'formacion' || type === 'examen' ? 1 : type === 'autoevaluacion' ? 4 : type === 'auditoria' ? 5 : 3
-                            return (
-                            <Button key={type} variant="outline" size="sm"
-                              className="gap-1 text-xs"
-                              onClick={() => startCreate(s.id, type, defaultMiniStep)}>
-                              <Plus className="h-3.5 w-3.5" />
-                              Nueva {type === 'formacion' ? 'Formación' : type === 'examen' ? 'Examen' : type === 'autoevaluacion' ? 'Autoevaluación' : type === 'auditoria' ? 'Auditoría Externa' : type === 'inventario' ? 'Config. Inventario' : 'Formato Estándar'}
-                            </Button>
-                          )})}
-                        </div>
+                        {PASO_CONFIG.map(pasoConfig => {
+                          const pasoKey = `S${s.id}-P${pasoConfig.paso}`
+                          const pasoTemplates = templatesBySAndPaso(s.id, pasoConfig.paso)
+                          const pasoCount = pasoTemplates.length
+                          const isPasoExpanded = expandedPaso === pasoKey
+                          const PasoIcon = pasoConfig.icon
 
-                        {/* Template list */}
-                        {sTemplates.length === 0 ? (
-                          <div className="text-center py-6 text-muted-foreground text-sm">
-                            No hay plantillas para S{s.id}. Crea una nueva o pulsa &quot;Crear plantillas por defecto&quot;.
-                          </div>
-                        ) : (
-                          <div className="space-y-2">
-                            {sTemplates.map(tpl => (
-                              <div key={tpl.id}
-                                className={`p-3 rounded-lg border ${tpl.active ? 'bg-white border-gray-200' : 'bg-gray-50 border-gray-300 opacity-60'}`}>
-                                {/* S / Paso indicator */}
-                                <div className="flex items-center gap-2 mb-2 px-1">
-                                  <div className="flex items-center gap-1.5 px-2 py-0.5 rounded text-xs font-bold text-white"
-                                    style={{ backgroundColor: S_COLORS[tpl.sStep] || '#666' }}>
-                                    S{tpl.sStep}
-                                  </div>
-                                  <span className="text-xs text-muted-foreground">Paso {tpl.miniStep || 3}</span>
-                                  <span className="text-xs text-muted-foreground">·</span>
-                                  <span className="text-xs font-medium" style={{ color: S_COLORS[tpl.sStep] || '#666' }}>
-                                    {MINI_STEPS_LABELS[tpl.miniStep || 3]}
+                          return (
+                            <div key={pasoConfig.paso} className="rounded-lg border overflow-hidden"
+                              style={{ borderColor: S_COLORS[s.id] + '25' }}>
+                              {/* Paso Header */}
+                              <div className="flex items-center justify-between px-3 py-2 cursor-pointer"
+                                style={{ backgroundColor: S_COLORS[s.id] + '08' }}
+                                onClick={() => setExpandedPaso(isPasoExpanded ? null : pasoKey)}>
+                                <div className="flex items-center gap-2">
+                                  <PasoIcon className="h-4 w-4" style={{ color: S_COLORS[s.id] }} />
+                                  <span className="text-sm font-semibold" style={{ color: S_COLORS[s.id] }}>
+                                    Paso {pasoConfig.paso}:
                                   </span>
+                                  <span className="text-sm text-muted-foreground">{pasoConfig.label}</span>
                                 </div>
-                                <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-3 flex-1 min-w-0">
-                                  <Badge className="shrink-0" style={{
-                                    backgroundColor: tpl.type === 'formacion' ? '#DBEAFE' : tpl.type === 'examen' ? '#FEF3C7' : tpl.type === 'autoevaluacion' ? '#D1FAE5' : tpl.type === 'auditoria' ? '#FED7AA' : tpl.type === 'inventario' ? '#FFEDD5' : '#EDE9FE',
-                                    color: tpl.type === 'formacion' ? '#1D4ED8' : tpl.type === 'examen' ? '#92400E' : tpl.type === 'autoevaluacion' ? '#065F46' : tpl.type === 'auditoria' ? '#9A3412' : tpl.type === 'inventario' ? '#9A3412' : '#6D28D9',
-                                  }}>
-                                    {tpl.type === 'formacion' ? 'Formación' : tpl.type === 'examen' ? 'Examen' : tpl.type === 'autoevaluacion' ? 'Aut. Int.' : tpl.type === 'auditoria' ? 'Aud. Ext.' : tpl.type === 'inventario' ? 'Inventario' : 'Estándar'}
-                                  </Badge>
-                                  <div className="min-w-0">
-                                    <p className="text-sm font-medium truncate">{tpl.title}</p>
-                                    {tpl.description && <p className="text-xs text-muted-foreground truncate">{tpl.description}</p>}
+                                <div className="flex items-center gap-2">
+                                  {/* Create buttons for this paso's types */}
+                                  <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
+                                    {pasoConfig.types.map(type => (
+                                      <Button key={type} variant="outline" size="sm"
+                                        className="h-6 px-2 text-[10px] gap-0.5"
+                                        style={{ borderColor: S_COLORS[s.id] + '40', color: S_COLORS[s.id] }}
+                                        onClick={() => startCreate(s.id, type, pasoConfig.paso)}>
+                                        <Plus className="h-3 w-3" />
+                                        {type === 'formacion' ? 'Formación' : type === 'examen' ? 'Examen' : type === 'autoevaluacion' ? 'Autoevaluación' : type === 'auditoria' ? 'Aud. Ext.' : type === 'inventario' ? 'Inventario' : type === 'fotos' ? 'Fotos' : 'Estándar'}
+                                      </Button>
+                                    ))}
                                   </div>
-                                  {getTemplateSummary(tpl) && (
-                                    <Badge variant="outline" className="shrink-0 text-[10px]">
-                                      {getTemplateSummary(tpl)}
-                                    </Badge>
-                                  )}
-                                  {tpl.notaMinima != null ? (
-                                    <Badge variant="outline" className="shrink-0 text-xs">
-                                      Nota mín: {tpl.notaMinima}%
-                                    </Badge>
-                                  ) : (
-                                    <Badge variant="outline" className="shrink-0 text-xs text-gray-400 border-gray-200">
-                                      Sin nota mín
-                                    </Badge>
-                                  )}
-                                  {!tpl.active && (
-                                    <Badge variant="outline" className="shrink-0 text-xs text-red-500 border-red-200">Inactiva</Badge>
-                                  )}
-                                </div>
-                                <div className="flex items-center gap-1 shrink-0 ml-2">
-                                  <Button variant="ghost" size="sm" onClick={() => handleCopyTemplate(tpl)}
-                                    className="h-7 w-7 p-0 text-purple-500 hover:text-purple-700 hover:bg-purple-50" title="Copiar al portapapeles">
-                                    {copiedId === tpl.id ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
-                                  </Button>
-                                  <Button variant="ghost" size="sm" onClick={() => handleDuplicateTemplate(tpl)}
-                                    className="h-7 w-7 p-0 text-amber-500 hover:text-amber-700 hover:bg-amber-50" title="Duplicar plantilla (crea copia directa)">
-                                    <ClipboardCopy className="h-3.5 w-3.5" />
-                                  </Button>
-                                  <Button variant="ghost" size="sm" onClick={() => handleDownload(tpl)}
-                                    className="h-7 w-7 p-0 text-gray-500 hover:text-gray-700" title="Descargar JSON">
-                                    <Download className="h-3.5 w-3.5" />
-                                  </Button>
-                                  <Button variant="ghost" size="sm" onClick={() => startEdit(tpl)}
-                                    className="h-7 w-7 p-0 text-blue-600 hover:text-blue-700">
-                                    <Edit3 className="h-3.5 w-3.5" />
-                                  </Button>
-                                  <Button variant="ghost" size="sm" onClick={() => handleDelete(tpl.id)}
-                                    className="h-7 w-7 p-0 text-red-500 hover:text-red-600">
-                                    <Trash2 className="h-3.5 w-3.5" />
-                                  </Button>
-                                </div>
+                                  <Badge variant="outline" className="text-[10px] h-5"
+                                    style={{ color: S_COLORS[s.id], borderColor: S_COLORS[s.id] + '30' }}>
+                                    {pasoCount}
+                                  </Badge>
+                                  {isPasoExpanded ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
                                 </div>
                               </div>
-                            ))}
+
+                              {/* Paso Expanded — template list */}
+                              <AnimatePresence>
+                                {isPasoExpanded && (
+                                  <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }}
+                                    className="overflow-hidden">
+                                    <div className="px-3 pb-3 space-y-2">
+                                      {pasoCount === 0 ? (
+                                        <div className="text-center py-4 text-muted-foreground text-xs">
+                                          Sin plantillas para este paso. Pulsa + para crear.
+                                        </div>
+                                      ) : (
+                                        pasoTemplates.map(tpl => (
+                                          <div key={tpl.id}
+                                            className={`p-2.5 rounded-lg border ${tpl.active ? 'bg-white border-gray-200' : 'bg-gray-50 border-gray-300 opacity-60'}`}>
+                                            <div className="flex items-center justify-between">
+                                              <div className="flex items-center gap-3 flex-1 min-w-0">
+                                                <Badge className="shrink-0" style={{
+                                                  backgroundColor: tpl.type === 'formacion' ? '#DBEAFE' : tpl.type === 'examen' ? '#FEF3C7' : tpl.type === 'autoevaluacion' ? '#D1FAE5' : tpl.type === 'auditoria' ? '#FED7AA' : tpl.type === 'inventario' ? '#FFEDD5' : tpl.type === 'fotos' ? '#E0F2FE' : '#EDE9FE',
+                                                  color: tpl.type === 'formacion' ? '#1D4ED8' : tpl.type === 'examen' ? '#92400E' : tpl.type === 'autoevaluacion' ? '#065F46' : tpl.type === 'auditoria' ? '#9A3412' : tpl.type === 'inventario' ? '#9A3412' : tpl.type === 'fotos' ? '#0369A1' : '#6D28D9',
+                                                }}>
+                                                  {tpl.type === 'formacion' ? 'Formación' : tpl.type === 'examen' ? 'Examen' : tpl.type === 'autoevaluacion' ? 'Aut. Int.' : tpl.type === 'auditoria' ? 'Aud. Ext.' : tpl.type === 'inventario' ? 'Inventario' : tpl.type === 'fotos' ? 'Fotos' : 'Estándar'}
+                                                </Badge>
+                                                <div className="min-w-0">
+                                                  <p className="text-sm font-medium truncate">{tpl.title}</p>
+                                                  {tpl.description && <p className="text-xs text-muted-foreground truncate">{tpl.description}</p>}
+                                                </div>
+                                                {getTemplateSummary(tpl) && (
+                                                  <Badge variant="outline" className="shrink-0 text-[10px]">
+                                                    {getTemplateSummary(tpl)}
+                                                  </Badge>
+                                                )}
+                                                {tpl.notaMinima != null ? (
+                                                  <Badge variant="outline" className="shrink-0 text-xs">
+                                                    Nota mín: {tpl.notaMinima}%
+                                                  </Badge>
+                                                ) : (
+                                                  <Badge variant="outline" className="shrink-0 text-xs text-gray-400 border-gray-200">
+                                                    Sin nota mín
+                                                  </Badge>
+                                                )}
+                                                {!tpl.active && (
+                                                  <Badge variant="outline" className="shrink-0 text-xs text-red-500 border-red-200">Inactiva</Badge>
+                                                )}
+                                              </div>
+                                              <div className="flex items-center gap-1 shrink-0 ml-2">
+                                                <Button variant="ghost" size="sm" onClick={() => handleCopyTemplate(tpl)}
+                                                  className="h-7 w-7 p-0 text-purple-500 hover:text-purple-700 hover:bg-purple-50" title="Copiar al portapapeles">
+                                                  {copiedId === tpl.id ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+                                                </Button>
+                                                <Button variant="ghost" size="sm" onClick={() => handleDuplicateTemplate(tpl)}
+                                                  className="h-7 w-7 p-0 text-amber-500 hover:text-amber-700 hover:bg-amber-50" title="Duplicar plantilla">
+                                                  <ClipboardCopy className="h-3.5 w-3.5" />
+                                                </Button>
+                                                <Button variant="ghost" size="sm" onClick={() => handleDownload(tpl)}
+                                                  className="h-7 w-7 p-0 text-gray-500 hover:text-gray-700" title="Descargar JSON">
+                                                  <Download className="h-3.5 w-3.5" />
+                                                </Button>
+                                                <Button variant="ghost" size="sm" onClick={() => startEdit(tpl)}
+                                                  className="h-7 w-7 p-0 text-blue-600 hover:text-blue-700">
+                                                  <Edit3 className="h-3.5 w-3.5" />
+                                                </Button>
+                                                <Button variant="ghost" size="sm" onClick={() => handleDelete(tpl.id)}
+                                                  className="h-7 w-7 p-0 text-red-500 hover:text-red-600">
+                                                  <Trash2 className="h-3.5 w-3.5" />
+                                                </Button>
+                                              </div>
+                                            </div>
+                                          </div>
+                                        ))
+                                      )}
+                                    </div>
+                                  </motion.div>
+                                )}
+                              </AnimatePresence>
+                            </div>
+                          )
+                        })}
+
+                        {sTotal === 0 && (
+                          <div className="text-center py-6 text-muted-foreground text-sm">
+                            No hay plantillas para S{s.id}. Pulsa &quot;Crear plantillas por defecto&quot; para generarlas todas.
                           </div>
                         )}
                       </div>
