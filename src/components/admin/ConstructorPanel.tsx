@@ -234,7 +234,7 @@ const PLATFORM_PERMISSION_LABELS: Record<string, string> = {
 // ─── Component ───────────────────────────────────────────────────────────────
 
 export default function ConstructorPanel() {
- const { setCurrentView, fetchProjects, fetchCompanies, projects, setCurrentProject, currentProject } = use5SStore()
+ const { setCurrentView, fetchProjects, fetchCompanies, projects, setCurrentProject, currentProject, currentUser } = use5SStore()
  const [activeTab, setActiveTab] = useState<ConstructorTab>('empresas')
  const [configSubTab, setConfigSubTab] = useState<ConfigSubTab>('plantillas')
 
@@ -284,10 +284,22 @@ export default function ConstructorPanel() {
  // Company admins map: companyId → admin user info
  const [companyAdmins, setCompanyAdmins] = useState<Record<string, { name: string; email: string }>>({})
 
+ // Delete company confirmation
+ const [deletingCompany, setDeletingCompany] = useState<{ id: string; name: string; projectCount: number } | null>(null)
+
+ // Gestor profile edit
+ const [showGestorProfile, setShowGestorProfile] = useState(false)
+ const [gestorProfileData, setGestorProfileData] = useState({ name: '', email: '', currentPassword: '', newPassword: '', confirmNewPassword: '' })
+ const [isSavingProfile, setIsSavingProfile] = useState(false)
+ const [profileMessage, setProfileMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
+
  // Password reset
  const [resetPasswordUserId, setResetPasswordUserId] = useState<string | null>(null)
  const [newPassword, setNewPassword] = useState('')
  const [showPassword, setShowPassword] = useState(false)
+
+ // Delete user confirmation
+ const [deletingUser, setDeletingUser] = useState<{ id: string; name: string; email: string; role: string } | null>(null)
 
  // Permissions
  const [permissions, setPermissions] = useState<Record<string, Record<string, boolean>>>({})
@@ -502,6 +514,26 @@ export default function ConstructorPanel() {
     }),
    })
 
+   // Step 5: Send welcome email to admin + notification to gestor
+   if (adminMode === 'create' && adminUserId) {
+    try {
+     await fetch('/api/email', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+       type: 'admin_welcome',
+       adminName: newAdminName,
+       adminEmail: newAdminEmail,
+       adminPassword: newAdminPassword,
+       companyName: newCompanyName,
+       gestorEmail: currentUser?.email || undefined,
+      }),
+     })
+    } catch (emailErr) {
+     console.error('Error sending welcome email (non-blocking):', emailErr)
+    }
+   }
+
    setShowNewCompany(false)
    resetNewCompanyForm()
    await loadStats()
@@ -550,6 +582,120 @@ export default function ConstructorPanel() {
   }
  }
 
+ const handleDeleteCompany = async (companyId: string) => {
+  try {
+   const res = await fetch(`/api/companies/${companyId}`, {
+    method: 'DELETE',
+   })
+   const data = await res.json()
+   if (res.ok) {
+    setDeletingCompany(null)
+    await loadStats()
+    await fetchCompanies()
+    await loadCompanyAdmins()
+    alert(data.message || 'Empresa eliminada')
+   } else {
+    alert(data.error || 'Error al eliminar empresa')
+   }
+  } catch (error) {
+   console.error('Error deleting company:', error)
+   alert('Error al eliminar la empresa')
+  }
+ }
+
+ // ─── Gestor profile actions ─────────────────────────────────────────────
+const handleSaveGestorProfile = async () => {
+  if (!currentUser) return
+  setIsSavingProfile(true)
+  setProfileMessage(null)
+
+  try {
+    // Validate email
+    if (!gestorProfileData.email.trim()) {
+      setProfileMessage({ type: 'error', text: 'El email no puede estar vacío' })
+      setIsSavingProfile(false)
+      return
+    }
+
+    // Validate name
+    if (!gestorProfileData.name.trim()) {
+      setProfileMessage({ type: 'error', text: 'El nombre no puede estar vacío' })
+      setIsSavingProfile(false)
+      return
+    }
+
+    // If changing password, validate
+    if (gestorProfileData.newPassword) {
+      if (gestorProfileData.newPassword.length < 6) {
+        setProfileMessage({ type: 'error', text: 'La nueva contraseña debe tener al menos 6 caracteres' })
+        setIsSavingProfile(false)
+        return
+      }
+      if (gestorProfileData.newPassword !== gestorProfileData.confirmNewPassword) {
+        setProfileMessage({ type: 'error', text: 'Las contraseñas no coinciden' })
+        setIsSavingProfile(false)
+        return
+      }
+      // Verify current password
+      if (!gestorProfileData.currentPassword) {
+        setProfileMessage({ type: 'error', text: 'Debes introducir tu contraseña actual para cambiarla' })
+        setIsSavingProfile(false)
+        return
+      }
+      // Verify current password by trying to login
+      const verifyRes = await fetch('/api/auth', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: currentUser.email, password: gestorProfileData.currentPassword }),
+      })
+      const verifyData = await verifyRes.json()
+      if (!verifyData.success) {
+        setProfileMessage({ type: 'error', text: 'La contraseña actual es incorrecta' })
+        setIsSavingProfile(false)
+        return
+      }
+    }
+
+    // Update user
+    const updatePayload: Record<string, unknown> = {
+      id: currentUser.id,
+      name: gestorProfileData.name.trim(),
+      email: gestorProfileData.email.trim().toLowerCase(),
+    }
+    if (gestorProfileData.newPassword) {
+      updatePayload.password = gestorProfileData.newPassword
+    }
+
+    const res = await fetch('/api/users', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(updatePayload),
+    })
+    const data = await res.json()
+
+    if (data.success) {
+      // Update local store
+      const store = use5SStore.getState()
+      if (store.currentUser) {
+        store.currentUser.name = gestorProfileData.name.trim()
+        store.currentUser.email = gestorProfileData.email.trim().toLowerCase()
+      }
+      setProfileMessage({ type: 'success', text: 'Perfil actualizado correctamente' })
+      setTimeout(() => {
+        setShowGestorProfile(false)
+        setProfileMessage(null)
+      }, 2000)
+    } else {
+      setProfileMessage({ type: 'error', text: data.error || 'Error al actualizar el perfil' })
+    }
+  } catch (error) {
+    console.error('Error updating gestor profile:', error)
+    setProfileMessage({ type: 'error', text: 'Error de conexión al guardar' })
+  } finally {
+    setIsSavingProfile(false)
+  }
+ }
+
  // ─── Subscription actions ─────────────────────────────────────────────
  const handleUpdateSubscription = async () => {
   if (!editingSub) return
@@ -575,6 +721,11 @@ export default function ConstructorPanel() {
  // ─── User actions ────────────────────────────────────────────────────────
  const handleUpdateUser = async (userId: string) => {
   try {
+   // Validate email if changing
+   if (editUserData.email && !editUserData.email.trim()) {
+    alert('El email no puede estar vacío')
+    return
+   }
    const res = await fetch('/api/users', {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
@@ -584,6 +735,14 @@ export default function ConstructorPanel() {
     setEditingUser(null)
     await loadUsers()
     await loadStats()
+    // If the updated user is the current gestor, update the store too
+    if (currentUser && userId === currentUser.id) {
+     const store = use5SStore.getState()
+     if (store.currentUser) {
+      if (editUserData.name) store.currentUser.name = editUserData.name
+      if (editUserData.email) store.currentUser.email = editUserData.email.trim().toLowerCase()
+     }
+    }
    } else {
     const data = await res.json()
     alert(data.error || 'Error al actualizar usuario')
@@ -627,6 +786,23 @@ export default function ConstructorPanel() {
    }
   } catch (error) {
    console.error('Error resetting password:', error)
+  }
+ }
+
+ const handleDeleteUser = async (userId: string) => {
+  try {
+   const res = await fetch(`/api/users?id=${userId}`, { method: 'DELETE' })
+   const data = await res.json()
+   if (res.ok) {
+    setDeletingUser(null)
+    await loadUsers()
+    await loadStats()
+   } else {
+    alert(data.error || 'Error al eliminar usuario')
+   }
+  } catch (error) {
+   console.error('Error deleting user:', error)
+   alert('Error al eliminar usuario')
   }
  }
 
@@ -735,9 +911,26 @@ export default function ConstructorPanel() {
        <p className="text-xs text-slate-500">Dueño de la Plataforma 5S</p>
       </div>
      </div>
-     <div className="flex items-center gap-2">
+     <div className="flex items-center gap-3">
+      {currentUser && (
+       <button
+        onClick={() => {
+         setGestorProfileData({ name: currentUser.name, email: currentUser.email, currentPassword: '', newPassword: '', confirmNewPassword: '' })
+         setProfileMessage(null)
+         setShowGestorProfile(true)
+        }}
+        className="text-right hover:bg-amber-50 border border-amber-200 rounded-lg px-3 py-1.5 transition-colors cursor-pointer group"
+        title="Cambiar correo / contraseña"
+       >
+        <p className="text-xs font-medium text-slate-700 group-hover:text-amber-700">{currentUser.name}</p>
+        <p className="text-[10px] text-slate-500 group-hover:text-amber-600 flex items-center gap-1">
+         {currentUser.email}
+         <Key className="h-2.5 w-2.5" />
+        </p>
+       </button>
+      )}
       <Badge className="bg-gradient-to-r from-violet-600 to-purple-600 text-white border-0 px-3 py-1">
-       <Crown className="h-3 w-3 mr-1" /> GESTOR (DUEÑO)
+       <Crown className="h-3 w-3 mr-1" /> GESTOR
       </Badge>
      </div>
     </div>
@@ -824,6 +1017,9 @@ export default function ConstructorPanel() {
                  </Button>
                  <Button variant="ghost" size="sm" onClick={() => handleToggleCompanyActive(company.id, company.active)} className={`h-7 w-7 p-0 ${company.active ? 'text-red-500 hover:bg-red-100' : 'text-green-500 hover:bg-green-50'}`}>
                   {company.active ? <XCircle className="h-4 w-4" /> : <CheckCircle2 className="h-4 w-4" />}
+                 </Button>
+                 <Button variant="ghost" size="sm" onClick={() => setDeletingCompany({ id: company.id, name: company.name, projectCount: company.projectCount })} className="h-7 w-7 p-0 text-red-400 hover:bg-red-50 hover:text-red-600">
+                  <Trash2 className="h-4 w-4" />
                  </Button>
                 </div>
                </div>
@@ -1263,23 +1459,29 @@ export default function ConstructorPanel() {
             </TableHeader>
             <TableBody>
              {filteredUsers.map(user => (
-              <TableRow key={user.id} className="border-slate-100 hover:bg-violet-50">
+              <TableRow key={user.id} className={`border-slate-100 ${user.role === 'gestor' ? 'bg-red-50/50 hover:bg-red-50' : 'hover:bg-violet-50'}`}>
                <TableCell>
                 {editingUser === user.id ? (
                  <Input value={editUserData.name} onChange={e => setEditUserData(d => ({ ...d, name: e.target.value }))} className="bg-white border-slate-300 text-slate-800 text-xs h-7 w-36" />
                 ) : (
                  <div className="flex items-center gap-2">
-                  <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold ${user.active ? 'bg-violet-100 text-violet-700' : 'bg-gray-100 text-gray-500'}`}>
+                  <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold ${user.role === 'gestor' ? 'bg-red-100 text-red-700' : user.active ? 'bg-violet-100 text-violet-700' : 'bg-gray-100 text-gray-500'}`}>
                    {user.name.charAt(0).toUpperCase()}
                   </div>
                   <span className="text-xs text-slate-800 font-medium">{user.name}</span>
                  </div>
                 )}
                </TableCell>
-               <TableCell className="text-xs text-slate-500">{user.email}</TableCell>
                <TableCell>
                 {editingUser === user.id ? (
-                 <Select value={editUserData.role} onValueChange={val => setEditUserData(d => ({ ...d, role: val }))}>
+                 <Input type="email" value={editUserData.email} onChange={e => setEditUserData(d => ({ ...d, email: e.target.value }))} className="bg-white border-slate-300 text-slate-800 text-xs h-7 w-48" />
+                ) : (
+                 <span className="text-xs text-slate-500">{user.email}</span>
+                )}
+               </TableCell>
+               <TableCell>
+                {editingUser === user.id ? (
+                 <Select value={editUserData.role} onValueChange={val => setEditUserData(d => ({ ...d, role: val }))} disabled={user.role === 'gestor'}>
                   <SelectTrigger className="bg-white border-slate-300 text-slate-800 text-xs h-7 w-36">
                    <SelectValue />
                   </SelectTrigger>
@@ -1318,15 +1520,20 @@ export default function ConstructorPanel() {
                   </>
                  ) : (
                   <>
-                   <Button variant="ghost" size="sm" onClick={() => { setEditingUser(user.id); setEditUserData({ name: user.name, email: user.email, role: user.role, active: user.active }) }} className="h-6 w-6 p-0 text-violet-500 hover:bg-violet-50">
+                   <Button variant="ghost" size="sm" onClick={() => { setEditingUser(user.id); setEditUserData({ name: user.name, email: user.email, role: user.role, active: user.active }) }} className="h-6 w-6 p-0 text-violet-500 hover:bg-violet-50" title="Editar usuario">
                     <Edit3 className="h-3 w-3" />
                    </Button>
-                   <Button variant="ghost" size="sm" onClick={() => handleToggleActive(user.id, user.active)} className={`h-6 w-6 p-0 ${user.active ? 'text-red-500 hover:bg-red-100' : 'text-green-500 hover:bg-green-50'}`}>
+                   <Button variant="ghost" size="sm" onClick={() => handleToggleActive(user.id, user.active)} className={`h-6 w-6 p-0 ${user.active ? 'text-red-500 hover:bg-red-100' : 'text-green-500 hover:bg-green-50'}`} title={user.active ? 'Desactivar' : 'Activar'}>
                     {user.active ? <XCircle className="h-3 w-3" /> : <CheckCircle2 className="h-3 w-3" />}
                    </Button>
-                   <Button variant="ghost" size="sm" onClick={() => { setResetPasswordUserId(user.id); setNewPassword('') }} className="h-6 w-6 p-0 text-violet-500 hover:bg-violet-50">
+                   <Button variant="ghost" size="sm" onClick={() => { setResetPasswordUserId(user.id); setNewPassword('') }} className="h-6 w-6 p-0 text-violet-500 hover:bg-violet-50" title="Cambiar contraseña">
                     <Key className="h-3 w-3" />
                    </Button>
+                   {user.role !== 'gestor' && (
+                    <Button variant="ghost" size="sm" onClick={() => setDeletingUser({ id: user.id, name: user.name, email: user.email, role: user.role })} className="h-6 w-6 p-0 text-red-500 hover:bg-red-100" title="Eliminar usuario">
+                     <Trash2 className="h-3 w-3" />
+                    </Button>
+                   )}
                   </>
                  )}
                 </div>
@@ -1715,6 +1922,199 @@ export default function ConstructorPanel() {
        <div className="flex gap-2 justify-end">
         <Button variant="outline" size="sm" onClick={() => setResetPasswordUserId(null)} className="border-violet-300 text-violet-700">Cancelar</Button>
         <Button size="sm" onClick={() => handleResetPassword(resetPasswordUserId!)} disabled={newPassword.length < 6} className="bg-violet-600 text-white">Guardar</Button>
+       </div>
+      </div>
+     </DialogContent>
+    </Dialog>
+   )}
+
+   {/* Delete company confirmation dialog */}
+   {deletingCompany && (
+    <Dialog open={!!deletingCompany} onOpenChange={() => setDeletingCompany(null)}>
+     <DialogContent className="bg-white border-slate-200">
+      <DialogHeader>
+       <DialogTitle className="text-red-700 flex items-center gap-2">
+        <AlertTriangle className="h-5 w-5" />
+        Eliminar Empresa
+       </DialogTitle>
+      </DialogHeader>
+      <div className="space-y-3 py-2">
+       <p className="text-sm text-slate-700">
+        ¿Estás seguro de que quieres eliminar <strong>"{deletingCompany.name}"</strong>?
+       </p>
+       {deletingCompany.projectCount > 0 ? (
+        <div className="bg-orange-50 border border-orange-200 rounded-lg p-3">
+         <p className="text-xs text-orange-700 font-medium flex items-center gap-1">
+          <AlertTriangle className="h-3.5 w-3.5" />
+          Esta empresa tiene {deletingCompany.projectCount} proyecto(s) asociado(s)
+         </p>
+         <p className="text-[11px] text-orange-600 mt-1">
+          La empresa será <strong>desactivada</strong> en lugar de eliminada permanentemente, ya que tiene proyectos asociados.
+         </p>
+        </div>
+       ) : (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+         <p className="text-xs text-red-700 font-medium flex items-center gap-1">
+          <AlertTriangle className="h-3.5 w-3.5" />
+          Esta acción es irreversible
+         </p>
+         <p className="text-[11px] text-red-600 mt-1">
+          La empresa será eliminada permanentemente de la base de datos.
+         </p>
+        </div>
+       )}
+       <div className="flex gap-2 justify-end">
+        <Button variant="outline" size="sm" onClick={() => setDeletingCompany(null)} className="border-slate-300 text-slate-700">Cancelar</Button>
+        <Button size="sm" onClick={() => handleDeleteCompany(deletingCompany!.id)} className="bg-red-600 hover:bg-red-700 text-white">
+         <Trash2 className="h-3 w-3 mr-1" />
+         {deletingCompany.projectCount > 0 ? 'Desactivar' : 'Eliminar'}
+        </Button>
+       </div>
+      </div>
+     </DialogContent>
+    </Dialog>
+   )}
+
+   {/* Gestor Profile Dialog */}
+   {showGestorProfile && currentUser && (
+    <Dialog open={showGestorProfile} onOpenChange={(open) => { if (!open) setShowGestorProfile(false) }}>
+     <DialogContent className="bg-white border-slate-200 max-w-md">
+      <DialogHeader>
+       <DialogTitle className="text-violet-700 flex items-center gap-2">
+        <Key className="h-5 w-5" />
+        Mi Perfil — Gestor
+       </DialogTitle>
+      </DialogHeader>
+      <div className="space-y-4 py-2">
+       {/* Current credentials info */}
+       <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
+        <p className="text-xs text-amber-700 font-medium flex items-center gap-1">
+         <AlertTriangle className="h-3.5 w-3.5" />
+         Cambia aquí tu correo y contraseña
+        </p>
+        <div className="mt-1.5 space-y-1">
+         <p className="text-xs text-slate-600"><strong>Nombre actual:</strong> {currentUser.name}</p>
+         <p className="text-xs text-slate-600"><strong>Email actual:</strong> {currentUser.email}</p>
+         <p className="text-xs text-slate-600"><strong>Rol:</strong> Gestor (Dueño de la plataforma)</p>
+        </div>
+       </div>
+
+       {/* Edit form */}
+       <div className="space-y-3">
+        <div className="space-y-1">
+         <Label className="text-xs text-slate-600">Nombre</Label>
+         <Input
+          value={gestorProfileData.name}
+          onChange={e => setGestorProfileData(d => ({ ...d, name: e.target.value }))}
+          className="bg-white border-slate-300 text-slate-800 text-sm"
+         />
+        </div>
+        <div className="space-y-1">
+         <Label className="text-xs text-slate-600 font-semibold">Email</Label>
+         <Input
+          type="email"
+          value={gestorProfileData.email}
+          onChange={e => setGestorProfileData(d => ({ ...d, email: e.target.value }))}
+          className="bg-white border-amber-300 text-slate-800 text-sm focus:border-amber-500 focus:ring-amber-500"
+         />
+        </div>
+
+        {/* Password change section */}
+        <div className="border-t border-slate-200 pt-3">
+         <p className="text-xs font-medium text-slate-700 mb-2">Cambiar contraseña (opcional)</p>
+         <div className="space-y-2">
+          <div className="space-y-1">
+           <Label className="text-[10px] text-slate-500">Contraseña actual</Label>
+           <div className="relative">
+            <Input
+             type={showPassword ? 'text' : 'password'}
+             value={gestorProfileData.currentPassword}
+             onChange={e => setGestorProfileData(d => ({ ...d, currentPassword: e.target.value }))}
+             className="bg-white border-slate-300 text-slate-800 text-sm pr-10"
+             placeholder="Introduce tu contraseña actual"
+            />
+            <Button variant="ghost" size="sm" onClick={() => setShowPassword(!showPassword)} className="absolute right-1 top-1 h-7 w-7 p-0 text-slate-400">
+             {showPassword ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
+            </Button>
+           </div>
+          </div>
+          <div className="space-y-1">
+           <Label className="text-[10px] text-slate-500">Nueva contraseña</Label>
+           <Input
+            type="password"
+            value={gestorProfileData.newPassword}
+            onChange={e => setGestorProfileData(d => ({ ...d, newPassword: e.target.value }))}
+            className="bg-white border-amber-300 text-slate-800 text-sm focus:border-amber-500 focus:ring-amber-500"
+            placeholder="Mínimo 6 caracteres"
+           />
+          </div>
+          <div className="space-y-1">
+           <Label className="text-[10px] text-slate-500">Confirmar nueva contraseña</Label>
+           <Input
+            type="password"
+            value={gestorProfileData.confirmNewPassword}
+            onChange={e => setGestorProfileData(d => ({ ...d, confirmNewPassword: e.target.value }))}
+            className="bg-white border-amber-300 text-slate-800 text-sm focus:border-amber-500 focus:ring-amber-500"
+            placeholder="Repite la nueva contraseña"
+           />
+          </div>
+         </div>
+        </div>
+       </div>
+
+       {/* Feedback message */}
+       {profileMessage && (
+        <div className={`rounded-lg p-2.5 text-xs font-medium ${profileMessage.type === 'success' ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-red-700 border border-red-200'}`}>
+         {profileMessage.text}
+        </div>
+       )}
+
+       <div className="flex gap-2 justify-end">
+        <Button variant="outline" size="sm" onClick={() => setShowGestorProfile(false)} className="border-slate-300 text-slate-700">Cancelar</Button>
+        <Button size="sm" onClick={handleSaveGestorProfile} disabled={isSavingProfile} className="bg-violet-600 hover:bg-violet-700 text-white">
+         {isSavingProfile ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <Save className="h-3 w-3 mr-1" />}
+         Guardar Cambios
+        </Button>
+       </div>
+      </div>
+     </DialogContent>
+    </Dialog>
+   )}
+
+   {/* Delete User Confirmation Dialog */}
+   {deletingUser && (
+    <Dialog open={!!deletingUser} onOpenChange={() => setDeletingUser(null)}>
+     <DialogContent className="bg-white border-slate-200 max-w-md">
+      <DialogHeader>
+       <DialogTitle className="text-red-700 flex items-center gap-2">
+        <AlertTriangle className="h-5 w-5" />
+        Eliminar Usuario
+       </DialogTitle>
+      </DialogHeader>
+      <div className="space-y-3 py-2">
+       <p className="text-sm text-slate-700">
+        ¿Estás seguro de que quieres eliminar al usuario <strong>"{deletingUser.name}"</strong>?
+       </p>
+       <div className="bg-slate-50 rounded-lg p-3 space-y-1">
+        <p className="text-xs text-slate-600"><strong>Nombre:</strong> {deletingUser.name}</p>
+        <p className="text-xs text-slate-600"><strong>Email:</strong> {deletingUser.email}</p>
+        <p className="text-xs text-slate-600"><strong>Rol:</strong> {ROLE_LABELS[deletingUser.role] || deletingUser.role}</p>
+       </div>
+       <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+        <p className="text-xs text-red-700 font-medium flex items-center gap-1">
+         <AlertTriangle className="h-3.5 w-3.5" />
+         Esta acción es irreversible
+        </p>
+        <p className="text-[11px] text-red-600 mt-1">
+         El usuario será eliminado permanentemente de la base de datos junto con todos sus datos asociados (progreso, sesiones, membresías).
+        </p>
+       </div>
+       <div className="flex gap-2 justify-end">
+        <Button variant="outline" size="sm" onClick={() => setDeletingUser(null)} className="border-slate-300 text-slate-700">Cancelar</Button>
+        <Button size="sm" onClick={() => handleDeleteUser(deletingUser!.id)} className="bg-red-600 hover:bg-red-700 text-white">
+         <Trash2 className="h-3 w-3 mr-1" />
+         Eliminar
+        </Button>
        </div>
       </div>
      </DialogContent>

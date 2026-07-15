@@ -1683,15 +1683,17 @@ export default function TemplateManager() {
   const [notaMinimaAplica, setNotaMinimaAplica] = useState(true)
   const [formActive, setFormActive] = useState(true)
 
+  // Save feedback
+  const [saveMessage, setSaveMessage] = useState<string | null>(null)
+
   // Fetch ALL templates at once (all types)
   const ALL_TYPES = ['formacion', 'examen', 'fotos', 'inventario', 'estandar', 'layout', 'plan_limpieza', 'autoevaluacion', 'plan_accion', 'auditoria', 'pdca'] as const
 
   const fetchTemplates = useCallback(async (withSeed = false) => {
     setIsLoading(true)
     try {
-      // Auto-seed: only if the database says it hasn't been done yet
-      // The seed endpoint checks SystemConfig and skips if already done,
-      // so calling it is safe — it won't overwrite user changes.
+      // Run seed on first load to ensure miniStep values are correct.
+      // The seed now fixes miniStep and creates missing templates.
       if (withSeed) {
         try {
           await fetch('/api/seed/templates', { method: 'POST' })
@@ -1821,6 +1823,8 @@ export default function TemplateManager() {
 
       resetForm()
       fetchTemplates()
+      setSaveMessage('Plantilla guardada correctamente')
+      setTimeout(() => setSaveMessage(null), 3000)
     } catch (e) { console.error('Error saving:', e); alert('Error al guardar') }
     finally { setIsSaving(false) }
   }
@@ -1843,6 +1847,8 @@ export default function TemplateManager() {
       const data = await res.json()
       if (data.success) {
         fetchTemplates()
+        setSaveMessage(`Plantilla movida a Paso ${newMiniStep}`)
+        setTimeout(() => setSaveMessage(null), 3000)
       } else {
         alert('Error al mover la plantilla: ' + data.error)
       }
@@ -2028,6 +2034,11 @@ export default function TemplateManager() {
           </Badge>
         </h2>
         <div className="flex items-center gap-2">
+          {saveMessage && (
+            <span className="text-xs text-green-600 font-medium bg-green-50 px-2 py-1 rounded animate-pulse">
+              {saveMessage}
+            </span>
+          )}
           <Button variant="outline" size="sm" onClick={handlePasteTemplate}
             className="gap-1 text-xs border-purple-300 text-purple-600 hover:bg-purple-50">
             <ClipboardPaste className="h-3.5 w-3.5" />

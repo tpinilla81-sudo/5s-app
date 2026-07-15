@@ -198,6 +198,11 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ success: false, error: 'Usuario no encontrado' }, { status: 404 })
     }
 
+    // Never allow deleting a gestor (platform owner)
+    if (user.role === 'gestor') {
+      return NextResponse.json({ success: false, error: 'No se puede eliminar un usuario Gestor (dueño de la plataforma)' }, { status: 400 })
+    }
+
     if (user.role === 'admin') {
       const adminCount = await db.user.count({ where: { role: 'admin', active: true } })
       if (adminCount <= 1) {
@@ -205,8 +210,15 @@ export async function DELETE(request: NextRequest) {
       }
     }
 
+    // Delete related records first to avoid foreign key constraint errors
+    await db.session.deleteMany({ where: { userId: id } })
+    await db.employeeProgress.deleteMany({ where: { userId: id } })
+    await db.memberZone.deleteMany({ where: { member: { userId: id } } })
+    await db.projectMember.deleteMany({ where: { userId: id } })
+    await db.companyMember.deleteMany({ where: { userId: id } })
+
     await db.user.delete({ where: { id } })
-    return NextResponse.json({ success: true })
+    return NextResponse.json({ success: true, message: 'Usuario eliminado correctamente' })
   } catch (error) {
     console.error('Error deleting user:', error)
     return NextResponse.json({ success: false, error: 'Error al eliminar usuario' }, { status: 500 })

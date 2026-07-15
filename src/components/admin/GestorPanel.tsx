@@ -334,6 +334,22 @@ export default function GestorPanel() {
       })
 
       if (assignRes.ok) {
+        // 3. Send welcome email to the new admin (non-blocking)
+        const company = stats?.companies?.find(c => c.id === assigningAdminTo)
+        const companyName = company?.name || 'la empresa'
+        fetch('/api/email', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            type: 'admin_welcome',
+            adminName: newAdminData.name,
+            adminEmail: newAdminData.email,
+            adminPassword: newAdminData.password,
+            companyName,
+            gestorEmail: undefined, // could add gestor email here later
+          }),
+        }).catch(e => console.error('Email send error (non-critical):', e))
+
         setAssigningAdminTo(null)
         setShowCreateUser(false)
         setNewAdminData({ name: '', email: '', password: '' })

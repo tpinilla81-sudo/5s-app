@@ -63,10 +63,47 @@ export async function POST(request: NextRequest) {
     let created = 0
     let fixed = 0
 
-    // NOTE: We NO LONGER auto-fix miniStep values on existing templates.
-    // Previously this loop would overwrite user edits every time the seed ran.
-    // If an admin changes miniStep via the gestor, that change must persist.
-    // The miniStep mapping is only used when creating NEW templates.
+    // FIX miniStep and titles on existing templates.
+    // This ensures templates are always in the correct Paso regardless of previous state.
+    for (const tpl of existing) {
+      const correctStep = CORRECT_MINI_STEP[tpl.type]
+      if (correctStep && tpl.miniStep !== correctStep) {
+        await db.template.update({
+          where: { id: tpl.id },
+          data: { miniStep: correctStep },
+        })
+        fixed++
+      }
+    }
+
+    // Fix titles
+    const afterFix = fixed > 0 ? await db.template.findMany() : existing
+    let titlesFixed = 0
+    for (const tpl of afterFix) {
+      let newTitle = tpl.title
+      const jName = S_JAPANESE[tpl.sStep - 1]
+
+      if (tpl.type === 'formacion') newTitle = `Formación S${tpl.sStep} - ${jName}`
+      else if (tpl.type === 'examen') newTitle = `Examen S${tpl.sStep} - ${jName}`
+      else if (tpl.type === 'autoevaluacion') newTitle = `Autoevaluación S${tpl.sStep} - ${jName}`
+      else if (tpl.type === 'auditoria') newTitle = `Auditoría S${tpl.sStep} - ${jName}`
+      else if (tpl.type === 'inventario') newTitle = `Inventario S${tpl.sStep} - ${jName}`
+      else if (tpl.type === 'estandar') newTitle = `Formato Estándar de Mejora - ${jName}`
+      else if (tpl.type === 'plan_accion') newTitle = `Plan de Acción S${tpl.sStep} - ${jName}`
+      else if (tpl.type === 'layout') newTitle = `Layout de Zona - ${jName}`
+      else if (tpl.type === 'plan_limpieza') newTitle = `Plan de Inspección y Limpieza - ${jName}`
+      else if (tpl.type === 'pdca') newTitle = `Tablero PDCA - ${jName}`
+      else if (tpl.type === 'fotos') newTitle = `Fotos S${tpl.sStep} - ${jName}`
+
+      if (newTitle !== tpl.title) {
+        await db.template.update({
+          where: { id: tpl.id },
+          data: { title: newTitle },
+        })
+        titlesFixed++
+      }
+    }
+    fixed += titlesFixed
 
     const exists = (sStep: number, type: string) =>
       existing.some(t => t.sStep === sStep && t.type === type)
