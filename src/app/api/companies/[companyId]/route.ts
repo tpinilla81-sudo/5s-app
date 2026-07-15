@@ -151,7 +151,7 @@ export async function PUT(
   }
 }
 
-// DELETE /api/companies/[companyId] - Delete company (admin only)
+// DELETE /api/companies/[companyId] - Delete company (gestor only)
 export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ companyId: string }> }
@@ -166,19 +166,90 @@ export async function DELETE(
       return NextResponse.json({ success: false, error: 'Solo el gestor (dueño de la app) puede eliminar empresas' }, { status: 403 })
     }
 
+    // Get company members before deletion to handle orphan admins
+    const companyMembers = await db.companyMember.findMany({
+      where: { companyId },
+      include: {
+        user: {
+          select: { id: true, role: true, active: true },
+        },
+      },
+    })
+
     // Check company has no projects with data
     const projectCount = await db.project.count({ where: { companyId } })
     if (projectCount > 0) {
-      // Soft delete instead
+      // Soft delete — deactivate company
       await db.company.update({
         where: { id: companyId },
         data: { active: false },
       })
-      return NextResponse.json({ success: true, message: 'Empresa desactivada (tiene proyectos asociados)' })
+
+      // Also deactivate admin users that only belong to this company
+      for (const member of companyMembers) {
+        if (member.user.role === 'admin') {
+          const otherMemberships = await db.companyMember.count({
+            where: {
+              userId: member.userId,
+              NOT: { companyId },
+            },
+          })
+          // If this admin only belongs to this company, deactivate them too
+          if (otherMemberships === 0) {
+            await db.user.update({
+              where: { id: member.userId },
+              data: { active: false },
+            })
+          }
+        }
+      }
+
+      return NextResponse.json({ success: true, message: 'Empresa y administrador desactivados (tiene proyectos asociados)' })
     }
 
+    // Hard delete — find orphan admins to delete along with the company
+    const orphanAdminIds: string[] = []
+    for (const member of companyMembers) {
+      if (member.user.role === 'admin') {
+        const otherMemberships = await db.companyMember.count({
+          where: {
+            userId: member.userId,
+            NOT: { companyId },
+          },
+        })
+        // If this admin only belongs to this company, mark for deletion
+        if (otherMemberships === 0) {
+          orphanAdminIds.push(member.userId)
+        }
+      }
+    }
+
+    // Delete the company (cascade-deletes CompanyMembers and Subscription)
     await db.company.delete({ where: { id: companyId } })
-    return NextResponse.json({ success: true, message: 'Empresa eliminada' })
+
+    // Now delete orphan admin users that no longer have any company
+    let deletedAdminCount = 0
+    for (const userId of orphanAdminIds) {
+      try {
+        // Clean up user's related records before deletion
+        await db.session.deleteMany({ where: { userId } })
+        await db.employeeProgress.deleteMany({ where: { userId } })
+        await db.memberZone.deleteMany({ where: { member: { userId } } })
+        await db.projectMember.deleteMany({ where: { userId } })
+        // CompanyMember already cascade-deleted with company
+        await db.user.delete({ where: { id: userId } })
+        deletedAdminCount++
+      } catch (userDeleteError) {
+        console.error(`Error deleting orphan admin ${userId}:`, userDeleteError)
+        // Continue with other admins even if one fails
+      }
+    }
+
+    const message = deletedAdminCount > 0
+      ? `Empresa eliminada junto con ${deletedAdminCount} administrador(es) asociado(s)`
+      : 'Empresa eliminada'
+
+    return NextResponse.json({ success: true, message })
   } catch (error) {
     console.error('Delete company error:', error)
     return NextResponse.json({ success: false, error: 'Error al eliminar empresa' }, { status: 500 })

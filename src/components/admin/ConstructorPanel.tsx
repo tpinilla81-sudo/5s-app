@@ -593,6 +593,7 @@ export default function ConstructorPanel() {
     await loadStats()
     await fetchCompanies()
     await loadCompanyAdmins()
+    await loadUsers() // Refresh users list since admins may have been deleted
     alert(data.message || 'Empresa eliminada')
    } else {
     alert(data.error || 'Error al eliminar empresa')
@@ -1958,7 +1959,7 @@ const handleSaveGestorProfile = async () => {
           Esta empresa tiene {deletingCompany.projectCount} proyecto(s) asociado(s)
          </p>
          <p className="text-[11px] text-orange-600 mt-1">
-          La empresa será <strong>desactivada</strong> en lugar de eliminada permanentemente, ya que tiene proyectos asociados.
+          La empresa y su administrador serán <strong>desactivados</strong> en lugar de eliminados permanentemente, ya que tiene proyectos asociados.
          </p>
         </div>
        ) : (
@@ -1968,7 +1969,7 @@ const handleSaveGestorProfile = async () => {
           Esta acción es irreversible
          </p>
          <p className="text-[11px] text-red-600 mt-1">
-          La empresa será eliminada permanentemente de la base de datos.
+          La empresa será eliminada permanentemente junto con su administrador asociado.
          </p>
         </div>
        )}

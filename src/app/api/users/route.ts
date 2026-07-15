@@ -204,9 +204,16 @@ export async function DELETE(request: NextRequest) {
     }
 
     if (user.role === 'admin') {
-      const adminCount = await db.user.count({ where: { role: 'admin', active: true } })
-      if (adminCount <= 1) {
-        return NextResponse.json({ success: false, error: 'No se puede eliminar el último administrador' }, { status: 400 })
+      // Check if this admin has any company membership
+      const companyMembershipCount = await db.companyMember.count({ where: { userId: id } })
+      if (companyMembershipCount === 0) {
+        // Orphan admin (no company) — allow deletion regardless of total admin count
+      } else {
+        // Admin with company — protect the last admin
+        const adminCount = await db.user.count({ where: { role: 'admin', active: true } })
+        if (adminCount <= 1) {
+          return NextResponse.json({ success: false, error: 'No se puede eliminar el último administrador' }, { status: 400 })
+        }
       }
     }
 
