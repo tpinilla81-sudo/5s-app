@@ -643,10 +643,12 @@ const handleSaveGestorProfile = async () => {
         return
       }
       // Verify current password by trying to login
+      // Use gestorProfileData.email (what's in the form) which should match the DB
+      // currentUser.email might be stale if the user changed their email in a previous save
       const verifyRes = await fetch('/api/auth', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: currentUser.email, password: gestorProfileData.currentPassword }),
+        body: JSON.stringify({ email: gestorProfileData.email.trim().toLowerCase(), password: gestorProfileData.currentPassword }),
       })
       const verifyData = await verifyRes.json()
       if (!verifyData.success) {
@@ -674,12 +676,14 @@ const handleSaveGestorProfile = async () => {
     const data = await res.json()
 
     if (data.success) {
-      // Update local store
-      const store = use5SStore.getState()
-      if (store.currentUser) {
-        store.currentUser.name = gestorProfileData.name.trim()
-        store.currentUser.email = gestorProfileData.email.trim().toLowerCase()
-      }
+      // Update local store properly using setState to trigger re-render
+      use5SStore.setState(state => {
+        if (state.currentUser) {
+          state.currentUser.name = gestorProfileData.name.trim()
+          state.currentUser.email = gestorProfileData.email.trim().toLowerCase()
+        }
+        return state
+      })
       setProfileMessage({ type: 'success', text: 'Perfil actualizado correctamente' })
       setTimeout(() => {
         setShowGestorProfile(false)
