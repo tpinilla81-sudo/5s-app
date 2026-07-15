@@ -52,27 +52,61 @@ export async function GET(request: NextRequest) {
     }
 
     // ✅ Companies with details + admin user (first member with role 'admin_empresa' or 'admin')
-    const companies = await db.company.findMany({
-      include: {
-        _count: { select: { projects: true, members: true } },
-        members: {
-          where: {
-            OR: [
-              { role: 'admin_empresa' },
-              { role: 'admin' },
-            ],
+    // Try with invitationEmailSent first; if column doesn't exist yet, fallback without it
+    let companies: any[]
+    let hasInvitationEmailSent = true
+    try {
+      companies = await db.company.findMany({
+        include: {
+          _count: { select: { projects: true, members: true } },
+          members: {
+            where: {
+              OR: [
+                { role: 'admin_empresa' },
+                { role: 'admin' },
+              ],
+            },
+            include: {
+              user: {
+                select: { id: true, name: true, email: true, role: true, active: true },
+              },
+            },
+            orderBy: { joinedAt: 'asc' },
+            take: 1,
           },
+        },
+        orderBy: { createdAt: 'desc' },
+      })
+    } catch (dbError: any) {
+      // Column invitationEmailSent might not exist yet — retry with explicit select
+      if (dbError?.message?.includes('invitationEmailSent') || dbError?.code === 'P2022') {
+        console.log('[platform-stats] invitationEmailSent column not found, using fallback query')
+        hasInvitationEmailSent = false
+        companies = await db.company.findMany({
           include: {
-            user: {
-              select: { id: true, name: true, email: true, role: true, active: true },
+            _count: { select: { projects: true, members: true } },
+            members: {
+              where: {
+                OR: [
+                  { role: 'admin_empresa' },
+                  { role: 'admin' },
+                ],
+              },
+              include: {
+                user: {
+                  select: { id: true, name: true, email: true, role: true, active: true },
+                },
+              },
+              orderBy: { joinedAt: 'asc' },
+              take: 1,
             },
           },
-          orderBy: { joinedAt: 'asc' },
-          take: 1,
-        },
-      },
-      orderBy: { createdAt: 'desc' },
-    })
+          orderBy: { createdAt: 'desc' },
+        })
+      } else {
+        throw dbError
+      }
+    }
 
     const companiesWithDetails = companies.map(c => {
       const adminMember = c.members[0]
@@ -91,7 +125,7 @@ export async function GET(request: NextRequest) {
               name: adminMember.user.name,
               email: adminMember.user.email,
               active: adminMember.user.active,
-              invitationEmailSent: adminMember.invitationEmailSent,
+              invitationEmailSent: hasInvitationEmailSent ? (adminMember.invitationEmailSent ?? false) : false,
             }
           : null,
       }
