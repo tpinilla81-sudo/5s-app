@@ -164,7 +164,7 @@ model EmployeeProgress {
 
 model Template {
   id          String   @id @default(cuid())
-  type        String // "formacion", "examen", "fotos", "inventario", "autoevaluacion", "auditoria", "estandar", "plan_accion"
+  type        String // "formacion", "examen", "fotos", "inventario", "autoevaluacion", "auditoria", "estandar", "plan_accion", "layout", "plan_limpieza", "pdca"
   sStep       Int // 1-5 (a qué S pertenece)
   miniStep    Int @default(3) // 1-5 (a qué paso dentro de la S pertenece)
   title       String
@@ -558,4 +558,12 @@ model Session {
   @@index([token])
   @@index([userId])
   @@index([expiresAt])
+}
+
+model SystemConfig {
+  id    String @id @default(cuid())
+  key   String @unique // e.g. "templates_seeded", "seed_version"
+  value String // JSON string or simple value
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { use5SStore } from '@/lib/store'
 import { Button } from '@/components/ui/button'
@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { Textarea } from '@/components/ui/textarea'
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select'
@@ -43,9 +44,9 @@ const S_COLORS: Record<number, string> = { 1: '#8B5CF6', 2: '#EAB308', 3: '#3B82
 const MINI_STEPS_LABELS: Record<number, string> = {
   1: 'Formación y Exámenes',
   2: 'Fotografías (Antes/Después)',
-  3: 'Inventario / Estándar',
+  3: 'Inventario / Estándar / Layout / Plan Limpieza',
   4: 'Autoevaluación / Plan de Acción',
-  5: 'Auditoría Externa',
+  5: 'Auditoría Externa / PDCA',
 }
 
 // ═══════════════════════════════════════════════════════
@@ -264,6 +265,63 @@ function getDefaultPlanAccionContent(sStep: number) {
       { key: 'semanaReal', label: 'Semana Real', type: 'text', width: '100px', description: 'Semana real de la finalización' },
     ],
     sourceTypes: ['autoevaluacion', 'auditoria'],
+    sStep: sStep,
+  }
+}
+
+function getDefaultLayoutContent(sStep: number) {
+  return {
+    layoutType: 'zone_layout',
+    description: `Layout de la zona para S${sStep}. Dibuja o sube un plano de la zona indicando las áreas de trabajo, pasillos, ubicación de equipos y elementos estáticos.`,
+    floorColors: [
+      { color: '#0E6BA8', label: 'Azul RAL 5017 — Entrada de material', ral: 'RAL 5017' },
+      { color: '#2D8C3C', label: 'Verde RAL 6032 — Salida de material premontado', ral: 'RAL 6032' },
+      { color: '#E8E8E8', label: 'Blanco RAL 9003 — Elementos estáticos', ral: 'RAL 9003' },
+      { color: '#F5E649', label: 'Amarillo RAL 1016 — Área de trabajo', ral: 'RAL 1016' },
+      { color: '#CC0000', label: 'Rojo RAL 3000 — Equipos contra incendios', ral: 'RAL 3000' },
+      { color: '#F5A623', label: 'Amarillo anaranjado RAL 1003 — Elementos de seguridad', ral: 'RAL 1003' },
+    ],
+    drawTools: ['select', 'rect', 'circle', 'line', 'arrow', 'text'],
+    sStep: sStep,
+    targetStandardCategory: 'layout',
+    targetS4Library: true,
+  }
+}
+
+function getDefaultPlanLimpiezaContent(sStep: number) {
+  return {
+    planType: 'inspection_cleaning',
+    description: `Plan de Inspección y Limpieza para S${sStep}. Define la ruta de inspección, los puntos de suciedad que no se pueden eliminar y las acciones de limpieza para la zona.`,
+    sections: [
+      { key: 'ruta_inspeccion', label: 'Ruta de Inspección', type: 'route', description: 'Define el recorrido de inspección paso a paso' },
+      { key: 'puntos_suciedad', label: 'Puntos de Suciedad No Eliminables', type: 'checklist', description: 'Lista de puntos de suciedad que no se pueden eliminar, con acciones preventivas' },
+      { key: 'acciones_limpieza', label: 'Acciones de Limpieza', type: 'list', description: 'Acciones de limpieza a realizar en cada punto' },
+      { key: 'frecuencia', label: 'Frecuencia', type: 'select', options: ['Diaria', 'Semanal', 'Quincenal', 'Mensual'], description: 'Frecuencia de inspección' },
+      { key: 'responsable', label: 'Responsable', type: 'text', description: 'Persona responsable de la inspección' },
+    ],
+    sStep: sStep,
+    targetStandardCategory: 'plan_limpieza',
+    targetS4Library: true,
+  }
+}
+
+function getDefaultPDCAContent(sStep: number) {
+  return {
+    pdcaType: 'continuous_improvement_board',
+    description: `Tablero PDCA para S${sStep}. Herramienta de mejora continua después de acabar las 5S en la que se registra y se dirige las 5S. Incluye el Plan de Acción y KPIs referentes que indican progreso y trabajo realizado y por realizar.`,
+    phases: [
+      { key: 'plan', label: 'PLAN', labelEs: 'Planificar', description: 'Identificar problemas, establecer objetivos y definir planes de acción', color: '#3B82F6' },
+      { key: 'do', label: 'DO', labelEs: 'Ejecutar', description: 'Implementar las acciones planificadas y recopilar datos', color: '#22C55E' },
+      { key: 'check', label: 'CHECK', labelEs: 'Verificar', description: 'Analizar los resultados y comparar con los objetivos', color: '#EAB308' },
+      { key: 'act', label: 'ACT', labelEs: 'Actuar', description: 'Estandarizar lo que funciona y corregir lo que no', color: '#F97316' },
+    ],
+    kpis: [
+      { key: 'completion_rate', label: 'Tasa de Completado', description: 'Porcentaje de elementos PDCA completados' },
+      { key: 'action_progress', label: 'Progreso del Plan de Acción', description: 'Progreso medio del Plan de Acción' },
+      { key: 'open_actions', label: 'Acciones Abiertas', description: 'Acciones del plan de acción en estado abierta' },
+      { key: 'overdue_items', label: 'Elementos Vencidos', description: 'Elementos PDCA con fecha límite pasada' },
+    ],
+    links: ['plan_accion', 'standards_library'],
     sStep: sStep,
   }
 }
@@ -1331,14 +1389,273 @@ function PlanAccionEditor({ content, onChange }: { content: string; onChange: (v
 }
 
 // ═══════════════════════════════════════════════════════
+// VISUAL EDITOR: LayoutTemplateEditor (layout)
+// ═══════════════════════════════════════════════════════
+function LayoutTemplateEditor({ content, onChange }: { content: string; onChange: (v: string) => void }) {
+  let parsed: any = {}
+  try { parsed = JSON.parse(content) } catch { /* empty */ }
+
+  const updateField = (key: string, value: any) => {
+    const updated = { ...parsed, [key]: value }
+    onChange(JSON.stringify(updated, null, 2))
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+        <p className="text-xs text-blue-700 font-semibold">Layout de Zona</p>
+        <p className="text-xs text-blue-600 mt-1">
+          Esta plantilla configura la herramienta de dibujo/subida de layout de zona.
+          Los layouts creados se guardarán como estándares en la Biblioteca de S4.
+        </p>
+      </div>
+
+      <div>
+        <Label className="text-xs font-semibold">Descripción</Label>
+        <Textarea
+          value={parsed.description || ''}
+          onChange={e => updateField('description', e.target.value)}
+          placeholder="Describe el propósito del layout de zona..."
+          className="text-xs min-h-[60px]"
+        />
+      </div>
+
+      <div>
+        <Label className="text-xs font-semibold">Tipo de Layout</Label>
+        <Input
+          value={parsed.layoutType || 'zone_layout'}
+          onChange={e => updateField('layoutType', e.target.value)}
+          className="h-8 text-xs"
+        />
+      </div>
+
+      <div className="flex items-center gap-2">
+        <input type="checkbox" checked={parsed.targetS4Library === true}
+          onChange={e => updateField('targetS4Library', e.target.checked)} />
+        <Label className="text-xs">Enviar a Biblioteca de Estándares de S4</Label>
+      </div>
+
+      <div className="bg-gray-50 border rounded-lg p-3">
+        <p className="text-xs font-semibold text-gray-700 mb-2">Colores de Suelo (RAL)</p>
+        {(parsed.floorColors || []).map((fc: any, i: number) => (
+          <div key={i} className="flex items-center gap-2 mb-1">
+            <div className="w-4 h-4 rounded border" style={{ backgroundColor: fc.color }} />
+            <span className="text-[10px]">{fc.label} ({fc.ral})</span>
+          </div>
+        ))}
+        <p className="text-[10px] text-muted-foreground mt-1">Los colores RAL se configuran desde el editor de layout.</p>
+      </div>
+
+      <div className="text-sm text-muted-foreground text-center">
+        Layout de Zona · Herramienta de dibujo/subida integrada
+      </div>
+    </div>
+  )
+}
+
+// ═══════════════════════════════════════════════════════
+// VISUAL EDITOR: PlanLimpiezaTemplateEditor (plan_limpieza)
+// ═══════════════════════════════════════════════════════
+interface PlanLimpiezaSection {
+  key: string; label: string; type: string; description: string; options?: string[];
+}
+
+function PlanLimpiezaTemplateEditor({ content, onChange }: { content: string; onChange: (v: string) => void }) {
+  let parsed: any = {}
+  try { parsed = JSON.parse(content) } catch { /* empty */ }
+
+  const sections: PlanLimpiezaSection[] = parsed.sections || []
+
+  const updateField = (key: string, value: any) => {
+    const updated = { ...parsed, [key]: value }
+    onChange(JSON.stringify(updated, null, 2))
+  }
+
+  const updateSection = (index: number, field: string, value: any) => {
+    const newSections = [...sections]
+    newSections[index] = { ...newSections[index], [field]: value }
+    updateField('sections', newSections)
+  }
+
+  const addSection = () => {
+    const newSections = [...sections, { key: `seccion_${sections.length + 1}`, label: 'Nueva Sección', type: 'text', description: '' }]
+    updateField('sections', newSections)
+  }
+
+  const removeSection = (index: number) => {
+    const newSections = sections.filter((_: any, i: number) => i !== index)
+    updateField('sections', newSections)
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="bg-cyan-50 border border-cyan-200 rounded-lg p-3">
+        <p className="text-xs text-cyan-700 font-semibold">Plan de Inspección y Limpieza</p>
+        <p className="text-xs text-cyan-600 mt-1">
+          Define la ruta de inspección, los puntos de suciedad no eliminables y las acciones de limpieza.
+          Los planes creados se guardarán como estándares en la Biblioteca de S4.
+        </p>
+      </div>
+
+      <div>
+        <Label className="text-xs font-semibold">Descripción</Label>
+        <Textarea
+          value={parsed.description || ''}
+          onChange={e => updateField('description', e.target.value)}
+          placeholder="Describe el plan de inspección y limpieza..."
+          className="text-xs min-h-[60px]"
+        />
+      </div>
+
+      <div className="flex items-center gap-2">
+        <input type="checkbox" checked={parsed.targetS4Library === true}
+          onChange={e => updateField('targetS4Library', e.target.checked)} />
+        <Label className="text-xs">Enviar a Biblioteca de Estándares de S4</Label>
+      </div>
+
+      <div>
+        <div className="flex items-center justify-between mb-2">
+          <Label className="text-xs font-semibold">Secciones del Plan</Label>
+          <Button variant="outline" size="sm" onClick={addSection} className="h-6 text-[10px] gap-1">
+            <Plus className="h-3 w-3" /> Añadir Sección
+          </Button>
+        </div>
+        {sections.map((sec, i) => (
+          <div key={i} className="bg-white border rounded-lg p-3 mb-2">
+            <div className="flex items-center gap-2 mb-2">
+              <Input value={sec.key} onChange={e => updateSection(i, 'key', e.target.value)}
+                className="h-7 text-xs flex-1" placeholder="key" />
+              <Input value={sec.label} onChange={e => updateSection(i, 'label', e.target.value)}
+                className="h-7 text-xs flex-1" placeholder="Etiqueta" />
+              <Select value={sec.type} onValueChange={v => updateSection(i, 'type', v)}>
+                <SelectTrigger className="h-7 text-xs w-28"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="route">Ruta</SelectItem>
+                  <SelectItem value="checklist">Checklist</SelectItem>
+                  <SelectItem value="list">Lista</SelectItem>
+                  <SelectItem value="select">Selección</SelectItem>
+                  <SelectItem value="text">Texto</SelectItem>
+                </SelectContent>
+              </Select>
+              <Button variant="ghost" size="sm" onClick={() => removeSection(i)} className="h-7 w-7 p-0 text-red-500">
+                <Trash2 className="h-3 w-3" />
+              </Button>
+            </div>
+            <Input value={sec.description || ''} onChange={e => updateSection(i, 'description', e.target.value)}
+              className="h-7 text-xs" placeholder="Descripción de la sección" />
+            {sec.type === 'select' && (
+              <Input
+                value={(sec.options || []).join(', ')}
+                onChange={e => updateSection(i, 'options', e.target.value.split(',').map(s => s.trim()).filter(Boolean))}
+                className="h-7 text-xs mt-1" placeholder="Opciones separadas por coma"
+              />
+            )}
+          </div>
+        ))}
+      </div>
+
+      <div className="text-sm text-muted-foreground text-center">
+        {sections.length} sección(es) · Plan de Inspección y Limpieza
+      </div>
+    </div>
+  )
+}
+
+// ═══════════════════════════════════════════════════════
+// VISUAL EDITOR: PDCATemplateEditor (pdca)
+// ═══════════════════════════════════════════════════════
+function PDCATemplateEditor({ content, onChange }: { content: string; onChange: (v: string) => void }) {
+  let parsed: any = {}
+  try { parsed = JSON.parse(content) } catch { /* empty */ }
+
+  const updateField = (key: string, value: any) => {
+    const updated = { ...parsed, [key]: value }
+    onChange(JSON.stringify(updated, null, 2))
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="bg-orange-50 border border-orange-200 rounded-lg p-3">
+        <p className="text-xs text-orange-700 font-semibold">Tablero PDCA — Mejora Continua</p>
+        <p className="text-xs text-orange-600 mt-1">
+          Configuración del tablero PDCA (Plan-Do-Check-Act) como herramienta de mejora continua.
+          Incluye KPIs de progreso y enlace al Plan de Acción y Biblioteca de Estándares.
+        </p>
+      </div>
+
+      <div>
+        <Label className="text-xs font-semibold">Descripción</Label>
+        <Textarea
+          value={parsed.description || ''}
+          onChange={e => updateField('description', e.target.value)}
+          placeholder="Describe el tablero PDCA..."
+          className="text-xs min-h-[60px]"
+        />
+      </div>
+
+      <div>
+        <Label className="text-xs font-semibold mb-2 block">Fases PDCA</Label>
+        {(parsed.phases || []).map((phase: any, i: number) => (
+          <div key={i} className="flex items-center gap-2 mb-2 bg-white border rounded-lg p-2">
+            <div className="w-6 h-6 rounded flex items-center justify-center text-white text-[10px] font-bold"
+              style={{ backgroundColor: phase.color }}>
+              {phase.label?.charAt(0)}
+            </div>
+            <div className="flex-1">
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-bold">{phase.label}</span>
+                <span className="text-[10px] text-muted-foreground">({phase.labelEs})</span>
+              </div>
+              <p className="text-[10px] text-muted-foreground">{phase.description}</p>
+            </div>
+          </div>
+        ))}
+        <p className="text-[10px] text-muted-foreground mt-1">Las fases PDCA son fijas (Plan-Do-Check-Act) y no se pueden modificar.</p>
+      </div>
+
+      <div>
+        <Label className="text-xs font-semibold mb-2 block">KPIs del Tablero</Label>
+        {(parsed.kpis || []).map((kpi: any, i: number) => (
+          <div key={i} className="bg-white border rounded-lg p-2 mb-1">
+            <div className="flex items-center gap-2">
+              <Badge className="bg-orange-100 text-orange-800 text-[9px]">{kpi.key}</Badge>
+              <span className="text-xs font-semibold">{kpi.label}</span>
+            </div>
+            <p className="text-[10px] text-muted-foreground ml-2">{kpi.description}</p>
+          </div>
+        ))}
+      </div>
+
+      <div>
+        <Label className="text-xs font-semibold mb-2 block">Enlaces Integrados</Label>
+        <div className="flex gap-2">
+          {(parsed.links || []).map((link: string, i: number) => (
+            <Badge key={i} className="bg-teal-100 text-teal-800 text-[10px]">
+              {link === 'plan_accion' ? '📋 Plan de Acción' : link === 'standards_library' ? '📚 Biblioteca' : link}
+            </Badge>
+          ))}
+        </div>
+        <p className="text-[10px] text-muted-foreground mt-1">
+          El tablero PDCA se enlaza automáticamente con el Plan de Acción y la Biblioteca de Estándares.
+        </p>
+      </div>
+
+      <div className="text-sm text-muted-foreground text-center">
+        Tablero PDCA · Mejora Continua · {(parsed.phases || []).length} fases · {(parsed.kpis || []).length} KPIs
+      </div>
+    </div>
+  )
+}
+
+// ═══════════════════════════════════════════════════════
 // PASO DEFINITIONS — which template types belong to each paso
 // ═══════════════════════════════════════════════════════
 const PASO_CONFIG: { paso: number; label: string; icon: React.ComponentType<{ className?: string }>; types: string[] }[] = [
   { paso: 1, label: 'Formación y Exámenes', icon: BookOpen, types: ['formacion', 'examen'] },
   { paso: 2, label: 'Fotografías (Antes/Después)', icon: Camera, types: ['fotos'] },
-  { paso: 3, label: 'Inventario / Estándar', icon: ClipboardList, types: ['inventario', 'estandar'] },
+  { paso: 3, label: 'Inventario / Estándar / Layout / Plan Limpieza', icon: ClipboardList, types: ['inventario', 'estandar', 'layout', 'plan_limpieza'] },
   { paso: 4, label: 'Autoevaluación / Plan de Acción', icon: ClipboardCheck, types: ['autoevaluacion', 'plan_accion'] },
-  { paso: 5, label: 'Auditoría Externa', icon: FileCheck, types: ['auditoria'] },
+  { paso: 5, label: 'Auditoría Externa / PDCA', icon: FileCheck, types: ['auditoria', 'pdca'] },
 ]
 
 // ═══════════════════════════════════════════════════════
@@ -1367,18 +1684,17 @@ export default function TemplateManager() {
   const [formActive, setFormActive] = useState(true)
 
   // Fetch ALL templates at once (all types)
-  const ALL_TYPES = ['formacion', 'examen', 'fotos', 'inventario', 'estandar', 'autoevaluacion', 'plan_accion', 'auditoria'] as const
-
-  const seedDoneRef = useRef(false)
+  const ALL_TYPES = ['formacion', 'examen', 'fotos', 'inventario', 'estandar', 'layout', 'plan_limpieza', 'autoevaluacion', 'plan_accion', 'auditoria', 'pdca'] as const
 
   const fetchTemplates = useCallback(async (withSeed = false) => {
     setIsLoading(true)
     try {
-      // Auto-seed: only on first load to fix miniStep + create missing
-      if (withSeed && !seedDoneRef.current) {
+      // Auto-seed: only if the database says it hasn't been done yet
+      // The seed endpoint checks SystemConfig and skips if already done,
+      // so calling it is safe — it won't overwrite user changes.
+      if (withSeed) {
         try {
           await fetch('/api/seed/templates', { method: 'POST' })
-          seedDoneRef.current = true
         } catch (e) {
           console.error('Auto-seed error:', e)
         }
@@ -1426,7 +1742,7 @@ export default function TemplateManager() {
     setEditorMode('visual')
 
     // Auto-set miniStep based on type
-    const autoMiniStep = type === 'formacion' || type === 'examen' ? 1 : type === 'fotos' ? 2 : type === 'inventario' || type === 'estandar' ? 3 : type === 'autoevaluacion' || type === 'plan_accion' ? 4 : type === 'auditoria' ? 5 : miniStep
+    const autoMiniStep = type === 'formacion' || type === 'examen' ? 1 : type === 'fotos' ? 2 : type === 'inventario' || type === 'estandar' || type === 'layout' || type === 'plan_limpieza' ? 3 : type === 'autoevaluacion' || type === 'plan_accion' ? 4 : type === 'auditoria' || type === 'pdca' ? 5 : miniStep
     setFormMiniStep(autoMiniStep)
 
     if (type === 'formacion') {
@@ -1439,6 +1755,12 @@ export default function TemplateManager() {
       setFormContent(JSON.stringify(getDefaultInventoryContent(sStep), null, 2))
     } else if (type === 'estandar') {
       setFormContent(JSON.stringify(getDefaultStandardContent(), null, 2))
+    } else if (type === 'layout') {
+      setFormContent(JSON.stringify(getDefaultLayoutContent(sStep), null, 2))
+    } else if (type === 'plan_limpieza') {
+      setFormContent(JSON.stringify(getDefaultPlanLimpiezaContent(sStep), null, 2))
+    } else if (type === 'pdca') {
+      setFormContent(JSON.stringify(getDefaultPDCAContent(sStep), null, 2))
     } else if (type === 'plan_accion') {
       setFormContent(JSON.stringify(getDefaultPlanAccionContent(sStep), null, 2))
     } else {
@@ -1680,6 +2002,9 @@ export default function TemplateManager() {
       if (data.columns) return `${data.columns.length} columna(s)`
       if (data.fields) return `${data.fields.length} campo(s)`
       if (data.categories || data.extraFields) return `${(data.categories || []).length} cat. / ${(data.extraFields || []).length} campos`
+      if (data.phases) return `${data.phases.length} fases PDCA · ${(data.kpis || []).length} KPIs`
+      if (data.floorColors) return `${data.floorColors.length} colores RAL · Layout`
+      if (data.planType === 'inspection_cleaning') return `${(data.sections || []).length} secciones · Plan Limpieza`
       if (data.sections) {
         const totalItems = data.sections.reduce((s: number, sec: any) => s + (sec.items?.length || 0), 0)
         return totalItems > 0 ? `${data.sections.length} sec. / ${totalItems} items` : `${data.sections.length} sección(es)`
@@ -1812,10 +2137,10 @@ export default function TemplateManager() {
                                             <div className="flex items-center justify-between">
                                               <div className="flex items-center gap-3 flex-1 min-w-0">
                                                 <Badge className="shrink-0" style={{
-                                                  backgroundColor: tpl.type === 'formacion' ? '#DBEAFE' : tpl.type === 'examen' ? '#FEF3C7' : tpl.type === 'autoevaluacion' ? '#D1FAE5' : tpl.type === 'auditoria' ? '#FED7AA' : tpl.type === 'inventario' ? '#FFEDD5' : tpl.type === 'fotos' ? '#E0F2FE' : tpl.type === 'plan_accion' ? '#FFE4E6' : '#EDE9FE',
-                                                  color: tpl.type === 'formacion' ? '#1D4ED8' : tpl.type === 'examen' ? '#92400E' : tpl.type === 'autoevaluacion' ? '#065F46' : tpl.type === 'auditoria' ? '#9A3412' : tpl.type === 'inventario' ? '#9A3412' : tpl.type === 'fotos' ? '#0369A1' : tpl.type === 'plan_accion' ? '#9F1239' : '#6D28D9',
+                                                  backgroundColor: tpl.type === 'formacion' ? '#DBEAFE' : tpl.type === 'examen' ? '#FEF3C7' : tpl.type === 'autoevaluacion' ? '#D1FAE5' : tpl.type === 'auditoria' ? '#FED7AA' : tpl.type === 'inventario' ? '#FFEDD5' : tpl.type === 'fotos' ? '#E0F2FE' : tpl.type === 'plan_accion' ? '#FFE4E6' : tpl.type === 'layout' ? '#DBEAFE' : tpl.type === 'plan_limpieza' ? '#CFFAFE' : tpl.type === 'pdca' ? '#FFF7ED' : '#EDE9FE',
+                                                  color: tpl.type === 'formacion' ? '#1D4ED8' : tpl.type === 'examen' ? '#92400E' : tpl.type === 'autoevaluacion' ? '#065F46' : tpl.type === 'auditoria' ? '#9A3412' : tpl.type === 'inventario' ? '#9A3412' : tpl.type === 'fotos' ? '#0369A1' : tpl.type === 'plan_accion' ? '#9F1239' : tpl.type === 'layout' ? '#1D4ED8' : tpl.type === 'plan_limpieza' ? '#155E75' : tpl.type === 'pdca' ? '#9A3412' : '#6D28D9',
                                                 }}>
-                                                  {tpl.type === 'formacion' ? 'Formación' : tpl.type === 'examen' ? 'Examen' : tpl.type === 'autoevaluacion' ? 'Aut. Int.' : tpl.type === 'auditoria' ? 'Aud. Ext.' : tpl.type === 'inventario' ? 'Inventario' : tpl.type === 'fotos' ? 'Fotos' : tpl.type === 'plan_accion' ? 'Plan Acción' : 'Estándar'}
+                                                  {tpl.type === 'formacion' ? 'Formación' : tpl.type === 'examen' ? 'Examen' : tpl.type === 'autoevaluacion' ? 'Aut. Int.' : tpl.type === 'auditoria' ? 'Aud. Ext.' : tpl.type === 'inventario' ? 'Inventario' : tpl.type === 'fotos' ? 'Fotos' : tpl.type === 'plan_accion' ? 'Plan Acción' : tpl.type === 'layout' ? 'Layout' : tpl.type === 'plan_limpieza' ? 'Plan Limpieza' : tpl.type === 'pdca' ? 'PDCA' : 'Estándar'}
                                                 </Badge>
                                                 <div className="min-w-0">
                                                   <p className="text-sm font-medium truncate">{tpl.title}</p>
@@ -1957,7 +2282,10 @@ export default function TemplateManager() {
                       <SelectItem value="auditoria">Auditoría Externa</SelectItem>
                       <SelectItem value="inventario">Inventario</SelectItem>
                       <SelectItem value="estandar">Estándar</SelectItem>
+                      <SelectItem value="layout">Layout de Zona</SelectItem>
+                      <SelectItem value="plan_limpieza">Plan de Inspección/Limpieza</SelectItem>
                       <SelectItem value="plan_accion">Plan de Acción</SelectItem>
+                      <SelectItem value="pdca">Tablero PDCA</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -2088,6 +2416,27 @@ export default function TemplateManager() {
                         Cargar plan de acción por defecto
                       </Button>
                     )}
+                    {formType === 'layout' && (
+                      <Button variant="outline" size="sm" className="text-xs"
+                        onClick={() => setFormContent(JSON.stringify(getDefaultLayoutContent(formSStep), null, 2))}>
+                        <RotateCcw className="h-3.5 w-3.5 mr-1" />
+                        Cargar layout por defecto
+                      </Button>
+                    )}
+                    {formType === 'plan_limpieza' && (
+                      <Button variant="outline" size="sm" className="text-xs"
+                        onClick={() => setFormContent(JSON.stringify(getDefaultPlanLimpiezaContent(formSStep), null, 2))}>
+                        <RotateCcw className="h-3.5 w-3.5 mr-1" />
+                        Cargar plan de limpieza por defecto
+                      </Button>
+                    )}
+                    {formType === 'pdca' && (
+                      <Button variant="outline" size="sm" className="text-xs"
+                        onClick={() => setFormContent(JSON.stringify(getDefaultPDCAContent(formSStep), null, 2))}>
+                        <RotateCcw className="h-3.5 w-3.5 mr-1" />
+                        Cargar PDCA por defecto
+                      </Button>
+                    )}
 
                     {/* Upload JSON */}
                     <Button variant="outline" size="sm" className="text-xs" onClick={handleUploadJson}>
@@ -2137,6 +2486,15 @@ export default function TemplateManager() {
                     )}
                     {formType === 'plan_accion' && (
                       <PlanAccionEditor content={formContent} onChange={setFormContent} />
+                    )}
+                    {formType === 'layout' && (
+                      <LayoutTemplateEditor content={formContent} onChange={setFormContent} />
+                    )}
+                    {formType === 'plan_limpieza' && (
+                      <PlanLimpiezaTemplateEditor content={formContent} onChange={setFormContent} />
+                    )}
+                    {formType === 'pdca' && (
+                      <PDCATemplateEditor content={formContent} onChange={setFormContent} />
                     )}
                   </div>
                 ) : (

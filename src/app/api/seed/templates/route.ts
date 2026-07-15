@@ -1,13 +1,41 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 
 /**
  * POST /api/seed/templates
- * Non-destructive seed: creates ONLY missing templates AND fixes wrong miniStep values.
+ * Non-destructive seed: creates ONLY missing templates.
  * Creates templates for ALL S steps (1-5) and ALL types.
+ * Tracks seeding state in SystemConfig so it doesn't re-run needlessly.
+ * Supports ?force=true to force re-seed (e.g. after adding new template types).
  */
-export async function POST() {
+export async function POST(request: NextRequest) {
   try {
+    const url = new URL(request.url)
+    const forceSeed = url.searchParams.get('force') === 'true'
+
+    // Check if seed was already completed (unless force=true)
+    // Gracefully handle case where SystemConfig table doesn't exist yet
+    if (!forceSeed) {
+      try {
+        const alreadySeeded = await db.systemConfig.findUnique({ where: { key: 'templates_seeded' } })
+        if (alreadySeeded) {
+          return NextResponse.json({
+            success: true,
+            data: {
+              message: 'Seed ya fue ejecutado anteriormente. Usa ?force=true para forzar.',
+              templatesCreated: 0,
+              templatesFixed: 0,
+              templatesExisting: await db.template.count(),
+              templatesTotal: await db.template.count(),
+              skipped: true,
+            },
+          })
+        }
+      } catch (e) {
+        // SystemConfig table might not exist yet — proceed with seed
+        console.log('SystemConfig table not found, proceeding with seed')
+      }
+    }
     const S_JAPANESE = ['Seiri', 'Seiton', 'Seiso', 'Seiketsu', 'Shitsuke']
     const S_NAMES = ['Revisar', 'Ordenar', 'Limpiar', 'Estandarizar', 'Mantener']
 
@@ -18,9 +46,12 @@ export async function POST() {
       fotos: 2,
       inventario: 3,
       estandar: 3,
+      layout: 3,
+      plan_limpieza: 3,
       autoevaluacion: 4,
       plan_accion: 4,
       auditoria: 5,
+      pdca: 5,
     }
 
     // Get all existing templates (full records, not just select)
@@ -29,17 +60,10 @@ export async function POST() {
     let created = 0
     let fixed = 0
 
-    // Fix wrong miniStep values on existing templates
-    for (const tpl of existing) {
-      const correctStep = CORRECT_MINI_STEP[tpl.type]
-      if (correctStep && tpl.miniStep !== correctStep) {
-        await db.template.update({
-          where: { id: tpl.id },
-          data: { miniStep: correctStep },
-        })
-        fixed++
-      }
-    }
+    // NOTE: We NO LONGER auto-fix miniStep values on existing templates.
+    // Previously this loop would overwrite user edits every time the seed ran.
+    // If an admin changes miniStep via the gestor, that change must persist.
+    // The miniStep mapping is only used when creating NEW templates.
 
     const exists = (sStep: number, type: string) =>
       existing.some(t => t.sStep === sStep && t.type === type)
@@ -241,6 +265,64 @@ export async function POST() {
         created++
       }
 
+      // ─── Layout de Zona (Paso 3 — solo S2 Seiton) ───
+      if (!exists(s, 'layout') && s === 2) {
+        await db.template.create({
+          data: {
+            type: 'layout',
+            sStep: s,
+            miniStep: 3,
+            title: `Layout de Zona - ${S_JAPANESE[s - 1]}`,
+            description: `Herramienta para subir o dibujar el layout de la zona en ${S_NAMES[s - 1]}. Primer estándar creado que irá a la Biblioteca de Estándares de S4.`,
+            content: JSON.stringify({
+              layoutType: 'zone_layout',
+              description: `Layout de la zona para ${S_JAPANESE[s - 1]}. Dibuja o sube un plano de la zona indicando las áreas de trabajo, pasillos, ubicación de equipos y elementos estáticos.`,
+              floorColors: [
+                { color: '#0E6BA8', label: 'Azul RAL 5017 — Entrada de material', ral: 'RAL 5017' },
+                { color: '#2D8C3C', label: 'Verde RAL 6032 — Salida de material premontado', ral: 'RAL 6032' },
+                { color: '#E8E8E8', label: 'Blanco RAL 9003 — Elementos estáticos', ral: 'RAL 9003' },
+                { color: '#F5E649', label: 'Amarillo RAL 1016 — Área de trabajo', ral: 'RAL 1016' },
+                { color: '#CC0000', label: 'Rojo RAL 3000 — Equipos contra incendios', ral: 'RAL 3000' },
+                { color: '#F5A623', label: 'Amarillo anaranjado RAL 1003 — Elementos de seguridad', ral: 'RAL 1003' },
+              ],
+              drawTools: ['select', 'rect', 'circle', 'line', 'arrow', 'text'],
+              sStep: s,
+              targetStandardCategory: 'layout',
+              targetS4Library: true,
+            }),
+          },
+        })
+        created++
+      }
+
+      // ─── Plan de Inspección y Limpieza (Paso 3 — solo S3 Seiso) ───
+      if (!exists(s, 'plan_limpieza') && s === 3) {
+        await db.template.create({
+          data: {
+            type: 'plan_limpieza',
+            sStep: s,
+            miniStep: 3,
+            title: `Plan de Inspección y Limpieza - ${S_JAPANESE[s - 1]}`,
+            description: `Herramienta para realizar el plan de inspección y limpieza de la zona en ${S_NAMES[s - 1]}. Indica una ruta para inspeccionar los puntos de suciedad que no se pueden eliminar.`,
+            content: JSON.stringify({
+              planType: 'inspection_cleaning',
+              description: `Plan de Inspección y Limpieza para ${S_JAPANESE[s - 1]}. Define la ruta de inspección, los puntos de suciedad que no se pueden eliminar y las acciones de limpieza para la zona.`,
+              sections: [
+                { key: 'ruta_inspeccion', label: 'Ruta de Inspección', type: 'route', description: 'Define el recorrido de inspección paso a paso' },
+                { key: 'puntos_suciedad', label: 'Puntos de Suciedad No Eliminables', type: 'checklist', description: 'Lista de puntos de suciedad que no se pueden eliminar, con acciones preventivas' },
+                { key: 'acciones_limpieza', label: 'Acciones de Limpieza', type: 'list', description: 'Acciones de limpieza a realizar en cada punto' },
+                { key: 'frecuencia', label: 'Frecuencia', type: 'select', options: ['Diaria', 'Semanal', 'Quincenal', 'Mensual'], description: 'Frecuencia de inspección' },
+                { key: 'responsable', label: 'Responsable', type: 'text', description: 'Persona responsable de la inspección' },
+              ],
+              sStep: s,
+              targetStandardCategory: 'plan_limpieza',
+              targetS4Library: true,
+            }),
+          },
+        })
+        created++
+      }
+
       // ─── Auditoría Externa (Paso 5) ───
       if (!exists(s, 'auditoria')) {
         await db.template.create({
@@ -256,9 +338,52 @@ export async function POST() {
         })
         created++
       }
+      // ─── Tablero PDCA (Paso 5 — solo S5 Shitsuke) ───
+      if (!exists(s, 'pdca') && s === 5) {
+        await db.template.create({
+          data: {
+            type: 'pdca',
+            sStep: s,
+            miniStep: 5,
+            title: `Tablero PDCA - ${S_JAPANESE[s - 1]}`,
+            description: `Tablero PDCA (Plan-Do-Check-Act) como herramienta de mejora continua para dirigir las 5S tras su implementación. Incluye Plan de Acción y KPIs de progreso.`,
+            content: JSON.stringify({
+              pdcaType: 'continuous_improvement_board',
+              description: `Tablero PDCA para ${S_JAPANESE[s - 1]}. Herramienta de mejora continua después de acabar las 5S en la que se registra y se dirige las 5S. Incluye el Plan de Acción y KPIs referentes que indican progreso y trabajo realizado y por realizar.`,
+              phases: [
+                { key: 'plan', label: 'PLAN', labelEs: 'Planificar', description: 'Identificar problemas, establecer objetivos y definir planes de acción', color: '#3B82F6' },
+                { key: 'do', label: 'DO', labelEs: 'Ejecutar', description: 'Implementar las acciones planificadas y recopilar datos', color: '#22C55E' },
+                { key: 'check', label: 'CHECK', labelEs: 'Verificar', description: 'Analizar los resultados y comparar con los objetivos', color: '#EAB308' },
+                { key: 'act', label: 'ACT', labelEs: 'Actuar', description: 'Estandarizar lo que funciona y corregir lo que no', color: '#F97316' },
+              ],
+              kpis: [
+                { key: 'completion_rate', label: 'Tasa de Completado', description: 'Porcentaje de elementos PDCA completados' },
+                { key: 'action_progress', label: 'Progreso del Plan de Acción', description: 'Progreso medio del Plan de Acción' },
+                { key: 'open_actions', label: 'Acciones Abiertas', description: 'Acciones del plan de acción en estado abierta' },
+                { key: 'overdue_items', label: 'Elementos Vencidos', description: 'Elementos PDCA con fecha límite pasada' },
+              ],
+              links: ['plan_accion', 'standards_library'],
+              sStep: s,
+            }),
+          },
+        })
+        created++
+      }
+
     }
 
     const totalTemplates = await db.template.count()
+
+    // Mark seed as completed in SystemConfig (gracefully handle missing table)
+    try {
+      await db.systemConfig.upsert({
+        where: { key: 'templates_seeded' },
+        update: { value: JSON.stringify({ completedAt: new Date().toISOString(), created, version: 2 }) },
+        create: { key: 'templates_seeded', value: JSON.stringify({ completedAt: new Date().toISOString(), created, version: 2 }) },
+      })
+    } catch (e) {
+      console.log('Could not save seed state to SystemConfig (table may not exist yet)')
+    }
 
     return NextResponse.json({
       success: true,
