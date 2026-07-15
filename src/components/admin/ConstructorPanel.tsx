@@ -1544,6 +1544,11 @@ const handleSaveGestorProfile = async () => {
                      <Trash2 className="h-3 w-3" />
                     </Button>
                    )}
+                   {user.role === 'gestor' && (
+                    <Button variant="ghost" size="sm" onClick={() => setDeletingUser({ id: user.id, name: user.name, email: user.email, role: user.role })} className="h-6 w-6 p-0 text-red-400 hover:bg-red-100" title="Eliminar gestor (solo si hay más de uno)">
+                     <Trash2 className="h-3 w-3" />
+                    </Button>
+                   )}
                   </>
                  )}
                 </div>
@@ -2110,15 +2115,27 @@ const handleSaveGestorProfile = async () => {
         <p className="text-xs text-slate-600"><strong>Email:</strong> {deletingUser.email}</p>
         <p className="text-xs text-slate-600"><strong>Rol:</strong> {ROLE_LABELS[deletingUser.role] || deletingUser.role}</p>
        </div>
-       <div className="bg-red-50 border border-red-200 rounded-lg p-3">
-        <p className="text-xs text-red-700 font-medium flex items-center gap-1">
-         <AlertTriangle className="h-3.5 w-3.5" />
-         Esta acción es irreversible
-        </p>
-        <p className="text-[11px] text-red-600 mt-1">
-         El usuario será eliminado permanentemente de la base de datos junto con todos sus datos asociados (progreso, sesiones, membresías).
-        </p>
-       </div>
+       {deletingUser.role === 'gestor' ? (
+        <div className="bg-orange-50 border border-orange-200 rounded-lg p-3">
+         <p className="text-xs text-orange-700 font-medium flex items-center gap-1">
+          <AlertTriangle className="h-3.5 w-3.5" />
+          Vas a eliminar un Gestor (dueño de la plataforma)
+         </p>
+         <p className="text-[11px] text-orange-600 mt-1">
+          Solo se puede eliminar si hay más de un gestor. Si es el último, la operación será rechazada.
+         </p>
+        </div>
+       ) : (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+         <p className="text-xs text-red-700 font-medium flex items-center gap-1">
+          <AlertTriangle className="h-3.5 w-3.5" />
+          Esta acción es irreversible
+         </p>
+         <p className="text-[11px] text-red-600 mt-1">
+          El usuario será eliminado permanentemente de la base de datos junto con todos sus datos asociados (progreso, sesiones, membresías).
+         </p>
+        </div>
+       )}
        <div className="flex gap-2 justify-end">
         <Button variant="outline" size="sm" onClick={() => setDeletingUser(null)} className="border-slate-300 text-slate-700">Cancelar</Button>
         <Button size="sm" onClick={() => handleDeleteUser(deletingUser!.id)} className="bg-red-600 hover:bg-red-700 text-white">

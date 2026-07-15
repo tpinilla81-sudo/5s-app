@@ -198,9 +198,12 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ success: false, error: 'Usuario no encontrado' }, { status: 404 })
     }
 
-    // Never allow deleting a gestor (platform owner)
+    // Protect the last gestor (platform owner) — but allow deleting extras
     if (user.role === 'gestor') {
-      return NextResponse.json({ success: false, error: 'No se puede eliminar un usuario Gestor (dueño de la plataforma)' }, { status: 400 })
+      const gestorCount = await db.user.count({ where: { role: 'gestor', active: true } })
+      if (gestorCount <= 1) {
+        return NextResponse.json({ success: false, error: 'No se puede eliminar el último Gestor (dueño de la plataforma)' }, { status: 400 })
+      }
     }
 
     if (user.role === 'admin') {
