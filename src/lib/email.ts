@@ -1,10 +1,21 @@
 import { Resend } from 'resend'
 
+// Validate RESEND_API_KEY format — Resend keys start with "re_"
+function isValidResendKey(key: string | undefined): key is string {
+  if (!key) return false
+  // Resend API keys start with "re_" and are alphanumeric
+  return key.startsWith('re_') && key.length >= 10 && /^[a-zA-Z0-9_]+$/.test(key)
+}
+
 // Lazy-initialize Resend only when actually sending (avoid build-time crash)
 let _resend: Resend | null = null
 function getResend(): Resend {
   if (!_resend) {
-    _resend = new Resend(process.env.RESEND_API_KEY || 'placeholder')
+    const key = process.env.RESEND_API_KEY
+    if (!isValidResendKey(key)) {
+      throw new Error('RESEND_API_KEY no configurada o inválida. Debe comenzar con "re_" y ser una clave válida de Resend.')
+    }
+    _resend = new Resend(key)
   }
   return _resend
 }
@@ -16,21 +27,35 @@ interface EmailOptions {
   from?: string
 }
 
-const DEFAULT_FROM = '5S App <no-reply@5s-app.dev>'
+const DEFAULT_FROM = '5S App <onboarding@resend.dev>'
 
 /**
  * Send an email using Resend.
- * Gracefully handles missing API key (logs instead of crashing).
+ * Gracefully handles missing or invalid API key (logs instead of crashing).
  */
 export async function sendEmail({ to, subject, html, from }: EmailOptions): Promise<{ success: boolean; error?: string }> {
-  if (!process.env.RESEND_API_KEY) {
+  const key = process.env.RESEND_API_KEY
+
+  // Check if API key exists
+  if (!key) {
     console.log(`[EMAIL] No RESEND_API_KEY configured. Would send to: ${Array.isArray(to) ? to.join(', ') : to}`)
     console.log(`[EMAIL] Subject: ${subject}`)
-    return { success: false, error: 'RESEND_API_KEY not configured' }
+    return { success: false, error: 'RESEND_API_KEY no configurada en las variables de entorno de Vercel' }
+  }
+
+  // Validate API key format
+  if (!isValidResendKey(key)) {
+    console.error(`[EMAIL] RESEND_API_KEY has invalid format. Key starts with: "${key.substring(0, 5)}..."`)
+    console.error(`[EMAIL] A valid Resend API key must start with "re_" and contain only alphanumeric characters.`)
+    return {
+      success: false,
+      error: 'RESEND_API_KEY tiene formato inválido. Debe ser una clave válida de Resend (empieza con "re_"). Verifica la variable de entorno en Vercel.'
+    }
   }
 
   try {
-    const { error } = await getResend().emails.send({
+    const resend = getResend()
+    const { error } = await resend.emails.send({
       from: from || DEFAULT_FROM,
       to: Array.isArray(to) ? to : [to],
       subject,
@@ -44,9 +69,17 @@ export async function sendEmail({ to, subject, html, from }: EmailOptions): Prom
 
     console.log(`[EMAIL] Sent to: ${Array.isArray(to) ? to.join(', ') : to} | Subject: ${subject}`)
     return { success: true }
-  } catch (err) {
+  } catch (err: any) {
     console.error('[EMAIL] Exception:', err)
-    return { success: false, error: String(err) }
+    // Check if the error is related to invalid header/API key
+    const errMsg = String(err?.message || err)
+    if (errMsg.includes('invalid header') || errMsg.includes('Headers.append')) {
+      return {
+        success: false,
+        error: 'RESEND_API_KEY contiene caracteres inválidos. Verifica que la variable de entorno en Vercel tenga una clave válida de Resend (empieza con "re_").'
+      }
+    }
+    return { success: false, error: errMsg }
   }
 }
 

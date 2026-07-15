@@ -45,19 +45,28 @@ export async function POST(request: NextRequest) {
         appUrl,
       })
 
-      // Always send copy to gestor if gestorEmail provided
+      // If email failed, return the error immediately (don't send CC if main email failed)
+      if (!result.success) {
+        return NextResponse.json(result)
+      }
+
+      // Send copy to gestor if gestorEmail provided (non-blocking — don't fail if CC fails)
       if (gestorEmail) {
-        await sendCompanyCreatedEmail({
+        const ccResult = await sendCompanyCreatedEmail({
           gestorEmail,
           companyName,
           adminName,
           adminEmail,
           appUrl,
         })
+        if (!ccResult.success) {
+          console.warn('[EMAIL] CC to gestor failed:', ccResult.error)
+          // Don't fail the main request — the admin email was sent successfully
+        }
       }
 
       // Mark invitationEmailSent on the CompanyMember if email was sent successfully
-      if (result.success && companyId) {
+      if (companyId) {
         try {
           await db.companyMember.updateMany({
             where: {
@@ -95,8 +104,18 @@ export async function POST(request: NextRequest) {
     }
 
     return NextResponse.json({ success: false, error: 'Tipo de email no reconocido' }, { status: 400 })
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error sending email:', error)
-    return NextResponse.json({ success: false, error: 'Error al enviar email' }, { status: 500 })
+
+    // Provide helpful error messages
+    const errMsg = String(error?.message || error)
+    if (errMsg.includes('RESEND_API_KEY') || errMsg.includes('invalid header') || errMsg.includes('Headers.append')) {
+      return NextResponse.json({
+        success: false,
+        error: 'Error de configuración: La API key de Resend no es válida. Ve a Vercel → Settings → Environment Variables y configura RESEND_API_KEY con una clave válida (empieza con "re_").'
+      }, { status: 500 })
+    }
+
+    return NextResponse.json({ success: false, error: 'Error al enviar email. Inténtalo de nuevo.' }, { status: 500 })
   }
 }

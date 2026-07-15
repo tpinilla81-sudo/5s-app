@@ -654,11 +654,11 @@ const handleSendInvitationEmail = async (companyId: string) => {
     await loadStats()
     await loadCompanyAdmins()
    } else {
-    alert(data.error || 'Error al enviar el email. Verifica la configuración de RESEND_API_KEY.')
+    alert(data.error || 'Error al enviar el email. Verifica la configuración de RESEND_API_KEY en Vercel.')
    }
   } catch (error) {
    console.error('Error sending invitation email:', error)
-   alert('Error al enviar el email de invitación')
+   alert('Error de conexión al enviar el email. Inténtalo de nuevo.')
   } finally {
    setSendingEmailFor(null)
   }
