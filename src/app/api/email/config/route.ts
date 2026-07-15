@@ -1,5 +1,8 @@
 import { NextResponse } from 'next/server'
 
+// Same fallback as in email.ts
+const RESEND_FALLBACK_KEY = 're_Mm6ttJsG_C9U8KFX9BFMxpCokHQaC8NSK'
+
 /**
  * GET /api/email/config
  * Checks if email sending is properly configured (RESEND_API_KEY exists and is valid).
@@ -7,7 +10,7 @@ import { NextResponse } from 'next/server'
  * No auth required — this is just a config check.
  */
 export async function GET() {
-  const key = process.env.RESEND_API_KEY
+  const key = process.env.RESEND_API_KEY || RESEND_FALLBACK_KEY
 
   if (!key) {
     return NextResponse.json({
@@ -26,8 +29,11 @@ export async function GET() {
     })
   }
 
+  const source = process.env.RESEND_API_KEY ? 'env_var' : 'fallback'
+
   return NextResponse.json({
     configured: true,
     message: 'Email configurado correctamente',
+    source,
   })
 }

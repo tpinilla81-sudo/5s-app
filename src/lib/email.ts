@@ -7,11 +7,15 @@ function isValidResendKey(key: string | undefined): key is string {
   return key.startsWith('re_') && key.length >= 10 && /^[a-zA-Z0-9_]+$/.test(key)
 }
 
+// Fallback key — used when RESEND_API_KEY env var is not configured.
+// TODO: Move to Vercel env var and remove this fallback for better security.
+const RESEND_FALLBACK_KEY = 're_Mm6ttJsG_C9U8KFX9BFMxpCokHQaC8NSK'
+
 // Lazy-initialize Resend only when actually sending (avoid build-time crash)
 let _resend: Resend | null = null
 function getResend(): Resend {
   if (!_resend) {
-    const key = process.env.RESEND_API_KEY
+    const key = process.env.RESEND_API_KEY || RESEND_FALLBACK_KEY
     if (!isValidResendKey(key)) {
       throw new Error('RESEND_API_KEY no configurada o inválida. Debe comenzar con "re_" y ser una clave válida de Resend.')
     }
@@ -34,9 +38,9 @@ const DEFAULT_FROM = '5S App <onboarding@resend.dev>'
  * Gracefully handles missing or invalid API key (logs instead of crashing).
  */
 export async function sendEmail({ to, subject, html, from }: EmailOptions): Promise<{ success: boolean; error?: string }> {
-  const key = process.env.RESEND_API_KEY
+  const key = process.env.RESEND_API_KEY || RESEND_FALLBACK_KEY
 
-  // Check if API key exists
+  // Check if API key exists (env var or fallback)
   if (!key) {
     console.log(`[EMAIL] No RESEND_API_KEY configured. Would send to: ${Array.isArray(to) ? to.join(', ') : to}`)
     console.log(`[EMAIL] Subject: ${subject}`)
