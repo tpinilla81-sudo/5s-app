@@ -642,18 +642,22 @@ const handleSaveGestorProfile = async () => {
         setIsSavingProfile(false)
         return
       }
-      // Verify current password by trying to login
-      // Use gestorProfileData.email (what's in the form) which should match the DB
-      // currentUser.email might be stale if the user changed their email in a previous save
-      const verifyRes = await fetch('/api/auth', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: gestorProfileData.email.trim().toLowerCase(), password: gestorProfileData.currentPassword }),
-      })
-      const verifyData = await verifyRes.json()
-      // API /api/auth returns { user: {...} } on success, { error: '...' } on failure
-      if (!verifyData.user) {
-        setProfileMessage({ type: 'error', text: 'La contraseña actual es incorrecta' })
+      // Verify current password using dedicated verify endpoint
+      try {
+        const verifyRes = await fetch('/api/users/verify-password', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId: currentUser.id, password: gestorProfileData.currentPassword }),
+        })
+        const verifyData = await verifyRes.json()
+        if (!verifyData.valid) {
+          setProfileMessage({ type: 'error', text: 'La contraseña actual es incorrecta' })
+          setIsSavingProfile(false)
+          return
+        }
+      } catch (verifyErr) {
+        console.error('Password verification error:', verifyErr)
+        setProfileMessage({ type: 'error', text: 'Error al verificar la contraseña' })
         setIsSavingProfile(false)
         return
       }

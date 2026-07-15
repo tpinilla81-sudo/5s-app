@@ -97,23 +97,26 @@ const S_BORDER_COLORS: Record<number, string> = {
 
 const PASO_LABELS: Record<number, { label: string; types: string[] }> = {
   1: { label: 'Formación y Exámenes', types: ['formacion', 'examen'] },
-  2: { label: 'Fotografías', types: ['fotos'] },
-  3: { label: 'Inventario / Estándar', types: ['inventario', 'estandar'] },
-  4: { label: 'Autoevaluación', types: ['autoevaluacion'] },
-  5: { label: 'Auditoría', types: ['auditoria'] },
+  2: { label: 'Fotografías (Antes/Después)', types: ['fotos'] },
+  3: { label: 'Inventario / Estándar / Layout / Plan Limpieza', types: ['inventario', 'estandar', 'layout', 'plan_limpieza'] },
+  4: { label: 'Autoevaluación / Plan de Acción', types: ['autoevaluacion', 'plan_accion'] },
+  5: { label: 'Auditoría Externa / PDCA', types: ['auditoria', 'pdca'] },
 }
 
 const TYPE_LABELS: Record<string, string> = {
   formacion: 'Formación', examen: 'Examen', fotos: 'Fotos',
-  inventario: 'Inventario', estandar: 'Estándar',
-  autoevaluacion: 'Autoevaluación', auditoria: 'Auditoría',
+  inventario: 'Inventario', estandar: 'Estándar', layout: 'Layout',
+  plan_limpieza: 'Plan Limpieza', autoevaluacion: 'Autoevaluación',
+  plan_accion: 'Plan de Acción', auditoria: 'Auditoría', pdca: 'PDCA',
 }
 
 const TYPE_COLORS: Record<string, string> = {
   formacion: 'bg-blue-100 text-blue-700', examen: 'bg-amber-100 text-amber-700',
   fotos: 'bg-pink-100 text-pink-700', inventario: 'bg-green-100 text-green-700',
-  estandar: 'bg-purple-100 text-purple-700', autoevaluacion: 'bg-cyan-100 text-cyan-700',
-  auditoria: 'bg-red-100 text-red-700',
+  estandar: 'bg-purple-100 text-purple-700', layout: 'bg-indigo-100 text-indigo-700',
+  plan_limpieza: 'bg-sky-100 text-sky-700', autoevaluacion: 'bg-cyan-100 text-cyan-700',
+  plan_accion: 'bg-orange-100 text-orange-700', auditoria: 'bg-red-100 text-red-700',
+  pdca: 'bg-rose-100 text-rose-700',
 }
 
 const REFERENCE_WIDTH = 1100

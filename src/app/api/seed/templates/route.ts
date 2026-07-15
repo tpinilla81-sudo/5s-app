@@ -16,29 +16,10 @@ export async function POST(request: NextRequest) {
     const url = new URL(request.url)
     const forceSeed = url.searchParams.get('force') === 'true'
 
-    // Check if seed was already completed (unless force=true)
-    // Gracefully handle case where SystemConfig table doesn't exist yet
-    if (!forceSeed) {
-      try {
-        const alreadySeeded = await db.systemConfig.findUnique({ where: { key: 'templates_seeded' } })
-        if (alreadySeeded) {
-          return NextResponse.json({
-            success: true,
-            data: {
-              message: 'Seed ya fue ejecutado anteriormente. Usa ?force=true para forzar.',
-              templatesCreated: 0,
-              templatesFixed: 0,
-              templatesExisting: await db.template.count(),
-              templatesTotal: await db.template.count(),
-              skipped: true,
-            },
-          })
-        }
-      } catch (e) {
-        // SystemConfig table might not exist yet — proceed with seed
-        console.log('SystemConfig table not found, proceeding with seed')
-      }
-    }
+    // Always run seed to fix miniStep values and create missing templates.
+    // The seed is non-destructive — it only creates templates that don't exist
+    // and fixes incorrect miniStep values. Skipping it caused missing templates.
+    // force=true additionally resets miniStep and title fixes even if already correct.
     const S_JAPANESE = ['Seiri', 'Seiton', 'Seiso', 'Seiketsu', 'Shitsuke']
     const S_NAMES = ['Revisar', 'Ordenar', 'Limpiar', 'Estandarizar', 'Mantener']
 
