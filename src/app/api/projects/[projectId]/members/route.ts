@@ -102,10 +102,12 @@ export async function POST(
     let user = await db.user.findUnique({
       where: { email: email.toLowerCase().trim() },
     })
+    let isNewUser = false
+    let rawPassword = password && password.length >= 6 ? password : '123456'
 
     if (!user) {
       // Create user with provided password or default
-      const hashedPassword = hashPasswordSync(password && password.length >= 6 ? password : '123456')
+      const hashedPassword = hashPasswordSync(rawPassword)
       user = await db.user.create({
         data: {
           email: email.toLowerCase().trim(),
@@ -114,6 +116,7 @@ export async function POST(
           role: memberRole,
         },
       })
+      isNewUser = true
     }
 
     // Check if already a member
@@ -184,7 +187,7 @@ export async function POST(
       },
     })
 
-    // Transform response
+    // Transform response — include generated password for new users only
     const transformedMember = {
       id: member.id,
       role: member.role,
@@ -195,6 +198,7 @@ export async function POST(
         name: mz.zone.name,
         color: mz.zone.color,
       })),
+      generatedPassword: isNewUser ? rawPassword : undefined,
     }
 
     return NextResponse.json({ member: transformedMember }, { status: 201 })

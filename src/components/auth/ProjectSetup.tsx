@@ -48,6 +48,7 @@ import {
   FileText,
   CreditCard,
   User,
+  Mail,
 } from 'lucide-react'
 import { Checkbox } from '@/components/ui/checkbox'
 
@@ -74,6 +75,8 @@ interface MemberInput {
   email: string
   role: string
   zoneIds: string[]
+  password?: string // Generated password shown after creation
+  emailSent?: boolean // Track if welcome email was sent
 }
 
 interface CompanyData {
@@ -367,7 +370,9 @@ export default function ProjectSetup() {
       // Add additional members (admin is auto-added in createProject)
       const { currentProject } = use5SStore.getState()
       if (currentProject) {
-        for (const member of members) {
+        const updatedMembers = [...members]
+        for (let i = 0; i < members.length; i++) {
+          const member = members[i]
           const realZoneIds: string[] = []
           for (const zId of member.zoneIds) {
             if (zId && zId.startsWith('zone-')) {
@@ -377,7 +382,7 @@ export default function ProjectSetup() {
             }
           }
 
-          await fetch(`/api/projects/${currentProject.id}/members`, {
+          const res = await fetch(`/api/projects/${currentProject.id}/members`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -387,12 +392,50 @@ export default function ProjectSetup() {
               zoneIds: realZoneIds.length > 0 ? realZoneIds : undefined,
             }),
           })
+          const data = await res.json()
+          if (data.member?.generatedPassword) {
+            updatedMembers[i] = { ...updatedMembers[i], password: data.member.generatedPassword }
+          }
         }
+        setMembers(updatedMembers)
       }
     } catch (error) {
       console.error('Error creating project:', error)
     } finally {
       setIsCreating(false)
+    }
+  }
+
+  // Send welcome email to a member
+  const [sendingEmailTo, setSendingEmailTo] = useState<string | null>(null)
+  const handleSendWelcomeEmail = async (member: MemberInput) => {
+    setSendingEmailTo(member.email)
+    try {
+      const res = await fetch('/api/email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: 'admin_welcome',
+          adminName: member.name,
+          adminEmail: member.email,
+          adminPassword: member.password || '',
+          companyName: companyName,
+          gestorEmail: currentUser?.email || undefined,
+        }),
+      })
+      const data = await res.json()
+      if (data.success) {
+        setMembers(members.map(m => m.email === member.email ? { ...m, emailSent: true } : m))
+        if (data.testingMode) {
+          alert(`Email enviado en modo prueba.\nEn producción iría a: ${member.email}\nContenido: contraseña = ${member.password || '123456'}`)
+        }
+      } else {
+        alert('Error al enviar email: ' + (data.error || 'Desconocido'))
+      }
+    } catch (err) {
+      console.error('Error sending welcome email:', err)
+    } finally {
+      setSendingEmailTo(null)
     }
   }
 
@@ -932,6 +975,8 @@ export default function ProjectSetup() {
                           <TableHead>Email</TableHead>
                           <TableHead>Rol</TableHead>
                           <TableHead>Zona</TableHead>
+                          <TableHead>Contraseña</TableHead>
+                          <TableHead>Email</TableHead>
                           <TableHead className="w-10" />
                         </TableRow>
                       </TableHeader>
@@ -945,6 +990,28 @@ export default function ProjectSetup() {
                               {member.zoneIds.length > 0
                                 ? member.zoneIds.map(zId => { const idx = parseInt(zId.replace('zone-', ''), 10); return zones[idx]?.name }).filter(Boolean).join(', ')
                                 : '-'}
+                            </TableCell>
+                            <TableCell className="text-sm">
+                              {member.password ? (
+                                <span className="font-mono text-xs bg-yellow-100 text-yellow-800 px-2 py-0.5 rounded">
+                                  {member.password}
+                                </span>
+                              ) : (
+                                <span className="text-xs text-muted-foreground">—</span>
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              {member.password && !member.emailSent ? (
+                                <Button variant="ghost" size="sm"
+                                  onClick={() => handleSendWelcomeEmail(member)}
+                                  disabled={sendingEmailTo === member.email}
+                                  className="text-green-600 hover:text-green-700 hover:bg-green-50 h-8 px-2"
+                                  title="Enviar email de bienvenida">
+                                  {sendingEmailTo === member.email ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />}
+                                </Button>
+                              ) : member.emailSent ? (
+                                <Badge className="bg-green-100 text-green-700 border-green-200 border text-[10px]">Enviado</Badge>
+                              ) : null}
                             </TableCell>
                             <TableCell>
                               <Button variant="ghost" size="sm" onClick={() => handleRemoveMember(index)}

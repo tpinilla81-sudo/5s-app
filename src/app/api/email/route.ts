@@ -27,10 +27,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: 'Faltan campos requeridos' }, { status: 400 })
     }
 
-    // Verify the user is a gestor
+    // Verify the user is authenticated (gestor or admin can send emails)
     const user = await getAuthUser(request)
-    if (!user || user.role !== 'gestor') {
-      return NextResponse.json({ success: false, error: 'Solo el gestor puede enviar emails de invitación' }, { status: 403 })
+    if (!user) {
+      return NextResponse.json({ success: false, error: 'No autenticado' }, { status: 401 })
+    }
+    if (user.role !== 'gestor' && user.role !== 'admin') {
+      return NextResponse.json({ success: false, error: 'No tienes permisos para enviar emails de invitación' }, { status: 403 })
     }
 
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://5s-app-one.vercel.app'
