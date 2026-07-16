@@ -175,3 +175,30 @@ Stage Summary:
 - 2 HIGH: MIN_PHOTOS=3 instead of 10, ActionItems without responsable
 - 1 MEDIUM: Auditor notification not automatic from API
 - 1 LOW: Photo traceability not visible in UI
+
+---
+Task ID: 5
+Agent: Main Agent
+Task: Testear y corregir los 5 pasos de S1 con todos los requisitos
+
+Work Log:
+- Explorado código completo de los 5 pasos de S1 (FormacionModal, FotosModal, InventarioModal, AutoevaluacionModal, AuditoriaModal)
+- Identificados 7 fallos críticos y corregidos todos:
+  1. Examen API hardcodeaba 80% → Ahora usa template.notaMinima (configurable por gestor)
+  2. MIN_PHOTOS era 3 → Cambiado a 10 según requisito del usuario
+  3. Autoevaluación no permitía enviar si nota < notaMinima → Ahora se puede enviar siempre, pero paso 5 solo se desbloquea si se aprueba
+  4. Plantillas tenían notaMinima=null → Actualizadas vía API: examen=80, autoeval=70, auditoría=75
+  5. Botón header decía 'Jaula' → Renombrado a 'Inventario'
+  6. Audit API no pasaba zoneId a ActionItems → Ahora incluye zoneId en disfunciones
+  7. Autoevaluación y Auditoría no tenían subida de fotos → Añadida sección de fotos con trazabilidad completa a biblioteca
+- Deployado a producción en https://5s-app-one.vercel.app
+
+Stage Summary:
+- 7 fallos corregidos en los 5 pasos de S1
+- Examen respeta notaMinima de plantilla (gestor puede configurar)
+- Mínimo 10 fotos para paso 2
+- Autoevaluación permite envío con nota baja (registra disfunciones) pero solo desbloquea auditoría si aprueba
+- Fotos en autoevaluación y auditoría van a biblioteca con trazabilidad completa
+- Botón 'Inventario' en header accede a la Jaula
+- Plantillas con notaMinima configurables desde GestorPanel → TemplateManager
+- Producción: https://5s-app-one.vercel.app
