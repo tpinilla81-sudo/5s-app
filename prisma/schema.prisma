@@ -8,19 +8,20 @@ generator client {
 datasource db {
   provider  = "postgresql"
   url       = env("DATABASE_URL")
-  directUrl = env("DATABASE_URL_UNPOOLED")
+  directUrl = env("DIRECT_URL")
 }
 
 model User {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  name      String
-  password  String
-  role      String   @default("empleado") // "gestor", "admin", "gerente", "responsable", "empleado", "auditor"
-  avatar    String?
-  active    Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id            String   @id @default(cuid())
+  email         String   @unique
+  name          String
+  password      String
+  plainPassword String?  // Stored so admin can recover/view it
+  role          String   @default("empleado") // "gestor", "admin", "gerente", "responsable", "empleado", "auditor"
+  avatar        String?
+  active        Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
   memberships        ProjectMember[]
   companyMemberships CompanyMember[]

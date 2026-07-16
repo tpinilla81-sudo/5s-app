@@ -86,6 +86,7 @@ export async function GET(request: NextRequest) {
       role: user.role,
       avatar: user.avatar,
       active: user.active,
+      plainPassword: user.plainPassword,
       createdAt: user.createdAt,
       companies: user.companyMemberships.map(cm => ({
         id: cm.company.id,
@@ -137,6 +138,7 @@ export async function POST(request: NextRequest) {
         name: name.trim(),
         email: email.trim().toLowerCase(),
         password: hashPassword(password),
+        plainPassword: password,
         role: role || 'empleado',
         active: active !== undefined ? active : true,
       },
@@ -187,7 +189,10 @@ export async function PUT(request: NextRequest) {
     if (email !== undefined) updateData.email = email.trim().toLowerCase()
     if (role !== undefined) updateData.role = role
     if (active !== undefined) updateData.active = active
-    if (password && password.length >= 6) updateData.password = hashPassword(password)
+    if (password && password.length >= 6) {
+      updateData.password = hashPassword(password)
+      updateData.plainPassword = password
+    }
 
     const user = await db.user.update({
       where: { id },

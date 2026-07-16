@@ -6,7 +6,7 @@ function hashPasswordSync(password: string): string {
   return createHash('sha256').update(password).digest('hex')
 }
 
-// GET /api/projects/[projectId]/members - List members with zones and role
+// GET /api/projects/[projectId]/members - List members with zones, role, and password
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ projectId: string }> }
@@ -25,6 +25,7 @@ export async function GET(
             role: true,
             avatar: true,
             active: true,
+            plainPassword: true,
           },
         },
         zones: {
@@ -113,6 +114,7 @@ export async function POST(
           email: email.toLowerCase().trim(),
           name: name.trim(),
           password: hashedPassword,
+          plainPassword: rawPassword,
           role: memberRole,
         },
       })
@@ -178,6 +180,7 @@ export async function POST(
             role: true,
             avatar: true,
             active: true,
+            plainPassword: true,
           },
         },
         zones: {
@@ -256,6 +259,63 @@ export async function DELETE(
     console.error('Remove member error:', error)
     return NextResponse.json(
       { error: 'Error al eliminar miembro' },
+      { status: 500 }
+    )
+  }
+}
+
+// PATCH /api/projects/[projectId]/members - Update a member's role
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: Promise<{ projectId: string }> }
+) {
+  try {
+    const { projectId } = await params
+    const body = await request.json()
+    const { memberId, role } = body
+
+    if (!memberId || !role) {
+      return NextResponse.json(
+        { error: 'ID de miembro y rol son requeridos' },
+        { status: 400 }
+      )
+    }
+
+    const validRoles = ['admin', 'gerente', 'responsable', 'empleado', 'auditor']
+    if (!validRoles.includes(role)) {
+      return NextResponse.json(
+        { error: 'Rol no válido' },
+        { status: 400 }
+      )
+    }
+
+    const member = await db.projectMember.findUnique({
+      where: { id: memberId },
+    })
+
+    if (!member || member.projectId !== projectId) {
+      return NextResponse.json(
+        { error: 'Miembro no encontrado en este proyecto' },
+        { status: 404 }
+      )
+    }
+
+    // Update both the ProjectMember role and the User role
+    await db.projectMember.update({
+      where: { id: memberId },
+      data: { role },
+    })
+
+    await db.user.update({
+      where: { id: member.userId },
+      data: { role },
+    })
+
+    return NextResponse.json({ success: true, role })
+  } catch (error) {
+    console.error('Update member error:', error)
+    return NextResponse.json(
+      { error: 'Error al actualizar miembro' },
       { status: 500 }
     )
   }

@@ -71,6 +71,7 @@ interface UserData {
   name: string
   role: string
   active: boolean
+  plainPassword?: string | null
   createdAt: string
   projects: Array<{
     projectId: string
@@ -104,7 +105,7 @@ interface ZoneData {
 interface MemberData {
   id: string
   role: string
-  user: { id: string; email: string; name: string; role: string; active: boolean }
+  user: { id: string; email: string; name: string; role: string; active: boolean; plainPassword?: string | null }
   zones: Array<{ id: string; name: string; color: string }>
 }
 
@@ -1329,85 +1330,207 @@ export default function AdminPanel({ embedded }: AdminPanelProps = {}) {
                                         </div>
                                       )}
 
-                                      {/* Members table */}
+                                      {/* Members table — complete, editable, with passwords */}
                                       {projectMembers.length === 0 ? (
                                         <p className="text-xs text-muted-foreground text-center py-4">No hay miembros en este proyecto</p>
                                       ) : (
-                                        <div className="rounded-lg border overflow-hidden">
-                                          <Table>
-                                            <TableHeader>
-                                              <TableRow>
-                                                <TableHead className="text-xs">Nombre</TableHead>
-                                                <TableHead className="text-xs">Email</TableHead>
-                                                <TableHead className="text-xs">Rol</TableHead>
-                                                <TableHead className="text-xs">Zona</TableHead>
-                                                <TableHead className="text-xs text-center">Acciones</TableHead>
-                                              </TableRow>
-                                            </TableHeader>
-                                            <TableBody>
-                                              {projectMembers.map(member => (
-                                                <TableRow key={member.id}>
-                                                  <TableCell className="text-xs font-medium">{member.user.name}</TableCell>
-                                                  <TableCell className="text-xs text-muted-foreground">{member.user.email}</TableCell>
-                                                  <TableCell>
-                                                    <Badge className={`${ROLE_COLORS[member.role] || ''} border text-[10px]`}>
-                                                      {ROLE_LABELS[member.role] || member.role}
-                                                    </Badge>
-                                                  </TableCell>
-                                                  <TableCell className="text-xs">
-                                                    {member.zones.length > 0 ? (
-                                                      <div className="flex flex-wrap gap-1">
-                                                        {member.zones.map(z => (
-                                                          <span key={z.id} className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-gray-50 border text-[10px]">
-                                                            <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: z.color }} />
-                                                            {z.name}
-                                                          </span>
-                                                        ))}
-                                                      </div>
-                                                    ) : <span className="text-muted-foreground">-</span>}
-                                                  </TableCell>
-                                                  <TableCell className="text-center">
-                                                    <div className="flex items-center justify-center gap-1">
-                                                      <Button variant="outline" size="sm" className="h-7 text-[10px] text-blue-500 border-blue-200 hover:bg-blue-50 hover:text-blue-700 hover:border-blue-300 gap-1" onClick={async () => {
-                                                        const pwd = prompt(`Introduce la contraseña para enviar a ${member.user.name}:\n(Por defecto: 123456)`)
-                                                        if (pwd === null) return
-                                                        const finalPwd = pwd.length >= 6 ? pwd : '123456'
-                                                        setSendingCredentials(member.id)
-                                                        try {
-                                                          const res = await fetch(`/api/projects/${selectedProjectId}/send-credentials`, {
-                                                            method: 'POST',
-                                                            headers: { 'Content-Type': 'application/json' },
-                                                            body: JSON.stringify({ memberId: member.id, password: finalPwd }),
-                                                          })
-                                                          const data = await res.json()
-                                                          if (data.success) {
-                                                            if (data.testingMode) {
-                                                              alert(`✉️ Email enviado en modo de prueba a: ${data.redirectedTo}\n(El email real iría a: ${member.user.email})`)
-                                                            } else {
-                                                              alert(`✉️ Email de bienvenida enviado a: ${member.user.email}`)
-                                                            }
-                                                          } else {
-                                                            alert(`Error al enviar email: ${data.error}`)
-                                                          }
-                                                        } catch (err) {
-                                                          alert('Error de conexión al enviar credenciales')
-                                                        } finally {
-                                                          setSendingCredentials(null)
-                                                        }
-                                                      }} title="Enviar credenciales por email" disabled={sendingCredentials === member.id}>
-                                                        {sendingCredentials === member.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <Mail className="h-3 w-3" />}
-                                                        Enviar
-                                                      </Button>
-                                                      <Button variant="outline" size="sm" className="h-7 text-[10px] text-red-500 border-red-200 hover:bg-red-50 hover:text-red-700 hover:border-red-300 gap-1" onClick={() => handleRemoveMember(member.id, member.user.name)} title="Eliminar miembro del proyecto">
-                                                        <Trash2 className="h-3 w-3" />
-                                                        Eliminar
-                                                      </Button>
-                                                    </div>
-                                                  </TableCell>
+                                        <div className="space-y-2">
+                                          {/* Excel download button */}
+                                          <div className="flex justify-end">
+                                            <Button size="sm" variant="outline" className="h-7 text-[10px] gap-1 text-green-600 border-green-200 hover:bg-green-50" onClick={() => {
+                                              // Build CSV for Excel download
+                                              const headers = ['Nombre', 'Email', 'Contraseña', 'Rol', 'Zonas', 'Estado']
+                                              const rows = projectMembers.map(m => [
+                                                m.user.name,
+                                                m.user.email,
+                                                m.user.plainPassword || '••••••',
+                                                ROLE_LABELS[m.role] || m.role,
+                                                m.zones.map(z => z.name).join('; '),
+                                                m.user.active ? 'Activo' : 'Inactivo',
+                                              ])
+                                              const csvContent = [headers, ...rows].map(r => r.map(c => `"${c}"`).join(',')).join('\n')
+                                              const BOM = '\uFEFF'
+                                              const blob = new Blob([BOM + csvContent], { type: 'text/csv;charset=utf-8;' })
+                                              const link = document.createElement('a')
+                                              link.href = URL.createObjectURL(blob)
+                                              link.download = `recursos_proyecto_${selectedProjectId}.csv`
+                                              link.click()
+                                            }}>
+                                              <Save className="h-3 w-3" /> Descargar Excel (CSV)
+                                            </Button>
+                                          </div>
+                                          <div className="rounded-lg border overflow-x-auto">
+                                            <Table>
+                                              <TableHeader>
+                                                <TableRow>
+                                                  <TableHead className="text-xs">Nombre</TableHead>
+                                                  <TableHead className="text-xs">Email</TableHead>
+                                                  <TableHead className="text-xs">Contraseña</TableHead>
+                                                  <TableHead className="text-xs">Rol</TableHead>
+                                                  <TableHead className="text-xs">Zonas</TableHead>
+                                                  <TableHead className="text-xs text-center">Acciones</TableHead>
                                                 </TableRow>
-                                              ))}
-                                            </TableBody>
-                                          </Table>
+                                              </TableHeader>
+                                              <TableBody>
+                                                {projectMembers.map(member => (
+                                                  <TableRow key={member.id}>
+                                                    <TableCell className="text-xs font-medium">
+                                                      <Input
+                                                        className="h-7 text-xs border-transparent hover:border-gray-300 focus:border-purple-400 px-1 py-0 min-w-[80px]"
+                                                        value={member.user.name}
+                                                        onChange={async (e) => {
+                                                          const newName = e.target.value
+                                                          setProjectMembers(prev => prev.map(m => m.id === member.id ? { ...m, user: { ...m.user, name: newName } } : m))
+                                                          await fetch('/api/users', {
+                                                            method: 'PUT',
+                                                            headers: { 'Content-Type': 'application/json' },
+                                                            body: JSON.stringify({ id: member.user.id, name: newName }),
+                                                          })
+                                                        }}
+                                                      />
+                                                    </TableCell>
+                                                    <TableCell className="text-xs">
+                                                      <Input
+                                                        className="h-7 text-xs border-transparent hover:border-gray-300 focus:border-purple-400 px-1 py-0 min-w-[120px]"
+                                                        value={member.user.email}
+                                                        onChange={async (e) => {
+                                                          const newEmail = e.target.value
+                                                          setProjectMembers(prev => prev.map(m => m.id === member.id ? { ...m, user: { ...m.user, email: newEmail } } : m))
+                                                        }}
+                                                        onBlur={async (e) => {
+                                                          const newEmail = e.target.value.trim().toLowerCase()
+                                                          if (newEmail && newEmail !== member.user.email) {
+                                                            await fetch('/api/users', {
+                                                              method: 'PUT',
+                                                              headers: { 'Content-Type': 'application/json' },
+                                                              body: JSON.stringify({ id: member.user.id, email: newEmail }),
+                                                            })
+                                                          }
+                                                        }}
+                                                      />
+                                                    </TableCell>
+                                                    <TableCell className="text-xs">
+                                                      <div className="flex items-center gap-1">
+                                                        <Input
+                                                          className="h-7 text-xs border-transparent hover:border-gray-300 focus:border-purple-400 px-1 py-0 min-w-[90px] font-mono"
+                                                          value={member.user.plainPassword || '••••••'}
+                                                          onChange={async (e) => {
+                                                            const newPwd = e.target.value
+                                                            setProjectMembers(prev => prev.map(m => m.id === member.id ? { ...m, user: { ...m.user, plainPassword: newPwd } } : m))
+                                                          }}
+                                                          onBlur={async (e) => {
+                                                            const newPwd = e.target.value
+                                                            if (newPwd && newPwd.length >= 6 && newPwd !== '••••••') {
+                                                              await fetch('/api/users', {
+                                                                method: 'PUT',
+                                                                headers: { 'Content-Type': 'application/json' },
+                                                                body: JSON.stringify({ id: member.user.id, password: newPwd }),
+                                                              })
+                                                            }
+                                                          }}
+                                                        />
+                                                        <button
+                                                          className="text-gray-400 hover:text-purple-600 shrink-0"
+                                                          title="Restablecer contraseña"
+                                                          onClick={async () => {
+                                                            const newPwd = prompt(`Nueva contraseña para ${member.user.name}:`, '123456')
+                                                            if (!newPwd || newPwd.length < 6) {
+                                                              if (newPwd !== null) alert('La contraseña debe tener al menos 6 caracteres')
+                                                              return
+                                                            }
+                                                            await fetch('/api/users', {
+                                                              method: 'PUT',
+                                                              headers: { 'Content-Type': 'application/json' },
+                                                              body: JSON.stringify({ id: member.user.id, password: newPwd }),
+                                                            })
+                                                            setProjectMembers(prev => prev.map(m => m.id === member.id ? { ...m, user: { ...m.user, plainPassword: newPwd } } : m))
+                                                            alert(`Contraseña actualizada a: ${newPwd}`)
+                                                          }}
+                                                        >
+                                                          <Key className="h-3.5 w-3.5" />
+                                                        </button>
+                                                      </div>
+                                                    </TableCell>
+                                                    <TableCell>
+                                                      <Select value={member.role} onValueChange={async (newRole) => {
+                                                        setProjectMembers(prev => prev.map(m => m.id === member.id ? { ...m, role: newRole } : m))
+                                                        // Update member role via API
+                                                        try {
+                                                          await fetch(`/api/projects/${selectedProjectId}/members`, {
+                                                            method: 'PATCH',
+                                                            headers: { 'Content-Type': 'application/json' },
+                                                            body: JSON.stringify({ memberId: member.id, role: newRole }),
+                                                          })
+                                                        } catch (err) {
+                                                          console.error('Error updating role:', err)
+                                                        }
+                                                      }}>
+                                                        <SelectTrigger className="h-7 text-[10px] w-[110px]">
+                                                          <SelectValue />
+                                                        </SelectTrigger>
+                                                        <SelectContent>
+                                                          <SelectItem value="admin">Administrador</SelectItem>
+                                                          <SelectItem value="gerente">Gerente</SelectItem>
+                                                          <SelectItem value="responsable">Responsable</SelectItem>
+                                                          <SelectItem value="empleado">Empleado</SelectItem>
+                                                          <SelectItem value="auditor">Auditor</SelectItem>
+                                                        </SelectContent>
+                                                      </Select>
+                                                    </TableCell>
+                                                    <TableCell className="text-xs">
+                                                      {member.zones.length > 0 ? (
+                                                        <div className="flex flex-wrap gap-1">
+                                                          {member.zones.map(z => (
+                                                            <span key={z.id} className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-gray-50 border text-[10px]">
+                                                              <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: z.color }} />
+                                                              {z.name}
+                                                            </span>
+                                                          ))}
+                                                        </div>
+                                                      ) : <span className="text-muted-foreground">-</span>}
+                                                    </TableCell>
+                                                    <TableCell className="text-center">
+                                                      <div className="flex items-center justify-center gap-1">
+                                                        <Button variant="outline" size="sm" className="h-7 text-[10px] text-blue-500 border-blue-200 hover:bg-blue-50 hover:text-blue-700 hover:border-blue-300 gap-1" onClick={async () => {
+                                                          const pwd = member.user.plainPassword || prompt(`Contraseña para enviar a ${member.user.name}:`, '123456')
+                                                          if (!pwd) return
+                                                          const finalPwd = pwd.length >= 6 ? pwd : '123456'
+                                                          setSendingCredentials(member.id)
+                                                          try {
+                                                            const res = await fetch(`/api/projects/${selectedProjectId}/send-credentials`, {
+                                                              method: 'POST',
+                                                              headers: { 'Content-Type': 'application/json' },
+                                                              body: JSON.stringify({ memberId: member.id, password: finalPwd }),
+                                                            })
+                                                            const data = await res.json()
+                                                            if (data.success) {
+                                                              if (data.testingMode) {
+                                                                alert(`Email enviado en modo de prueba a: ${data.redirectedTo}\n(El email real iría a: ${member.user.email})`)
+                                                              } else {
+                                                                alert(`Email de bienvenida enviado a: ${member.user.email}`)
+                                                              }
+                                                            } else {
+                                                              alert(`Error al enviar email: ${data.error}`)
+                                                            }
+                                                          } catch (err) {
+                                                            alert('Error de conexión al enviar credenciales')
+                                                          } finally {
+                                                            setSendingCredentials(null)
+                                                          }
+                                                        }} title="Enviar credenciales por email" disabled={sendingCredentials === member.id}>
+                                                          {sendingCredentials === member.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <Mail className="h-3 w-3" />}
+                                                          Enviar
+                                                        </Button>
+                                                        <Button variant="outline" size="sm" className="h-7 text-[10px] text-red-500 border-red-200 hover:bg-red-50 hover:text-red-700 hover:border-red-300 gap-1" onClick={() => handleRemoveMember(member.id, member.user.name)} title="Eliminar miembro del proyecto">
+                                                          <Trash2 className="h-3 w-3" />
+                                                        </Button>
+                                                      </div>
+                                                    </TableCell>
+                                                  </TableRow>
+                                                ))}
+                                              </TableBody>
+                                            </Table>
+                                          </div>
                                         </div>
                                       )}
                                     </div>
