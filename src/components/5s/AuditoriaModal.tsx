@@ -220,6 +220,42 @@ export default function AuditoriaModal({ open, onClose, sStep, miniStep }: Audit
           });
         }
 
+        // ─── Notify responsables of NOK disfunciones from audit ───
+        if (nokResults.length > 0 && currentProject?.id && currentZone?.id) {
+          try {
+            const membersRes = await fetch(`/api/projects/${currentProject.id}/members`);
+            const membersData = await membersRes.json();
+            const allMembers = membersData?.members || [];
+
+            const sStepData = S_STEPS.find(s => s.id === sStep);
+            const disfuncionMessage = `El auditor ha detectado ${nokResults.length} disfunción(es) en la auditoría de S${sStep} (${sStepData?.japaneseName || ''}) en la zona "${currentZone.name}". Revisa el Plan de Acción.`;
+
+            // Notify zone responsable
+            const responsableIds = new Set<string>();
+            if (currentZone.responsableId) responsableIds.add(currentZone.responsableId);
+            const responsables = allMembers.filter((m: any) => m.role === 'responsable');
+            for (const resp of responsables) responsableIds.add(resp.userId);
+
+            for (const respId of responsableIds) {
+              await fetch('/api/notifications', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  userId: respId,
+                  type: 'disfuncion',
+                  title: `Disfunciones en auditoría: S${sStep} — ${sStepData?.japaneseName || ''}`,
+                  message: disfuncionMessage,
+                  sStep,
+                  zoneId: currentZone.id,
+                  projectId: currentProject.id,
+                }),
+              });
+            }
+          } catch (notifError) {
+            console.error('Error notifying responsables of audit disfunciones:', notifError);
+          }
+        }
+
         // Mark the mini-step as completed
         const progressRes = await fetch(`/api/progress/step?sStep=${sStep}&miniStep=${miniStep}`, {
           method: 'PUT',

@@ -154,6 +154,71 @@ export default function AutoevaluacionModal({ open, onClose, sStep, miniStep }: 
         setFinalScore(scoring.scorePercent);
         await fetchProgress();
 
+        // ─── Create Action Items for NOK (disfunciones) ───
+        const nokResults = Object.values(results).filter((r: any) => r.status === 'nok');
+        for (const nok of nokResults) {
+          if (!nok.hallazgo && !nok.mejora) continue; // Skip items without description
+          try {
+            await fetch('/api/actions', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                sStep,
+                miniStep: 4,
+                itemId: nok.itemId,
+                itemDescription: `Disfunción detectada en autoevaluación: ${nok.itemId}`,
+                hallazgo: nok.hallazgo || nok.itemId,
+                mejora: nok.mejora || '',
+                responsable: null,
+                prioridad: 'media',
+                estado: 'abierta',
+                source: 'autoevaluacion',
+                auditor: null,
+                projectId: currentProject?.id,
+                zoneId: currentZone?.id || null,
+              }),
+            });
+          } catch (actionError) {
+            console.error('Error creating action item from autoevaluación:', actionError);
+          }
+        }
+
+        // ─── Notify responsables of NOK disfunciones ───
+        if (nokResults.length > 0 && currentProject?.id && currentZone?.id) {
+          try {
+            const membersRes = await fetch(`/api/projects/${currentProject.id}/members`);
+            const membersData = await membersRes.json();
+            const allMembers = membersData?.members || [];
+
+            const sStepData = S_STEPS.find(s => s.id === sStep);
+            const disfuncionMessage = `Se han detectado ${nokResults.length} disfunción(es) en la autoevaluación de S${sStep} (${sStepData?.japaneseName || ''}) en la zona "${currentZone.name}". Revisa el Plan de Acción.`;
+
+            // Notify zone responsable
+            const responsableIds = new Set<string>();
+            if (currentZone.responsableId) responsableIds.add(currentZone.responsableId);
+            const responsables = allMembers.filter((m: any) => m.role === 'responsable');
+            for (const resp of responsables) responsableIds.add(resp.userId);
+
+            for (const respId of responsableIds) {
+              await fetch('/api/notifications', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  userId: respId,
+                  type: 'disfuncion',
+                  title: `Disfunciones detectadas: S${sStep} — ${sStepData?.japaneseName || ''}`,
+                  message: disfuncionMessage,
+                  sStep,
+                  zoneId: currentZone.id,
+                  projectId: currentProject.id,
+                }),
+              });
+            }
+          } catch (notifError) {
+            console.error('Error notifying responsables of disfunciones:', notifError);
+          }
+        }
+
         // Check if Steps 1-4 are now all completed for this S-step in the zone
         // If so, notify auditor(s) that they can perform Step 5
         if (currentProject?.id && currentZone?.id) {

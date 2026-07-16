@@ -120,3 +120,35 @@ Stage Summary:
 - Companies with projects can now be fully deleted via force=true parameter
 - Both AdminPanel and GestorPanel have improved delete UX with clear options
 - Soft delete is still available as a safer option when company has projects
+
+---
+Task ID: 6
+Agent: Main Agent
+Task: Test S1 (Seiri) 5 pasos del proyecto demo y verificar que disfunciones van al Plan de Acción y se notifica a responsables
+
+Work Log:
+- Seeded templates (8 creadas, 50 corregidas, 35 existentes = 43 total)
+- Tested Paso 1 (Formación+Examen): ✅ EmployeeProgress + Progress OK
+- Tested Paso 2 (Fotografías): ✅ Progress OK
+- Tested Paso 3 (Inventario): ✅ Progress OK
+- Tested Paso 4 (Autoevaluación): ❌ BUG CRÍTICO ENCONTRADO Y CORREGIDO
+  - BUG: AutoevaluacionModal NO creaba Action Items para disfunciones NOK
+  - FIX: Añadido código para crear Action Items vía /api/actions para cada item NOK con hallazgo/mejora
+  - FIX: Añadido código para notificar al responsable de la zona sobre las disfunciones detectadas
+- Tested Paso 5 (Auditoría): ❌ BUG ENCONTRADO Y CORREGIDO
+  - BUG: AuditoriaModal NO notificaba al responsable sobre disfunciones detectadas
+  - FIX: Añadido código para notificar al responsable de la zona sobre disfunciones de auditoría
+  - FIX: Añadido import de S_STEPS y AUDIT_PASS_THRESHOLD en AuditoriaModal
+- Deployed fixes to Vercel production (5s-app-one.vercel.app)
+- Re-tested all 5 steps: ✅ All pass
+- Verified Action Items created: 4 total (3 from autoevaluación, 1 from auditoría)
+- Verified Notifications: ✅ Notification API works for responsable
+
+Stage Summary:
+- FALLOS CORREGIDOS:
+  1. Autoevaluación (Paso 4) no creaba Action Items → CORREGIDO
+  2. Autoevaluación no notificaba al responsable → CORREGIDO
+  3. Auditoría (Paso 5) no notificaba al responsable sobre disfunciones → CORREGIDO
+- S1 completo funciona: 5 pasos completados en zona Almacén
+- 4 Action Items en Plan de Acción (3 autoevaluación + 1 auditoría)
+- Notificación de disfunciones enviada al responsable de la zona
