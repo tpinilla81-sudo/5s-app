@@ -128,6 +128,7 @@ export async function POST(request: NextRequest) {
               estado: 'abierta',
               source: `auditoria_${auditTypeValue}`,
               projectId: lookupProjectId,
+              zoneId: body.zoneId || null,
             },
           })
         }

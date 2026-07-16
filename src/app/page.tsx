@@ -465,14 +465,14 @@ export default function HomePage() {
                 )}
               </Button>
             )}
-            {/* 📦 Jaula de Excedentes */}
+            {/* 📦 Inventario (Jaula de Excedentes) */}
             {canSeeNotifications && (
               <Button variant="outline" size="sm"
                 className="gap-1 text-[10px] h-7 border-red-300 text-red-600 hover:bg-red-50"
                 onClick={() => setShowJaulaModal(true)}
-                title="Jaula de Excedentes">
+                title="Inventario de Innecesarios">
                 <Package className="h-3 w-3" />
-                <span className="hidden sm:inline">Jaula</span>
+                <span className="hidden sm:inline">Inventario</span>
               </Button>
             )}
             {/* ✅ Activos (Necesarios) */}

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -12,7 +12,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { CheckSquare, CheckCircle, Camera, ChevronDown, ChevronRight, Maximize2, Minimize2, AlertCircle } from 'lucide-react';
+import { CheckSquare, CheckCircle, XCircle, Camera, ChevronDown, ChevronRight, Maximize2, Minimize2, AlertCircle, Upload, X, Image as ImageIcon } from 'lucide-react';
 import { use5SStore } from '@/lib/store';
 import {
   S_STEPS,
@@ -48,6 +48,9 @@ export default function AutoevaluacionModal({ open, onClose, sStep, miniStep }: 
   const [isCompleted, setIsCompleted] = useState(false);
   const [finalScore, setFinalScore] = useState(0);
   const [notaMinima, setNotaMinima] = useState(70);
+  const [autoevalPhotos, setAutoevalPhotos] = useState<{ file: File; preview: string; uploading?: boolean; serverUrl?: string }[]>([]);
+  const [isUploadingPhotos, setIsUploadingPhotos] = useState(false);
+  const photoInputRef = useRef<HTMLInputElement>(null);
 
   // Load template from API (uses board config if zone has one)
   const { sections, isLoading: isLoadingTemplate, notaMinima: templateNotaMinima } = useChecklistTemplate('autoevaluacion', sStep, open, currentZone?.boardConfigId);
@@ -90,6 +93,7 @@ export default function AutoevaluacionModal({ open, onClose, sStep, miniStep }: 
       setObservaciones('');
       setIsCompleted(false);
       setFinalScore(0);
+      setAutoevalPhotos([]);
     }
   }, [open, sStep]);
 
@@ -108,7 +112,27 @@ export default function AutoevaluacionModal({ open, onClose, sStep, miniStep }: 
   const nokItems = Object.values(results).filter(r => r.status === 'nok');
   const allNokCompleted = nokItems.length === 0 || nokItems.every(r => (r.hallazgo || '').trim() !== '' && (r.mejora || '').trim() !== '');
 
-  const canSubmit = canPerformAutoeval && scoring.answeredCount > 0 && scoring.scorePercent >= notaMinima && allNokCompleted;
+  const passed = scoring.scorePercent >= notaMinima;
+  const canSubmit = canPerformAutoeval && scoring.answeredCount > 0 && allNokCompleted;
+
+  const handlePhotoSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files) return;
+    for (const file of Array.from(files)) {
+      const preview = URL.createObjectURL(file);
+      setAutoevalPhotos(prev => [...prev, { file, preview }]);
+    }
+    // Reset input
+    if (photoInputRef.current) photoInputRef.current.value = '';
+  };
+
+  const removeAutoevalPhoto = (index: number) => {
+    setAutoevalPhotos(prev => {
+      const photo = prev[index];
+      if (photo.preview) URL.revokeObjectURL(photo.preview);
+      return prev.filter((_, i) => i !== index);
+    });
+  };
 
   const toggleSection = (sectionId: string) => {
     setExpandedSections(prev => ({ ...prev, [sectionId]: !prev[sectionId] }));
@@ -133,14 +157,18 @@ export default function AutoevaluacionModal({ open, onClose, sStep, miniStep }: 
     if (!canPerformAutoeval) return; // Only responsable/admin for S4, or any employee for S1/S2/S3/S5
     setIsSubmitting(true);
     try {
+      // Only mark as completed if score meets notaMinima threshold
+      // If not passed, still save results but step stays available for retry
       const res = await fetch(`/api/progress/step?sStep=${sStep}&miniStep=${miniStep}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          completed: true,
+          completed: passed,
           score: scoring.scorePercent,
           notes: JSON.stringify({
             type: 'autoevaluacion',
+            passed,
+            notaMinima,
             results: Object.values(results),
             observaciones,
           }),
@@ -153,6 +181,50 @@ export default function AutoevaluacionModal({ open, onClose, sStep, miniStep }: 
         setIsCompleted(true);
         setFinalScore(scoring.scorePercent);
         await fetchProgress();
+
+        // ─── Upload photos to library with traceability ───
+        if (autoevalPhotos.length > 0) {
+          setIsUploadingPhotos(true);
+          for (let idx = 0; idx < autoevalPhotos.length; idx++) {
+            const photo = autoevalPhotos[idx];
+            try {
+              // Step 1: Upload the file to get a server URL
+              const formData = new FormData();
+              formData.append('file', photo.file);
+              formData.append('filename', `S${sStep}_autoeval_${currentZone?.name || 'zona'}_${idx + 1}_${Date.now()}.jpg`);
+
+              const uploadRes = await fetch('/api/upload', {
+                method: 'POST',
+                body: formData,
+              });
+              const uploadData = await uploadRes.json();
+
+              if (uploadData.success && uploadData.url) {
+                // Step 2: Save to photo library with full traceability
+                await fetch('/api/photo-library', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    sStep,
+                    miniStep: 4,
+                    title: `Autoeval S${sStep} - Foto ${idx + 1}`,
+                    description: `${sStepData?.japaneseName || 'S' + sStep} - ${currentZone?.name || 'Zona'} - Paso 4 Autoevaluación - Subida por ${currentUser?.name || 'Usuario'}`,
+                    photoUrl: uploadData.url,
+                    photoType: 'hallazgo',
+                    category: `paso4_s${sStep}`,
+                    tags: JSON.stringify([`S${sStep}`, sStepData?.japaneseName || '', currentZone?.name || '', 'paso4', 'autoevaluacion', 'hallazgo']),
+                    projectId: currentProject?.id,
+                    zoneId: currentZone?.id || null,
+                    uploadedBy: currentUser?.id || null,
+                  }),
+                });
+              }
+            } catch (photoErr) {
+              console.error('Error uploading autoeval photo:', photoErr);
+            }
+          }
+          setIsUploadingPhotos(false);
+        }
 
         // ─── Create Action Items for NOK (disfunciones) ───
         const nokResults = Object.values(results).filter((r: any) => r.status === 'nok');
@@ -391,12 +463,30 @@ export default function AutoevaluacionModal({ open, onClose, sStep, miniStep }: 
           </div>
         ) : isCompleted ? (
           <div className="text-center py-8">
-            <CheckCircle className="h-16 w-16 text-green-500 mx-auto mb-3" />
-            <h3 className="text-xl font-bold mb-2">¡Autoevaluación Completada!</h3>
+            {passed ? (
+              <>
+                <CheckCircle className="h-16 w-16 text-green-500 mx-auto mb-3" />
+                <h3 className="text-xl font-bold mb-2 text-green-700">¡Autoevaluación Aprobada!</h3>
+              </>
+            ) : (
+              <>
+                <XCircle className="h-16 w-16 text-red-500 mx-auto mb-3" />
+                <h3 className="text-xl font-bold mb-2 text-red-700">Autoevaluación No Aprobada</h3>
+              </>
+            )}
             <p className="text-lg mb-1">Puntuación: <strong>{finalScore}%</strong></p>
-            <p className="text-muted-foreground">
+            <p className="text-sm text-muted-foreground">
               {scoring.okCount} OK / {scoring.nokCount} NOK de {totalItems} puntos de verificación
             </p>
+            <p className="text-xs text-muted-foreground mt-1">
+              Mínimo requerido: {notaMinima}%
+            </p>
+            {!passed && (
+              <p className="text-sm text-amber-600 mt-3">
+                Debes obtener al menos {notaMinima}% para desbloquear el Paso 5 (Auditoría). 
+                Corrige las disfunciones y vuelve a realizar la autoevaluación.
+              </p>
+            )}
           </div>
         ) : (
           <div className="space-y-4">
@@ -567,6 +657,52 @@ export default function AutoevaluacionModal({ open, onClose, sStep, miniStep }: 
               </CardContent>
             </Card>
 
+            {/* Fotos de la autoevaluación */}
+            <Card>
+              <CardContent className="p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Camera className="h-4 w-4 text-muted-foreground" />
+                    <label className="text-sm font-medium">Fotos de la autoevaluación</label>
+                  </div>
+                  <span className="text-xs text-muted-foreground">{autoevalPhotos.length} foto{autoevalPhotos.length !== 1 ? 's' : ''}</span>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Añade fotos de hallazgos o disfunciones detectadas. Se guardarán en la biblioteca con trazabilidad.
+                </p>
+                <input
+                  ref={photoInputRef}
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  className="hidden"
+                  onChange={handlePhotoSelect}
+                />
+                <button
+                  className="w-full border-2 border-dashed rounded-lg p-4 flex flex-col items-center gap-2 hover:border-primary/50 hover:bg-muted/30 transition-colors"
+                  onClick={() => photoInputRef.current?.click()}
+                >
+                  <Upload className="h-5 w-5 text-muted-foreground" />
+                  <span className="text-xs font-medium">Seleccionar fotos</span>
+                </button>
+                {autoevalPhotos.length > 0 && (
+                  <div className="grid grid-cols-4 gap-2">
+                    {autoevalPhotos.map((photo, idx) => (
+                      <div key={idx} className="relative group">
+                        <img src={photo.preview} alt={`Foto ${idx + 1}`} className="w-full h-20 object-cover rounded-lg border" />
+                        <button
+                          className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                          onClick={() => removeAutoevalPhoto(idx)}
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
             {/* NOK incomplete warning */}
             {nokItems.length > 0 && !allNokCompleted && (
               <div className="p-3 bg-red-50 border border-red-200 rounded-lg flex items-center gap-2">
@@ -582,9 +718,9 @@ export default function AutoevaluacionModal({ open, onClose, sStep, miniStep }: 
               <Button
                 onClick={handleSubmit}
                 disabled={!canSubmit || isSubmitting}
-                style={canSubmit ? { backgroundColor: sStepData?.color } : undefined}
+                style={canSubmit ? { backgroundColor: passed ? sStepData?.color : '#dc2626' } : undefined}
               >
-                {isSubmitting ? 'Enviando...' : `Completar Autoevaluación (${scoring.scorePercent}%)`}
+                {isSubmitting ? 'Enviando...' : passed ? `Completar Autoevaluación (${scoring.scorePercent}% - Apto)` : `Enviar Autoevaluación (${scoring.scorePercent}% - No Apto, mín. ${notaMinima}%)`}
               </Button>
             </div>
           </div>

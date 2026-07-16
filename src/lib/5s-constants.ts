@@ -353,7 +353,7 @@ export const INVENTORY_CONFIGS: Record<number, InventoryConfig> = {
   },
 };
 
-export const MIN_PHOTOS = 3;
+export const MIN_PHOTOS = 10;
 export const INVENTORY_CLASSIFY_THRESHOLD = 80;
 export const ACTION_PLAN_MIN_ITEMS = 3;
 export const SELF_EVAL_THRESHOLD = 70;

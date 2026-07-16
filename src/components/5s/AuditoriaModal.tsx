@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -16,6 +16,7 @@ import { Label } from '@/components/ui/label';
 import {
   ShieldCheck,
   CheckCircle,
+  XCircle,
   Camera,
   ChevronDown,
   ChevronRight,
@@ -26,6 +27,9 @@ import {
   TrendingUp,
   Maximize2,
   Minimize2,
+  Upload,
+  X,
+  Image as ImageIcon,
 } from 'lucide-react';
 import { use5SStore } from '@/lib/store';
 import {
@@ -60,6 +64,9 @@ export default function AuditoriaModal({ open, onClose, sStep, miniStep }: Audit
   const [notaMinima, setNotaMinima] = useState(75);
   const [fechaAuditoria, setFechaAuditoria] = useState('');
   const [horaAuditoria, setHoraAuditoria] = useState('');
+  const [auditPhotos, setAuditPhotos] = useState<{ file: File; preview: string; uploading?: boolean; serverUrl?: string }[]>([]);
+  const [isUploadingPhotos, setIsUploadingPhotos] = useState(false);
+  const photoInputRef = useRef<HTMLInputElement>(null);
 
   // Load template from API (uses board config if zone has one)
   const { sections, isLoading: isLoadingTemplate, notaMinima: templateNotaMinima } = useChecklistTemplate('auditoria', sStep, open, currentZone?.boardConfigId);
@@ -108,6 +115,7 @@ export default function AuditoriaModal({ open, onClose, sStep, miniStep }: Audit
       setIsCompleted(false);
       setFinalScore(0);
       setHaMejoras(null);
+      setAuditPhotos([]);
       setMejoras([]);
       // Auto-fill date and time of the audit
       const now = new Date();
@@ -155,6 +163,24 @@ export default function AuditoriaModal({ open, onClose, sStep, miniStep }: Audit
       ...prev,
       [itemId]: { ...prev[itemId], itemId, [field]: value },
     }));
+  };
+
+  const handleAuditPhotoSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files) return;
+    for (const file of Array.from(files)) {
+      const preview = URL.createObjectURL(file);
+      setAuditPhotos(prev => [...prev, { file, preview }]);
+    }
+    if (photoInputRef.current) photoInputRef.current.value = '';
+  };
+
+  const removeAuditPhoto = (index: number) => {
+    setAuditPhotos(prev => {
+      const photo = prev[index];
+      if (photo.preview) URL.revokeObjectURL(photo.preview);
+      return prev.filter((_, i) => i !== index);
+    });
   };
 
   const handleSubmit = async () => {
@@ -254,6 +280,48 @@ export default function AuditoriaModal({ open, onClose, sStep, miniStep }: Audit
           } catch (notifError) {
             console.error('Error notifying responsables of audit disfunciones:', notifError);
           }
+        }
+
+        // ─── Upload audit photos to library with traceability ───
+        if (auditPhotos.length > 0) {
+          setIsUploadingPhotos(true);
+          for (let idx = 0; idx < auditPhotos.length; idx++) {
+            const photo = auditPhotos[idx];
+            try {
+              const formData = new FormData();
+              formData.append('file', photo.file);
+              formData.append('filename', `S${sStep}_auditoria_${currentZone?.name || 'zona'}_${idx + 1}_${Date.now()}.jpg`);
+
+              const uploadRes = await fetch('/api/upload', {
+                method: 'POST',
+                body: formData,
+              });
+              const uploadData = await uploadRes.json();
+
+              if (uploadData.success && uploadData.url) {
+                await fetch('/api/photo-library', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    sStep,
+                    miniStep: 5,
+                    title: `Auditoría S${sStep} - Foto ${idx + 1}`,
+                    description: `${sStepData?.japaneseName || 'S' + sStep} - ${currentZone?.name || 'Zona'} - Paso 5 Auditoría - Auditor: ${auditorName}`,
+                    photoUrl: uploadData.url,
+                    photoType: 'hallazgo',
+                    category: `paso5_s${sStep}`,
+                    tags: JSON.stringify([`S${sStep}`, sStepData?.japaneseName || '', currentZone?.name || '', 'paso5', 'auditoria', 'hallazgo']),
+                    projectId: currentProject?.id,
+                    zoneId: currentZone?.id || null,
+                    uploadedBy: currentUser?.id || null,
+                  }),
+                });
+              }
+            } catch (photoErr) {
+              console.error('Error uploading audit photo:', photoErr);
+            }
+          }
+          setIsUploadingPhotos(false);
         }
 
         // Mark the mini-step as completed
@@ -789,6 +857,52 @@ export default function AuditoriaModal({ open, onClose, sStep, miniStep }: Audit
                   className="mt-2"
                   rows={3}
                 />
+              </CardContent>
+            </Card>
+
+            {/* Fotos de la auditoría */}
+            <Card>
+              <CardContent className="p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Camera className="h-4 w-4 text-muted-foreground" />
+                    <label className="text-sm font-medium">Fotos de la auditoría</label>
+                  </div>
+                  <span className="text-xs text-muted-foreground">{auditPhotos.length} foto{auditPhotos.length !== 1 ? 's' : ''}</span>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Añade fotos de hallazgos o disfunciones detectadas. Se guardarán en la biblioteca con trazabilidad.
+                </p>
+                <input
+                  ref={photoInputRef}
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  className="hidden"
+                  onChange={handleAuditPhotoSelect}
+                />
+                <button
+                  className="w-full border-2 border-dashed rounded-lg p-4 flex flex-col items-center gap-2 hover:border-primary/50 hover:bg-muted/30 transition-colors"
+                  onClick={() => photoInputRef.current?.click()}
+                >
+                  <Upload className="h-5 w-5 text-muted-foreground" />
+                  <span className="text-xs font-medium">Seleccionar fotos</span>
+                </button>
+                {auditPhotos.length > 0 && (
+                  <div className="grid grid-cols-4 gap-2">
+                    {auditPhotos.map((photo, idx) => (
+                      <div key={idx} className="relative group">
+                        <img src={photo.preview} alt={`Foto ${idx + 1}`} className="w-full h-20 object-cover rounded-lg border" />
+                        <button
+                          className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                          onClick={() => removeAuditPhoto(idx)}
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </CardContent>
             </Card>
 

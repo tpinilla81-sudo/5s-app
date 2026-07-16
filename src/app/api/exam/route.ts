@@ -38,7 +38,9 @@ export async function POST(request: NextRequest) {
     })
 
     const score = Math.round((correct / questions.length) * 100)
-    const passed = score >= 80
+    // Use notaMinima from template if set, otherwise default to 80%
+    const notaMinima = template.notaMinima != null ? template.notaMinima : 80
+    const passed = score >= notaMinima
 
     // Save answers with projectId
     for (const r of results) {
@@ -140,6 +142,7 @@ export async function POST(request: NextRequest) {
       data: {
         score,
         passed,
+        notaMinima,
         correctCount: correct,
         totalQuestions: questions.length,
         results,
