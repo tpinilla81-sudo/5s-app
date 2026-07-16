@@ -33,9 +33,13 @@ interface EmailOptions {
 
 const DEFAULT_FROM = '5S App <onboarding@resend.dev>'
 
+// The owner email for Resend's testing mode (free tier can only send to this address)
+const RESEND_OWNER_EMAIL = 'tpinilla81@gmail.com'
+
 /**
  * Send an email using Resend.
  * Gracefully handles missing or invalid API key (logs instead of crashing).
+ * In testing mode (unverified domain), redirects emails to the owner with a note.
  */
 export async function sendEmail({ to, subject, html, from }: EmailOptions): Promise<{ success: boolean; error?: string }> {
   const key = getEffectiveKey()
@@ -45,25 +49,66 @@ export async function sendEmail({ to, subject, html, from }: EmailOptions): Prom
     return { success: false, error: 'RESEND_API_KEY no configurada. Ve a Vercel → Settings → Environment Variables y añade tu API key de Resend (empieza con "re_").' }
   }
 
+  const recipients = Array.isArray(to) ? to : [to]
+
   try {
     const resend = getResend(key)
     const { error } = await resend.emails.send({
       from: from || DEFAULT_FROM,
-      to: Array.isArray(to) ? to : [to],
+      to: recipients,
       subject,
       html,
     })
 
     if (error) {
+      // Check if the error is Resend's testing mode restriction
+      const errMsg = typeof error.message === 'string' ? error.message : String(error)
+      if (errMsg.includes('testing emails to your own email address') || errMsg.includes('verify a domain')) {
+        console.log(`[EMAIL] Testing mode detected. Redirecting to owner: ${RESEND_OWNER_EMAIL}`)
+
+        // Retry sending to the owner email with a note about the original recipient
+        const testingNote = `
+          <div style="background:#fef3c7;border:1px solid #fde68a;border-radius:8px;padding:16px;margin-bottom:20px;">
+            <p style="margin:0 0 8px;color:#92400e;font-weight:600;">⚠️ Modo de prueba — Email redirigido</p>
+            <p style="margin:0;color:#78350f;font-size:14px;">
+              Este email iba destinado a: <strong>${recipients.join(', ')}</strong><br>
+              En modo de prueba, Resend solo permite enviar a tu propia dirección.<br>
+              Para enviar a cualquier destinatario, verifica un dominio en <a href="https://resend.com/domains" style="color:#059669;">resend.com/domains</a>
+            </p>
+          </div>
+        `
+        const modifiedHtml = testingNote + html
+        const modifiedSubject = `[PRUEBA → ${recipients.join(', ')}] ${subject}`
+
+        try {
+          const retryResult = await resend.emails.send({
+            from: from || DEFAULT_FROM,
+            to: [RESEND_OWNER_EMAIL],
+            subject: modifiedSubject,
+            html: modifiedHtml,
+          })
+
+          if (retryResult.error) {
+            console.error('[EMAIL] Retry send error:', retryResult.error)
+            return { success: false, error: retryResult.error.message }
+          }
+
+          console.log(`[EMAIL] Sent in testing mode to owner: ${RESEND_OWNER_EMAIL} (original: ${recipients.join(', ')}) | Subject: ${subject}`)
+          return { success: true, testingMode: true, redirectedTo: RESEND_OWNER_EMAIL, originalRecipients: recipients }
+        } catch (retryErr: any) {
+          console.error('[EMAIL] Retry exception:', retryErr)
+          return { success: false, error: String(retryErr?.message || retryErr) }
+        }
+      }
+
       console.error('[EMAIL] Send error:', error)
-      return { success: false, error: error.message }
+      return { success: false, error: errMsg }
     }
 
-    console.log(`[EMAIL] Sent to: ${Array.isArray(to) ? to.join(', ') : to} | Subject: ${subject}`)
+    console.log(`[EMAIL] Sent to: ${recipients.join(', ')} | Subject: ${subject}`)
     return { success: true }
   } catch (err: any) {
     console.error('[EMAIL] Exception:', err)
-    // Check if the error is related to invalid header/API key
     const errMsg = String(err?.message || err)
     if (errMsg.includes('invalid header') || errMsg.includes('Headers.append')) {
       return {

@@ -665,10 +665,17 @@ const handleSendInvitationEmail = async (companyId: string) => {
    })
    const data = await res.json()
    if (data.success) {
-    toast.success('Email enviado', {
-     description: `Invitación enviada a ${admin.email} con copia a ${currentUser?.email}`,
-     duration: 5000,
-    })
+    if (data.testingMode) {
+     toast.success('Email enviado (modo prueba)', {
+      description: data.message || `En modo prueba, el email se envió a tu dirección en lugar de a ${admin.email}. Para enviar a otros, verifica un dominio en resend.com/domains.`,
+      duration: 8000,
+     })
+    } else {
+     toast.success('Email enviado', {
+      description: `Invitación enviada a ${admin.email} con copia a ${currentUser?.email}`,
+      duration: 5000,
+     })
+    }
     // Reload stats to refresh invitationEmailSent flag
     await loadStats()
     await loadCompanyAdmins()

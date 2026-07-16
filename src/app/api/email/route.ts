@@ -50,6 +50,15 @@ export async function POST(request: NextRequest) {
         return NextResponse.json(result)
       }
 
+      // If in testing mode, inform the frontend
+      if (result.testingMode) {
+        return NextResponse.json({
+          success: true,
+          testingMode: true,
+          message: `Email enviado en modo de prueba a ${result.redirectedTo} (destino original: ${result.originalRecipients?.join(', ')}). Para enviar a cualquier destinatario, verifica un dominio en resend.com/domains.`,
+        })
+      }
+
       // Send copy to gestor if gestorEmail provided (non-blocking — don't fail if CC fails)
       if (gestorEmail) {
         const ccResult = await sendCompanyCreatedEmail({
