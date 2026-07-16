@@ -3,7 +3,8 @@ import { db } from '@/lib/db'
 import { getAuthUser } from '@/lib/auth-helpers'
 
 // GET /api/projects - List projects with zones and member count
-// Admin sees all active projects; gerente sees projects from their companies; non-admin sees only their assigned projects
+// Admin sees projects from their companies; gerente same; non-admin sees only their assigned projects
+// GESTOR (platform owner) sees ALL projects across all companies.
 export async function GET(request: NextRequest) {
   try {
     // Check if user is logged in via session
@@ -11,37 +12,39 @@ export async function GET(request: NextRequest) {
     const userRole = user?.role || 'empleado'
     const userId: string | null = user?.id || null
 
+    const isGestor = userRole === 'gestor'
     const isAdmin = userRole === 'admin'
     const isGerente = userRole === 'gerente'
 
     let whereCondition: any = { active: true }
 
-    if (!isAdmin && userId) {
-      if (isGerente) {
-        // Gerente: see projects from their companies + projects they're directly assigned to
-        const companyMemberships = await db.companyMember.findMany({
-          where: { userId },
-          select: { companyId: true },
-        })
-        const companyIds = companyMemberships.map((cm) => cm.companyId)
+    if (isGestor) {
+      // Gestor (platform owner) sees ALL projects
+      whereCondition = { active: true }
+    } else if (isAdmin || isGerente) {
+      // Admin & Gerente: only projects from their companies + projects they're directly assigned to
+      const companyMemberships = await db.companyMember.findMany({
+        where: { userId },
+        select: { companyId: true },
+      })
+      const companyIds = companyMemberships.map((cm) => cm.companyId)
 
-        whereCondition = {
-          active: true,
-          OR: [
-            { members: { some: { userId } } },
-            { companyId: { in: companyIds.length > 0 ? companyIds : ['__none__'] } },
-          ],
-        }
-      } else {
-        // Non-admin, non-gerente: only their assigned projects
-        whereCondition = {
-          active: true,
-          members: {
-            some: {
-              userId: userId,
-            },
+      whereCondition = {
+        active: true,
+        OR: [
+          { members: { some: { userId } } },
+          { companyId: { in: companyIds.length > 0 ? companyIds : ['__none__'] } },
+        ],
+      }
+    } else if (userId) {
+      // Other roles: only their assigned projects
+      whereCondition = {
+        active: true,
+        members: {
+          some: {
+            userId: userId,
           },
-        }
+        },
       }
     }
 
@@ -85,8 +88,15 @@ export async function GET(request: NextRequest) {
 }
 
 // POST /api/projects - Create new project with zones
+// Only gestor, admin, and gerente can create projects.
+// Admin/gerente can only create projects in companies they belong to.
 export async function POST(request: NextRequest) {
   try {
+    const user = await getAuthUser(request)
+    if (!user) {
+      return NextResponse.json({ error: 'No autenticado' }, { status: 401 })
+    }
+
     const body = await request.json()
     const { name, description, company, companyId, zones } = body
 
@@ -104,12 +114,49 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Authorization: only gestor, admin, gerente can create projects
+    const isGestor = user.role === 'gestor'
+    const isAdmin = user.role === 'admin'
+    const isGerente = user.role === 'gerente'
+
+    if (!isGestor && !isAdmin && !isGerente) {
+      return NextResponse.json(
+        { error: 'No tienes permisos para crear proyectos' },
+        { status: 403 }
+      )
+    }
+
+    // Admin/gerente: verify they belong to the company they're creating a project for
+    if (!isGestor && companyId) {
+      const membership = await db.companyMember.findFirst({
+        where: { companyId, userId: user.id },
+      })
+      if (!membership) {
+        return NextResponse.json(
+          { error: 'Solo puedes crear proyectos en empresas donde eres miembro' },
+          { status: 403 }
+        )
+      }
+    }
+
+    // If admin has no companyId provided, find their first company
+    let effectiveCompanyId = companyId
+    if (!isGestor && !effectiveCompanyId) {
+      const companyMemberships = await db.companyMember.findMany({
+        where: { userId: user.id },
+        select: { companyId: true },
+      })
+      if (companyMemberships.length > 0) {
+        effectiveCompanyId = companyMemberships[0].companyId
+      }
+    }
+
     const project = await db.project.create({
       data: {
         name: name.trim(),
         description: description?.trim() || null,
         company: company.trim(),
-        companyId: companyId || null,
+        companyId: effectiveCompanyId || null,
         zones: {
           create: zones.map((zone: { name: string; description?: string; color?: string }) => ({
             name: zone.name.trim(),
@@ -128,6 +175,15 @@ export async function POST(request: NextRequest) {
         },
       },
     })
+
+    // Auto-assign the creator as a project member if admin/gerente
+    if (!isGestor) {
+      await db.projectMember.upsert({
+        where: { userId_projectId: { userId: user.id, projectId: project.id } },
+        create: { userId: user.id, projectId: project.id, role: user.role },
+        update: {},
+      })
+    }
 
     return NextResponse.json(
       {

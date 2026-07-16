@@ -315,6 +315,7 @@ export default function ProjectSetup() {
         name: projectName,
         description: projectDescription || undefined,
         company: companyName,
+        companyId: myCompany?.id || undefined,
         zones: zones.map((z) => ({
           name: z.name,
           description: z.description || undefined,

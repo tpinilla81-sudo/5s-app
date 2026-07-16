@@ -1,17 +1,59 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
+import { getAuthUser } from '@/lib/auth-helpers'
 
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
     const projectId = searchParams.get('projectId')
-    const companyScope = searchParams.get('companyScope') // "empresa" = all projects
+    const companyScope = searchParams.get('companyScope') // "empresa" = all projects in user's company
 
-    const where = projectId ? { projectId } : {}
+    // Get the authenticated user to scope data by company
+    const user = await getAuthUser(request)
+    const userRole = user?.role || 'empleado'
+    const userId: string | null = user?.id || null
+    const isGestor = userRole === 'gestor'
+
+    // Determine which project IDs the user can see
+    let allowedProjectIds: string[] | null = null // null = all (gestor)
+    if (!isGestor && userId) {
+      // Get project IDs from user's companies + direct memberships
+      const companyMemberships = await db.companyMember.findMany({
+        where: { userId },
+        select: { companyId: true },
+      })
+      const companyIds = companyMemberships.map(cm => cm.companyId)
+
+      const projects = await db.project.findMany({
+        where: {
+          active: true,
+          OR: [
+            { members: { some: { userId } } },
+            { companyId: { in: companyIds.length > 0 ? companyIds : ['__none__'] } },
+          ],
+        },
+        select: { id: true },
+      })
+      allowedProjectIds = projects.map(p => p.id)
+    }
+
+    // Build where clause scoping to allowed projects
+    let baseWhere: any = {}
+    if (projectId) {
+      // Specific project requested — verify access
+      if (allowedProjectIds && !allowedProjectIds.includes(projectId)) {
+        return NextResponse.json({ success: false, error: 'Sin permisos' }, { status: 403 })
+      }
+      baseWhere = { projectId }
+    } else if (allowedProjectIds) {
+      baseWhere = { projectId: { in: allowedProjectIds } }
+    }
+
+    const where = baseWhere
 
     // Get audit results with scores
     const auditResults = await db.auditResult.findMany({
-      where: projectId ? { projectId } : {},
+      where: baseWhere,
       select: {
         score: true,
         result: true,
@@ -34,13 +76,13 @@ export async function GET(request: NextRequest) {
 
     // Get progress items (zone-level)
     const progressItems = await db.progress.findMany({
-      where: projectId ? { projectId } : {},
+      where: baseWhere,
       select: { sStep: true, miniStep: true, completed: true, score: true, photoUrls: true },
     })
 
     // Also get employee-level progress (for individual steps like Formación/step 1)
     const employeeProgressItems = await db.employeeProgress.findMany({
-      where: projectId ? { projectId } : {},
+      where: baseWhere,
       select: { sStep: true, miniStep: true, completed: true, score: true },
     })
 
@@ -116,11 +158,13 @@ export async function GET(request: NextRequest) {
       db.actionItem.count({ where }),
     ])
 
-    // For company scope: get per-project breakdown
+    // For company scope: get per-project breakdown (scoped to user's companies)
     let perProjectBreakdown = null
     if (companyScope === 'empresa') {
       const projects = await db.project.findMany({
-        where: { active: true },
+        where: allowedProjectIds
+          ? { active: true, id: { in: allowedProjectIds } }
+          : { active: true },
         select: { id: true, name: true, company: true },
       })
 

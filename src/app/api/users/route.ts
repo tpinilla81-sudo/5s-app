@@ -1,27 +1,55 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createHash } from 'crypto'
 import { db } from '@/lib/db'
+import { getAuthUser } from '@/lib/auth-helpers'
 
 function hashPassword(password: string): string {
   return createHash('sha256').update(password).digest('hex')
 }
 
 // GET /api/users - List all users with their project memberships
+// Gestor sees all users; admin/gerente sees only users from their companies
 // ✅ UPDATED: Soporta ?search=email para búsqueda (utilizado por el panel de gestor)
 export async function GET(request: NextRequest) {
   try {
+    const user = await getAuthUser(request)
+    if (!user) {
+      return NextResponse.json({ success: false, error: 'No autenticado' }, { status: 401 })
+    }
+
     const { searchParams } = new URL(request.url)
     const search = searchParams.get('search')?.trim()
+    const isGestor = user.role === 'gestor'
 
-    // If search parameter provided, filter by email/name
-    const where = search && search.length >= 3
-      ? {
-          OR: [
-            { email: { contains: search.toLowerCase() } },
-            { name: { contains: search, mode: 'insensitive' as const } },
-          ],
-        }
-      : {}
+    // Build base where clause
+    let where: any = {}
+    if (search && search.length >= 3) {
+      where = {
+        OR: [
+          { email: { contains: search.toLowerCase() } },
+          { name: { contains: search, mode: 'insensitive' as const } },
+        ],
+      }
+    }
+
+    // Non-gestor: only see users from their companies
+    if (!isGestor) {
+      const companyMemberships = await db.companyMember.findMany({
+        where: { userId: user.id },
+        select: { companyId: true },
+      })
+      const companyIds = companyMemberships.map(cm => cm.companyId)
+
+      // Filter to users who are members of the same companies
+      where = {
+        ...where,
+        companyMemberships: {
+          some: {
+            companyId: { in: companyIds.length > 0 ? companyIds : ['__none__'] },
+          },
+        },
+      }
+    }
 
     const users = await db.user.findMany({
       where,
