@@ -180,22 +180,29 @@ export default function FormacionModal({ open, onClose, sStep, miniStep }: Forma
 
   const allAnswered = Object.keys(answers).length === examQuestions.length;
 
-  const handleAdminSkip = async () => {
+  const handleSkipStep = async (reason: string = 'Paso completado sin plantilla') => {
     try {
       const res = await fetch(`/api/progress/step?sStep=${sStep}&miniStep=${miniStep}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ completed: true, score: 100, notes: 'Completado por administrador (skip)', projectId: currentProject?.id, zoneId: currentZone?.id || null }),
+        body: JSON.stringify({ completed: true, score: 100, notes: reason, projectId: currentProject?.id, zoneId: currentZone?.id || null, skipMissingTemplate: true }),
       });
       const json = await res.json();
       if (json.success) {
         await fetchProgress();
+        // Also refresh employee progress
+        const { currentProject, currentZone, fetchEmployeeProgress } = use5SStore.getState();
+        if (currentProject && currentZone) {
+          await fetchEmployeeProgress(currentProject.id, currentZone.id);
+        }
         onClose();
       }
     } catch (error) {
-      console.error('Error admin skip:', error);
+      console.error('Error skipping step:', error);
     }
   };
+
+  const handleAdminSkip = () => handleSkipStep('Completado por administrador (skip)');
 
   return (
     <Dialog open={open} onOpenChange={() => onClose()}>
@@ -261,8 +268,17 @@ export default function FormacionModal({ open, onClose, sStep, miniStep }: Forma
                 <BookOpen className="h-12 w-12 text-amber-500 mx-auto mb-3" />
                 <h3 className="text-lg font-bold mb-2">Sin formación configurada</h3>
                 <p className="text-sm text-muted-foreground max-w-md mx-auto">
-                  El administrador no ha configurado contenido de formación para S{sStep}. Contacta con el administrador para que configure la plantilla desde el panel de administración.
+                  El administrador no ha configurado contenido de formación para S{sStep}. Puedes pasar este paso y completarlo más tarde.
                 </p>
+                {!isReadOnly && (
+                  <Button
+                    variant="outline"
+                    className="mt-4"
+                    onClick={() => handleSkipStep('Paso sin formación - sin plantilla configurada')}
+                  >
+                    Pasar sin formación
+                  </Button>
+                )}
               </div>
             ) : (
               <div className="space-y-4">
@@ -333,7 +349,17 @@ export default function FormacionModal({ open, onClose, sStep, miniStep }: Forma
                   ))}
                 </div>
 
-                {!examResult.passed && (
+                {examResult.passed ? (
+                  <div className="flex justify-center">
+                    <Button
+                      onClick={onClose}
+                      style={{ backgroundColor: sStepData?.color }}
+                      className="text-white"
+                    >
+                      Continuar al siguiente paso
+                    </Button>
+                  </div>
+                ) : (
                   <div className="flex justify-center">
                     <Button
                       variant="outline"
@@ -354,8 +380,17 @@ export default function FormacionModal({ open, onClose, sStep, miniStep }: Forma
                   <AlertCircle className="h-12 w-12 text-amber-500 mx-auto mb-3" />
                   <h3 className="text-lg font-bold mb-2">Sin examen configurado</h3>
                   <p className="text-sm text-muted-foreground max-w-md mx-auto">
-                    El administrador no ha configurado un examen para S{sStep}. Contacta con el administrador para que configure la plantilla desde el panel de administración.
+                    El administrador no ha configurado un examen para S{sStep}. Puedes pasar este paso y completarlo más tarde.
                   </p>
+                  {!isReadOnly && (
+                    <Button
+                      variant="outline"
+                      className="mt-4"
+                      onClick={() => handleSkipStep('Paso sin examen - sin plantilla configurada')}
+                    >
+                      Pasar sin examen
+                    </Button>
+                  )}
                 </div>
               ) : (
               <div className="text-center py-8 space-y-4">

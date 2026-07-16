@@ -195,7 +195,7 @@ export async function PUT(request: NextRequest) {
 
     // Parse body once
     const body = await request.json()
-    const { completed, score, notes, photoUrls, projectId, zoneId } = body
+    const { completed, score, notes, photoUrls, projectId, zoneId, skipMissingTemplate } = body
 
     // Permission-based access control — check via rolePermissionConfig
     const sessionRes = await fetch(new URL('/api/auth', request.url).toString(), {
@@ -216,7 +216,8 @@ export async function PUT(request: NextRequest) {
     }
 
     // Validate step prerequisites when marking as completed
-    if (completed && projectId) {
+    // Allow skipping prerequisites when no template is configured (skipMissingTemplate)
+    if (completed && projectId && !skipMissingTemplate) {
       const validation = await validateStepPrerequisites(sStepNum, miniStepNum, projectId, zoneId || null, user.role)
       if (!validation.valid) {
         return NextResponse.json({ success: false, error: validation.error }, { status: 400 })

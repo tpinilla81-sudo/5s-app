@@ -846,6 +846,23 @@ export default function InventarioModal({ open, onClose, sStep, miniStep }: Inve
     }
   };
 
+  const handleSkipMissingTemplate = async () => {
+    try {
+      const res = await fetch(`/api/progress/step?sStep=${sStep}&miniStep=${miniStep}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ completed: true, score: 100, notes: 'Paso sin plantilla - sin plantilla configurada', projectId: currentProject?.id, zoneId: currentZone?.id || null, skipMissingTemplate: true }),
+      });
+      const json = await res.json();
+      if (json.success) {
+        await fetchProgress();
+        onClose();
+      }
+    } catch (error) {
+      console.error('Error skip missing template:', error);
+    }
+  };
+
   const handleExport = () => {
     const extraHeaders = config.extraFields.map(f => f.label);
     const headerRow = ['Nombre', 'Ubicación', 'Categoría', 'Total exist.', 'Necesarios', 'Innecesarios', 'Precio (€)', ...extraHeaders, 'Acción'].join(',');
@@ -943,8 +960,13 @@ export default function InventarioModal({ open, onClose, sStep, miniStep }: Inve
             <h3 className="text-xl font-bold text-gray-500 mb-2">Sin plantilla configurada</h3>
             <p className="text-muted-foreground max-w-md mx-auto">
               El administrador no ha configurado ninguna plantilla de inventario para S{sStep} ({sStepData?.japaneseName}) en el Paso 3.
-              Contacta con el administrador para que configure la plantilla desde el panel de administración.
+              Puedes pasar este paso y completarlo más tarde.
             </p>
+            {!isReadOnly && (
+              <Button variant="outline" className="mt-4" onClick={handleSkipMissingTemplate}>
+                Pasar sin plantilla
+              </Button>
+            )}
           </div>
         ) : isCompleted ? (
           <div className="text-center py-8">
