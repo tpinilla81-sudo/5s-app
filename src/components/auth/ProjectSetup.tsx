@@ -260,7 +260,7 @@ export default function ProjectSetup() {
       case 1:
         return projectName.trim() !== ''
       case 2:
-        return companyName.trim() !== ''
+        return true // Company name is pre-filled by gestor; all other fields optional
       case 3:
         return zones.length > 0 && zones.every((z) => z.name.trim() !== '')
       case 4:
@@ -272,10 +272,51 @@ export default function ProjectSetup() {
     }
   }
 
+  // ─── Postal code autocomplete (Spain) ─────────────────────────────
+  const [cpLoading, setCpLoading] = useState(false)
+  const handlePostalCodeChange = async (cp: string) => {
+    setCompanyPostalCode(cp)
+    // Only search when 5 digits (Spanish CP format)
+    if (cp.length === 5 && /^\d{5}$/.test(cp)) {
+      setCpLoading(true)
+      try {
+        const res = await fetch(`https://zip-api.eu/api/v1/info/ES-${cp}`)
+        if (res.ok) {
+          const data = await res.json()
+          if (data.place) setCompanyCity(data.place)
+          if (data.admin_name) setCompanyProvince(data.admin_name)
+        }
+      } catch {
+        // Silently ignore — API may be unavailable
+      } finally {
+        setCpLoading(false)
+      }
+    }
+  }
+
+  const [billingCpLoading, setBillingCpLoading] = useState(false)
+  const handleBillingPostalCodeChange = async (cp: string) => {
+    setBillingPostalCode(cp)
+    if (cp.length === 5 && /^\d{5}$/.test(cp)) {
+      setBillingCpLoading(true)
+      try {
+        const res = await fetch(`https://zip-api.eu/api/v1/info/ES-${cp}`)
+        if (res.ok) {
+          const data = await res.json()
+          if (data.place) setBillingCity(data.place)
+        }
+      } catch {
+        // Silently ignore
+      } finally {
+        setBillingCpLoading(false)
+      }
+    }
+  }
+
   const handleNext = async () => {
-    // When moving from Step 2 (Company), save company data
+    // When moving from Step 2 (Company), save company data (non-blocking)
     if (step === 2) {
-      await saveCompanyData()
+      saveCompanyData() // Fire and forget — don't block navigation
     }
     setStep(step + 1)
   }
@@ -608,13 +649,13 @@ export default function ProjectSetup() {
                     Datos de la Empresa
                   </CardTitle>
                   <CardDescription>
-                    Completa los datos de tu empresa. El nombre ya viene rellenado por el gestor.
+                    Todos los campos son opcionales. Puedes completarlos más tarde. El nombre ya viene rellenado por el gestor.
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div className="space-y-1 sm:col-span-2">
-                      <Label className="text-xs">Nombre de la Empresa *</Label>
+                      <Label className="text-xs">Nombre de la Empresa</Label>
                       <Input value={companyName} onChange={(e) => setCompanyName(e.target.value)} readOnly={!!myCompany} className={myCompany ? 'bg-gray-50 cursor-not-allowed' : ''} />
                       {myCompany && <p className="text-[10px] text-muted-foreground">Asignada por el gestor</p>}
                     </div>
@@ -636,16 +677,20 @@ export default function ProjectSetup() {
                       <Input placeholder="Calle, número, piso..." value={companyAddress} onChange={(e) => setCompanyAddress(e.target.value)} />
                     </div>
                     <div className="space-y-1">
+                      <Label className="text-xs">Código Postal</Label>
+                      <div className="relative">
+                        <Input placeholder="Ej: 28001" value={companyPostalCode} onChange={(e) => handlePostalCodeChange(e.target.value)} maxLength={5} />
+                        {cpLoading && <Loader2 className="absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 text-green-500 animate-spin" />}
+                      </div>
+                      <p className="text-[10px] text-muted-foreground">Al escribir 5 dígitos se autocompletará ciudad y provincia</p>
+                    </div>
+                    <div className="space-y-1">
                       <Label className="text-xs">Ciudad</Label>
                       <Input placeholder="Ej: Madrid" value={companyCity} onChange={(e) => setCompanyCity(e.target.value)} />
                     </div>
                     <div className="space-y-1">
                       <Label className="text-xs">Provincia</Label>
                       <Input placeholder="Ej: Madrid" value={companyProvince} onChange={(e) => setCompanyProvince(e.target.value)} />
-                    </div>
-                    <div className="space-y-1">
-                      <Label className="text-xs">Código Postal</Label>
-                      <Input placeholder="Ej: 28001" value={companyPostalCode} onChange={(e) => setCompanyPostalCode(e.target.value)} />
                     </div>
                     <div className="space-y-1">
                       <Label className="text-xs">País</Label>
@@ -670,7 +715,7 @@ export default function ProjectSetup() {
                     Datos de Facturación
                   </CardTitle>
                   <CardDescription>
-                    Datos necesarios para la suscripción y facturación
+                    Opcional — Puedes completarlos más tarde desde la configuración
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
@@ -701,7 +746,10 @@ export default function ProjectSetup() {
                     </div>
                     <div className="space-y-1">
                       <Label className="text-xs">Código Postal (Facturación)</Label>
-                      <Input placeholder="CP" value={billingPostalCode} onChange={(e) => setBillingPostalCode(e.target.value)} />
+                      <div className="relative">
+                        <Input placeholder="CP" value={billingPostalCode} onChange={(e) => handleBillingPostalCodeChange(e.target.value)} maxLength={5} />
+                        {billingCpLoading && <Loader2 className="absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 text-blue-500 animate-spin" />}
+                      </div>
                     </div>
                   </div>
                 </CardContent>
@@ -714,7 +762,7 @@ export default function ProjectSetup() {
                     Persona de Contacto
                   </CardTitle>
                   <CardDescription>
-                    Datos de la persona de contacto principal de la empresa
+                    Opcional — Puedes completarlos más tarde
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
