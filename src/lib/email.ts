@@ -7,23 +7,18 @@ function isValidResendKey(key: string | undefined): key is string {
   return key.startsWith('re_') && key.length >= 10 && /^[a-zA-Z0-9_]+$/.test(key)
 }
 
-// Fallback key — used when RESEND_API_KEY env var is not configured or invalid.
-// TODO: Move to Vercel env var and remove this fallback for better security.
-const RESEND_FALLBACK_KEY = 're_Mm6ttJsG_C9U8KFX9BFMxpCokHQaC8NSK'
-
-// Resolve the effective API key: prefer valid env var, fall back to hardcoded key
-function getEffectiveKey(): string {
+// Resolve the effective API key from environment variable only
+function getEffectiveKey(): string | null {
   const envKey = process.env.RESEND_API_KEY
   if (isValidResendKey(envKey)) return envKey!
-  console.log('[EMAIL] Env var RESEND_API_KEY missing or invalid, using fallback key')
-  return RESEND_FALLBACK_KEY
+  console.log('[EMAIL] Env var RESEND_API_KEY missing or invalid. Please configure it in Vercel → Settings → Environment Variables.')
+  return null
 }
 
 // Lazy-initialize Resend only when actually sending (avoid build-time crash)
 let _resend: Resend | null = null
-function getResend(): Resend {
+function getResend(key: string): Resend {
   if (!_resend) {
-    const key = getEffectiveKey()
     _resend = new Resend(key)
   }
   return _resend
@@ -45,14 +40,13 @@ const DEFAULT_FROM = '5S App <onboarding@resend.dev>'
 export async function sendEmail({ to, subject, html, from }: EmailOptions): Promise<{ success: boolean; error?: string }> {
   const key = getEffectiveKey()
 
-  // This should never happen since fallback exists, but just in case
-  if (!key || !isValidResendKey(key)) {
+  if (!key) {
     console.log(`[EMAIL] No valid API key available. Would send to: ${Array.isArray(to) ? to.join(', ') : to}`)
-    return { success: false, error: 'No hay API key de Resend válida configurada' }
+    return { success: false, error: 'RESEND_API_KEY no configurada. Ve a Vercel → Settings → Environment Variables y añade tu API key de Resend (empieza con "re_").' }
   }
 
   try {
-    const resend = getResend()
+    const resend = getResend(key)
     const { error } = await resend.emails.send({
       from: from || DEFAULT_FROM,
       to: Array.isArray(to) ? to : [to],
