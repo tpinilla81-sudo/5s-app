@@ -8,6 +8,8 @@ import {
   PDCA_STEPS,
   PDCA_TEMPLATES,
   AUDIT_PASS_THRESHOLD,
+  MC_SECTIONS,
+  MC_STEP_CONFIG,
 } from '@/lib/5s-constants';
 import type { AuditSection, PDCAStep } from '@/lib/5s-constants';
 import { fetchAllChecklistTemplates } from '@/lib/checklist-templates';
@@ -136,6 +138,18 @@ const ESTADO_LABELS: Record<string, string> = {
   cerrada: 'Cerrada',
 };
 
+// Objetivo interface
+interface ObjetivoItem {
+  id: string;
+  title: string;
+  description: string;
+  responsable: string;
+  deadline: string | null;
+  status: 'pending' | 'in_progress' | 'completed';
+  pdcaPhase: string;
+  createdAt: string;
+}
+
 export default function MaintenanceView({ embedded }: MaintenanceViewProps = {}) {
   const { setCurrentView, currentProject, currentZone, fetchProgress } = use5SStore();
   const [showQuarterlyAudit, setShowQuarterlyAudit] = useState(false);
@@ -153,7 +167,7 @@ export default function MaintenanceView({ embedded }: MaintenanceViewProps = {})
   const [actionStats, setActionStats] = useState({ abierta: 0, en_proceso: 0, resuelta: 0, cerrada: 0 });
   const [stats, setStats] = useState<any>(null);
   const [isLoadingHistory, setIsLoadingHistory] = useState(true);
-  const [activeTab, setActiveTab] = useState<'overview' | 'weekly' | 'monthly' | 'quarterly' | 'actions' | 'counters' | 'pdca'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'weekly' | 'monthly' | 'quarterly' | 'actions' | 'counters' | 'pdca' | 'objetivos'>('overview');
   const [selectedPDCAStep, setSelectedPDCAStep] = useState<number>(1); // 1=D, 2=P, 3=C, 4=A
 
   // Action plan form
@@ -169,6 +183,11 @@ export default function MaintenanceView({ embedded }: MaintenanceViewProps = {})
   const [kpis, setKpis] = useState<KPIData[]>([]);
   const [showNewKpi, setShowNewKpi] = useState(false);
   const [newKpi, setNewKpi] = useState({ name: '', objective: '', actual: 0, target: 100, unit: '%', frequency: 'mensual', responsable: '' });
+
+  // Objetivos
+  const [objetivos, setObjetivos] = useState<ObjetivoItem[]>([]);
+  const [showNewObjetivo, setShowNewObjetivo] = useState(false);
+  const [newObjetivo, setNewObjetivo] = useState({ title: '', description: '', responsable: '', deadline: '', pdcaPhase: 'plan' });
 
   useEffect(() => {
     loadData();
@@ -386,6 +405,32 @@ export default function MaintenanceView({ embedded }: MaintenanceViewProps = {})
     setKpis(prev => prev.filter(k => k.id !== id));
   };
 
+  // ─── Objetivos handlers ──────────────────────────────────────────────────
+  const handleAddObjetivo = () => {
+    if (!newObjetivo.title.trim()) return;
+    const objetivo: ObjetivoItem = {
+      id: `obj_${Date.now()}`,
+      title: newObjetivo.title,
+      description: newObjetivo.description,
+      responsable: newObjetivo.responsable,
+      deadline: newObjetivo.deadline || null,
+      status: 'pending',
+      pdcaPhase: newObjetivo.pdcaPhase,
+      createdAt: new Date().toISOString(),
+    };
+    setObjetivos(prev => [...prev, objetivo]);
+    setNewObjetivo({ title: '', description: '', responsable: '', deadline: '', pdcaPhase: 'plan' });
+    setShowNewObjetivo(false);
+  };
+
+  const handleUpdateObjetivoStatus = (id: string, status: 'pending' | 'in_progress' | 'completed') => {
+    setObjetivos(prev => prev.map(o => o.id === id ? { ...o, status } : o));
+  };
+
+  const handleDeleteObjetivo = (id: string) => {
+    setObjetivos(prev => prev.filter(o => o.id !== id));
+  };
+
   // Get PDCA items for current step
   const currentPdcaItems = pdcaItems.filter(i => i.letter === PDCA_STEPS.find(s => s.id === selectedPDCAStep)?.letter);
   const currentKpis = kpis.filter(k => k.pdcaStep === selectedPDCAStep);
@@ -397,6 +442,7 @@ export default function MaintenanceView({ embedded }: MaintenanceViewProps = {})
   const tabs = [
     { key: 'overview', label: 'Resumen', icon: BarChart3 },
     { key: 'pdca', label: 'Ciclo PDCA', icon: RotateCcw },
+    { key: 'objetivos', label: 'Objetivos', icon: Target },
     { key: 'weekly', label: 'Semanal', icon: SprayCan },
     { key: 'monthly', label: 'Mensual', icon: Calendar },
     { key: 'quarterly', label: 'Trimestral', icon: ShieldCheck },
@@ -964,6 +1010,167 @@ export default function MaintenanceView({ embedded }: MaintenanceViewProps = {})
                     })}
                   </div>
                 )}
+              </CardContent>
+            </Card>
+          )}
+        </div>
+      )}
+
+      {/* ─── OBJETIVOS TAB ─── */}
+      {activeTab === 'objetivos' && (
+        <div className="space-y-4">
+          <Card className="border-green-200 bg-gradient-to-r from-green-50 to-emerald-50">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center text-white shadow-md">
+                    <Target className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-bold text-green-900">Objetivos de Mejora Continua</h3>
+                    <p className="text-xs text-green-700">Define y sigue los objetivos de mejora para cada fase del ciclo PDCA.</p>
+                  </div>
+                </div>
+                <Button size="sm" onClick={() => setShowNewObjetivo(true)} className="gap-1 h-7 text-xs bg-green-600 hover:bg-green-700">
+                  <Plus className="h-3 w-3" /> Nuevo Objetivo
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* New Objetivo Form */}
+          {showNewObjetivo && (
+            <Card className="border-green-200">
+              <CardContent className="p-4 space-y-3">
+                <h4 className="text-sm font-semibold text-green-800">Nuevo Objetivo</h4>
+                <div>
+                  <label className="text-xs font-medium">Título del objetivo *</label>
+                  <Input placeholder="Ej: Reducir defectos en un 30%" value={newObjetivo.title} onChange={e => setNewObjetivo(p => ({ ...p, title: e.target.value }))} className="mt-1 h-8 text-xs" />
+                </div>
+                <div>
+                  <label className="text-xs font-medium">Descripción</label>
+                  <Textarea placeholder="Describe el objetivo en detalle..." value={newObjetivo.description} onChange={e => setNewObjetivo(p => ({ ...p, description: e.target.value }))} className="mt-1 text-xs" rows={2} />
+                </div>
+                <div className="grid grid-cols-3 gap-2">
+                  <div>
+                    <label className="text-xs font-medium">Responsable</label>
+                    <Input placeholder="Nombre" value={newObjetivo.responsable} onChange={e => setNewObjetivo(p => ({ ...p, responsable: e.target.value }))} className="mt-1 h-8 text-xs" />
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium">Fecha límite</label>
+                    <Input type="date" value={newObjetivo.deadline} onChange={e => setNewObjetivo(p => ({ ...p, deadline: e.target.value }))} className="mt-1 h-8 text-xs" />
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium">Fase PDCA</label>
+                    <Select value={newObjetivo.pdcaPhase} onValueChange={val => setNewObjetivo(p => ({ ...p, pdcaPhase: val }))}>
+                      <SelectTrigger className="mt-1 h-8 text-xs">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="do">D — Do (Hacer)</SelectItem>
+                        <SelectItem value="plan">P — Plan (Planificar)</SelectItem>
+                        <SelectItem value="check">C — Check (Verificar)</SelectItem>
+                        <SelectItem value="act">A — Act (Actuar)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <div className="flex justify-end gap-2">
+                  <Button variant="outline" size="sm" onClick={() => setShowNewObjetivo(false)} className="h-7 text-xs">Cancelar</Button>
+                  <Button size="sm" onClick={handleAddObjetivo} disabled={!newObjetivo.title.trim()} className="h-7 text-xs bg-green-600 hover:bg-green-700 text-white">Agregar</Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Objetivos List by PDCA Phase */}
+          {PDCA_STEPS.map(step => {
+            const phaseObjetivos = objetivos.filter(o => o.pdcaPhase === step.letter.toLowerCase());
+            if (phaseObjetivos.length === 0 && step.id !== 1) return null;
+            return (
+              <Card key={step.id} style={{ borderColor: step.color + '40' }}>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium flex items-center gap-2">
+                    <div className="w-7 h-7 rounded-full flex items-center justify-center text-white text-xs font-bold" style={{ backgroundColor: step.color }}>
+                      {step.letter}
+                    </div>
+                    <span style={{ color: step.color }}>{step.name} — {step.spanishName}</span>
+                    <Badge variant="outline" className="text-[10px]" style={{ color: step.color, borderColor: step.color + '30' }}>
+                      {phaseObjetivos.length} objetivo{phaseObjetivos.length !== 1 ? 's' : ''}
+                    </Badge>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {phaseObjetivos.length === 0 ? (
+                    <div className="text-center py-3">
+                      <Target className="h-6 w-6 text-muted-foreground/30 mx-auto mb-1" />
+                      <p className="text-xs text-muted-foreground">No hay objetivos para esta fase</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      {phaseObjetivos.map(obj => (
+                        <div key={obj.id} className="flex items-center gap-3 p-2 rounded-lg border bg-white">
+                          <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold ${
+                            obj.status === 'completed' ? 'bg-green-100 text-green-700' :
+                            obj.status === 'in_progress' ? 'bg-amber-100 text-amber-700' :
+                            'bg-gray-100 text-gray-600'
+                          }`}>
+                            {obj.status === 'completed' ? <CheckCircle className="h-3.5 w-3.5" /> :
+                             obj.status === 'in_progress' ? <Clock className="h-3.5 w-3.5" /> :
+                             <Target className="h-3.5 w-3.5" />}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className={`text-xs font-medium ${obj.status === 'completed' ? 'line-through text-muted-foreground' : ''}`}>{obj.title}</p>
+                            {obj.description && <p className="text-[10px] text-muted-foreground truncate">{obj.description}</p>}
+                            <div className="flex items-center gap-2 mt-0.5">
+                              {obj.responsable && <span className="text-[10px] text-muted-foreground"><User className="h-2.5 w-2.5 inline mr-0.5" />{obj.responsable}</span>}
+                              {obj.deadline && <span className="text-[10px] text-muted-foreground"><Calendar className="h-2.5 w-2.5 inline mr-0.5" />{new Date(obj.deadline).toLocaleDateString('es-ES')}</span>}
+                            </div>
+                          </div>
+                          <Select value={obj.status} onValueChange={val => handleUpdateObjetivoStatus(obj.id, val as any)}>
+                            <SelectTrigger className="h-6 w-24 text-[10px]">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="pending">Pendiente</SelectItem>
+                              <SelectItem value="in_progress">En curso</SelectItem>
+                              <SelectItem value="completed">Completado</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <Button variant="ghost" size="sm" className="h-6 w-6 p-0 text-destructive" onClick={() => handleDeleteObjetivo(obj.id)}>
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            );
+          })}
+
+          {/* Objetivos Summary */}
+          {objetivos.length > 0 && (
+            <Card className="border-green-100">
+              <CardContent className="p-4">
+                <h4 className="text-sm font-semibold mb-2 flex items-center gap-2">
+                  <BarChart3 className="h-4 w-4 text-green-600" />
+                  Resumen de Objetivos
+                </h4>
+                <div className="grid grid-cols-3 gap-3 text-center">
+                  <div className="p-2 rounded-lg bg-gray-50">
+                    <p className="text-lg font-bold text-gray-600">{objetivos.filter(o => o.status === 'pending').length}</p>
+                    <p className="text-[10px] text-gray-700 font-medium">Pendientes</p>
+                  </div>
+                  <div className="p-2 rounded-lg bg-amber-50">
+                    <p className="text-lg font-bold text-amber-600">{objetivos.filter(o => o.status === 'in_progress').length}</p>
+                    <p className="text-[10px] text-amber-700 font-medium">En curso</p>
+                  </div>
+                  <div className="p-2 rounded-lg bg-green-50">
+                    <p className="text-lg font-bold text-green-600">{objetivos.filter(o => o.status === 'completed').length}</p>
+                    <p className="text-[10px] text-green-700 font-medium">Completados</p>
+                  </div>
+                </div>
               </CardContent>
             </Card>
           )}

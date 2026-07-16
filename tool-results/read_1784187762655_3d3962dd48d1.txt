@@ -1,0 +1,1425 @@
+     1→'use client';
+     2→
+     3→import { useState, useEffect } from 'react';
+     4→import { motion } from 'framer-motion';
+     5→import { use5SStore } from '@/lib/store';
+     6→import {
+     7→  S_STEPS,
+     8→  PDCA_STEPS,
+     9→  PDCA_TEMPLATES,
+    10→  AUDIT_PASS_THRESHOLD,
+    11→} from '@/lib/5s-constants';
+    12→import type { AuditSection, PDCAStep } from '@/lib/5s-constants';
+    13→import { fetchAllChecklistTemplates } from '@/lib/checklist-templates';
+    14→import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+    15→import { Badge } from '@/components/ui/badge';
+    16→import { Button } from '@/components/ui/button';
+    17→import { Input } from '@/components/ui/input';
+    18→import { Textarea } from '@/components/ui/textarea';
+    19→import {
+    20→  Select,
+    21→  SelectContent,
+    22→  SelectItem,
+    23→  SelectTrigger,
+    24→  SelectValue,
+    25→} from '@/components/ui/select';
+    26→import {
+    27→  Trophy,
+    28→  ShieldCheck,
+    29→  TrendingUp,
+    30→  Calendar,
+    31→  Clock,
+    32→  CheckCircle,
+    33→  AlertCircle,
+    34→  Plus,
+    35→  ArrowLeft,
+    36→  Zap,
+    37→  FileText,
+    38→  Sparkles,
+    39→  BarChart3,
+    40→  ClipboardList,
+    41→  Trash2,
+    42→  ChevronDown,
+    43→  ChevronRight,
+    44→  ListChecks,
+    45→  User,
+    46→  SprayCan,
+    47→  Play,
+    48→  SearchCheck,
+    49→  Rocket,
+    50→  RotateCcw,
+    51→  BookOpen,
+    52→  Target,
+    53→  Camera,
+    54→  Standard as StandardIcon,
+    55→} from 'lucide-react';
+    56→import QuarterlyAuditModal from './QuarterlyAuditModal';
+    57→import PeriodicAuditModal from './PeriodicAuditModal';
+    58→
+    59→// Icon map for PDCA steps
+    60→const PDCA_ICONS: Record<string, React.ReactNode> = {
+    61→  D: <Play className="h-4 w-4" />,
+    62→  P: <ClipboardList className="h-4 w-4" />,
+    63→  C: <SearchCheck className="h-4 w-4" />,
+    64→  A: <Rocket className="h-4 w-4" />,
+    65→};
+    66→
+    67→interface AuditRecord {
+    68→  id: string;
+    69→  auditorName: string;
+    70→  result: string;
+    71→  score: number;
+    72→  observations: string | null;
+    73→  auditType: string;
+    74→  auditDate: string;
+    75→}
+    76→
+    77→interface ActionItemData {
+    78→  id: string;
+    79→  sStep: number;
+    80→  itemId: string;
+    81→  itemDescription: string;
+    82→  hallazgo: string;
+    83→  responsable: string | null;
+    84→  prioridad: string;
+    85→  estado: string;
+    86→  fechaLimite: string | null;
+    87→  source?: string;
+    88→  createdAt: string;
+    89→}
+    90→
+    91→interface MaintenanceViewProps {
+    92→  embedded?: boolean;
+    93→}
+    94→
+    95→// KPI interface
+    96→interface KPIData {
+    97→  id: string;
+    98→  name: string;
+    99→  objective: string;
+   100→  actual: number;
+   101→  target: number;
+   102→  unit: string;
+   103→  pdcaStep: number; // 1=D, 2=P, 3=C, 4=A
+   104→  frequency: string;
+   105→  responsable: string;
+   106→  trend: 'up' | 'down' | 'stable';
+   107→}
+   108→
+   109→// PDCA Board Item
+   110→interface PDCAItem {
+   111→  id: string;
+   112→  letter: string; // D, P, C, A
+   113→  title: string;
+   114→  description: string;
+   115→  responsable: string;
+   116→  status: 'pending' | 'in_progress' | 'completed';
+   117→  dueDate: string | null;
+   118→  createdAt: string;
+   119→}
+   120→
+   121→const PRIORIDAD_COLORS: Record<string, string> = {
+   122→  alta: 'bg-red-100 text-red-800',
+   123→  media: 'bg-amber-100 text-amber-800',
+   124→  baja: 'bg-green-100 text-green-800',
+   125→};
+   126→const ESTADO_COLORS: Record<string, string> = {
+   127→  abierta: 'bg-red-100 text-red-700',
+   128→  en_proceso: 'bg-amber-100 text-amber-700',
+   129→  resuelta: 'bg-green-100 text-green-700',
+   130→  cerrada: 'bg-gray-100 text-gray-600',
+   131→};
+   132→const ESTADO_LABELS: Record<string, string> = {
+   133→  abierta: 'Abierta',
+   134→  en_proceso: 'En proceso',
+   135→  resuelta: 'Resuelta',
+   136→  cerrada: 'Cerrada',
+   137→};
+   138→
+   139→export default function MaintenanceView({ embedded }: MaintenanceViewProps = {}) {
+   140→  const { setCurrentView, currentProject, currentZone, fetchProgress } = use5SStore();
+   141→  const [showQuarterlyAudit, setShowQuarterlyAudit] = useState(false);
+   142→  const [showWeeklyAudit, setShowWeeklyAudit] = useState(false);
+   143→  const [showMonthlyAudit, setShowMonthlyAudit] = useState(false);
+   144→
+   145→  // Dynamic checklist data loaded from API templates
+   146→  const [weeklySections, setWeeklySections] = useState<AuditSection[]>([]);
+   147→  const [monthlySections, setMonthlySections] = useState<AuditSection[]>([]);
+   148→  const [weeklyTotalItems, setWeeklyTotalItems] = useState(0);
+   149→  const [monthlyTotalItems, setMonthlyTotalItems] = useState(0);
+   150→
+   151→  const [auditHistory, setAuditHistory] = useState<AuditRecord[]>([]);
+   152→  const [actionItems, setActionItems] = useState<ActionItemData[]>([]);
+   153→  const [actionStats, setActionStats] = useState({ abierta: 0, en_proceso: 0, resuelta: 0, cerrada: 0 });
+   154→  const [stats, setStats] = useState<any>(null);
+   155→  const [isLoadingHistory, setIsLoadingHistory] = useState(true);
+   156→  const [activeTab, setActiveTab] = useState<'overview' | 'weekly' | 'monthly' | 'quarterly' | 'actions' | 'counters' | 'pdca'>('overview');
+   157→  const [selectedPDCAStep, setSelectedPDCAStep] = useState<number>(1); // 1=D, 2=P, 3=C, 4=A
+   158→
+   159→  // Action plan form
+   160→  const [showNewAction, setShowNewAction] = useState(false);
+   161→  const [newAction, setNewAction] = useState({ descripcion: '', responsable: '', prioridad: 'media', fechaLimite: '' });
+   162→
+   163→  // PDCA board items
+   164→  const [pdcaItems, setPdcaItems] = useState<PDCAItem[]>([]);
+   165→  const [showNewPdcaItem, setShowNewPdcaItem] = useState(false);
+   166→  const [newPdcaItem, setNewPdcaItem] = useState({ title: '', description: '', responsable: '', dueDate: '' });
+   167→
+   168→  // KPIs
+   169→  const [kpis, setKpis] = useState<KPIData[]>([]);
+   170→  const [showNewKpi, setShowNewKpi] = useState(false);
+   171→  const [newKpi, setNewKpi] = useState({ name: '', objective: '', actual: 0, target: 100, unit: '%', frequency: 'mensual', responsable: '' });
+   172→
+   173→  useEffect(() => {
+   174→    loadData();
+   175→  }, [currentProject]);
+   176→
+   177→  // Load checklist templates from API and compute weekly/monthly variants
+   178→  useEffect(() => {
+   179→    const loadChecklists = async () => {
+   180→      const templatesMap = await fetchAllChecklistTemplates('auditoria');
+   181→      const s3Sections = templatesMap[3] || [];
+   182→      setWeeklySections(s3Sections);
+   183→      setWeeklyTotalItems(s3Sections.reduce((sum, s) => sum + s.items.length, 0));
+   184→      const monthlyList: AuditSection[] = [];
+   185→      for (let s = 1; s <= 5; s++) {
+   186→        const sSections = templatesMap[s] || [];
+   187→        for (const section of sSections) {
+   188→          monthlyList.push({ ...section, items: section.items.slice(0, 2) });
+   189→        }
+   190→      }
+   191→      setMonthlySections(monthlyList);
+   192→      setMonthlyTotalItems(monthlyList.reduce((sum, s) => sum + s.items.length, 0));
+   193→    };
+   194→    loadChecklists();
+   195→  }, []);
+   196→
+   197→  const loadData = async () => {
+   198→    setIsLoadingHistory(true);
+   199→    await Promise.all([loadAuditHistory(), loadActionItems(), loadStats()]);
+   200→    setIsLoadingHistory(false);
+   201→  };
+   202→
+   203→  const loadAuditHistory = async () => {
+   204→    try {
+   205→      const params = currentProject ? `?projectId=${currentProject.id}` : '';
+   206→      const res = await fetch(`/api/audit${params}`);
+   207→      const data = await res.json();
+   208→      if (data.success && data.audits) {
+   209→        const sorted = data.audits.sort((a: any, b: any) => new Date(b.auditDate).getTime() - new Date(a.auditDate).getTime());
+   210→        setAuditHistory(sorted);
+   211→      }
+   212→    } catch (error) { console.error('Error loading audit history:', error); }
+   213→  };
+   214→
+   215→  const loadActionItems = async () => {
+   216→    try {
+   217→      const params = currentProject ? `?projectId=${currentProject.id}` : '';
+   218→      const res = await fetch(`/api/actions${params}`);
+   219→      const data = await res.json();
+   220→      if (data.success && data.data) {
+   221→        setActionItems(data.data);
+   222→        const counts = { abierta: 0, en_proceso: 0, resuelta: 0, cerrada: 0 };
+   223→        data.data.forEach((a: ActionItemData) => {
+   224→          if (counts[a.estado as keyof typeof counts] !== undefined) counts[a.estado as keyof typeof counts]++;
+   225→        });
+   226→        setActionStats(counts);
+   227→      }
+   228→    } catch (error) { console.error('Error loading action items:', error); }
+   229→  };
+   230→
+   231→  const loadStats = async () => {
+   232→    try {
+   233→      const params = currentProject ? `?projectId=${currentProject.id}` : '';
+   234→      const res = await fetch(`/api/stats${params}`);
+   235→      const data = await res.json();
+   236→      if (data.success) setStats(data.data);
+   237→    } catch (error) { console.error('Error loading stats:', error); }
+   238→  };
+   239→
+   240→  const handleAuditComplete = async () => {
+   241→    setShowQuarterlyAudit(false);
+   242→    setShowWeeklyAudit(false);
+   243→    setShowMonthlyAudit(false);
+   244→    await loadData();
+   245→    if (fetchProgress) fetchProgress();
+   246→  };
+   247→
+   248→  const handleAddAction = async () => {
+   249→    if (!newAction.descripcion.trim() || !currentProject) return;
+   250→    try {
+   251→      const res = await fetch('/api/actions', {
+   252→        method: 'POST',
+   253→        headers: { 'Content-Type': 'application/json' },
+   254→        body: JSON.stringify({
+   255→          projectId: currentProject.id,
+   256→          zoneId: currentZone?.id || null,
+   257→          sStep: 0, // 0 = mejora continua
+   258→          miniStep: 0,
+   259→          itemId: `mc_${Date.now()}`,
+   260→          itemDescription: newAction.descripcion,
+   261→          hallazgo: newAction.descripcion,
+   262→          responsable: newAction.responsable || null,
+   263→          prioridad: newAction.prioridad,
+   264→          estado: 'abierta',
+   265→          fechaLimite: newAction.fechaLimite || null,
+   266→          source: 'mejora_continua',
+   267→        }),
+   268→      });
+   269→      if (res.ok) {
+   270→        setNewAction({ descripcion: '', responsable: '', prioridad: 'media', fechaLimite: '' });
+   271→        setShowNewAction(false);
+   272→        await loadActionItems();
+   273→      }
+   274→    } catch (error) { console.error('Error adding action:', error); }
+   275→  };
+   276→
+   277→  const handleUpdateActionEstado = async (actionId: string, newEstado: string) => {
+   278→    try {
+   279→      const res = await fetch('/api/actions', {
+   280→        method: 'PUT',
+   281→        headers: { 'Content-Type': 'application/json' },
+   282→        body: JSON.stringify({ id: actionId, estado: newEstado }),
+   283→      });
+   284→      if (res.ok) await loadActionItems();
+   285→    } catch (error) { console.error('Error updating action:', error); }
+   286→  };
+   287→
+   288→  const handleDeleteAction = async (actionId: string) => {
+   289→    try {
+   290→      const res = await fetch(`/api/actions?id=${actionId}`, { method: 'DELETE' });
+   291→      if (res.ok) await loadActionItems();
+   292→    } catch (error) { console.error('Error deleting action:', error); }
+   293→  };
+   294→
+   295→  // ─── Derived data ────────────────────────────────────────────────────────
+   296→  const weeklyAudits = auditHistory.filter(a => a.auditType === 'weekly');
+   297→  const monthlyAudits = auditHistory.filter(a => a.auditType === 'monthly');
+   298→  const quarterlyAudits = auditHistory.filter(a => a.auditType === 'quarterly');
+   299→  const totalActions = Object.values(actionStats).reduce((a, b) => a + b, 0);
+   300→
+   301→  const getNextWeeklyDate = () => {
+   302→    if (weeklyAudits.length === 0) return 'Pendiente';
+   303→    const last = new Date(weeklyAudits[0].auditDate);
+   304→    const next = new Date(last.getTime() + 7 * 24 * 60 * 60 * 1000);
+   305→    const diff = Math.ceil((next.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+   306→    if (diff <= 0) return '¡Vencida!';
+   307→    if (diff === 1) return 'Mañana';
+   308→    return `En ${diff} días`;
+   309→  };
+   310→
+   311→  const getNextAuditDate = (audits: AuditRecord[], months: number) => {
+   312→    if (audits.length === 0) return 'Pendiente';
+   313→    const last = new Date(audits[0].auditDate);
+   314→    const next = new Date(last.getTime() + months * 30 * 24 * 60 * 60 * 1000);
+   315→    const diff = Math.ceil((next.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+   316→    if (diff <= 0) return '¡Vencida!';
+   317→    if (diff <= 30) return `En ${diff} días`;
+   318→    return next.toLocaleDateString('es-ES', { day: 'numeric', month: 'long' });
+   319→  };
+   320→
+   321→  const isWeeklyOverdue = () => {
+   322→    if (weeklyAudits.length === 0) return true;
+   323→    const last = new Date(weeklyAudits[0].auditDate);
+   324→    return Date.now() - last.getTime() > 7 * 24 * 60 * 60 * 1000;
+   325→  };
+   326→
+   327→  const isMonthlyOverdue = () => {
+   328→    if (monthlyAudits.length === 0) return true;
+   329→    const last = new Date(monthlyAudits[0].auditDate);
+   330→    return Date.now() - last.getTime() > 30 * 24 * 60 * 60 * 1000;
+   331→  };
+   332→
+   333→  const isQuarterlyOverdue = () => {
+   334→    if (quarterlyAudits.length === 0) return true;
+   335→    const last = new Date(quarterlyAudits[0].auditDate);
+   336→    return Date.now() - last.getTime() > 90 * 24 * 60 * 60 * 1000;
+   337→  };
+   338→
+   339→  // ─── PDCA handlers ────────────────────────────────────────────────────────
+   340→  const handleAddPdcaItem = () => {
+   341→    const step = PDCA_STEPS.find(s => s.id === selectedPDCAStep);
+   342→    if (!step || !newPdcaItem.title.trim()) return;
+   343→    const item: PDCAItem = {
+   344→      id: `pdca_${Date.now()}`,
+   345→      letter: step.letter,
+   346→      title: newPdcaItem.title,
+   347→      description: newPdcaItem.description,
+   348→      responsable: newPdcaItem.responsable,
+   349→      status: 'pending',
+   350→      dueDate: newPdcaItem.dueDate || null,
+   351→      createdAt: new Date().toISOString(),
+   352→    };
+   353→    setPdcaItems(prev => [...prev, item]);
+   354→    setNewPdcaItem({ title: '', description: '', responsable: '', dueDate: '' });
+   355→    setShowNewPdcaItem(false);
+   356→  };
+   357→
+   358→  const handleUpdatePdcaStatus = (id: string, status: 'pending' | 'in_progress' | 'completed') => {
+   359→    setPdcaItems(prev => prev.map(i => i.id === id ? { ...i, status } : i));
+   360→  };
+   361→
+   362→  const handleDeletePdcaItem = (id: string) => {
+   363→    setPdcaItems(prev => prev.filter(i => i.id !== id));
+   364→  };
+   365→
+   366→  const handleAddKpi = () => {
+   367→    if (!newKpi.name.trim()) return;
+   368→    const kpi: KPIData = {
+   369→      id: `kpi_${Date.now()}`,
+   370→      name: newKpi.name,
+   371→      objective: newKpi.objective,
+   372→      actual: newKpi.actual,
+   373→      target: newKpi.target,
+   374→      unit: newKpi.unit,
+   375→      pdcaStep: selectedPDCAStep,
+   376→      frequency: newKpi.frequency,
+   377→      responsable: newKpi.responsable,
+   378→      trend: 'stable',
+   379→    };
+   380→    setKpis(prev => [...prev, kpi]);
+   381→    setNewKpi({ name: '', objective: '', actual: 0, target: 100, unit: '%', frequency: 'mensual', responsable: '' });
+   382→    setShowNewKpi(false);
+   383→  };
+   384→
+   385→  const handleDeleteKpi = (id: string) => {
+   386→    setKpis(prev => prev.filter(k => k.id !== id));
+   387→  };
+   388→
+   389→  // Get PDCA items for current step
+   390→  const currentPdcaItems = pdcaItems.filter(i => i.letter === PDCA_STEPS.find(s => s.id === selectedPDCAStep)?.letter);
+   391→  const currentKpis = kpis.filter(k => k.pdcaStep === selectedPDCAStep);
+   392→
+   393→  // Get templates available for current PDCA step
+   394→  const availableTemplates = Object.entries(PDCA_TEMPLATES).filter(([, t]) => t.applyTo.includes(selectedPDCAStep));
+   395→
+   396→  // ─── Tab configuration ──────────────────────────────────────────────────────
+   397→  const tabs = [
+   398→    { key: 'overview', label: 'Resumen', icon: BarChart3 },
+   399→    { key: 'pdca', label: 'Ciclo PDCA', icon: RotateCcw },
+   400→    { key: 'weekly', label: 'Semanal', icon: SprayCan },
+   401→    { key: 'monthly', label: 'Mensual', icon: Calendar },
+   402→    { key: 'quarterly', label: 'Trimestral', icon: ShieldCheck },
+   403→    { key: 'actions', label: 'Plan Acción', icon: Zap },
+   404→    { key: 'counters', label: 'Contadores', icon: BarChart3 },
+   405→  ];
+   406→
+   407→  return (
+   408→    <div className="space-y-4">
+   409→      {/* Header - only in standalone mode */}
+   410→      {!embedded && (
+   411→        <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
+   412→          <div className="flex items-center justify-between mb-4">
+   413→            <Button variant="ghost" size="sm" onClick={() => setCurrentView('board')} className="gap-1.5">
+   414→              <ArrowLeft className="h-4 w-4" />
+   415→              Volver al Tablero 5S
+   416→            </Button>
+   417→          </div>
+   418→        </motion.div>
+   419→      )}
+   420→
+   421→      {/* ─── Phase 6 Header ─── */}
+   422→      <Card className="border-green-200 bg-gradient-to-r from-green-50 to-emerald-50">
+   423→        <CardContent className="p-4 sm:p-6">
+   424→          <div className="flex items-center gap-4">
+   425→            <div className="w-14 h-14 rounded-full bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center text-white shadow-lg">
+   426→              <Trophy className="h-7 w-7" />
+   427→            </div>
+   428→            <div className="flex-1">
+   429→              <div className="flex items-center gap-2">
+   430→                <h2 className="text-lg sm:text-xl font-bold text-green-900">Fase 6 — Mejora Continua</h2>
+   431→                <Badge className="bg-green-100 text-green-800 border-green-200 text-[10px]">1/6</Badge>
+   432→              </div>
+   433→              <p className="text-sm text-green-700 mt-1">
+   434→                Ciclo de Deming <strong>(D-P-C-A)</strong>: Do, Plan, Check, Act. Mejora continua mediante auditorías periódicas, plan de acción y KPIs.
+   435→              </p>
+   436→            </div>
+   437→            <div className="hidden sm:flex items-center gap-1">
+   438→              {PDCA_STEPS.map(s => (
+   439→                <div key={s.id} className="w-9 h-9 rounded-full flex items-center justify-center text-white text-xs font-bold" style={{ backgroundColor: s.color }} title={`${s.letter} — ${s.spanishName}`}>
+   440→                  {s.letter}
+   441→                </div>
+   442→              ))}
+   443→            </div>
+   444→          </div>
+   445→        </CardContent>
+   446→      </Card>
+   447→
+   448→      {/* Tab navigation */}
+   449→      <div className="flex gap-1 overflow-x-auto pb-1">
+   450→        {tabs.map(tab => (
+   451→          <button
+   452→            key={tab.key}
+   453→            onClick={() => setActiveTab(tab.key as any)}
+   454→            className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium whitespace-nowrap transition-colors ${
+   455→              activeTab === tab.key
+   456→                ? 'bg-green-100 text-green-800 border border-green-200'
+   457→                : 'text-muted-foreground hover:bg-muted'
+   458→            }`}
+   459→          >
+   460→            <tab.icon className="h-3.5 w-3.5" />
+   461→            {tab.label}
+   462→          </button>
+   463→        ))}
+   464→      </div>
+   465→
+   466→      {/* ─── OVERVIEW TAB ─── */}
+   467→      {activeTab === 'overview' && (
+   468→        <div className="space-y-4">
+   469→          {/* PDCA cycle visual */}
+   470→          <Card className="border-emerald-100">
+   471→            <CardContent className="p-4">
+   472→              <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
+   473→                <RotateCcw className="h-4 w-4 text-emerald-600" />
+   474→                Ciclo de Deming — PDCA
+   475→              </h3>
+   476→              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+   477→                {PDCA_STEPS.map(step => (
+   478→                  <button
+   479→                    key={step.id}
+   480→                    onClick={() => { setSelectedPDCAStep(step.id); setActiveTab('pdca'); }}
+   481→                    className="p-3 rounded-xl border-2 transition-all hover:shadow-md text-left"
+   482→                    style={{ borderColor: step.color, backgroundColor: step.bgColor }}
+   483→                  >
+   484→                    <div className="flex items-center gap-2 mb-1">
+   485→                      <div className="w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-bold" style={{ backgroundColor: step.color }}>
+   486→                        {step.letter}
+   487→                      </div>
+   488→                      <div>
+   489→                        <p className="text-xs font-bold" style={{ color: step.color }}>{step.name}</p>
+   490→                        <p className="text-[10px] text-muted-foreground">{step.spanishName}</p>
+   491→                      </div>
+   492→                    </div>
+   493→                    <p className="text-[10px] text-muted-foreground leading-tight">{step.description.slice(0, 60)}...</p>
+   494→                  </button>
+   495→                ))}
+   496→              </div>
+   497→            </CardContent>
+   498→          </Card>
+   499→
+   500→          {/* Key metrics */}
+   501→          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+   502→            <Card className={isWeeklyOverdue() ? 'border-red-200 bg-red-50' : 'border-blue-100'}>
+   503→              <CardContent className="p-3 text-center">
+   504→                <SprayCan className={`h-5 w-5 mx-auto mb-1 ${isWeeklyOverdue() ? 'text-red-500' : 'text-blue-500'}`} />
+   505→                <p className="text-2xl font-bold text-blue-700">{weeklyAudits.length}</p>
+   506→                <p className="text-xs text-muted-foreground">Auditorías Semanales</p>
+   507→                <p className={`text-[10px] mt-1 ${isWeeklyOverdue() ? 'text-red-600 font-medium' : 'text-muted-foreground'}`}>
+   508→                  {getNextWeeklyDate()}
+   509→                </p>
+   510→              </CardContent>
+   511→            </Card>
+   512→
+   513→            <Card className={isMonthlyOverdue() ? 'border-red-200 bg-red-50' : 'border-purple-100'}>
+   514→              <CardContent className="p-3 text-center">
+   515→                <Calendar className={`h-5 w-5 mx-auto mb-1 ${isMonthlyOverdue() ? 'text-red-500' : 'text-purple-500'}`} />
+   516→                <p className="text-2xl font-bold text-purple-700">{monthlyAudits.length}</p>
+   517→                <p className="text-xs text-muted-foreground">Auditorías Mensuales</p>
+   518→                <p className={`text-[10px] mt-1 ${isMonthlyOverdue() ? 'text-red-600 font-medium' : 'text-muted-foreground'}`}>
+   519→                  {getNextAuditDate(monthlyAudits, 1)}
+   520→                </p>
+   521→              </CardContent>
+   522→            </Card>
+   523→
+   524→            <Card className={isQuarterlyOverdue() ? 'border-red-200 bg-red-50' : 'border-orange-100'}>
+   525→              <CardContent className="p-3 text-center">
+   526→                <ShieldCheck className={`h-5 w-5 mx-auto mb-1 ${isQuarterlyOverdue() ? 'text-red-500' : 'text-orange-500'}`} />
+   527→                <p className="text-2xl font-bold text-orange-700">{quarterlyAudits.length}</p>
+   528→                <p className="text-xs text-muted-foreground">Auditorías Trimestrales</p>
+   529→                <p className={`text-[10px] mt-1 ${isQuarterlyOverdue() ? 'text-red-600 font-medium' : 'text-muted-foreground'}`}>
+   530→                  {getNextAuditDate(quarterlyAudits, 3)}
+   531→                </p>
+   532→              </CardContent>
+   533→            </Card>
+   534→          </div>
+   535→
+   536→          {/* Action plan summary */}
+   537→          <Card className="border-orange-100">
+   538→            <CardHeader className="pb-2">
+   539→              <CardTitle className="text-sm font-medium flex items-center gap-2">
+   540→                <Zap className="h-4 w-4 text-orange-500" />
+   541→                Plan de Acción — Resumen
+   542→              </CardTitle>
+   543→            </CardHeader>
+   544→            <CardContent>
+   545→              {totalActions === 0 ? (
+   546→                <p className="text-xs text-muted-foreground text-center py-4">No hay acciones de mejora registradas</p>
+   547→              ) : (
+   548→                <div className="grid grid-cols-4 gap-3 text-center">
+   549→                  <div className="p-2 rounded-lg bg-red-50">
+   550→                    <p className="text-lg font-bold text-red-600">{actionStats.abierta}</p>
+   551→                    <p className="text-[10px] text-red-700 font-medium">Abiertas</p>
+   552→                  </div>
+   553→                  <div className="p-2 rounded-lg bg-amber-50">
+   554→                    <p className="text-lg font-bold text-amber-600">{actionStats.en_proceso}</p>
+   555→                    <p className="text-[10px] text-amber-700 font-medium">En Proceso</p>
+   556→                  </div>
+   557→                  <div className="p-2 rounded-lg bg-green-50">
+   558→                    <p className="text-lg font-bold text-green-600">{actionStats.resuelta}</p>
+   559→                    <p className="text-[10px] text-green-700 font-medium">Resueltas</p>
+   560→                  </div>
+   561→                  <div className="p-2 rounded-lg bg-gray-50">
+   562→                    <p className="text-lg font-bold text-gray-600">{actionStats.cerrada}</p>
+   563→                    <p className="text-[10px] text-gray-700 font-medium">Cerradas</p>
+   564→                  </div>
+   565→                </div>
+   566→              )}
+   567→            </CardContent>
+   568→          </Card>
+   569→
+   570→          {/* Scoring explanation */}
+   571→          <Card>
+   572→            <CardContent className="p-4">
+   573→              <h4 className="text-sm font-semibold mb-2">Sistema de Puntuación — Todas las Auditorías</h4>
+   574→              <div className="grid grid-cols-3 gap-3 text-center">
+   575→                <div className="p-2 rounded-lg bg-blue-50 border border-blue-100">
+   576→                  <p className="text-lg font-bold text-blue-700">90%</p>
+   577→                  <p className="text-[10px] text-blue-600">Checklist (máx.)</p>
+   578→                </div>
+   579→                <div className="p-2 rounded-lg bg-green-50 border border-green-100">
+   580→                  <p className="text-lg font-bold text-green-700">+5%</p>
+   581→                  <p className="text-[10px] text-green-600">Por mejora (máx. 2)</p>
+   582→                </div>
+   583→                <div className="p-2 rounded-lg bg-orange-50 border border-orange-100">
+   584→                  <p className="text-lg font-bold text-orange-700">75%</p>
+   585→                  <p className="text-[10px] text-orange-600">Mínimo Apto</p>
+   586→                </div>
+   587→              </div>
+   588→              <p className="text-xs text-muted-foreground mt-2">
+   589→                Las anomalías (NOK) detectadas en cualquier auditoría se añaden automáticamente al Plan de Acción.
+   590→              </p>
+   591→            </CardContent>
+   592→          </Card>
+   593→        </div>
+   594→      )}
+   595→
+   596→      {/* ─── PDCA TAB (Ciclo de Deming) ─── */}
+   597→      {activeTab === 'pdca' && (
+   598→        <div className="space-y-4">
+   599→          {/* PDCA Step selector */}
+   600→          <div className="grid grid-cols-4 gap-2">
+   601→            {PDCA_STEPS.map(step => (
+   602→              <button
+   603→                key={step.id}
+   604→                onClick={() => setSelectedPDCAStep(step.id)}
+   605→                className={`relative p-3 rounded-xl border-2 transition-all text-center ${
+   606→                  selectedPDCAStep === step.id
+   607→                    ? 'shadow-lg scale-[1.02]'
+   608→                    : 'opacity-70 hover:opacity-100'
+   609→                }`}
+   610→                style={{
+   611→                  borderColor: selectedPDCAStep === step.id ? step.color : `${step.color}40`,
+   612→                  backgroundColor: selectedPDCAStep === step.id ? step.bgColor : 'white',
+   613→                }}
+   614→              >
+   615→                <div className="w-10 h-10 rounded-full flex items-center justify-center text-white text-lg font-bold mx-auto mb-1" style={{ backgroundColor: step.color }}>
+   616→                  {step.letter}
+   617→                </div>
+   618→                <p className="text-xs font-bold" style={{ color: step.color }}>{step.name}</p>
+   619→                <p className="text-[10px] text-muted-foreground">{step.spanishName}</p>
+   620→                {selectedPDCAStep === step.id && (
+   621→                  <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-4 h-1 rounded-full" style={{ backgroundColor: step.color }} />
+   622→                )}
+   623→              </button>
+   624→            ))}
+   625→          </div>
+   626→
+   627→          {/* Current PDCA step info */}
+   628→          {(() => {
+   629→            const step = PDCA_STEPS.find(s => s.id === selectedPDCAStep)!;
+   630→            return (
+   631→              <Card style={{ borderColor: step.color }}>
+   632→                <CardContent className="p-4">
+   633→                  <div className="flex items-center gap-3 mb-3">
+   634→                    <div className="w-12 h-12 rounded-full flex items-center justify-center text-white text-xl font-bold" style={{ backgroundColor: step.color }}>
+   635→                      {step.letter}
+   636→                    </div>
+   637→                    <div>
+   638→                      <h3 className="font-bold text-lg" style={{ color: step.color }}>{step.name} — {step.spanishName}</h3>
+   639→                      <p className="text-xs text-muted-foreground">{step.description}</p>
+   640→                    </div>
+   641→                  </div>
+   642→
+   643→                  {/* Templates available in this step */}
+   644→                  <div className="mt-3">
+   645→                    <p className="text-xs font-medium text-muted-foreground mb-2">Plantillas disponibles:</p>
+   646→                    <div className="flex flex-wrap gap-2">
+   647→                      {availableTemplates.map(([key, t]) => (
+   648→                        <Badge key={key} className="text-[10px] py-1" style={{ backgroundColor: step.bgColor, color: step.color, borderColor: step.color }}>
+   649→                          {t.name}
+   650→                        </Badge>
+   651→                      ))}
+   652→                    </div>
+   653→                  </div>
+   654→                </CardContent>
+   655→              </Card>
+   656→            );
+   657→          })()}
+   658→
+   659→          {/* PDCA Board (Tablero PDCA) — Always visible */}
+   660→          <Card className="border-dashed">
+   661→            <CardHeader className="pb-2">
+   662→              <div className="flex items-center justify-between">
+   663→                <CardTitle className="text-sm font-medium flex items-center gap-2">
+   664→                  <RotateCcw className="h-4 w-4 text-emerald-500" />
+   665→                  Tablero PDCA — {PDCA_STEPS.find(s => s.id === selectedPDCAStep)?.letter}
+   666→                </CardTitle>
+   667→                <Button size="sm" onClick={() => setShowNewPdcaItem(true)} className="gap-1 h-7 text-[10px]" style={{ backgroundColor: PDCA_STEPS.find(s => s.id === selectedPDCAStep)?.color }}>
+   668→                  <Plus className="h-3 w-3" /> Nuevo Item
+   669→                </Button>
+   670→              </div>
+   671→            </CardHeader>
+   672→            <CardContent>
+   673→              {showNewPdcaItem && (
+   674→                <div className="mb-3 p-3 rounded-lg border bg-gray-50 space-y-2">
+   675→                  <div>
+   676→                    <label className="text-xs font-medium">Título *</label>
+   677→                    <Input placeholder="Título del item..." value={newPdcaItem.title} onChange={e => setNewPdcaItem(p => ({ ...p, title: e.target.value }))} className="mt-1 h-8 text-xs" />
+   678→                  </div>
+   679→                  <div>
+   680→                    <label className="text-xs font-medium">Descripción</label>
+   681→                    <Textarea placeholder="Describe el item..." value={newPdcaItem.description} onChange={e => setNewPdcaItem(p => ({ ...p, description: e.target.value }))} className="mt-1 text-xs" rows={2} />
+   682→                  </div>
+   683→                  <div className="grid grid-cols-2 gap-2">
+   684→                    <div>
+   685→                      <label className="text-xs font-medium">Responsable</label>
+   686→                      <Input placeholder="Nombre" value={newPdcaItem.responsable} onChange={e => setNewPdcaItem(p => ({ ...p, responsable: e.target.value }))} className="mt-1 h-8 text-xs" />
+   687→                    </div>
+   688→                    <div>
+   689→                      <label className="text-xs font-medium">Fecha límite</label>
+   690→                      <Input type="date" value={newPdcaItem.dueDate} onChange={e => setNewPdcaItem(p => ({ ...p, dueDate: e.target.value }))} className="mt-1 h-8 text-xs" />
+   691→                    </div>
+   692→                  </div>
+   693→                  <div className="flex justify-end gap-2">
+   694→                    <Button variant="outline" size="sm" onClick={() => setShowNewPdcaItem(false)} className="h-7 text-xs">Cancelar</Button>
+   695→                    <Button size="sm" onClick={handleAddPdcaItem} disabled={!newPdcaItem.title.trim()} className="h-7 text-xs" style={{ backgroundColor: PDCA_STEPS.find(s => s.id === selectedPDCAStep)?.color, color: 'white' }}>Agregar</Button>
+   696→                  </div>
+   697→                </div>
+   698→              )}
+   699→
+   700→              {currentPdcaItems.length === 0 ? (
+   701→                <div className="text-center py-6">
+   702→                  <RotateCcw className="h-8 w-8 text-muted-foreground/30 mx-auto mb-2" />
+   703→                  <p className="text-xs text-muted-foreground">No hay items en este paso del ciclo PDCA</p>
+   704→                </div>
+   705→              ) : (
+   706→                <div className="space-y-2">
+   707→                  {currentPdcaItems.map(item => (
+   708→                    <div key={item.id} className="flex items-center gap-3 p-2 rounded-lg border bg-white">
+   709→                      <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold ${
+   710→                        item.status === 'completed' ? 'bg-green-100 text-green-700' :
+   711→                        item.status === 'in_progress' ? 'bg-amber-100 text-amber-700' :
+   712→                        'bg-gray-100 text-gray-600'
+   713→                      }`}>
+   714→                        {item.status === 'completed' ? <CheckCircle className="h-3.5 w-3.5" /> :
+   715→                         item.status === 'in_progress' ? <Clock className="h-3.5 w-3.5" /> :
+   716→                         <Plus className="h-3.5 w-3.5" />}
+   717→                      </div>
+   718→                      <div className="flex-1 min-w-0">
+   719→                        <p className={`text-xs font-medium ${item.status === 'completed' ? 'line-through text-muted-foreground' : ''}`}>{item.title}</p>
+   720→                        {item.description && <p className="text-[10px] text-muted-foreground truncate">{item.description}</p>}
+   721→                        <div className="flex items-center gap-2 mt-0.5">
+   722→                          {item.responsable && <span className="text-[10px] text-muted-foreground"><User className="h-2.5 w-2.5 inline mr-0.5" />{item.responsable}</span>}
+   723→                          {item.dueDate && <span className="text-[10px] text-muted-foreground"><Calendar className="h-2.5 w-2.5 inline mr-0.5" />{new Date(item.dueDate).toLocaleDateString('es-ES')}</span>}
+   724→                        </div>
+   725→                      </div>
+   726→                      <Select value={item.status} onValueChange={val => handleUpdatePdcaStatus(item.id, val as any)}>
+   727→                        <SelectTrigger className="h-6 w-24 text-[10px]">
+   728→                          <SelectValue />
+   729→                        </SelectTrigger>
+   730→                        <SelectContent>
+   731→                          <SelectItem value="pending">Pendiente</SelectItem>
+   732→                          <SelectItem value="in_progress">En curso</SelectItem>
+   733→                          <SelectItem value="completed">Completado</SelectItem>
+   734→                        </SelectContent>
+   735→                      </Select>
+   736→                      <Button variant="ghost" size="sm" className="h-6 w-6 p-0 text-destructive" onClick={() => handleDeletePdcaItem(item.id)}>
+   737→                        <Trash2 className="h-3 w-3" />
+   738→                      </Button>
+   739→                    </div>
+   740→                  ))}
+   741→                </div>
+   742→              )}
+   743→            </CardContent>
+   744→          </Card>
+   745→
+   746→          {/* Plan de Acción (D + P steps) */}
+   747→          {(selectedPDCAStep === 1 || selectedPDCAStep === 2) && (
+   748→            <Card className="border-orange-100">
+   749→              <CardHeader className="pb-2">
+   750→                <CardTitle className="text-sm font-medium flex items-center gap-2">
+   751→                  <Zap className="h-4 w-4 text-orange-500" />
+   752→                  Plan de Acción
+   753→                </CardTitle>
+   754→              </CardHeader>
+   755→              <CardContent>
+   756→                <div className="flex items-center justify-between mb-3">
+   757→                  <p className="text-xs text-muted-foreground">
+   758→                    {actionItems.length} acciones · {actionStats.abierta} abiertas · {actionStats.en_proceso} en proceso
+   759→                  </p>
+   760→                  <Button size="sm" onClick={() => setShowNewAction(!showNewAction)} className="gap-1 bg-orange-500 hover:bg-orange-600 text-white h-7 text-[10px]">
+   761→                    <Plus className="h-3 w-3" /> Nueva
+   762→                  </Button>
+   763→                </div>
+   764→
+   765→                {showNewAction && (
+   766→                  <div className="mb-3 p-3 rounded-lg border bg-orange-50/30 space-y-2">
+   767→                    <div>
+   768→                      <label className="text-xs font-medium">Descripción *</label>
+   769→                      <Textarea placeholder="Describa la acción..." value={newAction.descripcion} onChange={e => setNewAction(prev => ({ ...prev, descripcion: e.target.value }))} className="mt-1 text-xs" rows={2} />
+   770→                    </div>
+   771→                    <div className="grid grid-cols-3 gap-2">
+   772→                      <div>
+   773→                        <label className="text-xs font-medium">Responsable</label>
+   774→                        <Input placeholder="Nombre" value={newAction.responsable} onChange={e => setNewAction(prev => ({ ...prev, responsable: e.target.value }))} className="mt-1 h-8 text-xs" />
+   775→                      </div>
+   776→                      <div>
+   777→                        <label className="text-xs font-medium">Prioridad</label>
+   778→                        <Select value={newAction.prioridad} onValueChange={val => setNewAction(prev => ({ ...prev, prioridad: val }))}>
+   779→                          <SelectTrigger className="mt-1 h-8 text-xs"><SelectValue /></SelectTrigger>
+   780→                          <SelectContent>
+   781→                            <SelectItem value="alta">Alta</SelectItem>
+   782→                            <SelectItem value="media">Media</SelectItem>
+   783→                            <SelectItem value="baja">Baja</SelectItem>
+   784→                          </SelectContent>
+   785→                        </Select>
+   786→                      </div>
+   787→                      <div>
+   788→                        <label className="text-xs font-medium">Fecha límite</label>
+   789→                        <Input type="date" value={newAction.fechaLimite} onChange={e => setNewAction(prev => ({ ...prev, fechaLimite: e.target.value }))} className="mt-1 h-8 text-xs" />
+   790→                      </div>
+   791→                    </div>
+   792→                    <div className="flex justify-end gap-2">
+   793→                      <Button variant="outline" size="sm" onClick={() => setShowNewAction(false)} className="h-7 text-xs">Cancelar</Button>
+   794→                      <Button size="sm" onClick={handleAddAction} disabled={!newAction.descripcion.trim()} className="bg-orange-500 hover:bg-orange-600 text-white h-7 text-xs">Agregar</Button>
+   795→                    </div>
+   796→                  </div>
+   797→                )}
+   798→
+   799→                {actionItems.length === 0 ? (
+   800→                  <p className="text-xs text-muted-foreground text-center py-4">No hay acciones de mejora</p>
+   801→                ) : (
+   802→                  <div className="space-y-2 max-h-60 overflow-y-auto">
+   803→                    {actionItems.slice(0, 10).map(action => (
+   804→                      <div key={action.id} className="flex items-center gap-2 p-2 rounded-lg border bg-white text-xs">
+   805→                        <Badge className={`${PRIORIDAD_COLORS[action.prioridad] || 'bg-gray-100'} text-[9px] py-0`}>{action.prioridad}</Badge>
+   806→                        <span className="flex-1 truncate">{action.hallazgo || action.itemDescription}</span>
+   807→                        <Badge className={`${ESTADO_COLORS[action.estado] || 'bg-gray-100'} text-[9px] py-0`}>{ESTADO_LABELS[action.estado] || action.estado}</Badge>
+   808→                        <Select value={action.estado} onValueChange={val => handleUpdateActionEstado(action.id, val)}>
+   809→                          <SelectTrigger className="h-6 w-20 text-[10px]"><SelectValue /></SelectTrigger>
+   810→                          <SelectContent>
+   811→                            <SelectItem value="abierta">Abierta</SelectItem>
+   812→                            <SelectItem value="en_proceso">En proceso</SelectItem>
+   813→                            <SelectItem value="resuelta">Resuelta</SelectItem>
+   814→                            <SelectItem value="cerrada">Cerrada</SelectItem>
+   815→                          </SelectContent>
+   816→                        </Select>
+   817→                      </div>
+   818→                    ))}
+   819→                  </div>
+   820→                )}
+   821→              </CardContent>
+   822→            </Card>
+   823→          )}
+   824→
+   825→          {/* Realización de Estándar (P + A steps) */}
+   826→          {(selectedPDCAStep === 2 || selectedPDCAStep === 4) && (
+   827→            <Card className="border-indigo-100">
+   828→              <CardHeader className="pb-2">
+   829→                <CardTitle className="text-sm font-medium flex items-center gap-2">
+   830→                  <BookOpen className="h-4 w-4 text-indigo-500" />
+   831→                  B — Realización de Estándar
+   832→                </CardTitle>
+   833→              </CardHeader>
+   834→              <CardContent>
+   835→                <p className="text-xs text-muted-foreground mb-3">
+   836→                  {selectedPDCAStep === 2
+   837→                    ? 'Planificar los estándares a implementar. Definir criterios, procedimientos y métodos de verificación.'
+   838→                    : 'Estandarizar las mejoras logradas. Documentar y establecer como norma los procesos que funcionaron.'}
+   839→                </p>
+   840→                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+   841→                  <div className="p-3 rounded-lg border bg-indigo-50/30">
+   842→                    <p className="text-xs font-semibold text-indigo-700 mb-1">Proceso</p>
+   843→                    <ol className="text-[10px] text-muted-foreground space-y-1 list-decimal list-inside">
+   844→                      <li>Identificar el proceso a estandarizar</li>
+   845→                      <li>Documentar el método actual (mejor práctica)</li>
+   846→                      <li>Definir criterios de calidad y medición</li>
+   847→                      <li>Establecer puntos de verificación</li>
+   848→                      <li>Formar al personal en el estándar</li>
+   849→                    </ol>
+   850→                  </div>
+   851→                  <div className="p-3 rounded-lg border bg-indigo-50/30">
+   852→                    <p className="text-xs font-semibold text-indigo-700 mb-1">Verificación</p>
+   853→                    <ul className="text-[10px] text-muted-foreground space-y-1">
+   854→                      <li className="flex items-center gap-1"><CheckCircle className="h-3 w-3 text-green-500" /> ¿El estándar está documentado?</li>
+   855→                      <li className="flex items-center gap-1"><CheckCircle className="h-3 w-3 text-green-500" /> ¿El personal está formado?</li>
+   856→                      <li className="flex items-center gap-1"><CheckCircle className="h-3 w-3 text-green-500" /> ¿Se puede medir el cumplimiento?</li>
+   857→                      <li className="flex items-center gap-1"><CheckCircle className="h-3 w-3 text-green-500" /> ¿Hay fecha de revisión?</li>
+   858→                    </ul>
+   859→                  </div>
+   860→                </div>
+   861→              </CardContent>
+   862→            </Card>
+   863→          )}
+   864→
+   865→          {/* KPIs (P + C steps) */}
+   866→          {(selectedPDCAStep === 2 || selectedPDCAStep === 3) && (
+   867→            <Card className="border-teal-100">
+   868→              <CardHeader className="pb-2">
+   869→                <div className="flex items-center justify-between">
+   870→                  <CardTitle className="text-sm font-medium flex items-center gap-2">
+   871→                    <Target className="h-4 w-4 text-teal-500" />
+   872→                    KPIs de Mejora
+   873→                  </CardTitle>
+   874→                  <Button size="sm" onClick={() => setShowNewKpi(true)} className="gap-1 h-7 text-[10px] bg-teal-500 hover:bg-teal-600 text-white">
+   875→                    <Plus className="h-3 w-3" /> Nuevo KPI
+   876→                  </Button>
+   877→                </div>
+   878→              </CardHeader>
+   879→              <CardContent>
+   880→                {showNewKpi && (
+   881→                  <div className="mb-3 p-3 rounded-lg border bg-teal-50/30 space-y-2">
+   882→                    <div className="grid grid-cols-2 gap-2">
+   883→                      <div>
+   884→                        <label className="text-xs font-medium">Nombre del KPI *</label>
+   885→                        <Input placeholder="Ej: Tasa de cumplimiento" value={newKpi.name} onChange={e => setNewKpi(p => ({ ...p, name: e.target.value }))} className="mt-1 h-8 text-xs" />
+   886→                      </div>
+   887→                      <div>
+   888→                        <label className="text-xs font-medium">Objetivo</label>
+   889→                        <Input placeholder="Descripción del objetivo" value={newKpi.objective} onChange={e => setNewKpi(p => ({ ...p, objective: e.target.value }))} className="mt-1 h-8 text-xs" />
+   890→                      </div>
+   891→                    </div>
+   892→                    <div className="grid grid-cols-4 gap-2">
+   893→                      <div>
+   894→                        <label className="text-xs font-medium">Actual</label>
+   895→                        <Input type="number" value={newKpi.actual} onChange={e => setNewKpi(p => ({ ...p, actual: Number(e.target.value) }))} className="mt-1 h-8 text-xs" />
+   896→                      </div>
+   897→                      <div>
+   898→                        <label className="text-xs font-medium">Meta</label>
+   899→                        <Input type="number" value={newKpi.target} onChange={e => setNewKpi(p => ({ ...p, target: Number(e.target.value) }))} className="mt-1 h-8 text-xs" />
+   900→                      </div>
+   901→                      <div>
+   902→                        <label className="text-xs font-medium">Unidad</label>
+   903→                        <Select value={newKpi.unit} onValueChange={val => setNewKpi(p => ({ ...p, unit: val }))}>
+   904→                          <SelectTrigger className="mt-1 h-8 text-xs"><SelectValue /></SelectTrigger>
+   905→                          <SelectContent>
+   906→                            <SelectItem value="%">%</SelectItem>
+   907→                            <SelectItem value="uds">Unidades</SelectItem>
+   908→                            <SelectItem value="pts">Puntos</SelectItem>
+   909→                            <SelectItem value="€">Euros</SelectItem>
+   910→                          </SelectContent>
+   911→                        </Select>
+   912→                      </div>
+   913→                      <div>
+   914→                        <label className="text-xs font-medium">Frecuencia</label>
+   915→                        <Select value={newKpi.frequency} onValueChange={val => setNewKpi(p => ({ ...p, frequency: val }))}>
+   916→                          <SelectTrigger className="mt-1 h-8 text-xs"><SelectValue /></SelectTrigger>
+   917→                          <SelectContent>
+   918→                            <SelectItem value="semanal">Semanal</SelectItem>
+   919→                            <SelectItem value="mensual">Mensual</SelectItem>
+   920→                            <SelectItem value="trimestral">Trimestral</SelectItem>
+   921→                          </SelectContent>
+   922→                        </Select>
+   923→                      </div>
+   924→                    </div>
+   925→                    <div className="flex justify-end gap-2">
+   926→                      <Button variant="outline" size="sm" onClick={() => setShowNewKpi(false)} className="h-7 text-xs">Cancelar</Button>
+   927→                      <Button size="sm" onClick={handleAddKpi} disabled={!newKpi.name.trim()} className="bg-teal-500 hover:bg-teal-600 text-white h-7 text-xs">Agregar</Button>
+   928→                    </div>
+   929→                  </div>
+   930→                )}
+   931→
+   932→                {currentKpis.length === 0 ? (
+   933→                  <div className="text-center py-4">
+   934→                    <Target className="h-8 w-8 text-muted-foreground/30 mx-auto mb-2" />
+   935→                    <p className="text-xs text-muted-foreground">No hay KPIs definidos para este paso</p>
+   936→                    <p className="text-[10px] text-muted-foreground mt-1">
+   937→                      {selectedPDCAStep === 2 ? 'Define indicadores para medir el éxito de las mejoras planificadas' : 'Verifica el cumplimiento de los KPIs definidos en la fase de Planificación'}
+   938→                    </p>
+   939→                  </div>
+   940→                ) : (
+   941→                  <div className="space-y-2">
+   942→                    {currentKpis.map(kpi => {
+   943→                      const pct = kpi.target > 0 ? Math.round((kpi.actual / kpi.target) * 100) : 0;
+   944→                      return (
+   945→                        <div key={kpi.id} className="flex items-center gap-3 p-2 rounded-lg border bg-white">
+   946→                          <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ${
+   947→                            pct >= 100 ? 'bg-green-100 text-green-700' :
+   948→                            pct >= 70 ? 'bg-amber-100 text-amber-700' :
+   949→                            'bg-red-100 text-red-700'
+   950→                          }`}>
+   951→                            {pct}%
+   952→                          </div>
+   953→                          <div className="flex-1 min-w-0">
+   954→                            <p className="text-xs font-medium">{kpi.name}</p>
+   955→                            <p className="text-[10px] text-muted-foreground">
+   956→                              {kpi.actual} / {kpi.target} {kpi.unit} · {kpi.frequency}
+   957→                            </p>
+   958→                          </div>
+   959→                          <Button variant="ghost" size="sm" className="h-6 w-6 p-0 text-destructive" onClick={() => handleDeleteKpi(kpi.id)}>
+   960→                            <Trash2 className="h-3 w-3" />
+   961→                          </Button>
+   962→                        </div>
+   963→                      );
+   964→                    })}
+   965→                  </div>
+   966→                )}
+   967→              </CardContent>
+   968→            </Card>
+   969→          )}
+   970→        </div>
+   971→      )}
+   972→
+   973→      {/* ─── WEEKLY TAB ─── */}
+   974→      {activeTab === 'weekly' && (
+   975→        <div className="space-y-4">
+   976→          <Card className="border-blue-100">
+   977→            <CardContent className="p-4">
+   978→              <div className="flex items-center gap-3 mb-3">
+   979→                <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
+   980→                  <SprayCan className="h-5 w-5 text-blue-600" />
+   981→                </div>
+   982→                <div>
+   983→                  <h3 className="font-bold text-blue-900">Auditoría Semanal de Limpieza</h3>
+   984→                  <p className="text-xs text-muted-foreground">
+   985→                    Checklist de limpieza (S3 — Seiso). Se evalúa la limpieza de la zona de forma rápida y periódica.
+   986→                  </p>
+   987→                </div>
+   988→              </div>
+   989→              <div className="flex items-center justify-between">
+   990→                <div className="text-xs text-muted-foreground">
+   991→                  {weeklyTotalItems} puntos a evaluar · Frecuencia: semanal
+   992→                </div>
+   993→                <Button
+   994→                  onClick={() => setShowWeeklyAudit(true)}
+   995→                  className={`gap-1.5 ${isWeeklyOverdue() ? 'bg-red-500 hover:bg-red-600 text-white' : 'bg-blue-500 hover:bg-blue-600 text-white'}`}
+   996→                >
+   997→                  <Plus className="h-4 w-4" />
+   998→                  {isWeeklyOverdue() ? '¡Pendiente!' : 'Nueva Semanal'}
+   999→                </Button>
+  1000→              </div>
+  1001→            </CardContent>
+  1002→          </Card>
+  1003→          <Card>
+  1004→            <CardHeader className="pb-2">
+  1005→              <CardTitle className="text-sm font-medium flex items-center gap-2">
+  1006→                <FileText className="h-4 w-4 text-blue-500" />
+  1007→                Historial de Auditorías Semanales
+  1008→              </CardTitle>
+  1009→            </CardHeader>
+  1010→            <CardContent>
+  1011→              {weeklyAudits.length === 0 ? (
+  1012→                <div className="text-center py-6">
+  1013→                  <SprayCan className="h-10 w-10 text-muted-foreground/30 mx-auto mb-2" />
+  1014→                  <p className="text-sm text-muted-foreground">No hay auditorías semanales registradas</p>
+  1015→                </div>
+  1016→              ) : (
+  1017→                <div className="space-y-2">
+  1018→                  {weeklyAudits.map((audit, idx) => (
+  1019→                    <div key={audit.id} className="flex items-center justify-between p-3 rounded-lg border bg-white hover:bg-gray-50 transition-colors">
+  1020→                      <div className="flex items-center gap-3">
+  1021→                        <div className={`w-8 h-8 rounded-full flex items-center justify-center ${audit.score >= AUDIT_PASS_THRESHOLD ? 'bg-green-100' : 'bg-red-100'}`}>
+  1022→                          {audit.score >= AUDIT_PASS_THRESHOLD ? <CheckCircle className="h-4 w-4 text-green-600" /> : <AlertCircle className="h-4 w-4 text-red-600" />}
+  1023→                        </div>
+  1024→                        <div>
+  1025→                          <p className="text-sm font-medium">Semana {weeklyAudits.length - idx}</p>
+  1026→                          <p className="text-xs text-muted-foreground">
+  1027→                            {new Date(audit.auditDate).toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })}
+  1028→                            {' · '}{audit.auditorName}
+  1029→                          </p>
+  1030→                        </div>
+  1031→                      </div>
+  1032→                      <Badge className={audit.score >= AUDIT_PASS_THRESHOLD ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}>
+  1033→                        {audit.score}%
+  1034→                      </Badge>
+  1035→                    </div>
+  1036→                  ))}
+  1037→                </div>
+  1038→              )}
+  1039→            </CardContent>
+  1040→          </Card>
+  1041→        </div>
+  1042→      )}
+  1043→
+  1044→      {/* ─── MONTHLY TAB ─── */}
+  1045→      {activeTab === 'monthly' && (
+  1046→        <div className="space-y-4">
+  1047→          <Card className="border-purple-100">
+  1048→            <CardContent className="p-4">
+  1049→              <div className="flex items-center gap-3 mb-3">
+  1050→                <div className="w-10 h-10 rounded-full bg-purple-100 flex items-center justify-center">
+  1051→                  <Calendar className="h-5 w-5 text-purple-600" />
+  1052→                </div>
+  1053→                <div>
+  1054→                  <h3 className="font-bold text-purple-900">Auditoría Mensual 5S</h3>
+  1055→                  <p className="text-xs text-muted-foreground">
+  1056→                    Checklist resumido de las 5S. Evalúa los puntos clave de cada S de forma rápida.
+  1057→                  </p>
+  1058→                </div>
+  1059→              </div>
+  1060→              <div className="flex items-center justify-between">
+  1061→                <div className="text-xs text-muted-foreground">
+  1062→                  {monthlyTotalItems} puntos a evaluar · Frecuencia: mensual
+  1063→                </div>
+  1064→                <Button
+  1065→                  onClick={() => setShowMonthlyAudit(true)}
+  1066→                  className={`gap-1.5 ${isMonthlyOverdue() ? 'bg-red-500 hover:bg-red-600 text-white' : 'bg-purple-500 hover:bg-purple-600 text-white'}`}
+  1067→                >
+  1068→                  <Plus className="h-4 w-4" />
+  1069→                  {isMonthlyOverdue() ? '¡Pendiente!' : 'Nueva Mensual'}
+  1070→                </Button>
+  1071→              </div>
+  1072→            </CardContent>
+  1073→          </Card>
+  1074→          <Card>
+  1075→            <CardHeader className="pb-2">
+  1076→              <CardTitle className="text-sm font-medium flex items-center gap-2">
+  1077→                <FileText className="h-4 w-4 text-purple-500" />
+  1078→                Historial de Auditorías Mensuales
+  1079→              </CardTitle>
+  1080→            </CardHeader>
+  1081→            <CardContent>
+  1082→              {monthlyAudits.length === 0 ? (
+  1083→                <div className="text-center py-6">
+  1084→                  <Calendar className="h-10 w-10 text-muted-foreground/30 mx-auto mb-2" />
+  1085→                  <p className="text-sm text-muted-foreground">No hay auditorías mensuales registradas</p>
+  1086→                </div>
+  1087→              ) : (
+  1088→                <div className="space-y-2">
+  1089→                  {monthlyAudits.map((audit, idx) => (
+  1090→                    <div key={audit.id} className="flex items-center justify-between p-3 rounded-lg border bg-white hover:bg-gray-50 transition-colors">
+  1091→                      <div className="flex items-center gap-3">
+  1092→                        <div className={`w-8 h-8 rounded-full flex items-center justify-center ${audit.score >= AUDIT_PASS_THRESHOLD ? 'bg-green-100' : 'bg-red-100'}`}>
+  1093→                          {audit.score >= AUDIT_PASS_THRESHOLD ? <CheckCircle className="h-4 w-4 text-green-600" /> : <AlertCircle className="h-4 w-4 text-red-600" />}
+  1094→                        </div>
+  1095→                        <div>
+  1096→                          <p className="text-sm font-medium">Mes {monthlyAudits.length - idx}</p>
+  1097→                          <p className="text-xs text-muted-foreground">
+  1098→                            {new Date(audit.auditDate).toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })}
+  1099→                            {' · '}{audit.auditorName}
+  1100→                          </p>
+  1101→                        </div>
+  1102→                      </div>
+  1103→                      <Badge className={audit.score >= AUDIT_PASS_THRESHOLD ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}>
+  1104→                        {audit.score}%
+  1105→                      </Badge>
+  1106→                    </div>
+  1107→                  ))}
+  1108→                </div>
+  1109→              )}
+  1110→            </CardContent>
+  1111→          </Card>
+  1112→        </div>
+  1113→      )}
+  1114→
+  1115→      {/* ─── QUARTERLY TAB ─── */}
+  1116→      {activeTab === 'quarterly' && (
+  1117→        <div className="space-y-4">
+  1118→          <Card className={isQuarterlyOverdue() ? 'border-red-200 bg-red-50/30' : 'border-orange-100'}>
+  1119→            <CardContent className="p-4 flex items-center justify-between">
+  1120→              <div className="flex items-center gap-3">
+  1121→                <div className={`w-10 h-10 rounded-full flex items-center justify-center ${isQuarterlyOverdue() ? 'bg-red-100' : 'bg-orange-100'}`}>
+  1122→                  {isQuarterlyOverdue() ? <AlertCircle className="h-5 w-5 text-red-500" /> : <ShieldCheck className="h-5 w-5 text-orange-500" />}
+  1123→                </div>
+  1124→                <div>
+  1125→                  <p className="text-sm font-semibold">
+  1126→                    {isQuarterlyOverdue() ? 'Auditoría Trimestral Pendiente' : 'Auditoría Trimestral 5S Completa'}
+  1127→                  </p>
+  1128→                  <p className="text-xs text-muted-foreground">
+  1129→                    Checklist completo de las 5S. Detecta estándares y anomalías.
+  1130→                  </p>
+  1131→                </div>
+  1132→              </div>
+  1133→              <Button
+  1134→                onClick={() => setShowQuarterlyAudit(true)}
+  1135→                className={`gap-1.5 ${isQuarterlyOverdue() ? 'bg-red-500 hover:bg-red-600 text-white' : 'bg-orange-500 hover:bg-orange-600 text-white'}`}
+  1136→              >
+  1137→                <Plus className="h-4 w-4" />
+  1138→                Nueva Trimestral
+  1139→              </Button>
+  1140→            </CardContent>
+  1141→          </Card>
+  1142→          <Card>
+  1143→            <CardHeader className="pb-2">
+  1144→              <CardTitle className="text-sm font-medium flex items-center gap-2">
+  1145→                <FileText className="h-4 w-4 text-orange-500" />
+  1146→                Historial de Auditorías Trimestrales
+  1147→              </CardTitle>
+  1148→            </CardHeader>
+  1149→            <CardContent>
+  1150→              {quarterlyAudits.length === 0 ? (
+  1151→                <div className="text-center py-6">
+  1152→                  <ShieldCheck className="h-10 w-10 text-muted-foreground/30 mx-auto mb-2" />
+  1153→                  <p className="text-sm text-muted-foreground">No hay auditorías trimestrales registradas</p>
+  1154→                </div>
+  1155→              ) : (
+  1156→                <div className="space-y-2">
+  1157→                  {quarterlyAudits.map((audit, idx) => (
+  1158→                    <div key={audit.id} className="flex items-center justify-between p-3 rounded-lg border bg-white hover:bg-gray-50 transition-colors">
+  1159→                      <div className="flex items-center gap-3">
+  1160→                        <div className={`w-8 h-8 rounded-full flex items-center justify-center ${audit.score >= AUDIT_PASS_THRESHOLD ? 'bg-green-100' : 'bg-red-100'}`}>
+  1161→                          {audit.score >= AUDIT_PASS_THRESHOLD ? <CheckCircle className="h-4 w-4 text-green-600" /> : <AlertCircle className="h-4 w-4 text-red-600" />}
+  1162→                        </div>
+  1163→                        <div>
+  1164→                          <p className="text-sm font-medium">
+  1165→                            Trimestre {quarterlyAudits.length - idx}
+  1166→                            {idx === 0 && <span className="text-xs text-muted-foreground ml-1">(última)</span>}
+  1167→                          </p>
+  1168→                          <p className="text-xs text-muted-foreground">
+  1169→                            {new Date(audit.auditDate).toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })}
+  1170→                            {' · '}Auditor: {audit.auditorName}
+  1171→                          </p>
+  1172→                        </div>
+  1173→                      </div>
+  1174→                      <div className="flex items-center gap-2">
+  1175→                        <Badge className={audit.score >= AUDIT_PASS_THRESHOLD ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}>
+  1176→                          {audit.score}%
+  1177→                        </Badge>
+  1178→                        <Badge className={audit.result === 'apto' ? 'bg-green-500 text-white' : 'bg-red-500 text-white'}>
+  1179→                          {audit.result === 'apto' ? 'Apto' : 'No Apto'}
+  1180→                        </Badge>
+  1181→                      </div>
+  1182→                    </div>
+  1183→                  ))}
+  1184→                </div>
+  1185→              )}
+  1186→            </CardContent>
+  1187→          </Card>
+  1188→        </div>
+  1189→      )}
+  1190→
+  1191→      {/* ─── ACTIONS TAB ─── */}
+  1192→      {activeTab === 'actions' && (
+  1193→        <div className="space-y-4">
+  1194→          <Card className="border-orange-100">
+  1195→            <CardContent className="p-4">
+  1196→              <div className="flex items-center justify-between mb-3">
+  1197→                <div>
+  1198→                  <h3 className="font-bold text-orange-900">Plan de Acción Permanente</h3>
+  1199→                  <p className="text-xs text-muted-foreground">
+  1200→                    Todas las anomalías detectadas en auditorías se añaden aquí. Este plan de acción es permanente.
+  1201→                  </p>
+  1202→                </div>
+  1203→                <Button onClick={() => setShowNewAction(!showNewAction)} className="gap-1.5 bg-orange-500 hover:bg-orange-600 text-white">
+  1204→                  <Plus className="h-4 w-4" /> Nueva Acción
+  1205→                </Button>
+  1206→              </div>
+  1207→              <div className="grid grid-cols-4 gap-3 text-center">
+  1208→                <div className="p-2 rounded-lg bg-red-50">
+  1209→                  <p className="text-lg font-bold text-red-600">{actionStats.abierta}</p>
+  1210→                  <p className="text-[10px] text-red-700 font-medium">Abiertas</p>
+  1211→                </div>
+  1212→                <div className="p-2 rounded-lg bg-amber-50">
+  1213→                  <p className="text-lg font-bold text-amber-600">{actionStats.en_proceso}</p>
+  1214→                  <p className="text-[10px] text-amber-700 font-medium">En Proceso</p>
+  1215→                </div>
+  1216→                <div className="p-2 rounded-lg bg-green-50">
+  1217→                  <p className="text-lg font-bold text-green-600">{actionStats.resuelta}</p>
+  1218→                  <p className="text-[10px] text-green-700 font-medium">Resueltas</p>
+  1219→                </div>
+  1220→                <div className="p-2 rounded-lg bg-gray-50">
+  1221→                  <p className="text-lg font-bold text-gray-600">{actionStats.cerrada}</p>
+  1222→                  <p className="text-[10px] text-gray-700 font-medium">Cerradas</p>
+  1223→                </div>
+  1224→              </div>
+  1225→            </CardContent>
+  1226→          </Card>
+  1227→          {showNewAction && (
+  1228→            <Card className="border-orange-200 bg-orange-50/30">
+  1229→              <CardContent className="p-4 space-y-3">
+  1230→                <h4 className="text-sm font-semibold">Nueva Acción de Mejora</h4>
+  1231→                <div>
+  1232→                  <label className="text-xs font-medium">Descripción *</label>
+  1233→                  <Textarea placeholder="Describa la acción..." value={newAction.descripcion} onChange={e => setNewAction(prev => ({ ...prev, descripcion: e.target.value }))} className="mt-1" rows={2} />
+  1234→                </div>
+  1235→                <div className="grid grid-cols-3 gap-3">
+  1236→                  <div>
+  1237→                    <label className="text-xs font-medium">Responsable</label>
+  1238→                    <Input placeholder="Nombre" value={newAction.responsable} onChange={e => setNewAction(prev => ({ ...prev, responsable: e.target.value }))} className="mt-1" />
+  1239→                  </div>
+  1240→                  <div>
+  1241→                    <label className="text-xs font-medium">Prioridad</label>
+  1242→                    <Select value={newAction.prioridad} onValueChange={val => setNewAction(prev => ({ ...prev, prioridad: val }))}>
+  1243→                      <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+  1244→                      <SelectContent>
+  1245→                        <SelectItem value="alta">Alta</SelectItem>
+  1246→                        <SelectItem value="media">Media</SelectItem>
+  1247→                        <SelectItem value="baja">Baja</SelectItem>
+  1248→                      </SelectContent>
+  1249→                    </Select>
+  1250→                  </div>
+  1251→                  <div>
+  1252→                    <label className="text-xs font-medium">Fecha límite</label>
+  1253→                    <Input type="date" value={newAction.fechaLimite} onChange={e => setNewAction(prev => ({ ...prev, fechaLimite: e.target.value }))} className="mt-1" />
+  1254→                  </div>
+  1255→                </div>
+  1256→                <div className="flex justify-end gap-2">
+  1257→                  <Button variant="outline" size="sm" onClick={() => setShowNewAction(false)}>Cancelar</Button>
+  1258→                  <Button size="sm" onClick={handleAddAction} disabled={!newAction.descripcion.trim()} className="bg-orange-500 hover:bg-orange-600 text-white">Agregar</Button>
+  1259→                </div>
+  1260→              </CardContent>
+  1261→            </Card>
+  1262→          )}
+  1263→          <div className="space-y-2">
+  1264→            {actionItems.length === 0 ? (
+  1265→              <Card>
+  1266→                <CardContent className="p-8 text-center">
+  1267→                  <Zap className="h-10 w-10 text-muted-foreground/30 mx-auto mb-2" />
+  1268→                  <p className="text-sm text-muted-foreground">No hay acciones de mejora registradas</p>
+  1269→                  <p className="text-xs text-muted-foreground mt-1">Las anomalías de las auditorías aparecerán aquí automáticamente</p>
+  1270→                </CardContent>
+  1271→              </Card>
+  1272→            ) : (
+  1273→              actionItems.map((action) => (
+  1274→                <Card key={action.id} className={`overflow-hidden ${action.estado === 'resuelta' || action.estado === 'cerrada' ? 'opacity-60' : ''}`}>
+  1275→                  <CardContent className="p-3">
+  1276→                    <div className="flex items-start gap-3">
+  1277→                      <div className="flex flex-col items-center gap-1 mt-0.5">
+  1278→                        <Badge className={PRIORIDAD_COLORS[action.prioridad] || 'bg-gray-100'}>{action.prioridad}</Badge>
+  1279→                        <Badge className={ESTADO_COLORS[action.estado] || 'bg-gray-100'}>{ESTADO_LABELS[action.estado] || action.estado}</Badge>
+  1280→                      </div>
+  1281→                      <div className="flex-1 min-w-0">
+  1282→                        <p className={`text-sm font-medium ${action.estado === 'resuelta' || action.estado === 'cerrada' ? 'line-through text-muted-foreground' : ''}`}>
+  1283→                          {action.hallazgo || action.itemDescription}
+  1284→                        </p>
+  1285→                        <div className="flex items-center gap-3 mt-1.5 flex-wrap">
+  1286→                          {action.responsable && (
+  1287→                            <span className="text-xs text-muted-foreground flex items-center gap-1">
+  1288→                              <User className="h-3 w-3" /> {action.responsable}
+  1289→                            </span>
+  1290→                          )}
+  1291→                          {action.fechaLimite && (
+  1292→                            <span className="text-xs text-muted-foreground flex items-center gap-1">
+  1293→                              <Calendar className="h-3 w-3" /> {new Date(action.fechaLimite).toLocaleDateString('es-ES')}
+  1294→                            </span>
+  1295→                          )}
+  1296→                          <span className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
+  1297→                            {action.source === 'mejora_continua' ? 'Mejora continua' :
+  1298→                             action.source === 'actionplan' ? 'Plan de acción' :
+  1299→                             action.source?.startsWith('auditoria_') ? `Auditoría ${action.source.replace('auditoria_', '')}` :
+  1300→                             action.source}
+  1301→                          </span>
+  1302→                        </div>
+  1303→                      </div>
+  1304→                      <div className="flex items-center gap-1.5 shrink-0">
+  1305→                        <Select value={action.estado} onValueChange={val => handleUpdateActionEstado(action.id, val)}>
+  1306→                          <SelectTrigger className="h-7 w-28 text-xs"><SelectValue /></SelectTrigger>
+  1307→                          <SelectContent>
+  1308→                            <SelectItem value="abierta">Abierta</SelectItem>
+  1309→                            <SelectItem value="en_proceso">En proceso</SelectItem>
+  1310→                            <SelectItem value="resuelta">Resuelta</SelectItem>
+  1311→                            <SelectItem value="cerrada">Cerrada</SelectItem>
+  1312→                          </SelectContent>
+  1313→                        </Select>
+  1314→                        <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-destructive hover:text-red-600" onClick={() => handleDeleteAction(action.id)}>
+  1315→                          <Trash2 className="h-3.5 w-3.5" />
+  1316→                        </Button>
+  1317→                      </div>
+  1318→                    </div>
+  1319→                  </CardContent>
+  1320→                </Card>
+  1321→              ))
+  1322→            )}
+  1323→          </div>
+  1324→        </div>
+  1325→      )}
+  1326→
+  1327→      {/* ─── COUNTERS TAB ─── */}
+  1328→      {activeTab === 'counters' && (
+  1329→        <div className="space-y-4">
+  1330→          <Card className="border-green-100">
+  1331→            <CardContent className="p-4">
+  1332→              <h3 className="font-bold text-green-900 mb-1">Contadores Permanentes</h3>
+  1333→              <p className="text-xs text-muted-foreground mb-4">
+  1334→                Los contadores siguen activos desde el taller de implementación y continúan durante la mejora continua.
+  1335→              </p>
+  1336→              {stats ? (
+  1337→                <div className="space-y-4">
+  1338→                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+  1339→                    <div className="p-3 rounded-lg bg-blue-50 border border-blue-100 text-center">
+  1340→                      <FileText className="h-5 w-5 text-blue-500 mx-auto mb-1" />
+  1341→                      <p className="text-2xl font-bold text-blue-700">{stats.total?.checklistResponses || 0}</p>
+  1342→                      <p className="text-[10px] text-blue-600 font-medium">Checklists</p>
+  1343→                    </div>
+  1344→                    <div className="p-3 rounded-lg bg-green-50 border border-green-100 text-center">
+  1345→                      <ShieldCheck className="h-5 w-5 text-green-500 mx-auto mb-1" />
+  1346→                      <p className="text-2xl font-bold text-green-700">{stats.total?.auditResults || 0}</p>
+  1347→                      <p className="text-[10px] text-green-600 font-medium">Auditorías</p>
+  1348→                    </div>
+  1349→                    <div className="p-3 rounded-lg bg-orange-50 border border-orange-100 text-center">
+  1350→                      <Zap className="h-5 w-5 text-orange-500 mx-auto mb-1" />
+  1351→                      <p className="text-2xl font-bold text-orange-700">{stats.total?.actionItems || 0}</p>
+  1352→                      <p className="text-[10px] text-orange-600 font-medium">Acciones</p>
+  1353→                    </div>
+  1354→                    <div className="p-3 rounded-lg bg-purple-50 border border-purple-100 text-center">
+  1355→                      <ClipboardList className="h-5 w-5 text-purple-500 mx-auto mb-1" />
+  1356→                      <p className="text-2xl font-bold text-purple-700">{stats.total?.inventory || 0}</p>
+  1357→                      <p className="text-[10px] text-purple-600 font-medium">Inventario</p>
+  1358→                    </div>
+  1359→                    <div className="p-3 rounded-lg bg-cyan-50 border border-cyan-100 text-center">
+  1360→                      <CheckCircle className="h-5 w-5 text-cyan-500 mx-auto mb-1" />
+  1361→                      <p className="text-2xl font-bold text-cyan-700">{stats.total?.completedSteps || 0}</p>
+  1362→                      <p className="text-[10px] text-cyan-600 font-medium">Pasos Completados</p>
+  1363→                    </div>
+  1364→                    <div className="p-3 rounded-lg bg-pink-50 border border-pink-100 text-center">
+  1365→                      <TrendingUp className="h-5 w-5 text-pink-500 mx-auto mb-1" />
+  1366→                      <p className="text-2xl font-bold text-pink-700">{weeklyAudits.length + monthlyAudits.length + quarterlyAudits.length}</p>
+  1367→                      <p className="text-[10px] text-pink-600 font-medium">Aud. Periódicas</p>
+  1368→                    </div>
+  1369→                  </div>
+  1370→                  <h4 className="text-sm font-semibold mt-4">Contadores por S</h4>
+  1371→                  <div className="space-y-2">
+  1372→                    {S_STEPS.map(s => {
+  1373→                      const sData = stats.perS?.[s.id];
+  1374→                      return (
+  1375→                        <div key={s.id} className="flex items-center gap-3 p-2 rounded-lg border" style={{ borderColor: `${s.color}30` }}>
+  1376→                          <div className="w-6 h-6 rounded-full flex items-center justify-center text-white text-[10px] font-bold" style={{ backgroundColor: s.color }}>
+  1377→                            S{s.id}
+  1378→                          </div>
+  1379→                          <span className="text-sm font-medium flex-1" style={{ color: s.color }}>{s.name}</span>
+  1380→                          <div className="flex items-center gap-3 text-xs text-muted-foreground">
+  1381→                            <span>{sData?.photos || 0} fotos</span>
+  1382→                            <span>{sData?.actions || 0} acciones</span>
+  1383→                            <span>{sData?.completed || 0}/5 pasos</span>
+  1384→                          </div>
+  1385→                        </div>
+  1386→                      );
+  1387→                    })}
+  1388→                  </div>
+  1389→                </div>
+  1390→              ) : (
+  1391→                <p className="text-sm text-muted-foreground text-center py-4">Cargando contadores...</p>
+  1392→              )}
+  1393→            </CardContent>
+  1394→          </Card>
+  1395→        </div>
+  1396→      )}
+  1397→
+  1398→      {/* Audit modals */}
+  1399→      <QuarterlyAuditModal open={showQuarterlyAudit} onClose={handleAuditComplete} />
+  1400→      <PeriodicAuditModal
+  1401→        open={showWeeklyAudit}
+  1402→        onClose={handleAuditComplete}
+  1403→        auditType="weekly"
+  1404→        sections={weeklySections}
+  1405→        totalItems={weeklyTotalItems}
+  1406→        title="Auditoría Semanal de Limpieza"
+  1407→        subtitle="S3 — Seiso: Evaluación semanal de la limpieza de la zona"
+  1408→        color="#3B82F6"
+  1409→        icon={<SprayCan className="h-5 w-5 text-blue-500" />}
+  1410→      />
+  1411→      <PeriodicAuditModal
+  1412→        open={showMonthlyAudit}
+  1413→        onClose={handleAuditComplete}
+  1414→        auditType="monthly"
+  1415→        sections={monthlySections}
+  1416→        totalItems={monthlyTotalItems}
+  1417→        title="Auditoría Mensual 5S"
+  1418→        subtitle="Evaluación mensual resumida de las 5S — Puntos clave por cada S"
+  1419→        color="#8B5CF6"
+  1420→        icon={<Calendar className="h-5 w-5 text-purple-500" />}
+  1421→      />
+  1422→    </div>
+  1423→  );
+  1424→}
+  1425→

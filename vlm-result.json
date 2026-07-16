@@ -1,0 +1,28 @@
+{
+  "choices": [
+    {
+      "finish_reason": "stop",
+      "index": 0,
+      "message": {
+        "content": "La captura de pantalla muestra un mensaje de error en español indicando que el correo electrónico no está configurado. El texto explica que la API key de Resend no está configurada en Vercel, y proporciona instrucciones para solucionarlo: ir a Vercel → Settings → Environment Variables y añadir una clave válida para RESEND_API_KEY (que debe empezar con \"re_\"). El mensaje está resaltado con un fondo rosado y un icono de advertencia.",
+        "role": "assistant"
+      }
+    }
+  ],
+  "created": 1784186481,
+  "id": "20260716152101464de8a385d14481",
+  "model": "glm-4.6v",
+  "object": "chat.completion",
+  "request_id": "20260716152101464de8a385d14481",
+  "usage": {
+    "completion_tokens": 106,
+    "completion_tokens_details": {
+      "reasoning_tokens": 0
+    },
+    "prompt_tokens": 69,
+    "prompt_tokens_details": {
+      "cached_tokens": 4
+    },
+    "total_tokens": 175
+  }
+}

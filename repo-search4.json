@@ -1,0 +1,92 @@
+[
+  {
+    "url": "https://github.com/builder555/PineSAM",
+    "name": "builder555/PineSAM: UI for Pinecil V2 - control it over BLE  - GitHub",
+    "snippet": "With this app you have full control over your new shiny Pinecil V2 from your computer using bluetooth. NB: No special browser BLE GATT or flags required. Missing: pinill 5s-",
+    "host_name": "github.com",
+    "rank": 0,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://github.com/pine64",
+    "name": "Pine64 - GitHub",
+    "snippet": "Pine64 has 21 repositories available. Follow their code on GitHub. Public ISP tool & library for Bouffalo Labs RISC-V Microcontrollers and SoCs … maintained ...",
+    "host_name": "github.com",
+    "rank": 1,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://github.com/pine64/pine64_updater",
+    "name": "Application for updating PINE64 devices, such as Pinecil · GitHub",
+    "snippet": "Does not work for any Pine64 Pinecils sold after Aug. 1, 2022 ... Missing: pinill 5s-",
+    "host_name": "github.com",
+    "rank": 2,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://github.com/Spagett1/pineflash",
+    "name": "GitHub - Spagett1/pineflash: A tool to flash ironos to the pinecil",
+    "snippet": "A GUI tool to flash IronOS to the Pinecil V1, V2 and future other pine products. Features Auto-fetch the newest stable release of IronOS firmware. Allows ... Missing: pinill | Show results with: pinill",
+    "host_name": "github.com",
+    "rank": 3,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://github.com/fabrialberio/Pins",
+    "name": "fabrialberio/Pins: Create and edit app shortcuts - GitHub",
+    "snippet": "Pins allows you to customize your app menu by editing .desktop files. creating custom shortcuts to websites; hiding apps. Installation Download on Flathub ... Missing: pinill | Show results with: pinill",
+    "host_name": "github.com",
+    "rank": 4,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.linkedin.com/in/frances-morales",
+    "name": "Frances Morales Velilla - Full Stack Developer | From HR to Tech",
+    "snippet": "After more than a decade in Human Resources and Recruitment, I decided to follow a curiosity that had been growing for years and made the jump into tech.",
+    "host_name": "www.linkedin.com",
+    "rank": 5,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC8630534",
+    "name": "Broad Dissemination of Plasmids across Groundwater-Fed Rapid",
+    "snippet": "Our results reveal that plasmids can transfer at high frequencies and across distantly related taxa from rapid sand filter communities.",
+    "host_name": "pmc.ncbi.nlm.nih.gov",
+    "rank": 6,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.youtube.com/watch?v=oRn_9odwjAA",
+    "name": "Using GitHub copilot to build simple admin panel - YouTube",
+    "snippet": "... application using AdmingJS and express. AdminJS - https ... 5 views · 10:36. Go to channel The Stack · New GitHub Repos That ... Missing: pinill | Show results with: pinill",
+    "host_name": "www.youtube.com",
+    "rank": 7,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.facebook.com/groups/claudecommunity/posts/1047373821136616",
+    "name": "Hi! I'm new to this group. I recently joined because I am new to ai.",
+    "snippet": "Welcome! My most humble advice: Trust nothing. Verify everything. Assume failure. Defense in depth. Least privilege. Recovery matters. Audit ...",
+    "host_name": "www.facebook.com",
+    "rank": 8,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://besjournals.onlinelibrary.wiley.com/doi/abs/10.1111/2041-210x.70167",
+    "name": "GLOSSA: A user‐friendly R Shiny application for Bayesian machine",
+    "snippet": "Here we introduce GLOSSA, an open-source R package and Shiny application designed to make marine species distribution modelling more accessible.",
+    "host_name": "besjournals.onlinelibrary.wiley.com",
+    "rank": 9,
+    "date": "",
+    "favicon": ""
+  }
+]

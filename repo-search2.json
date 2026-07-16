@@ -1,0 +1,47 @@
+[
+  {
+    "url": "https://github.com/pensil-inc/pensil-app-backend",
+    "name": "Pensil Teaching App Backend - GitHub",
+    "snippet": "Pensil Teach App is an education platform created specifically for the tutors of the digital age. Pensil Teaching app reduce gap between tutor and students ...",
+    "host_name": "github.com",
+    "rank": 0,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://github.com/mobile",
+    "name": "GitHub Mobile",
+    "snippet": "Build from anywhere with GitHub Mobile. Collaborate, monitor, and create on mobile with GitHub Copilot for a smarter workflow.",
+    "host_name": "github.com",
+    "rank": 1,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://github.com/tramlinehq/tramline",
+    "name": "tramlinehq/tramline: Release coordination and deployment  - GitHub",
+    "snippet": "A centralized dashboard to monitor and control all your mobile releases, that gives visibility into the release process to all stakeholders.",
+    "host_name": "github.com",
+    "rank": 2,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://github.com/dodomorandi/hatspil",
+    "name": "dodomorandi/hatspil: High-throughput sequencing pipeline software",
+    "snippet": "HaTSPiL is a a Python pipeline for High-Throughput Sequencing analysis. Download from Git repo: git clone https://github.com/dodomorandi/hatspil.git",
+    "host_name": "github.com",
+    "rank": 3,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://github.com/guettli/programming-guidelines",
+    "name": "guettli/programming-guidelines - GitHub",
+    "snippet": "My opinionated programming guidelines. 1. Introduction. 2. Data structures. 3. Dev. 4. Remote APIs. 5. Op. 6. Networking. 7. Monitoring.",
+    "host_name": "github.com",
+    "rank": 4,
+    "date": "",
+    "favicon": ""
+  }
+]

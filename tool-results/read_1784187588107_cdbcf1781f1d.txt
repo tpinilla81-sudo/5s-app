@@ -1,0 +1,620 @@
+     1→'use client'
+     2→
+     3→import { useState, useEffect, useCallback } from 'react'
+     4→import { use5SStore } from '@/lib/store'
+     5→import { S_STEPS } from '@/lib/5s-constants'
+     6→import { Button } from '@/components/ui/button'
+     7→import { Input } from '@/components/ui/input'
+     8→import { Label } from '@/components/ui/label'
+     9→import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+    10→import { Badge } from '@/components/ui/badge'
+    11→import { Textarea } from '@/components/ui/textarea'
+    12→import {
+    13→  Select,
+    14→  SelectContent,
+    15→  SelectItem,
+    16→  SelectTrigger,
+    17→  SelectValue,
+    18→} from '@/components/ui/select'
+    19→import {
+    20→  Zap, Plus, Trash2, Edit3, X, Check, Loader2, ArrowRight,
+    21→  ClipboardList, BarChart3, TrendingUp, Target, Clock, AlertTriangle,
+    22→  CheckCircle, Circle, ListChecks, BookOpen, ChevronDown, ChevronRight,
+    23→  Lightbulb, Wrench, Eye, RefreshCw,
+    24→} from 'lucide-react'
+    25→import { toast } from 'sonner'
+    26→
+    27→// ═══════════════════════════════════════════════════════
+    28→// Types
+    29→// ═══════════════════════════════════════════════════════
+    30→interface PDCAItem {
+    31→  id: string
+    32→  title: string
+    33→  description: string | null
+    34→  phase: string // 'plan', 'do', 'check', 'act'
+    35→  sStep: number
+    36→  responsable: string | null
+    37→  prioridad: string
+    38→  estado: string
+    39→  fechaInicio: string
+    40→  fechaLimite: string | null
+    41→  resultado: string | null
+    42→  projectId: string
+    43→  zoneId: string | null
+    44→  createdAt: string
+    45→  updatedAt: string
+    46→}
+    47→
+    48→interface ActionItemData {
+    49→  id: string
+    50→  numeroEntrada: number
+    51→  estado: string
+    52→  porcentaje: number
+    53→  sStep: number
+    54→}
+    55→
+    56→const PHASE_CONFIG = [
+    57→  {
+    58→    key: 'plan',
+    59→    label: 'PLAN',
+    60→    labelEs: 'Planificar',
+    61→    description: 'Identificar problemas, establecer objetivos y definir planes de acción',
+    62→    color: '#3B82F6',
+    63→    bgColor: '#DBEAFE',
+    64→    icon: Target,
+    65→  },
+    66→  {
+    67→    key: 'do',
+    68→    label: 'DO',
+    69→    labelEs: 'Ejecutar',
+    70→    description: 'Implementar las acciones planificadas y recopilar datos',
+    71→    color: '#22C55E',
+    72→    bgColor: '#DCFCE7',
+    73→    icon: Wrench,
+    74→  },
+    75→  {
+    76→    key: 'check',
+    77→    label: 'CHECK',
+    78→    labelEs: 'Verificar',
+    79→    description: 'Analizar los resultados y comparar con los objetivos',
+    80→    color: '#EAB308',
+    81→    bgColor: '#FEF9C3',
+    82→    icon: Eye,
+    83→  },
+    84→  {
+    85→    key: 'act',
+    86→    label: 'ACT',
+    87→    labelEs: 'Actuar',
+    88→    description: 'Estandarizar lo que funciona y corregir lo que no',
+    89→    color: '#F97316',
+    90→    bgColor: '#FFF7ED',
+    91→    icon: Lightbulb,
+    92→  },
+    93→]
+    94→
+    95→const PRIORIDAD_OPTIONS = [
+    96→  { value: 'baja', label: 'Baja', color: 'bg-gray-100 text-gray-800' },
+    97→  { value: 'media', label: 'Media', color: 'bg-blue-100 text-blue-800' },
+    98→  { value: 'alta', label: 'Alta', color: 'bg-orange-100 text-orange-800' },
+    99→  { value: 'critica', label: 'Crítica', color: 'bg-red-100 text-red-800' },
+   100→]
+   101→
+   102→const ESTADO_OPTIONS = [
+   103→  { value: 'pendiente', label: 'Pendiente', color: 'bg-gray-100 text-gray-800' },
+   104→  { value: 'en_progreso', label: 'En Progreso', color: 'bg-blue-100 text-blue-800' },
+   105→  { value: 'completada', label: 'Completada', color: 'bg-green-100 text-green-800' },
+   106→  { value: 'cancelada', label: 'Cancelada', color: 'bg-red-100 text-red-800' },
+   107→]
+   108→
+   109→export default function PDCABoardView() {
+   110→  const { currentProject, currentZone, currentUser } = use5SStore()
+   111→  const [items, setItems] = useState<PDCAItem[]>([])
+   112→  const [actionItems, setActionItems] = useState<ActionItemData[]>([])
+   113→  const [isLoading, setIsLoading] = useState(false)
+   114→  const [activePhase, setActivePhase] = useState<string | null>(null)
+   115→  const [filterS, setFilterS] = useState<number | null>(null)
+   116→
+   117→  // Form state
+   118→  const [isCreating, setIsCreating] = useState(false)
+   119→  const [editingId, setEditingId] = useState<string | null>(null)
+   120→  const [formPhase, setFormPhase] = useState('plan')
+   121→  const [formTitle, setFormTitle] = useState('')
+   122→  const [formDescription, setFormDescription] = useState('')
+   123→  const [formSStep, setFormSStep] = useState(1)
+   124→  const [formResponsable, setFormResponsable] = useState('')
+   125→  const [formPrioridad, setFormPrioridad] = useState('media')
+   126→  const [formEstado, setFormEstado] = useState('pendiente')
+   127→  const [formFechaInicio, setFormFechaInicio] = useState(new Date().toISOString().slice(0, 10))
+   128→  const [formFechaLimite, setFormFechaLimite] = useState('')
+   129→  const [formResultado, setFormResultado] = useState('')
+   130→  const [isSaving, setIsSaving] = useState(false)
+   131→
+   132→  const loadItems = useCallback(async () => {
+   133→    if (!currentProject) return
+   134→    setIsLoading(true)
+   135→    try {
+   136→      const params = new URLSearchParams({ projectId: currentProject.id })
+   137→      if (currentZone?.id) params.set('zoneId', currentZone.id)
+   138→      if (filterS) params.set('sStep', String(filterS))
+   139→
+   140→      const res = await fetch(`/api/pdca?${params}`)
+   141→      const json = await res.json()
+   142→      if (json.success) {
+   143→        setItems(json.data || [])
+   144→      }
+   145→    } catch (e) {
+   146→      console.error('Error loading PDCA items:', e)
+   147→    } finally {
+   148→      setIsLoading(false)
+   149→    }
+   150→  }, [currentProject, currentZone, filterS])
+   151→
+   152→  const loadActionItems = useCallback(async () => {
+   153→    if (!currentProject) return
+   154→    try {
+   155→      const params = new URLSearchParams({ projectId: currentProject.id })
+   156→      if (currentZone?.id) params.set('zoneId', currentZone.id)
+   157→      const res = await fetch(`/api/actions?${params}`)
+   158→      const json = await res.json()
+   159→      if (json.success) {
+   160→        setActionItems(json.data || [])
+   161→      }
+   162→    } catch (e) {
+   163→      console.error('Error loading action items:', e)
+   164→    }
+   165→  }, [currentProject, currentZone])
+   166→
+   167→  useEffect(() => {
+   168→    loadItems()
+   169→    loadActionItems()
+   170→  }, [loadItems, loadActionItems])
+   171→
+   172→  const resetForm = () => {
+   173→    setFormPhase('plan')
+   174→    setFormTitle('')
+   175→    setFormDescription('')
+   176→    setFormSStep(1)
+   177→    setFormResponsable('')
+   178→    setFormPrioridad('media')
+   179→    setFormEstado('pendiente')
+   180→    setFormFechaInicio(new Date().toISOString().slice(0, 10))
+   181→    setFormFechaLimite('')
+   182→    setFormResultado('')
+   183→    setIsCreating(false)
+   184→    setEditingId(null)
+   185→  }
+   186→
+   187→  const handleEdit = (item: PDCAItem) => {
+   188→    setEditingId(item.id)
+   189→    setFormPhase(item.phase)
+   190→    setFormTitle(item.title)
+   191→    setFormDescription(item.description || '')
+   192→    setFormSStep(item.sStep)
+   193→    setFormResponsable(item.responsable || '')
+   194→    setFormPrioridad(item.prioridad)
+   195→    setFormEstado(item.estado)
+   196→    setFormFechaInicio(item.fechaInicio ? new Date(item.fechaInicio).toISOString().slice(0, 10) : '')
+   197→    setFormFechaLimite(item.fechaLimite ? new Date(item.fechaLimite).toISOString().slice(0, 10) : '')
+   198→    setFormResultado(item.resultado || '')
+   199→    setIsCreating(true)
+   200→  }
+   201→
+   202→  const handleSave = async () => {
+   203→    if (!currentProject || !formTitle || !formPhase) return
+   204→    setIsSaving(true)
+   205→    try {
+   206→      const payload: any = {
+   207→        title: formTitle,
+   208→        description: formDescription || null,
+   209→        phase: formPhase,
+   210→        sStep: formSStep,
+   211→        responsable: formResponsable || null,
+   212→        prioridad: formPrioridad,
+   213→        estado: formEstado,
+   214→        fechaInicio: formFechaInicio ? new Date(formFechaInicio).toISOString() : new Date().toISOString(),
+   215→        fechaLimite: formFechaLimite ? new Date(formFechaLimite).toISOString() : null,
+   216→        resultado: formResultado || null,
+   217→        projectId: currentProject.id,
+   218→        zoneId: currentZone?.id || null,
+   219→      }
+   220→
+   221→      if (editingId) {
+   222→        await fetch('/api/pdca', {
+   223→          method: 'PUT',
+   224→          headers: { 'Content-Type': 'application/json' },
+   225→          body: JSON.stringify({ id: editingId, ...payload }),
+   226→        })
+   227→        toast.success('Elemento PDCA actualizado')
+   228→      } else {
+   229→        await fetch('/api/pdca', {
+   230→          method: 'POST',
+   231→          headers: { 'Content-Type': 'application/json' },
+   232→          body: JSON.stringify(payload),
+   233→        })
+   234→        toast.success('Elemento PDCA creado')
+   235→      }
+   236→      resetForm()
+   237→      loadItems()
+   238→    } catch (e) {
+   239→      console.error('Save error:', e)
+   240→      toast.error('Error al guardar')
+   241→    } finally {
+   242→      setIsSaving(false)
+   243→    }
+   244→  }
+   245→
+   246→  const handleDelete = async (id: string) => {
+   247→    if (!confirm('¿Eliminar este elemento?')) return
+   248→    try {
+   249→      await fetch(`/api/pdca?id=${id}`, { method: 'DELETE' })
+   250→      toast.success('Elemento eliminado')
+   251→      loadItems()
+   252→    } catch {
+   253→      toast.error('Error al eliminar')
+   254→    }
+   255→  }
+   256→
+   257→  // ═══════════════════════════════════════════════════════
+   258→  // KPI Calculations
+   259→  // ═══════════════════════════════════════════════════════
+   260→  const kpis = {
+   261→    total: items.length,
+   262→    plan: items.filter(i => i.phase === 'plan').length,
+   263→    do: items.filter(i => i.phase === 'do').length,
+   264→    check: items.filter(i => i.phase === 'check').length,
+   265→    act: items.filter(i => i.phase === 'act').length,
+   266→    completed: items.filter(i => i.estado === 'completada').length,
+   267→    inProgress: items.filter(i => i.estado === 'en_progreso').length,
+   268→    pending: items.filter(i => i.estado === 'pendiente').length,
+   269→    completionRate: items.length > 0 ? Math.round((items.filter(i => i.estado === 'completada').length / items.length) * 100) : 0,
+   270→    // Action Plan KPIs
+   271→    totalActions: actionItems.length,
+   272→    openActions: actionItems.filter(a => a.estado === 'abierta').length,
+   273→    inProcessActions: actionItems.filter(a => a.estado === 'en_proceso').length,
+   274→    resolvedActions: actionItems.filter(a => a.estado === 'resuelta').length,
+   275→    closedActions: actionItems.filter(a => a.estado === 'cerrada').length,
+   276→    avgProgress: actionItems.length > 0 ? Math.round(actionItems.reduce((sum, a) => sum + a.porcentaje, 0) / actionItems.length) : 0,
+   277→  }
+   278→
+   279→  const filteredItems = activePhase
+   280→    ? items.filter(i => i.phase === activePhase)
+   281→    : items
+   282→
+   283→  return (
+   284→    <div className="h-full flex flex-col">
+   285→      {/* Header */}
+   286→      <div className="px-6 py-4 border-b bg-gradient-to-r from-orange-50 to-amber-50 shrink-0">
+   287→        <div className="flex items-center gap-3">
+   288→          <div className="w-10 h-10 rounded-xl bg-orange-600 flex items-center justify-center">
+   289→            <Zap className="h-5 w-5 text-white" />
+   290→          </div>
+   291→          <div className="flex-1">
+   292→            <h2 className="text-lg font-bold text-orange-900">Tablero PDCA — Mejora Continua</h2>
+   293→            <p className="text-xs text-orange-700">
+   294→              Planificar, Ejecutar, Verificar y Actuar. Herramienta de dirección de las 5S tras su implementación.
+   295→            </p>
+   296→          </div>
+   297→          <Select value={filterS ? String(filterS) : 'all'} onValueChange={v => setFilterS(v === 'all' ? null : Number(v))}>
+   298→            <SelectTrigger className="w-36 h-8 text-xs"><SelectValue placeholder="Todas las S" /></SelectTrigger>
+   299→            <SelectContent>
+   300→              <SelectItem value="all">Todas las S</SelectItem>
+   301→              {S_STEPS.map(s => <SelectItem key={s.id} value={String(s.id)}>S{s.id} — {s.japaneseName}</SelectItem>)}
+   302→            </SelectContent>
+   303→          </Select>
+   304→        </div>
+   305→      </div>
+   306→
+   307→      <div className="flex-1 overflow-auto">
+   308→        {/* KPI Dashboard */}
+   309→        <div className="px-6 py-4 border-b bg-white">
+   310→          <div className="grid grid-cols-6 gap-3">
+   311→            {/* Completion Rate */}
+   312→            <Card className="border-2 border-orange-200">
+   313→              <CardContent className="p-3 text-center">
+   314→                <div className="text-2xl font-black text-orange-600">{kpis.completionRate}%</div>
+   315→                <div className="text-[10px] font-semibold text-orange-800">Completado PDCA</div>
+   316→                <div className="mt-1 h-1.5 rounded-full bg-orange-100 overflow-hidden">
+   317→                  <div className="h-full bg-orange-500 rounded-full transition-all" style={{ width: `${kpis.completionRate}%` }} />
+   318→                </div>
+   319→              </CardContent>
+   320→            </Card>
+   321→
+   322→            {/* Plan de Acción Progress */}
+   323→            <Card className="border-2 border-rose-200">
+   324→              <CardContent className="p-3 text-center">
+   325→                <div className="text-2xl font-black text-rose-600">{kpis.avgProgress}%</div>
+   326→                <div className="text-[10px] font-semibold text-rose-800">Progreso Acciones</div>
+   327→                <div className="mt-1 h-1.5 rounded-full bg-rose-100 overflow-hidden">
+   328→                  <div className="h-full bg-rose-500 rounded-full transition-all" style={{ width: `${kpis.avgProgress}%` }} />
+   329→                </div>
+   330→              </CardContent>
+   331→            </Card>
+   332→
+   333→            {/* Open Actions */}
+   334→            <Card className="border-2 border-red-200">
+   335→              <CardContent className="p-3 text-center">
+   336→                <div className="text-2xl font-black text-red-600">{kpis.openActions}</div>
+   337→                <div className="text-[10px] font-semibold text-red-800">Acciones Abiertas</div>
+   338→              </CardContent>
+   339→            </Card>
+   340→
+   341→            {/* In Progress */}
+   342→            <Card className="border-2 border-blue-200">
+   343→              <CardContent className="p-3 text-center">
+   344→                <div className="text-2xl font-black text-blue-600">{kpis.inProcessActions + kpis.inProgress}</div>
+   345→                <div className="text-[10px] font-semibold text-blue-800">En Progreso</div>
+   346→              </CardContent>
+   347→            </Card>
+   348→
+   349→            {/* Resolved */}
+   350→            <Card className="border-2 border-green-200">
+   351→              <CardContent className="p-3 text-center">
+   352→                <div className="text-2xl font-black text-green-600">{kpis.resolvedActions + kpis.completed}</div>
+   353→                <div className="text-[10px] font-semibold text-green-800">Completadas</div>
+   354→              </CardContent>
+   355→            </Card>
+   356→
+   357→            {/* Total Items */}
+   358→            <Card className="border-2 border-gray-200">
+   359→              <CardContent className="p-3 text-center">
+   360→                <div className="text-2xl font-black text-gray-600">{kpis.total}</div>
+   361→                <div className="text-[10px] font-semibold text-gray-800">Total PDCA</div>
+   362→              </CardContent>
+   363→            </Card>
+   364→          </div>
+   365→        </div>
+   366→
+   367→        {/* PDCA Cycle Visualization */}
+   368→        <div className="px-6 py-4 border-b bg-gray-50">
+   369→          <div className="grid grid-cols-4 gap-3">
+   370→            {PHASE_CONFIG.map(phase => {
+   371→              const phaseItems = items.filter(i => i.phase === phase.key)
+   372→              const phaseCompleted = phaseItems.filter(i => i.estado === 'completada').length
+   373→              const phasePct = phaseItems.length > 0 ? Math.round((phaseCompleted / phaseItems.length) * 100) : 0
+   374→              const isActive = activePhase === phase.key
+   375→
+   376→              return (
+   377→                <button
+   378→                  key={phase.key}
+   379→                  onClick={() => setActivePhase(isActive ? null : phase.key)}
+   380→                  className={`text-left rounded-xl border-2 p-4 transition-all ${
+   381→                    isActive
+   382→                      ? 'shadow-lg scale-[1.02]'
+   383→                      : 'hover:shadow-md'
+   384→                  }`}
+   385→                  style={{
+   386→                    borderColor: isActive ? phase.color : `${phase.color}40`,
+   387→                    backgroundColor: isActive ? phase.bgColor : 'white',
+   388→                  }}
+   389→                >
+   390→                  <div className="flex items-center gap-2 mb-2">
+   391→                    <div className="w-8 h-8 rounded-lg flex items-center justify-center text-white"
+   392→                      style={{ backgroundColor: phase.color }}>
+   393→                      <phase.icon className="h-4 w-4" />
+   394→                    </div>
+   395→                    <div>
+   396→                      <div className="text-sm font-black" style={{ color: phase.color }}>{phase.label}</div>
+   397→                      <div className="text-[10px] font-semibold text-gray-600">{phase.labelEs}</div>
+   398→                    </div>
+   399→                  </div>
+   400→                  <p className="text-[10px] text-muted-foreground mb-2">{phase.description}</p>
+   401→                  <div className="flex items-center gap-2">
+   402→                    <div className="flex-1 h-1.5 rounded-full bg-gray-100">
+   403→                      <div className="h-full rounded-full transition-all" style={{ width: `${phasePct}%`, backgroundColor: phase.color }} />
+   404→                    </div>
+   405→                    <span className="text-[10px] font-bold" style={{ color: phase.color }}>{phasePct}%</span>
+   406→                  </div>
+   407→                  <div className="text-[9px] text-muted-foreground mt-1">
+   408→                    {phaseItems.length} elementos · {phaseCompleted} completados
+   409→                  </div>
+   410→                </button>
+   411→              )
+   412→            })}
+   413→          </div>
+   414→        </div>
+   415→
+   416→        {/* Action Button */}
+   417→        <div className="px-6 py-3 border-b bg-white flex items-center gap-2 shrink-0">
+   418→          {activePhase && (
+   419→            <Badge className="text-xs" style={{
+   420→              backgroundColor: PHASE_CONFIG.find(p => p.key === activePhase)?.bgColor,
+   421→              color: PHASE_CONFIG.find(p => p.key === activePhase)?.color,
+   422→            }}>
+   423→              Filtrando: {PHASE_CONFIG.find(p => p.key === activePhase)?.labelEs}
+   424→              <X className="h-3 w-3 ml-1 cursor-pointer" onClick={() => setActivePhase(null)} />
+   425→            </Badge>
+   426→          )}
+   427→          <div className="flex-1" />
+   428→          <Button size="sm" onClick={() => { resetForm(); setIsCreating(true) }}
+   429→            className="gap-1 bg-orange-600 hover:bg-orange-700 text-white text-xs h-8">
+   430→            <Plus className="h-3 w-3" /> Nuevo Elemento PDCA
+   431→          </Button>
+   432→        </div>
+   433→
+   434→        {/* Create/Edit Form */}
+   435→        {isCreating && (
+   436→          <div className="px-6 py-4 bg-orange-50/30 space-y-4 border-b">
+   437→            <div className="flex items-center justify-between">
+   438→              <h4 className="text-sm font-semibold text-orange-800">
+   439→                {editingId ? 'Editar Elemento PDCA' : 'Nuevo Elemento PDCA'}
+   440→              </h4>
+   441→              <Button variant="ghost" size="sm" onClick={resetForm} className="h-7 w-7 p-0">
+   442→                <X className="h-4 w-4" />
+   443→              </Button>
+   444→            </div>
+   445→
+   446→            <div className="grid grid-cols-3 gap-3">
+   447→              <div>
+   448→                <Label className="text-xs">Fase PDCA</Label>
+   449→                <Select value={formPhase} onValueChange={setFormPhase}>
+   450→                  <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+   451→                  <SelectContent>
+   452→                    {PHASE_CONFIG.map(p => (
+   453→                      <SelectItem key={p.key} value={p.key}>
+   454→                        <span className="font-bold">{p.label}</span> — {p.labelEs}
+   455→                      </SelectItem>
+   456→                    ))}
+   457→                  </SelectContent>
+   458→                </Select>
+   459→              </div>
+   460→              <div>
+   461→                <Label className="text-xs">S</Label>
+   462→                <Select value={String(formSStep)} onValueChange={v => setFormSStep(Number(v))}>
+   463→                  <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+   464→                  <SelectContent>
+   465→                    {S_STEPS.map(s => <SelectItem key={s.id} value={String(s.id)}>S{s.id} — {s.japaneseName}</SelectItem>)}
+   466→                  </SelectContent>
+   467→                </Select>
+   468→              </div>
+   469→              <div>
+   470→                <Label className="text-xs">Prioridad</Label>
+   471→                <Select value={formPrioridad} onValueChange={setFormPrioridad}>
+   472→                  <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+   473→                  <SelectContent>
+   474→                    {PRIORIDAD_OPTIONS.map(p => <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>)}
+   475→                  </SelectContent>
+   476→                </Select>
+   477→              </div>
+   478→            </div>
+   479→
+   480→            <div>
+   481→              <Label className="text-xs">Título</Label>
+   482→              <Input value={formTitle} onChange={e => setFormTitle(e.target.value)}
+   483→                placeholder="Describe la acción o elemento PDCA" className="h-8 text-xs" />
+   484→            </div>
+   485→
+   486→            <div>
+   487→              <Label className="text-xs">Descripción</Label>
+   488→              <Textarea value={formDescription} onChange={e => setFormDescription(e.target.value)}
+   489→                placeholder="Detalle del plan, acción, verificación o estandarización..."
+   490→                className="text-xs min-h-[60px]" />
+   491→            </div>
+   492→
+   493→            <div className="grid grid-cols-3 gap-3">
+   494→              <div>
+   495→                <Label className="text-xs">Responsable</Label>
+   496→                <Input value={formResponsable} onChange={e => setFormResponsable(e.target.value)}
+   497→                  placeholder="Persona responsable" className="h-8 text-xs" />
+   498→              </div>
+   499→              <div>
+   500→                <Label className="text-xs">Estado</Label>
+   501→                <Select value={formEstado} onValueChange={setFormEstado}>
+   502→                  <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+   503→                  <SelectContent>
+   504→                    {ESTADO_OPTIONS.map(e => <SelectItem key={e.value} value={e.value}>{e.label}</SelectItem>)}
+   505→                  </SelectContent>
+   506→                </Select>
+   507→              </div>
+   508→              <div>
+   509→                <Label className="text-xs">Fecha Límite</Label>
+   510→                <Input type="date" value={formFechaLimite} onChange={e => setFormFechaLimite(e.target.value)}
+   511→                  className="h-8 text-xs" />
+   512→              </div>
+   513→            </div>
+   514→
+   515→            <div>
+   516→              <Label className="text-xs">Resultado / Observaciones</Label>
+   517→              <Textarea value={formResultado} onChange={e => setFormResultado(e.target.value)}
+   518→                placeholder="Resultado de la verificación, lecciones aprendidas..."
+   519→                className="text-xs min-h-[40px]" />
+   520→            </div>
+   521→
+   522→            <div className="flex gap-2 pt-2">
+   523→              <Button onClick={handleSave} disabled={isSaving || !formTitle}
+   524→                className="gap-1 bg-orange-600 hover:bg-orange-700 text-white">
+   525→                {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+   526→                {editingId ? 'Guardar Cambios' : 'Crear Elemento'}
+   527→              </Button>
+   528→              <Button variant="outline" onClick={resetForm}>Cancelar</Button>
+   529→            </div>
+   530→          </div>
+   531→        )}
+   532→
+   533→        {/* Items List */}
+   534→        <div className="px-6 py-4">
+   535→          {isLoading ? (
+   536→            <div className="flex items-center justify-center py-12">
+   537→              <Loader2 className="h-6 w-6 text-orange-600 animate-spin" />
+   538→              <span className="ml-2 text-sm text-muted-foreground">Cargando...</span>
+   539→            </div>
+   540→          ) : filteredItems.length === 0 ? (
+   541→            <div className="text-center py-12">
+   542→              <Zap className="h-12 w-12 text-orange-300 mx-auto mb-3" />
+   543→              <h3 className="text-sm font-semibold text-gray-700 mb-1">No hay elementos PDCA</h3>
+   544→              <p className="text-xs text-muted-foreground">
+   545→                Comienza el ciclo de mejora continua creando el primer elemento.
+   546→              </p>
+   547→            </div>
+   548→          ) : (
+   549→            <div className="space-y-2">
+   550→              {filteredItems.map(item => {
+   551→                const phaseConfig = PHASE_CONFIG.find(p => p.key === item.phase)
+   552→                const prioridadInfo = PRIORIDAD_OPTIONS.find(p => p.value === item.prioridad)
+   553→                const estadoInfo = ESTADO_OPTIONS.find(e => e.value === item.estado)
+   554→                const sStepData = S_STEPS.find(s => s.id === item.sStep)
+   555→                const isOverdue = item.fechaLimite && new Date(item.fechaLimite) < new Date() && item.estado !== 'completada'
+   556→
+   557→                return (
+   558→                  <div key={item.id}
+   559→                    className="border-2 rounded-xl p-4 hover:shadow-md transition-all bg-white"
+   560→                    style={{ borderLeftWidth: '4px', borderLeftColor: phaseConfig?.color || '#gray' }}>
+   561→                    <div className="flex items-start gap-3">
+   562→                      <div className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0"
+   563→                        style={{ backgroundColor: phaseConfig?.bgColor }}>
+   564→                        {phaseConfig && <phaseConfig.icon className="h-4 w-4" style={{ color: phaseConfig.color }} />}
+   565→                      </div>
+   566→                      <div className="flex-1 min-w-0">
+   567→                        <div className="flex items-center gap-2 flex-wrap">
+   568→                          <h4 className="text-sm font-semibold">{item.title}</h4>
+   569→                          <Badge className="text-[9px] font-bold text-white" style={{ backgroundColor: phaseConfig?.color }}>
+   570→                            {phaseConfig?.label}
+   571→                          </Badge>
+   572→                          <Badge className={`${prioridadInfo?.color || ''} text-[9px]`}>{prioridadInfo?.label}</Badge>
+   573→                          <Badge className={`${estadoInfo?.color || ''} text-[9px]`}>{estadoInfo?.label}</Badge>
+   574→                          {isOverdue && (
+   575→                            <Badge className="bg-red-100 text-red-800 text-[9px]">
+   576→                              <AlertTriangle className="h-2.5 w-2.5 mr-0.5" /> Vencido
+   577→                            </Badge>
+   578→                          )}
+   579→                        </div>
+   580→                        {item.description && (
+   581→                          <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{item.description}</p>
+   582→                        )}
+   583→                        <div className="flex items-center gap-3 mt-1.5 text-[10px] text-muted-foreground">
+   584→                          <span className="font-semibold" style={{ color: sStepData?.color }}>S{item.sStep} — {sStepData?.japaneseName}</span>
+   585→                          {item.responsable && <span>👤 {item.responsable}</span>}
+   586→                          {item.fechaLimite && (
+   587→                            <span className={isOverdue ? 'text-red-600 font-semibold' : ''}>
+   588→                              📅 {new Date(item.fechaLimite).toLocaleDateString('es-ES')}
+   589→                            </span>
+   590→                          )}
+   591→                        </div>
+   592→                        {item.resultado && (
+   593→                          <div className="mt-2 p-2 rounded-lg bg-green-50 border border-green-200">
+   594→                            <p className="text-[10px] font-semibold text-green-700">Resultado:</p>
+   595→                            <p className="text-[10px] text-green-800">{item.resultado}</p>
+   596→                          </div>
+   597→                        )}
+   598→                      </div>
+   599→                      <div className="flex gap-1 shrink-0">
+   600→                        <Button variant="ghost" size="sm" onClick={() => handleEdit(item)}
+   601→                          className="h-7 w-7 p-0 text-orange-600">
+   602→                          <Edit3 className="h-3.5 w-3.5" />
+   603→                        </Button>
+   604→                        <Button variant="ghost" size="sm" onClick={() => handleDelete(item.id)}
+   605→                          className="h-7 w-7 p-0 text-red-500">
+   606→                          <Trash2 className="h-3.5 w-3.5" />
+   607→                        </Button>
+   608→                      </div>
+   609→                    </div>
+   610→                  </div>
+   611→                )
+   612→              })}
+   613→            </div>
+   614→          )}
+   615→        </div>
+   616→      </div>
+   617→    </div>
+   618→  )
+   619→}
+   620→

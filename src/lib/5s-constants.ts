@@ -144,6 +144,45 @@ export const PDCA_TEMPLATES = {
   },
 } as const;
 
+// ─── MC Sections (Objetivos) ──────────────────────────────────────────────────
+export interface MCSection {
+  id: number;
+  key: string;
+  name: string;
+  icon: string;
+  description: string;
+}
+
+export const MC_SECTIONS: MCSection[] = [
+  {
+    id: 1,
+    key: 'objetivos',
+    name: 'Objetivos',
+    icon: 'Target',
+    description: 'Define los objetivos de mejora continua para el proyecto. Establece metas medibles y plazos.',
+  },
+];
+
+// ─── MC Step Config for Template Manager ──────────────────────────────────────
+export const MC_STEP_CONFIG = {
+  id: 6,
+  name: 'MEJORA CONTINUA',
+  japaneseName: 'Kaizen',
+  spanishName: 'Mejora Continua',
+  color: '#16A34A',
+  bgColor: '#DCFCE7',
+  description: 'Fase 6 — Ciclo de Deming (D-P-C-A): Do, Plan, Check, Act. Mejora continua mediante auditorías periódicas, plan de acción y KPIs.',
+} as const;
+
+// MC Paso config for template manager — maps PDCA steps + Objetivos section
+export const MC_PASO_CONFIG = [
+  { paso: 1, label: 'Do — Hacer', key: 'do', icon: 'Play', types: ['pdca', 'plan_accion'] },
+  { paso: 2, label: 'Plan — Planificar', key: 'plan', icon: 'ClipboardList', types: ['pdca', 'plan_accion', 'estandar'] },
+  { paso: 3, label: 'Check — Verificar', key: 'check', icon: 'SearchCheck', types: ['pdca', 'kpi'] },
+  { paso: 4, label: 'Act — Actuar', key: 'act', icon: 'Rocket', types: ['pdca', 'estandar'] },
+  { paso: 5, label: 'Objetivos', key: 'objetivos', icon: 'Target', types: ['kpi'] },
+] as const;
+
 export const MINI_STEPS: MiniStep[] = [
   {
     id: 1,

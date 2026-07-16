@@ -1,0 +1,47 @@
+[
+  {
+    "url": "https://github.com/vercel/vercel",
+    "name": "GitHub - vercel/vercel: Develop. Preview. Ship.",
+    "snippet": "Vercel's AI Cloud is a unified platform for building modern applications, giving teams the tools to be flexible, move fast, and stay secure. Unit tests and ...",
+    "host_name": "github.com",
+    "rank": 0,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://vercel.com/docs/git/vercel-for-github",
+    "name": "Deploying GitHub Projects with Vercel",
+    "snippet": "Vercel for GitHub automatically deploys your GitHub projects with Vercel, Allows us to fetch and write source code for new project templates ...",
+    "host_name": "vercel.com",
+    "rank": 1,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://github.com/vercel/vercel/discussions/5783",
+    "name": "Is it possible to download project source file in vercel ? #5783 - GitHub",
+    "snippet": "I made this script to help me download source code from my apps at Vercel: https://github.com/zehfernandes/get-vercel-source-code Could be useful for you. ...",
+    "host_name": "github.com",
+    "rank": 2,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.youtube.com/watch?v=grod-PDmoBs",
+    "name": "Web Hosting with Github and Vercel - YouTube",
+    "snippet": "This tutorial walks through three different types of websites and how they can be hosted using Git, Github, Github Pages, and Vercel.",
+    "host_name": "www.youtube.com",
+    "rank": 3,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://community.vercel.com/t/vercel-for-github-source-code/44295",
+    "name": "Vercel for Github - Source Code - Help",
+    "snippet": "Is the Vercel for Github app open source? If so, where is the source code? Download Source from Vercel Project?",
+    "host_name": "community.vercel.com",
+    "rank": 4,
+    "date": "",
+    "favicon": ""
+  }
+]

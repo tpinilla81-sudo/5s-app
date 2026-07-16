@@ -17,8 +17,9 @@ import {
   ChevronDown, ChevronUp, AlertTriangle, Copy, RotateCcw, X,
   Eye, Code, GripVertical, Download, Upload, ClipboardList, Award,
   ClipboardPaste, ClipboardCopy, Check, ArrowRightLeft,
+  Play, SearchCheck, Rocket, Target, Sparkles,
 } from 'lucide-react'
-import { S_STEPS, AUDIT_CHECKLISTS, EXAM_PASS_THRESHOLD, SELF_EVAL_THRESHOLD, AUDIT_PASS_THRESHOLD, INVENTORY_CONFIGS } from '@/lib/5s-constants'
+import { S_STEPS, AUDIT_CHECKLISTS, EXAM_PASS_THRESHOLD, SELF_EVAL_THRESHOLD, AUDIT_PASS_THRESHOLD, INVENTORY_CONFIGS, MC_STEP_CONFIG, MC_PASO_CONFIG, PDCA_STEPS } from '@/lib/5s-constants'
 
 // ═══════════════════════════════════════════════════════
 // TYPES
@@ -39,7 +40,12 @@ interface TemplateData {
 
 // TemplateTab and TEMPLATE_TABS removed — now organized by S-step → Paso
 
-const S_COLORS: Record<number, string> = { 1: '#8B5CF6', 2: '#EAB308', 3: '#3B82F6', 4: '#F43F5E', 5: '#F97316' }
+const S_COLORS: Record<number, string> = { 1: '#8B5CF6', 2: '#EAB308', 3: '#3B82F6', 4: '#F43F5E', 5: '#F97316', 6: '#16A34A' }
+
+// MC Paso icon mapping
+const MC_PASO_ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
+  Play, ClipboardList, SearchCheck, Rocket, Target,
+}
 
 const MINI_STEPS_LABELS: Record<number, string> = {
   1: 'Formación y Exámenes',
@@ -1735,7 +1741,13 @@ export default function TemplateManager() {
     setFormType(type)
     setFormSStep(sStep)
     setFormMiniStep(miniStep)
-    setFormTitle(`S${sStep} - ${S_STEPS.find(s => s.id === sStep)?.japaneseName || ''}`)
+    // MC templates use sStep=0, title shows MC instead of S0
+    if (sStep === 0) {
+      const mcPasoLabel = MC_PASO_CONFIG.find(p => p.paso === miniStep)?.label || ''
+      setFormTitle(`MC - ${mcPasoLabel}`)
+    } else {
+      setFormTitle(`S${sStep} - ${S_STEPS.find(s => s.id === sStep)?.japaneseName || ''}`)
+    }
     setFormDescription('')
     const aplicaNota = type === 'examen' || type === 'autoevaluacion' || type === 'auditoria'
     setNotaMinimaAplica(aplicaNota)
@@ -2238,6 +2250,149 @@ export default function TemplateManager() {
               </div>
             )
           })}
+
+          {/* ═══════════ MC — Mejora Continua (Phase 6) ═══════════ */}
+          {(() => {
+            const mcColor = MC_STEP_CONFIG.color
+            const mcTotal = templates.filter(t => t.sStep === 0 && t.type === 'pdca').length + templates.filter(t => t.sStep === 0 && (t.type === 'plan_accion' || t.type === 'kpi' || t.type === 'estandar')).length
+            const isMcExpanded = expandedS === 6
+            return (
+              <div className="rounded-xl border-2 overflow-hidden"
+                style={{ borderColor: mcColor + '40' }}>
+                {/* MC Header */}
+                <div className="flex items-center justify-between px-4 py-3 cursor-pointer"
+                  style={{ backgroundColor: mcColor + '10' }}
+                  onClick={() => setExpandedS(isMcExpanded ? null : 6)}>
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-lg flex items-center justify-center text-white font-black text-sm"
+                      style={{ backgroundColor: mcColor }}>
+                      MC
+                    </div>
+                    <div>
+                      <span className="font-bold" style={{ color: mcColor }}>{MC_STEP_CONFIG.japaneseName}</span>
+                      <span className="text-sm text-muted-foreground ml-2">({MC_STEP_CONFIG.spanishName})</span>
+                      <span className="text-xs text-muted-foreground ml-2">— Fase 6</span>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <Badge variant="outline" style={{ color: mcColor, borderColor: mcColor + '40' }}>
+                      {mcTotal} plantilla{mcTotal !== 1 ? 's' : ''}
+                    </Badge>
+                    {isMcExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                  </div>
+                </div>
+
+                {/* MC Expanded — PDCA steps + Objetivos */}
+                <AnimatePresence>
+                  {isMcExpanded && (
+                    <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }}
+                      className="overflow-hidden">
+                      <div className="p-4 space-y-3">
+                        {/* PDCA Steps + Objetivos */}
+                        {MC_PASO_CONFIG.map(mcPaso => {
+                          const pasoKey = `MC-P${mcPaso.paso}`
+                          const pasoTemplates = templates.filter(t => {
+                            if (mcPaso.key === 'objetivos') return t.sStep === 0 && t.type === 'kpi'
+                            const pdcaStep = PDCA_STEPS.find(s => s.id === mcPaso.paso)
+                            return t.sStep === 0 && t.type === 'pdca' && pdcaStep && (t.content || '').includes(`"phase": "${pdcaStep.letter.toLowerCase()}"`)
+                              || (mcPaso.types.includes(t.type) && t.sStep === 0 && mcPaso.key !== 'objetivos')
+                          })
+                          const pasoCount = pasoTemplates.length
+                          const isPasoExpanded = expandedPaso === pasoKey
+                          const PasoIcon = MC_PASO_ICONS[mcPaso.icon] || ClipboardList
+                          const pasoColor = mcPaso.key === 'objetivos' ? mcColor : (PDCA_STEPS.find(s => s.id === mcPaso.paso)?.color || mcColor)
+
+                          return (
+                            <div key={mcPaso.paso} className="rounded-lg border overflow-hidden"
+                              style={{ borderColor: pasoColor + '25' }}>
+                              {/* Paso Header */}
+                              <div className="flex items-center justify-between px-3 py-2 cursor-pointer"
+                                style={{ backgroundColor: pasoColor + '08' }}
+                                onClick={() => setExpandedPaso(isPasoExpanded ? null : pasoKey)}>
+                                <div className="flex items-center gap-2">
+                                  <PasoIcon className="h-4 w-4" style={{ color: pasoColor }} />
+                                  {mcPaso.key !== 'objetivos' ? (
+                                    <div className="w-6 h-6 rounded-full flex items-center justify-center text-white text-[10px] font-bold" style={{ backgroundColor: pasoColor }}>
+                                      {PDCA_STEPS.find(s => s.id === mcPaso.paso)?.letter}
+                                    </div>
+                                  ) : null}
+                                  <span className="text-sm font-semibold" style={{ color: pasoColor }}>
+                                    {mcPaso.label}
+                                  </span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
+                                    {mcPaso.types.map(type => (
+                                      <Button key={type} variant="outline" size="sm"
+                                        className="h-6 px-2 text-[10px] gap-0.5"
+                                        style={{ borderColor: pasoColor + '40', color: pasoColor }}
+                                        onClick={() => startCreate(0, type, mcPaso.paso)}>
+                                        <Plus className="h-3 w-3" />
+                                        {type === 'pdca' ? 'PDCA' : type === 'plan_accion' ? 'Plan Acción' : type === 'estandar' ? 'Estándar' : 'KPIs'}
+                                      </Button>
+                                    ))}
+                                  </div>
+                                  <Badge variant="outline" className="text-[10px] h-5"
+                                    style={{ color: pasoColor, borderColor: pasoColor + '30' }}>
+                                    {pasoCount}
+                                  </Badge>
+                                  {isPasoExpanded ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+                                </div>
+                              </div>
+
+                              {/* Paso Expanded */}
+                              <AnimatePresence>
+                                {isPasoExpanded && (
+                                  <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }}
+                                    className="overflow-hidden">
+                                    <div className="px-3 pb-3 space-y-2">
+                                      {pasoCount === 0 ? (
+                                        <div className="text-center py-4 text-muted-foreground text-xs">
+                                          Sin plantillas para este paso. Pulsa + para crear.
+                                        </div>
+                                      ) : (
+                                        pasoTemplates.map(tpl => (
+                                          <div key={tpl.id}
+                                            className={`p-2.5 rounded-lg border ${tpl.active ? 'bg-white border-gray-200' : 'bg-gray-50 border-gray-300 opacity-60'}`}>
+                                            <div className="flex items-center justify-between">
+                                              <div className="flex items-center gap-3 flex-1 min-w-0">
+                                                <Badge variant="outline" className="text-[9px] shrink-0"
+                                                  style={{ color: pasoColor, borderColor: pasoColor + '30' }}>
+                                                  {tpl.type}
+                                                </Badge>
+                                                <div className="min-w-0">
+                                                  <p className="text-sm font-medium truncate">{tpl.title}</p>
+                                                  {tpl.description && <p className="text-xs text-muted-foreground truncate">{tpl.description}</p>}
+                                                </div>
+                                              </div>
+                                              <div className="flex items-center gap-1">
+                                                <Button variant="ghost" size="sm" onClick={() => startEdit(tpl)}
+                                                  className="h-7 w-7 p-0 text-blue-600 hover:text-blue-700">
+                                                  <Edit3 className="h-3.5 w-3.5" />
+                                                </Button>
+                                                <Button variant="ghost" size="sm" onClick={() => handleDelete(tpl.id)}
+                                                  className="h-7 w-7 p-0 text-red-500 hover:text-red-600">
+                                                  <Trash2 className="h-3.5 w-3.5" />
+                                                </Button>
+                                              </div>
+                                            </div>
+                                          </div>
+                                        ))
+                                      )}
+                                    </div>
+                                  </motion.div>
+                                )}
+                              </AnimatePresence>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+            )
+          })()}
         </div>
       )}
 
@@ -2259,14 +2414,16 @@ export default function TemplateManager() {
                   style={{ backgroundColor: S_COLORS[formSStep] + '10', borderColor: S_COLORS[formSStep] + '40' }}>
                   <div className="w-7 h-7 rounded flex items-center justify-center text-white font-black text-xs"
                     style={{ backgroundColor: S_COLORS[formSStep] }}>
-                    S{formSStep}
+                    {formSStep === 0 ? 'MC' : `S${formSStep}`}
                   </div>
                   <span className="text-sm font-semibold" style={{ color: S_COLORS[formSStep] }}>
-                    {S_STEPS.find(s => s.id === formSStep)?.japaneseName}
+                    {formSStep === 0 ? MC_STEP_CONFIG.japaneseName : S_STEPS.find(s => s.id === formSStep)?.japaneseName}
                   </span>
                   <Badge style={{ backgroundColor: S_COLORS[formSStep] + '20', color: S_COLORS[formSStep] }}
                     className="text-xs px-2 py-0.5 border-0 font-semibold">
-                    Paso {formMiniStep}: {MINI_STEPS_LABELS[formMiniStep] || `Paso ${formMiniStep}`}
+                    {formSStep === 0
+                      ? MC_PASO_CONFIG.find(p => p.paso === formMiniStep)?.label || `Paso ${formMiniStep}`
+                      : `Paso ${formMiniStep}: ${MINI_STEPS_LABELS[formMiniStep] || `Paso ${formMiniStep}`}`}
                   </Badge>
                 </div>
               </div>
@@ -2312,6 +2469,9 @@ export default function TemplateManager() {
                           S{s.id} - {s.japaneseName} ({s.spanishName})
                         </SelectItem>
                       ))}
+                      <SelectItem key={0} value="0">
+                        MC - {MC_STEP_CONFIG.japaneseName} ({MC_STEP_CONFIG.spanishName})
+                      </SelectItem>
                     </SelectContent>
                   </Select>
                 </div>

@@ -1,0 +1,92 @@
+[
+  {
+    "url": "https://github.com/prisma/nextjs-auth-starter",
+    "name": "prisma/nextjs-auth-starter - GitHub",
+    "snippet": "This repository provides a boilerplate to quickly set up a Next.js demo application with authentication using NextAuth.js v4, Prisma Postgres and Prisma ORM,",
+    "host_name": "github.com",
+    "rank": 0,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://github.com/prisma/prisma-next",
+    "name": "prisma/prisma-next - GitHub",
+    "snippet": "Prisma Next is a TypeScript rewrite of Prisma ORM, designed to be extensible, composable, and AI-agent friendly by default. a runnable app, a starter contract,",
+    "host_name": "github.com",
+    "rank": 1,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://github.com/prisma/prisma/discussions/23710",
+    "name": "How to use Prisma with Next.js and Next Auth (without targeting Edge",
+    "snippet": "In nextjs (v14.1.4) project with next auth (5.0.0-beta.16) and prisma setup, I am trying to add user data in user session by loading data from db.",
+    "host_name": "github.com",
+    "rank": 2,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://github.com/prisma/todo-app",
+    "name": "prisma/todo-app: Next.js + Better-Auth + Prisma Postgres - GitHub",
+    "snippet": "A simple todo list application built with Next.js, Better-Auth, and Prisma Postgres. Create, edit, and delete todos ✅ Mark tasks as complete/incomplete",
+    "host_name": "github.com",
+    "rank": 3,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://github.com/prisma/prisma/discussions/11987",
+    "name": "Reference setup with Prisma, NextJS, and local Postgres / PGBouncer?",
+    "snippet": "I've got NextJS setup with Prisma, which of course means there will be the standard Serverless issues to account for.",
+    "host_name": "github.com",
+    "rank": 4,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://github.com/prisma/prisma/discussions/20539",
+    "name": "I created a master/slave Prisma proxy with PostgreSQL + NextJS #20539",
+    "snippet": "I spent configuring a master-slave architecture using PostgreSQL, Prisma & NextJS with the app dir. Because this was a real pain in the a$$ since I haven't ...",
+    "host_name": "github.com",
+    "rank": 5,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://github.com/vercel/next.js/discussions/47876",
+    "name": "Using Prisma in NextJS 13 AppDir · vercel next.js · Discussion #47876",
+    "snippet": "I am using Prisma a lot in my current project and that of course includes server components to retrieve data but also client components to update data.",
+    "host_name": "github.com",
+    "rank": 6,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://github.com/HPWebdeveloper/Fullstack-Nextjs-React-Prisma-Postgres",
+    "name": "Fullstack App with Next.js, Prisma, and Postgres · GitHub",
+    "snippet": "A fullstack blog application built with Next.js 16, React 19, Prisma ORM, PostgreSQL, and NextAuth.js. Users can register, sign in, create, update, and delete ...",
+    "host_name": "github.com",
+    "rank": 7,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://github.com/prisma/prisma/discussions/24528",
+    "name": "Unable to use @prisma/client with NextJS + Docker #24528 - GitHub",
+    "snippet": "I am struggling to get Prisma to work with my stack, I keep getting the Error: @prisma/client did not initialize yet. Please run \"prisma generate\" and try to ...",
+    "host_name": "github.com",
+    "rank": 8,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://github.com/prisma/prisma/issues/7009",
+    "name": "Slow queries (Next.js + Prisma + Postgres) · Issue #7009 - GitHub",
+    "snippet": "I have built an app where you can house forums. This application is built using Next.js, Prisma, and Postgres. Everything runs super smooth and fast.",
+    "host_name": "github.com",
+    "rank": 9,
+    "date": "",
+    "favicon": ""
+  }
+]

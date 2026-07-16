@@ -1,0 +1,47 @@
+[
+  {
+    "url": "https://github.com/orgs/vercel/repositories",
+    "name": "Repositories - Vercel - GitHub",
+    "snippet": "Vercel has 239 repositories available. Follow their code on GitHub. free open-source library for building AI-powered applications and agents. ... Missing: one | Show results with: one",
+    "host_name": "github.com",
+    "rank": 0,
+    "date": "Jul 15, 2026",
+    "favicon": ""
+  },
+  {
+    "url": "https://github.com/vercel/vercel",
+    "name": "GitHub - vercel/vercel: Develop. Preview. Ship.",
+    "snippet": "Vercel's AI Cloud is a unified platform for building modern applications, giving teams the tools to be flexible, move fast, and stay secure while focusing on ...",
+    "host_name": "github.com",
+    "rank": 1,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://github.com/vercel",
+    "name": "Vercel - GitHub",
+    "snippet": "Agentic infrastructure for every app and agent. Vercel has 239 repositories available. Follow their code on GitHub. Missing: 5s- | Show results with: 5s-",
+    "host_name": "github.com",
+    "rank": 2,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://github.com/vercel/community/discussions/5060",
+    "name": "Vercel CLI monorepo support #5060 - GitHub",
+    "snippet": "Vercel CLI should always be invoked from the monorepo root, not the subdirectory. First, run vercel link to select the Vercel Project (you can ...",
+    "host_name": "github.com",
+    "rank": 3,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://github.com/vercel/community/discussions/438",
+    "name": "Multiple deployments from single project / multiple projects with same",
+    "snippet": "We would like to have multiple projects integrated with a single Github repository. As discussed here https://github.com/vercel/vercel/discussions/4719.",
+    "host_name": "github.com",
+    "rank": 4,
+    "date": "",
+    "favicon": ""
+  }
+]

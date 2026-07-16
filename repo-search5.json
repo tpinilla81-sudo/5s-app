@@ -1,0 +1,47 @@
+[
+  {
+    "url": "https://github.com/orgs/vercel/repositories",
+    "name": "Repositories - Vercel - GitHub",
+    "snippet": "Vercel has 239 repositories available. Follow their code on GitHub. a free open-source library for building AI-powered applications and agents. ... Missing: one. | Show results with: one.",
+    "host_name": "github.com",
+    "rank": 0,
+    "date": "Jul 15, 2026",
+    "favicon": ""
+  },
+  {
+    "url": "https://github.com/vercel/vercel",
+    "name": "GitHub - vercel/vercel: Develop. Preview. Ship.",
+    "snippet": "Vercel's AI Cloud is a unified platform for building modern applications, giving teams the tools to be flexible, move fast, and stay secure while focusing on ...",
+    "host_name": "github.com",
+    "rank": 1,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://vercel.com/docs/git",
+    "name": "Deploying Git Repositories with Vercel",
+    "snippet": "Vercel allows for automatic deployments on every branch push and merges onto the production branch of your GitHub, GitLab, Bitbucket and Azure DevOps Pipelines ...",
+    "host_name": "vercel.com",
+    "rank": 2,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://github.com/vercel",
+    "name": "Vercel - GitHub",
+    "snippet": "Agentic infrastructure for every app and agent. Vercel has 239 repositories available. Follow their code on GitHub. Missing: 5s- | Show results with: 5s-",
+    "host_name": "github.com",
+    "rank": 3,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.youtube.com/watch?v=GthkPo8xFqQ",
+    "name": "How To Deploy GitHub Project on Vercel | Step By Step - YouTube",
+    "snippet": "Want to deploy your GitHub project on Vercel in just a few minutes? In this tutorial “How To Deploy GitHub Project on Vercel | Step By Step” ...",
+    "host_name": "www.youtube.com",
+    "rank": 4,
+    "date": "",
+    "favicon": ""
+  }
+]
