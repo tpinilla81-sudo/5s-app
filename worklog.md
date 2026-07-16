@@ -22,3 +22,23 @@ Stage Summary:
 - Database: Neon PostgreSQL (neondb)
 - Seed created 6 users including gestor@cincos.com / gestor123 and admin@5s.com / admin123
 - All commits pushed to GitHub: https://github.com/tpinilla81-sudo/5s-app
+
+---
+Task ID: 2
+Agent: Main Agent
+Task: Fix email sending and redeploy to Vercel
+
+Work Log:
+- Diagnosed that the app works at https://5s-app-one.vercel.app (5s-app-deploy.vercel.app was 404)
+- Found that RESEND_API_KEY in Vercel was invalid (expired/revoked)
+- Updated email.ts: removed invalid fallback key, now only uses RESEND_API_KEY env var
+- Updated email/config/route.ts: removed fallback key, reports correctly
+- Deployed to Vercel using token [REDACTED]
+- Updated RESEND_API_KEY in Vercel to new valid key (re_KTVwzYhB_...)
+- Promoted latest deployment (dpl_HvABMV1aEZAqQAgD98jJ6xa5UmpS) to production via alias assignment
+- Verified email sending works: {"success":true}
+
+Stage Summary:
+- App URL: https://5s-app-one.vercel.app (HTTP 200)
+- Email: WORKING - Resend API key updated and verified
+- Code changes: removed invalid fallback key from email.ts and config route
