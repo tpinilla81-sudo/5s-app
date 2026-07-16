@@ -1,0 +1,549 @@
+     1→import { NextResponse } from 'next/server'
+     2→import { createHash } from 'crypto'
+     3→import { db } from '@/lib/db'
+     4→
+     5→function hashPassword(password: string): string {
+     6→  return createHash('sha256').update(password).digest('hex')
+     7→}
+     8→
+     9→const S_NAMES = ['Revisar', 'Ordenar', 'Limpiar', 'Estandarizar', 'Mantener']
+    10→const S_JAPANESE = ['Seiri', 'Seiton', 'Seiso', 'Seiketsu', 'Shitsuke']
+    11→
+    12→const TRAINING_CONTENT: Record<number, { sections: Array<{ title: string; content: string }> }> = {
+    13→  1: {
+    14→    sections: [
+    15→      {
+    16→        title: '1ª S - SEIRI (Revisar)',
+    17→        content: 'Consiste en revisar para identificar y clasificar los elementos innecesarios para la realización del trabajo. Es importante inventariar los elementos para luego ubicarlos en el lugar más apropiado para su uso y gestión.\n\nObjetivo: Aprovechar lugares despejados.\n\nAnaliza todo de una manera ordenada. Conoce lo que tienes. Establecer criterios para deshacerse de lo innecesario. Nota mínima para superar: 90',
+    18→      },
+    19→      {
+    20→        title: 'Ventajas y Beneficios',
+    21→        content: '"Ten sólo lo necesario en la cantidad correcta"\n\nSu práctica es esencial para la reducción o eliminación de accidentes.\n• Libera espacio útil.\n• Reducir los tiempos.\n• Facilita y mejorar el control visual.\n• Eliminar las pérdidas de productos o elementos.\n• Facilita el mantenimiento autónomo de máquinas.',
+    22→      },
+    23→      {
+    24→        title: 'IDENTIFICAR - Los 8 Desperdicios (MUDA)',
+    25→        content: 'MUDA es la palabra japonesa que define todos los «desperdicios» que consumen nuestro valioso tiempo y dinero.\n\nIdentifica necesarios e innecesarios según los 8 mudas o desperdicios:\n1. Sobreproducción\n2. Esperas\n3. Transporte\n4. Sobreprocesos\n5. Inventario\n6. Movimiento\n7. Defectos\n8. Talento de personas',
+    26→      },
+    27→      {
+    28→        title: 'Desperdicio de Sobre-Producción',
+    29→        content: 'Cuando se produce demasiado, más de lo que el cliente requiere. Se observa que hay producto acabado de más en la zona.',
+    30→      },
+    31→      {
+    32→        title: 'Desperdicio de Espera',
+    33→        content: 'Cuando los trabajadores están esperando el trabajo de otros. Esperar nuevas órdenes o instrucciones, esperar reparaciones. Se observa a personas realizando trabajos que no les corresponde.',
+    34→      },
+    35→      {
+    36→        title: 'Desperdicio de Transporte',
+    37→        content: 'Cuando se realizan muchos movimientos internos de materiales sin necesidad. Se observan almacenes intermedios que podrían estar en los proveedores.',
+    38→      },
+    39→      {
+    40→        title: 'Desperdicio de Sobre-Proceso',
+    41→        content: 'Cuando se realizan procesos que el cliente no paga. Se observan tareas en el proceso que luego se deshacen. Embalajes intermedios... etc.',
+    42→      },
+    43→      {
+    44→        title: 'Desperdicio de Inventario',
+    45→        content: 'Cuando se compra y almacena mucha materia prima. Se observa que se llenan almacenes o huecos de almacenaje con cantidades de materiales que no se requieren. Problemas de caducidades. Se compra mucho porque es barato... etc.',
+    46→      },
+    47→      {
+    48→        title: 'Desperdicio de Movimiento',
+    49→        content: 'Cuando los trabajadores están más tiempo en movimiento que trabajando. Se observa que las personas no están en su puesto de trabajo porque están continuamente buscando lo que necesitan.',
+    50→      },
+    51→      {
+    52→        title: 'Desperdicio de Defectos',
+    53→        content: 'Cuando los trabajadores están más tiempo reparando el producto terminado que produciendo. Se observa mucho tiempo las máquinas reparando por defectos. El personal de mantenimiento agitado.',
+    54→      },
+    55→      {
+    56→        title: 'No Aprovechar el Talento de las Personas',
+    57→        content: 'Cuando no se involucra en la mejora a todas las personas de la organización. Se observan prácticas individuales y que cada uno hace las cosas de manera diferente.',
+    58→      },
+    59→      {
+    60→        title: 'CLASIFICAR',
+    61→        content: 'Los elementos se clasifican en:\n• Materiales\n• Máquinas y equipos\n• Transporte y almacenaje\n• Mobiliario\n• Información',
+    62→      },
+    63→      {
+    64→        title: 'INVENTARIAR y UBICAR',
+    65→        content: 'Inventariar todos los elementos identificados para su gestión.\n\nPreguntas clave:\n• ¿Es necesario este elemento?\n• ¿Si es necesario, es necesario en esta cantidad?\n• ¿Si es necesario, tiene que estar localizado aquí?\n• ¿Cuánto tiempo hace que no se utiliza?',
+    66→      },
+    67→      {
+    68→        title: 'Gestión de Jaulas y Tarjetas',
+    69→        content: '"JAULA" es un lugar físico donde se destina todo aquel elemento que se elimina de lugar de trabajo y que puede servir para otros.\n\nTipos de JAULA:\n• TIPO A: Una por cada fábrica / 2 semanas de cuarentena / ordenado por tipo\n• TIPO B: Una por cada zona / 1 semana de cuarentena\n• TIPO C: Una por taller inicial / desaparece al finalizarlo\n\nEl color rojo del etiquetado de innecesarios significa: Enviar a la "JAULA".\nEl color naranja del etiquetado de innecesarios significa: Cuestionar si se envía a la "JAULA".',
+    70→      },
+    71→    ],
+    72→  },
+    73→  2: {
+    74→    sections: [
+    75→      {
+    76→        title: '2ª S - SEITON (Ordenar)',
+    77→        content: 'Consiste en ordenar para clasificar los elementos necesarios que hemos identificado en la 1ª S y que puedan ser encontrados con facilidad. Es importante inventariar los elementos para luego ubicarlos en el lugar más apropiado para su uso y gestión. Aparecen los primeros estándar.\n\nObjetivo: Encontrar fácilmente lo que estamos buscando.\n\nCriterios de situar y criterios de agrupar. Nota mínima para superar: 80',
+    78→      },
+    79→      {
+    80→        title: 'Ventajas y Beneficios',
+    81→        content: '"Un lugar para cada cosa, y cada cosa en su lugar"\n\n• Facilita y mejorar el control visual.\n• Eliminar las pérdidas de productos o elementos.\n• Mayor cumplimiento de las órdenes de trabajo.\n• Facilita el mantenimiento autónomo de máquinas, evitando averías.\n• Todo el miembro de la organización puede encontrar fácilmente lo que está buscando sin necesidad de estar totalmente familiarizado con el entorno.',
+    82→      },
+    83→      {
+    84→        title: 'CLASIFICAR',
+    85→        content: 'Los elementos se clasifican en:\n• Materiales\n• Máquinas y equipos\n• Transporte y almacenaje\n• Mobiliario\n• Información',
+    86→      },
+    87→      {
+    88→        title: 'Primeros Estándar - Layout',
+    89→        content: 'Layout es el diseño de la disposición más óptima de los elementos de las zonas de trabajo. Los objetivos del layout son facilitar la eliminación de los 8 desperdicios o "MUDAS".\n\nSeñalización del suelo: estándar visual para delimitar zonas de ubicación de elementos.',
+    90→      },
+    91→      {
+    92→        title: 'INVENTARIAR y UBICAR - Criterios',
+    93→        content: 'Criterios para ubicar los elementos:\n• Definir un nombre, código o color para cada clase de artículo.\n• Determinar la cantidad exacta que debe haber de cada artículo.\n• Decidir donde guardar las cosas tomando en cuenta la frecuencia de su uso.\n• Crear los medios para asegurar que cada artículo regrese a su lugar.\n• Colocar las cosas útiles por orden según criterios de: Seguridad / Calidad / Eficacia.\n\nSeguridad: Que no se puedan caer, que no se puedan mover, que no estorben.\nCalidad: Que no se oxiden, que no se golpeen, que no se puedan mezclar, que no se deterioren.\nEficacia: Minimizar el tiempo perdido.',
+    94→      },
+    95→      {
+    96→        title: 'Frecuencia de Uso',
+    97→        content: 'Decidir donde guardar las cosas tomando en cuenta la frecuencia de su uso:\n\n• Uso diario: en la zona de trabajo, al alcance de la mano\n• Uso semanal: cerca de la zona de trabajo\n• Uso mensual: en el almacén cercano\n• Uso cada varios años: en el almacén exterior\n\nLo que no es necesario se gestiona con las jaulas de innecesarios.',
+    98→      },
+    99→      {
+   100→        title: 'Tarjetas de Jaula/Almacén',
+   101→        content: 'El color rojo del etiquetado de innecesarios significa: Enviar a la "JAULA".\nEl color naranja del etiquetado de innecesarios significa: Cuestionar si se envía a la "JAULA".',
+   102→      },
+   103→    ],
+   104→  },
+   105→  3: {
+   106→    sections: [
+   107→      {
+   108→        title: '3ª S - SEISO (Limpiar)',
+   109→        content: 'Consiste en limpiar para identificar y clasificar los puntos de suciedad para eliminarlos, en lo posible, desde la causa raíz. Al finalizar, obtendremos el kit de limpieza óptimo.\n\nObjetivo: Identifiquemos las fuentes de suciedad.\n\nLocalizar fuentes de suciedad. Nota mínima para superar: 80',
+   110→      },
+   111→      {
+   112→        title: 'Ventajas y Beneficios',
+   113→        content: '"No es más limpio quien más limpia sino quien menos ensucia"\n"La limpieza es inspección"\n\n• Reduce el riesgo potencial de incidentes/accidentes.\n• Mejora el confort laboral.\n• Se incrementa la vida útil de los equipos y máquinas.\n• Las averías se pueden identificar más fácilmente.\n• Aumento significativo de la Productividad.\n• Se reducen los despilfarros de materiales y energía.\n• La calidad del producto se mejora.',
+   114→      },
+   115→      {
+   116→        title: 'Criterios de Limpieza',
+   117→        content: '• Integrar la limpieza como parte del trabajo diario.\n• Asumir la limpieza como una actividad de mantenimiento autónomo.\n• Se debe abolir la distinción entre operario de proceso, operario de limpieza y técnico de mantenimiento.\n• El trabajo de limpieza genera conocimiento sobre el equipo. No se trata de una actividad simple que se pueda delegar en personas de menor cualificación.\n• Se debe elevar la limpieza a la búsqueda de las fuentes de contaminación con el objeto de eliminar sus causas primarias.',
+   118→      },
+   119→      {
+   120→        title: 'Identificar, Clasificar y Eliminar Fuentes de Suciedad',
+   121→        content: 'Proceso:\n1. IDENTIFICAR las fuentes de suciedad (registro de incidencias/planes de acción)\n2. CLASIFICAR las fuentes según tipo y causa\n3. ELIMINAR las fuentes desde la causa raíz\n\nSi hay suciedad es fuente de suciedad. Si no hay suciedad no es parche.\nLo que se trata en la 1ª y 2ª S no se vuelve a tratar aquí.',
+   122→      },
+   123→      {
+   124→        title: 'Plan de Inspección y Limpieza - Kit de Limpieza',
+   125→        content: 'El plan de inspección y limpieza es la auditoría diaria.\n\nKit de limpieza: Según las fuentes de suciedad que hemos encontrado necesitaremos unos útiles de limpieza específicos y unos contenedores de reciclaje apropiados.\n\nEstándar: Documentar los procedimientos de limpieza y los útiles necesarios para cada zona.',
+   126→      },
+   127→    ],
+   128→  },
+   129→  4: {
+   130→    sections: [
+   131→      {
+   132→        title: '4ª S - SEIKETSU (Estandarizar)',
+   133→        content: 'Consiste básicamente en aplicar y mantener lo que se ha venido desarrollando hasta ahora estandarizando soluciones creativas para mantener el puesto de trabajo limpio y ordenado, preferiblemente mediante control visual.\n\nObjetivo: Control visual.\n\nAnalizar estándar visuales. 1ªS-2ªS-3ªS. Nota mínima para superar: 70',
+   134→      },
+   135→      {
+   136→        title: 'Ventajas y Beneficios',
+   137→        content: '"El control visual es cualquier dispositivo de comunicación que nos indique el estado de algo con un solo vistazo"\n\n• Muestra información necesaria, fácil y rápida de entender.\n• Se fomenta y guarda el conocimiento, cualquiera pueda realizar la operación.\n• Mejora el confort laboral.\n• Se evitan errores de mantenimientos y limpieza reduciendo incidentes/accidentes.\n• Hay un compromiso de las áreas al tener que aprobar estándares.\n• Las personas adquieren sus responsabilidades.\n• Se incrementa la productividad de la planta.',
+   138→      },
+   139→      {
+   140→        title: 'Biblioteca de Estándares',
+   141→        content: 'Crear una biblioteca de estándares que incluya:\n• Estándares de las 3 primeras S\n• Procedimientos de trabajo documentados\n• Criterios de calidad visual\n• Responsabilidades y frecuencias\n• Materiales y herramientas necesarios\n• Qué hacer si algo no cumple el estándar\n\nLos estándares deben ser claros, visuales y fáciles de cumplir por todos. Compartir la información sin que tenga que buscarse o pedirse.',
+   142→      },
+   143→      {
+   144→        title: 'Estandarizar y Hacer Visibles los Estándares',
+   145→        content: 'Pasos para la 4ª S:\n1. Analizar los estándares visuales necesarios\n2. Estandarizar todo y hacer visibles los estándares utilizados\n3. Crear dispositivos de control visual\n4. Aprobar estándares entre las áreas\n5. Documentar y difundir\n\nPara pasar a la fase 5 (5ªS): Deberemos obtener una nota de 70 o más en la auditoría.',
+   146→      },
+   147→    ],
+   148→  },
+   149→  5: {
+   150→    sections: [
+   151→      {
+   152→        title: '5ª S - SHITSUKE (Mantener)',
+   153→        content: 'Consiste en tener el hábito y crear un ambiente de respeto a las normas y estándares establecidos.\n\nObjetivo: Mantener disciplina.\n\n1ª auditoría inicial. Nota mínima para superar: 70',
+   154→      },
+   155→      {
+   156→        title: 'Ventajas y Beneficios',
+   157→        content: '"Sin disciplina y hábito cualquier beneficio logrado en los primeros cuatro desaparece."\n\n• Crea cultura para que se respeten y se cuiden los recursos.\n• Se cambian los malos hábitos.\n• Se respetan más el trabajo de las personas.\n• Se eleva la motivación.\n• Aumenta la calidad y las relaciones con los clientes.\n• Aumenta la productividad.\n• Todos los integrantes de la organización se sienten participativos.',
+   158→      },
+   159→      {
+   160→        title: 'Cronograma de Auditorías',
+   161→        content: 'Establecer un cronograma de auditorías periódicas para verificar el cumplimiento de las 5S.\n\n• Hacer visibles los resultados de las 5 S\n• Comunicar los resultados a toda la organización\n• Reconocer los logros y avances\n• Corregir las desviaciones de forma sistemática\n• Mantener la disciplina como hábito diario\n\nLa mejora continua es un viaje, no un destino. Cada día podemos hacer algo un poco mejor que ayer.',
+   162→      },
+   163→    ],
+   164→  },
+   165→}
+   166→
+   167→const EXAM_QUESTIONS: Record<number, { questions: Array<{ question: string; options: string[]; correctIndex: number }> }> = {
+   168→  1: {
+   169→    questions: [
+   170→      { question: 'La 1ª S consiste en:', options: ['Identificar para clasificar los elementos innecesarios para la realización del trabajo', 'Clasificar para identificar los elementos innecesarios para la realización del trabajo', 'Inventariar para identificar y clasificar los elementos innecesarios para la realización del trabajo', 'Revisar para identificar y clasificar los elementos innecesarios para la realización del trabajo'], correctIndex: 3 },
+   171→      { question: '¿Qué significa MUDA?', options: ['MUDA es la palabra japonesa que define la revisión de los materiales en las zonas de trabajo.', 'MUDA son las siglas de una metodología industrial.', 'MUDA es la palabra de origen oriental y que significa eficiencia.', 'MUDA es la palabra japonesa que define todos los «desperdicios» que consumen nuestro valioso tiempo y dinero.'], correctIndex: 3 },
+   172→      { question: 'El desperdicio de sobre-producción es cuando:', options: ['Se realizan muchos movimientos internos de materiales sin necesidad.', 'Se produce demasiado, más de lo que el cliente requiere.', 'No se involucra en la mejora a todas las personas de la organización.', 'Se compra y almacena mucha materia prima.'], correctIndex: 1 },
+   173→      { question: 'El desperdicio de transporte es cuando:', options: ['Se realizan muchos movimientos internos de materiales sin necesidad.', 'Se produce demasiado, más de lo que el cliente requiere.', 'No se involucra en la mejora a todas las personas de la organización.', 'Se compra y almacena mucha materia prima.'], correctIndex: 0 },
+   174→      { question: 'Los elementos se clasifican en:', options: ['Tamaño, peso y color.', 'Materiales, máquinas y equipos, transporte y almacenaje, mobiliario e información.', 'Herramientas de mano o máquinas.', 'Zonas de uso, logística y producción.'], correctIndex: 1 },
+   175→      { question: 'La definición de "JAULA" es:', options: ['La caseta del guarda.', 'La parte de la fábrica donde están los vehículos.', 'Una zona de residuos.', 'Un lugar físico donde se destina todo aquel elemento que se elimina de lugar de trabajo y que puede servir para otros.'], correctIndex: 3 },
+   176→      { question: 'El color rojo del etiquetado de innecesarios es:', options: ['Cuestionar si se envía a la "JAULA".', 'El color no tiene significado alguno.', 'Enviar a la "JAULA".', 'Enviar fuera de la zona de trabajo.'], correctIndex: 2 },
+   177→      { question: 'Marca la respuesta correcta respecto a la 1ª S:', options: ['La 1ª S prepara las condiciones para la 2ª S, destinada al orden.', 'La 1ª S no es importante y podría hacerse al final.', 'El objetivo particular de la 1ª S es eliminar todos los elementos de la zona de trabajo.', 'La 1ª S consiste únicamente en limpiar el lugar de trabajo.'], correctIndex: 0 },
+   178→    ],
+   179→  },
+   180→  2: {
+   181→    questions: [
+   182→      { question: 'La 2ª S consiste en:', options: ['Identificar para clasificar los elementos necesarios e innecesarios para la realización del trabajo', 'Clasificar para identificar los elementos necesarios e innecesarios para la realización del trabajo', 'Inventariar para identificar y clasificar los elementos necesarios e innecesarios para la realización del trabajo', 'Ordenar para identificar y clasificar los elementos necesarios que hemos observado en la 1ª S y que puedan ser encontrados con facilidad.'], correctIndex: 3 },
+   183→      { question: '¿Qué significa LAYOUT?', options: ['LAYOUT es el diseño de la disposición mas desfavorable de los elementos de las zonas de trabajo.', 'LAYOUT es el diseño de la disposición mas óptima de los trabajadores en las zonas de trabajo.', 'LAYOUT es el diseño de la disposición mas óptima de los desperdicios de las zonas de trabajo.', 'LAYOUT es el diseño de la disposición mas óptima de los elementos de las zonas de trabajo.'], correctIndex: 3 },
+   184→      { question: 'Un criterio para realizar correctamente la 2ª S es:', options: ['Decidir donde guardar las cosas tomando en cuenta la frecuencia de su uso.', 'Tirar lo que no se utilice mucho.', 'Ordenar todas las herramientas en los cajones.', 'Ordenar sin tener en cuenta la seguridad.'], correctIndex: 0 },
+   185→      { question: 'Unas de las ventajas de hacer la 2ª S es:', options: ['Facilita y mejorar el control visual.', 'Que todo este marcado para las visitas.', 'Eliminar las pérdidas de productos o elementos.', 'La A y la C son correctas.'], correctIndex: 3 },
+   186→      { question: 'Los elementos se clasifican en:', options: ['Tamaño, peso y color.', 'Materiales, máquinas y equipos, transporte y almacenaje, mobiliario e información.', 'Herramientas de mano o máquinas.', 'Zonas de uso, logística y producción.'], correctIndex: 1 },
+   187→      { question: 'Según la frecuencia de uso:', options: ['La frecuencia de uso no es importante para situar los elementos.', 'Lo que usamos cada muchos años lo guardamos en la zona de trabajo.', 'Lo que usamos todos los días lo ubicamos en el almacén exterior.', 'Lo que usamos todos los días lo ubicamos en la zona de trabajo.'], correctIndex: 3 },
+   188→      { question: 'El color naranja del etiquetado de innecesarios es:', options: ['Enviar a la "JAULA".', 'El color no tiene significado alguno.', 'Cuestionar si se envía a la "JAULA".', 'Enviar fuera de la zona de trabajo.'], correctIndex: 2 },
+   189→      { question: 'Marca la respuesta correcta:', options: ['La 2ª S facilita y mejorar el control visual.', 'La 2ª S facilita el mantenimiento autónomo de máquinas, evitando averías.', 'El objetivo particular de la 2ª S es aprovechar lugares despejados.', 'La A y B son correctas.'], correctIndex: 3 },
+   190→    ],
+   191→  },
+   192→  3: {
+   193→    questions: [
+   194→      { question: 'La 3ª S consiste en:', options: ['Limpiar para que vean las visitas que esta limpio.', 'Limpiar las máquinas para que funcionen bien.', 'Identificar los puntos de suciedad para limpiarlos semanalmente.', 'Limpiar para identificar y clasificar los puntos de suciedad para la eliminarlos, en lo posible, desde la causa raíz.'], correctIndex: 3 },
+   195→      { question: 'Una ventaja importante al aplicar la 3ª S es:', options: ['Reduce el riesgo potencial de incidentes/accidentes.', 'El suelo está mas brillante.', 'Mejora el confort laboral.', 'La A y la C son correctas.'], correctIndex: 3 },
+   196→      { question: 'Un criterio para realizar correctamente la 3ª S es:', options: ['Asumir la limpieza como una actividad de mantenimiento autónomo.', 'Solo limpian los encargados de la limpieza.', 'El objetivo no es eliminar las fuentes de suciedad.', 'Se debe hacer un plan de limpieza fuera de horas de trabajo.'], correctIndex: 0 },
+   197→      { question: 'La 3ª S es:', options: ['Una buena práctica para los tiempos muertos.', 'Que todo este limpio para las visitas.', 'Inspeccionar.', 'La ultima S.'], correctIndex: 2 },
+   198→      { question: 'Los elementos se clasifican en:', options: ['Tamaño, peso y color.', 'Materiales, máquinas y equipos, transporte y almacenaje, mobiliario e información.', 'Herramientas de mano o máquinas.', 'Zonas de uso, logística y producción.'], correctIndex: 1 },
+   199→      { question: 'Según la frecuencia de uso:', options: ['La frecuencia de uso no es importante para situar los elementos.', 'Lo que usamos cada muchos años lo guardamos en la zona de trabajo.', 'Lo que usamos todos los días lo ubicamos en el almacén exterior.', 'Lo que usamos todos los días lo ubicamos en la zona de trabajo.'], correctIndex: 3 },
+   200→      { question: 'El color naranja del etiquetado de innecesarios es:', options: ['Enviar a la "JAULA".', 'El color no tiene significado alguno.', 'Cuestionar si se envía a la "JAULA".', 'Enviar fuera de la zona de trabajo.'], correctIndex: 2 },
+   201→      { question: 'Marca la respuesta correcta:', options: ['La 2ª S facilita y mejorar el control visual.', 'La 2ª S facilita el mantenimiento autónomo de máquinas, evitando averías.', 'El objetivo particular de la 2ª S es aprovechar lugares despejados.', 'La A y B son correctas.'], correctIndex: 3 },
+   202→    ],
+   203→  },
+   204→  4: {
+   205→    questions: [
+   206→      { question: 'El objetivo de la 4ªS es:', options: ['Que todo este marcado igual.', 'Que lo que se este limpiando se vea.', 'Estandarizar todo que se vea.', 'Desarrollar condiciones de trabajo que eviten retroceso en las primeras 3 S´s'], correctIndex: 3 },
+   207→      { question: 'La 4ª S consiste en:', options: ['Respetar lo que los demás hacen.', 'Ser disciplinado y metódico.', 'Llevar a cabo una serie de prácticas para que todo este en su sitio.', 'Aplicar y mantener lo que se ha venido desarrollando hasta ahora estandarizando soluciones creativas para mantener el puesto de trabajo limpio y ordenado, preferiblemente mediante control visual.'], correctIndex: 3 },
+   208→      { question: 'Un criterio para realizar correctamente la 4ª S es:', options: ['Compartir la información sin que tenga que buscarse o pedirse.', 'Inventar lo mejor de lo mejor.', 'Ser imaginativo sin pensar en los demás.', 'Buscar la solución más cara del mercado.'], correctIndex: 0 },
+   209→      { question: 'Unas de las ventajas de hacer la 4ª S es:', options: ['Que todo esté del mismo color.', 'Que todo este marcado para las visitas.', 'Mejora el confort laboral.', 'Que las personas trabajen más rápido.'], correctIndex: 2 },
+   210→      { question: 'Uno de los pasos a seguir en la 4ª S es:', options: ['Realizar un listado de posibles estándares.', 'Estandarizar todo y hacer visibles los estándares utilizados.', 'Pintar el suelo según el estándar de señalización.', 'Los pasos a seguir son los mismo que en la 3ª S.'], correctIndex: 1 },
+   211→      { question: 'Para pasar a la fase 5, 5ªS:', options: ['Deberemos de obtener una nota de 100 en la auditoría.', 'Deberemos de obtener una nota de menos de 100 en la auditoría.', 'Deberemos de obtener una nota de 90 en la auditoría.', 'Deberemos de obtener una nota de 70 o más en la auditoría.'], correctIndex: 3 },
+   212→    ],
+   213→  },
+   214→  5: {
+   215→    questions: [
+   216→      { question: 'El objetivo de la 5ªS es:', options: ['Que todo este marcado igual.', 'Que lo que se este limpiando se vea.', 'Evaluar a las personas.', 'Mantener lo conseguido con las anteriores "S" haciendo las 5S como una forma cultural de trabajo.'], correctIndex: 3 },
+   217→      { question: 'La 5ª S consiste en:', options: ['Respetar lo que los demás hacen.', 'Ser disciplinado y metódico.', 'Llevar a cabo una serie de prácticas para que todo este en su sitio.', 'Tener el hábito y crear un ambiente de respeto a las normas y estándares establecidos.'], correctIndex: 3 },
+   218→      { question: 'Un criterio para realizar correctamente la 5ª S es:', options: ['Hacer visibles los resultados de las 5 S´s.', 'Inventar lo mejor de lo mejor.', 'Comunicar a nivel personal los resultados obtenidos.', 'Buscar la solución más cara del mercado.'], correctIndex: 0 },
+   219→      { question: 'Unas de las ventajas de hacer la 5ª S es:', options: ['Crear un ambiente de trabajo competitivo.', 'Que todo este marcado para las visitas.', 'Se eleva la motivación.', 'Que las personas trabajen más rápido.'], correctIndex: 2 },
+   220→      { question: 'Marca la afirmación correcta sobre la 5ªS:', options: ['La limpieza es inspección.', 'Sin disciplina y hábito cualquier beneficio logrado en los primeros cuatro desaparece.', 'Ten sólo lo necesario en la cantidad correcta.', 'El control visual es cualquier dispositivo de comunicación que nos indique el estado de algo con un solo vistazo.'], correctIndex: 1 },
+   221→    ],
+   222→  },
+   223→}
+   224→
+   225→const INVENTORY_TEMPLATES: Record<number, { items: Array<{ name: string; location: string; category: string; quantity: number; price: number | null; action: string; extra?: Record<string, string | number> }> }> = {
+   226→  1: {
+   227→    items: [
+   228→      { name: 'Herramientas rotas', location: 'Taller principal', category: 'innecesario', quantity: 3, price: 45.00, action: 'Enviar a jaula', extra: { estado: 'Malo', frecuenciaUso: 'Nunca', decision: 'Eliminar' } },
+   229→      { name: 'Material de oficina obsoleto', location: 'Oficina', category: 'innecesario', quantity: 10, price: 120.50, action: 'Enviar a jaula Tipo A', extra: { estado: 'Regular', frecuenciaUso: 'Nunca', decision: 'Eliminar' } },
+   230→      { name: 'Piezas de repuesto activas', location: 'Almacén A', category: 'util', quantity: 25, price: 875.00, action: 'Mantener organizado', extra: { estado: 'Bueno', frecuenciaUso: 'Mensual', decision: 'Reubicar' } },
+   231→      { name: 'Documentación antigua', location: 'Archivo', category: 'dudoso', quantity: 50, price: null, action: 'Enviar a jaula Tipo B - revisar', extra: { estado: 'Regular', frecuenciaUso: 'Anual', decision: 'Revisar' } },
+   232→      { name: 'Equipos en desuso', location: 'Nave 2', category: 'innecesario', quantity: 2, price: 1500.00, action: 'Etiqueta roja - enviar a jaula', extra: { estado: 'Malo', frecuenciaUso: 'Nunca', decision: 'Eliminar' } },
+   233→    ],
+   234→  },
+   235→  2: {
+   236→    items: [
+   237→      { name: 'Caja de herramientas', location: 'Puesto de trabajo 1', category: 'muy_frecuente', quantity: 1, price: 89.95, action: 'Asignar ubicación fija - sombra', extra: { ubicacionAsignada: 'Panel herramientas PT1', metodoIdentificacion: 'Sombra/Contorno', cercania: 'Muy cerca (brazo)' } },
+   238→      { name: 'Carro de transporte', location: 'Pasillo B', category: 'frecuente', quantity: 2, price: 320.00, action: 'Zona marcada en suelo', extra: { ubicacionAsignada: 'Pasillo B - zona verde', metodoIdentificacion: 'Señal visual', cercania: 'Cerca (1-3 pasos)' } },
+   239→      { name: 'Extintores', location: 'Varios puntos', category: 'ocasional', quantity: 4, price: 180.00, action: 'Señalizar ubicación', extra: { ubicacionAsignada: 'Columnas señaladas', metodoIdentificacion: 'Señalización', cercania: 'Media distancia' } },
+   240→      { name: 'Documentación archivo muerto', location: 'Archivo exterior', category: 'raro', quantity: 8, price: 48.00, action: 'Almacén exterior', extra: { ubicacionAsignada: 'Archivo exterior nave 3', metodoIdentificacion: 'Etiqueta', cercania: 'Poco accesible' } },
+   241→      { name: 'Contenedores de residuos', location: 'Salida trasera', category: 'frecuente', quantity: 3, price: 75.00, action: 'Codificar por color', extra: { ubicacionAsignada: 'Zona residuos señalizada', metodoIdentificacion: 'Código color', cercania: 'Cerca (1-3 pasos)' } },
+   242→    ],
+   243→    // Comprehensive Seiton template matching the user's Excel structure
+   244→    categories: [
+   245→      { value: 'materiales', label: 'MATERIALES', color: 'bg-blue-100 text-blue-800' },
+   246→      { value: 'maquinas_equipos', label: 'MÁQUINAS Y EQUIPOS', color: 'bg-purple-100 text-purple-800' },
+   247→      { value: 'mobiliario', label: 'MOBILIARIO', color: 'bg-amber-100 text-amber-800' },
+   248→      { value: 'informacion', label: 'INFORMACIÓN', color: 'bg-teal-100 text-teal-800' },
+   249→      { value: 'transporte_almacenaje', label: 'TRANSPORTE Y ALMACENAJE', color: 'bg-orange-100 text-orange-800' },
+   250→    ],
+   251→    extraFields: [
+   252→      { key: 'codigo', label: 'Código de Trazabilidad', type: 'text' },
+   253→      { key: 'subcategoria', label: 'Subcategoría', type: 'select', options: [
+   254→        'Consumibles', 'Materia Prima', 'Producto en proceso', 'Producto acabado',
+   255→        'Máquinas de trabajo', 'Utillajes de trabajo', 'Equipos y accesorios de Elevación',
+   256→        'Equipos de ensayo y verificación', 'Herramientas de ensamblaje', 'Equipos informáticos', 'Equipos de limpieza',
+   257→        'Bancos de trabajo', 'Paneles herramienta', 'Armarios o taquillas', 'Sillas, mesas', 'Paneles u otros soportes para información',
+   258→        'Planos, instrucciones, boletines de trabajo', 'Posters u otra información divulgativa', 'Información referente a indicadores', 'Carpeta o bandejas con documentación', 'Información de seguridad',
+   259→        'Máquinas de transporte', 'Utillajes de transporte, Pallets, embalajes de madera, cajas', 'Estanterías, gavetas, contenedores', 'Bolsas, plásticos, protecciones, elementos de flejado', 'Carros de transporte',
+   260→      ]},
+   261→      { key: 'zona_destino', label: 'Zona Actual / Destino', type: 'text' },
+   262→      { key: 'responsable', label: 'Responsable / Área', type: 'text' },
+   263→      { key: 'estado', label: 'Estado de Conservación', type: 'select', options: ['Excelente', 'Bueno', 'Regular', 'Requiere Mantenimiento'] },
+   264→    ],
+   265→    desplegables_jerarquicos: {
+   266→      'MATERIALES': { prefijo_codigo: 'MAT', subcategorias: ['Consumibles', 'Materia Prima', 'Producto en proceso', 'Producto acabado'] },
+   267→      'MÁQUINAS Y EQUIPOS': { prefijo_codigo: 'MAQ', subcategorias: ['Máquinas de trabajo', 'Utillajes de trabajo', 'Equipos y accesorios de Elevación', 'Equipos de ensayo y verificación', 'Herramientas de ensamblaje', 'Equipos informáticos', 'Equipos de limpieza'] },
+   268→      'MOBILIARIO': { prefijo_codigo: 'MOB', subcategorias: ['Bancos de trabajo', 'Paneles herramienta', 'Armarios o taquillas', 'Sillas, mesas', 'Paneles u otros soportes para información'] },
+   269→      'INFORMACIÓN': { prefijo_codigo: 'INF', subcategorias: ['Planos, instrucciones, boletines de trabajo', 'Posters u otra información divulgativa', 'Información referente a indicadores', 'Carpeta o bandejas con documentación', 'Información de seguridad'] },
+   270→      'TRANSPORTE Y ALMACENAJE': { prefijo_codigo: 'TRA', subcategorias: ['Máquinas de transporte', 'Utillajes de transporte, Pallets, embalajes de madera, cajas', 'Estanterías, gavetas, contenedores', 'Bolsas, plásticos, protecciones, elementos de flejado', 'Carros de transporte'] },
+   271→    },
+   272→  },
+   273→  3: {
+   274→    items: [
+   275→      { name: 'Polvo acumulado en estanterías', location: 'Almacén A', category: 'polvo', quantity: 1, price: null, action: 'Aspirar y establecer frecuencia', extra: { nivel: 'Moderado', fuente: 'Falta de limpieza', metodoLimpieza: 'Aspirado', frecuenciaLimpieza: 'Semanal' } },
+   276→      { name: 'Manchas de grasa en suelo', location: 'Taller principal', category: 'grasa', quantity: 3, price: null, action: 'Desengrasar y identificar fuga', extra: { nivel: 'Grave', fuente: 'Proceso productivo', metodoLimpieza: 'Fregado', frecuenciaLimpieza: 'Diaria' } },
+   277→      { name: 'Residuos en zona de carga', location: 'Zona de carga', category: 'residuos', quantity: 5, price: null, action: 'Recoger y instalar contenedores', extra: { nivel: 'Moderado', fuente: 'Derrame', metodoLimpieza: 'Reparación', frecuenciaLimpieza: 'Diaria' } },
+   278→      { name: 'Oxidación en estructuras', location: 'Nave 2', category: 'oxidacion', quantity: 2, price: null, action: 'Tratar y pintar superficie', extra: { nivel: 'Leve', fuente: 'Humedad', metodoLimpieza: 'Pulido', frecuenciaLimpieza: 'Mensual' } },
+   279→      { name: 'Humedad en paredes', location: 'Almacén B', category: 'humedad', quantity: 1, price: null, action: 'Reparar filtración y ventilar', extra: { nivel: 'Moderado', fuente: 'Medio ambiente', metodoLimpieza: 'Otro', frecuenciaLimpieza: 'Quincenal' } },
+   280→    ],
+   281→  },
+   282→  4: {
+   283→    items: [
+   284→      { name: 'Procedimiento de trabajo PT-001', location: 'Tablón oficina', category: 'procedimiento', quantity: 1, price: null, action: 'Actualizar y difundir', extra: { estadoEstandar: 'Implantado', documentado: 'Sí', cumplimiento: 85, fechaRevision: '2025-06-15' } },
+   285→      { name: 'Señalización de seguridad zona A', location: 'Taller', category: 'senalizacion', quantity: 8, price: 96.00, action: 'Verificar visibilidad', extra: { estadoEstandar: 'Implantado', documentado: 'Sí', cumplimiento: 90, fechaRevision: '2025-07-01' } },
+   286→      { name: 'Checklist de limpieza diaria', location: 'Carro limpieza', category: 'checklist', quantity: 5, price: 12.50, action: 'Revisar contenido', extra: { estadoEstandar: 'En proceso', documentado: 'Parcialmente', cumplimiento: 60, fechaRevision: '2025-05-30' } },
+   287→      { name: 'Diagrama de flujo proceso montaje', location: 'Oficina técnica', category: 'diagrama', quantity: 1, price: null, action: 'Colocar en zona visible', extra: { estadoEstandar: 'Pendiente', documentado: 'No', cumplimiento: 0, fechaRevision: '' } },
+   288→      { name: 'Panel visual indicadores 5S', location: 'Entrada taller', category: 'visual', quantity: 1, price: 75.00, action: 'Actualizar semanalmente', extra: { estadoEstandar: 'Implantado', documentado: 'Sí', cumplimiento: 75, fechaRevision: '2025-06-01' } },
+   289→    ],
+   290→  },
+   291→  5: {
+   292→    items: [
+   293→      { name: 'Cumplimiento horario limpieza', location: 'Taller principal', category: 'cumplido', quantity: 1, price: null, action: 'Mantener', extra: { practica: 'Limpieza diaria al inicio turno', responsable: 'Equipo A', frecuencia: 'Diaria' } },
+   294→      { name: 'Declaración de anomalías', location: 'Taller', category: 'parcial', quantity: 1, price: null, action: 'Fomentar uso del sistema', extra: { practica: 'Declarar anomalías al detectarlas', responsable: 'Todos', frecuencia: 'Diaria' } },
+   295→      { name: 'Actualización indicadores', location: 'Panel 5S', category: 'incumplido', quantity: 1, price: null, action: 'Asignar responsable y frecuencia', extra: { practica: 'Actualizar indicadores PDCA', responsable: 'Responsable zona', frecuencia: 'Semanal' } },
+   296→    ],
+   297→  },
+   298→}
+   299→
+   300→const AUTOEVAL_CHECKLISTS: Record<number, { items: Array<{ description: string; maxScore: number }> }> = {
+   301→  1: {
+   302→    items: [
+   303→      { description: 'Se han identificado y etiquetado todos los ítems innecesarios', maxScore: 5 },
+   304→      { description: 'Se ha eliminado al menos el 80% de los ítems innecesarios', maxScore: 5 },
+   305→      { description: 'El área de trabajo está libre de objetos sin uso', maxScore: 5 },
+   306→      { description: 'Se ha definido el área de ítems dudosos con plazo de decisión', maxScore: 5 },
+   307→      { description: 'Los empleados conocen y aplican el criterio de clasificación', maxScore: 5 },
+   308→    ],
+   309→  },
+   310→  2: {
+   311→    items: [
+   312→      { description: 'Cada herramienta tiene su ubicación marcada y visible', maxScore: 5 },
+   313→      { description: 'Los objetos más usados están al alcance de la mano', maxScore: 5 },
+   314→      { description: 'Se usan códigos de color y etiquetas para identificar ubicaciones', maxScore: 5 },
+   315→      { description: 'Se puede encontrar cualquier herramienta en menos de 30 segundos', maxScore: 5 },
+   316→      { description: 'Todos los empleados conocen la ubicación de los elementos', maxScore: 5 },
+   317→    ],
+   318→  },
+   319→  3: {
+   320→    items: [
+   321→      { description: 'Todas las superficies están limpias y libres de polvo', maxScore: 5 },
+   322→      { description: 'Se ha identificado y eliminado la fuente de suciedad', maxScore: 5 },
+   323→      { description: 'Existe un plan de limpieza asignado por zonas', maxScore: 5 },
+   324→      { description: 'Los equipos están limpios y en buen estado visible', maxScore: 5 },
+   325→      { description: 'Se dispone de materiales de limpieza adecuados', maxScore: 5 },
+   326→    ],
+   327→  },
+   328→  4: {
+   329→    items: [
+   330→      { description: 'Los procedimientos están documentados y accesibles', maxScore: 5 },
+   331→      { description: 'Existen fotos del estado estándar en lugar visible', maxScore: 5 },
+   332→      { description: 'Los estándares son conocidos por todos los empleados', maxScore: 5 },
+   333→      { description: 'Se usan checklists para verificar el cumplimiento', maxScore: 5 },
+   334→      { description: 'Las desviaciones se corrigen de forma sistemática', maxScore: 5 },
+   335→    ],
+   336→  },
+   337→  5: {
+   338→    items: [
+   339→      { description: 'Se realizan auditorías periódicas (al menos mensuales)', maxScore: 5 },
+   340→      { description: 'Los resultados de auditoría se comunican a todo el equipo', maxScore: 5 },
+   341→      { description: 'Se reconocen y celebran los logros del equipo', maxScore: 5 },
+   342→      { description: 'Los nuevos empleados reciben formación 5S', maxScore: 5 },
+   343→      { description: 'Existe un sistema de sugerencias de mejora activo', maxScore: 5 },
+   344→    ],
+   345→  },
+   346→}
+   347→
+   348→const AUDIT_TEMPLATES: Record<number, { criteria: Array<{ criterion: string; weight: number }> }> = {
+   349→  1: {
+   350→    criteria: [
+   351→      { criterion: 'Ausencia de ítems innecesarios en el área de trabajo', weight: 25 },
+   352→      { criterion: 'Uso efectivo de la técnica de tarjetas rojas', weight: 20 },
+   353→      { criterion: 'Definición clara de ítems necesarios vs innecesarios', weight: 20 },
+   354→      { criterion: 'Participación del personal en la clasificación', weight: 15 },
+   355→      { criterion: 'Documentación de decisiones tomadas', weight: 20 },
+   356→    ],
+   357→  },
+   358→  2: {
+   359→    criteria: [
+   360→      { criterion: 'Ubicaciones marcadas y visibles para todos los elementos', weight: 25 },
+   361→      { criterion: 'Tiempo de localización de herramientas < 30 segundos', weight: 20 },
+   362→      { criterion: 'Uso de códigos de color y señalización visual', weight: 20 },
+   363→      { criterion: 'Accesibilidad de objetos según frecuencia de uso', weight: 15 },
+   364→      { criterion: 'Conocimiento del personal sobre ubicaciones', weight: 20 },
+   365→    ],
+   366→  },
+   367→  3: {
+   368→    criteria: [
+   369→      { criterion: 'Nivel de limpieza general del área', weight: 25 },
+   370→      { criterion: 'Identificación y eliminación de fuentes de suciedad', weight: 20 },
+   371→      { criterion: 'Cumplimiento del plan de limpieza', weight: 20 },
+   372→      { criterion: 'Disponibilidad de materiales de limpieza', weight: 15 },
+   373→      { criterion: 'Integración limpieza-inspección', weight: 20 },
+   374→    ],
+   375→  },
+   376→  4: {
+   377→    criteria: [
+   378→      { criterion: 'Documentación actualizada de procedimientos', weight: 25 },
+   379→      { criterion: 'Gestión visual efectiva (fotos, checklists, señales)', weight: 20 },
+   380→      { criterion: 'Conocimiento del personal sobre estándares', weight: 20 },
+   381→      { criterion: 'Sistema de corrección de desviaciones', weight: 15 },
+   382→      { criterion: 'Revisión periódica de estándares', weight: 20 },
+   383→    ],
+   384→  },
+   385→  5: {
+   386→    criteria: [
+   387→      { criterion: 'Programa de auditorías implementado', weight: 25 },
+   388→      { criterion: 'Comunicación de resultados al equipo', weight: 20 },
+   389→      { criterion: 'Sistema de reconocimiento de logros', weight: 20 },
+   390→      { criterion: 'Formación continua de nuevos empleados', weight: 15 },
+   391→      { criterion: 'Cultura de mejora continua visible', weight: 20 },
+   392→    ],
+   393→  },
+   394→}
+   395→
+   396→export async function POST() {
+   397→  try {
+   398→    // Only create gestor (app owner) — no demo data, no admin user
+   399→    const existingGestor = await db.user.findUnique({ where: { email: 't_pinilla@outlook.com' } })
+   400→    if (!existingGestor) {
+   401→      await db.user.create({
+   402→        data: {
+   403→          email: 't_pinilla@outlook.com',
+   404→          name: 'Gestor',
+   405→          password: hashPassword('gestor123'),
+   406→          role: 'gestor',
+   407→          active: true,
+   408→        },
+   409→      })
+   410→    }
+   411→
+   412→    // Templates are essential for the app to function — recreate them
+   413→    try {
+   414→      await db.template.deleteMany({})
+   415→    } catch {
+   416→      // Ignore delete errors
+   417→    }
+   418→
+   419→    for (let s = 1; s <= 5; s++) {
+   420→      // Training templates
+   421→      await db.template.create({
+   422→        data: {
+   423→          type: 'formacion',
+   424→          sStep: s,
+   425→          title: `Formación ${S_NAMES[s - 1]} - 5S`,
+   426→          description: `Contenido formativo sobre la ${s}ª S: ${S_NAMES[s - 1]} (${S_JAPANESE[s - 1]})`,
+   427→          content: JSON.stringify(TRAINING_CONTENT[s]),
+   428→        },
+   429→      })
+   430→
+   431→      // Exam templates
+   432→      await db.template.create({
+   433→        data: {
+   434→          type: 'examen',
+   435→          sStep: s,
+   436→          title: `Examen ${S_NAMES[s - 1]} - 5S`,
+   437→          description: `Examen de evaluación sobre ${S_NAMES[s - 1]}`,
+   438→          content: JSON.stringify(EXAM_QUESTIONS[s]),
+   439→        },
+   440→      })
+   441→
+   442→      // Inventory templates
+   443→      await db.template.create({
+   444→        data: {
+   445→          type: 'inventario',
+   446→          sStep: s,
+   447→          title: `Plantilla Inventario ${S_NAMES[s - 1]}`,
+   448→          description: `Plantilla de inventario para ${S_NAMES[s - 1]}`,
+   449→          content: JSON.stringify(INVENTORY_TEMPLATES[s]),
+   450→        },
+   451→      })
+   452→
+   453→      // Self-evaluation templates
+   454→      await db.template.create({
+   455→        data: {
+   456→          type: 'autoevaluacion',
+   457→          sStep: s,
+   458→          title: `Autoevaluación ${S_NAMES[s - 1]}`,
+   459→          description: `Checklist de autoevaluación para ${S_NAMES[s - 1]}`,
+   460→          content: JSON.stringify(AUTOEVAL_CHECKLISTS[s]),
+   461→        },
+   462→      })
+   463→
+   464→      // Audit templates
+   465→      await db.template.create({
+   466→        data: {
+   467→          type: 'auditoria',
+   468→          sStep: s,
+   469→          title: `Auditoría ${S_NAMES[s - 1]}`,
+   470→          description: `Criterios de auditoría para ${S_NAMES[s - 1]}`,
+   471→          content: JSON.stringify(AUDIT_TEMPLATES[s]),
+   472→        },
+   473→      })
+   474→
+   475→      // Standard template (formato de mejora)
+   476→      await db.template.create({
+   477→        data: {
+   478→          type: 'estandar',
+   479→          sStep: s,
+   480→          title: `Formato Estándar de Mejora - ${S_NAMES[s - 1]}`,
+   481→          description: `Plantilla de formato estándar para registrar mejoras en ${S_NAMES[s - 1]} (${S_JAPANESE[s - 1]})`,
+   482→          content: JSON.stringify({
+   483→            fields: [
+   484→              { key: 'beforePhotoUrl', label: 'Foto Antes', type: 'photo', required: true },
+   485→              { key: 'afterPhotoUrl', label: 'Foto Después', type: 'photo', required: true },
+   486→              { key: 'responsable', label: 'Quién lo ha hecho', type: 'text', required: true },
+   487→              { key: 'contacto', label: 'Contacto', type: 'text', required: true },
+   488→              { key: 'mejoraTipo', label: 'Tipo de Mejora', type: 'select', options: ['seguridad', 'calidad', 'proceso', 'logistica'], required: true },
+   489→            ],
+   490→          }),
+   491→        },
+   492→      })
+   493→
+   494→      // Fotos template (Paso 2 — Fotografías Antes/Después)
+   495→      const fotosDescriptions: Record<number, string> = {
+   496→        1: 'Fotografía la zona para ver qué elementos innecesarios hay antes de clasificar',
+   497→        2: 'Fotografía la zona para ver cómo está organizada antes de reordenar',
+   498→        3: 'Fotografía la zona para documentar los puntos de suciedad antes de limpiar',
+   499→        4: 'Fotografía la zona para documentar el estado actual antes de estandarizar',
+   500→        5: 'Fotografía la zona para documentar el nivel de cumplimiento de los estándares',
+   501→      }
+   502→      await db.template.create({
+   503→        data: {
+   504→          type: 'fotos',
+   505→          sStep: s,
+   506→          miniStep: 2,
+   507→          title: `Fotos S${s} - ${S_JAPANESE[s - 1]}`,
+   508→          description: `Plantilla de fotografías para ${S_NAMES[s - 1]} (${S_JAPANESE[s - 1]})`,
+   509→          content: JSON.stringify({
+   510→            sections: [
+   511→              {
+   512→                title: 'Fotografías Antes',
+   513→                description: fotosDescriptions[s] || 'Documenta el estado actual con fotografías',
+   514→                minPhotos: 3,
+   515→                photoTypes: ['antes'],
+   516→                instructions: 'Toma un mínimo de 3 fotografías del estado actual de la zona. Incluye vistas generales y detalles de los problemas detectados.',
+   517→              },
+   518→              {
+   519→                title: 'Fotografías Después',
+   520→                description: 'Fotografía el resultado tras aplicar las mejoras',
+   521→                minPhotos: 3,
+   522→                photoTypes: ['despues'],
+   523→                instructions: 'Toma fotografías desde los mismos ángulos que las fotos "antes" para poder comparar el antes y el después.',
+   524→              },
+   525→            ],
+   526→          }),
+   527→        },
+   528→      })
+   529→    }
+   530→
+   531→    const templates = await db.template.findMany()
+   532→    const userCount = await db.user.count()
+   533→    const projectCount = await db.project.count()
+   534→    return NextResponse.json({
+   535→      success: true,
+   536→      data: {
+   537→        message: 'Base de datos inicializada correctamente (solo gestor + plantillas)',
+   538→        templatesCreated: templates.length,
+   539→        users: userCount,
+   540→        projects: projectCount,
+   541→        gestorCredentials: 't_pinilla@outlook.com / gestor123',
+   542→      },
+   543→    })
+   544→  } catch (error) {
+   545→    console.error('Error seeding database:', error)
+   546→    return NextResponse.json({ success: false, error: 'Error seeding database' }, { status: 500 })
+   547→  }
+   548→}
+   549→

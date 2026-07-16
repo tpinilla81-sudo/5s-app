@@ -1,0 +1,597 @@
+     1→'use client';
+     2→
+     3→import { useState, useEffect, useMemo } from 'react';
+     4→import {
+     5→  Dialog,
+     6→  DialogContent,
+     7→  DialogHeader,
+     8→  DialogTitle,
+     9→} from '@/components/ui/dialog';
+    10→import { Button } from '@/components/ui/button';
+    11→import { Card, CardContent } from '@/components/ui/card';
+    12→import { Badge } from '@/components/ui/badge';
+    13→import { Input } from '@/components/ui/input';
+    14→import { Textarea } from '@/components/ui/textarea';
+    15→import { CheckSquare, CheckCircle, Camera, ChevronDown, ChevronRight, Maximize2, Minimize2, AlertCircle } from 'lucide-react';
+    16→import { use5SStore } from '@/lib/store';
+    17→import {
+    18→  S_STEPS,
+    19→  SELF_EVAL_THRESHOLD,
+    20→} from '@/lib/5s-constants';
+    21→import type { AuditSection, AuditItemResult } from '@/lib/5s-constants';
+    22→import { useChecklistTemplate } from '@/lib/checklist-templates';
+    23→
+    24→interface AutoevaluacionModalProps {
+    25→  open: boolean;
+    26→  onClose: () => void;
+    27→  sStep: number;
+    28→  miniStep: number;
+    29→}
+    30→
+    31→
+    32→
+    33→export default function AutoevaluacionModal({ open, onClose, sStep, miniStep }: AutoevaluacionModalProps) {
+    34→  const { fetchProgress, currentUser, adminFreeNavigation, currentProject, currentZone, canPerform, canView, hasPermission } = use5SStore();
+    35→  const sStepData = S_STEPS.find(s => s.id === sStep);
+    36→  const canSkipSteps = hasPermission('skip_steps');
+    37→  const canPerformStep = canPerform(sStep, miniStep);
+    38→  const canViewStep = canView(sStep, miniStep);
+    39→  // Permission-driven: read-only if no execute perm OR if candado closed for skip_steps users
+    40→  const isReadOnly = !canPerformStep || (canSkipSteps && !adminFreeNavigation);
+    41→  const canPerformAutoeval = canPerformStep;
+    42→
+    43→  const [isFullscreen, setIsFullscreen] = useState(true);
+    44→  const [results, setResults] = useState<Record<string, AuditItemResult>>({});
+    45→  const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({});
+    46→  const [observaciones, setObservaciones] = useState('');
+    47→  const [isSubmitting, setIsSubmitting] = useState(false);
+    48→  const [isCompleted, setIsCompleted] = useState(false);
+    49→  const [finalScore, setFinalScore] = useState(0);
+    50→  const [notaMinima, setNotaMinima] = useState(70);
+    51→
+    52→  // Load template from API (uses board config if zone has one)
+    53→  const { sections, isLoading: isLoadingTemplate, notaMinima: templateNotaMinima } = useChecklistTemplate('autoevaluacion', sStep, open, currentZone?.boardConfigId);
+    54→
+    55→  // Apply template notaMinima when loaded
+    56→  useEffect(() => {
+    57→    if (templateNotaMinima !== null) setNotaMinima(templateNotaMinima);
+    58→  }, [templateNotaMinima]);
+    59→
+    60→
+    61→
+    62→  // Fetch dynamic threshold (overrides template if present)
+    63→  useEffect(() => {
+    64→    if (open && currentProject?.id) {
+    65→      const fetchThreshold = async () => {
+    66→        try {
+    67→          const params = new URLSearchParams({ projectId: currentProject.id });
+    68→          if (currentZone?.id) params.set('zoneId', currentZone.id);
+    69→          const res = await fetch(`/api/audit-targets?${params}`);
+    70→          const json = await res.json();
+    71→          if (json.success && json.data) {
+    72→            const zoneTarget = json.data.find((t: any) => t.sStep === sStep && t.miniStep === 4 && t.zoneId === currentZone?.id);
+    73→            const projectTarget = json.data.find((t: any) => t.sStep === sStep && t.miniStep === 4 && t.zoneId === null);
+    74→            const target = zoneTarget || projectTarget;
+    75→            if (target?.notaMinima) setNotaMinima(target.notaMinima);
+    76→          }
+    77→        } catch (e) { console.error('Error fetching threshold:', e); }
+    78→      };
+    79→      fetchThreshold();
+    80→    }
+    81→  }, [open, sStep, currentProject?.id, currentZone?.id]);
+    82→
+    83→  // Initialize expanded sections
+    84→  useEffect(() => {
+    85→    if (open && sections.length > 0) {
+    86→      const expanded: Record<string, boolean> = {};
+    87→      sections.forEach(s => { expanded[s.id] = true; });
+    88→      setExpandedSections(expanded);
+    89→      setResults({});
+    90→      setObservaciones('');
+    91→      setIsCompleted(false);
+    92→      setFinalScore(0);
+    93→    }
+    94→  }, [open, sStep]);
+    95→
+    96→  const totalItems = sections.reduce((sum, s) => sum + s.items.length, 0) || 26;
+    97→
+    98→  const scoring = useMemo(() => {
+    99→    const allResults = Object.values(results);
+   100→    const okCount = allResults.filter(r => r.status === 'ok').length;
+   101→    const nokCount = allResults.filter(r => r.status === 'nok').length;
+   102→    const answeredCount = okCount + nokCount;
+   103→    const scorePercent = totalItems > 0 ? Math.min(Math.round((okCount / totalItems) * 100), 100) : 0;
+   104→    return { okCount, nokCount, answeredCount, scorePercent };
+   105→  }, [results, totalItems]);
+   106→
+   107→  // Check that all NOK items have hallazgo and mejora filled
+   108→  const nokItems = Object.values(results).filter(r => r.status === 'nok');
+   109→  const allNokCompleted = nokItems.length === 0 || nokItems.every(r => (r.hallazgo || '').trim() !== '' && (r.mejora || '').trim() !== '');
+   110→
+   111→  const canSubmit = canPerformAutoeval && scoring.answeredCount > 0 && scoring.scorePercent >= notaMinima && allNokCompleted;
+   112→
+   113→  const toggleSection = (sectionId: string) => {
+   114→    setExpandedSections(prev => ({ ...prev, [sectionId]: !prev[sectionId] }));
+   115→  };
+   116→
+   117→  const setItemStatus = (itemId: string, status: 'ok' | 'nok' | 'na') => {
+   118→    setResults(prev => ({
+   119→      ...prev,
+   120→      [itemId]: { ...prev[itemId], itemId, status },
+   121→    }));
+   122→  };
+   123→
+   124→  const setItemField = (itemId: string, field: 'hallazgo' | 'mejora' | 'otherText', value: string) => {
+   125→    setResults(prev => ({
+   126→      ...prev,
+   127→      [itemId]: { ...prev[itemId], itemId, [field]: value },
+   128→    }));
+   129→  };
+   130→
+   131→  const handleSubmit = async () => {
+   132→    if (!canSubmit) return;
+   133→    if (!canPerformAutoeval) return; // Only responsable/admin for S4, or any employee for S1/S2/S3/S5
+   134→    setIsSubmitting(true);
+   135→    try {
+   136→      const res = await fetch(`/api/progress/step?sStep=${sStep}&miniStep=${miniStep}`, {
+   137→        method: 'PUT',
+   138→        headers: { 'Content-Type': 'application/json' },
+   139→        body: JSON.stringify({
+   140→          completed: true,
+   141→          score: scoring.scorePercent,
+   142→          notes: JSON.stringify({
+   143→            type: 'autoevaluacion',
+   144→            results: Object.values(results),
+   145→            observaciones,
+   146→          }),
+   147→          projectId: currentProject?.id,
+   148→          zoneId: currentZone?.id || null,
+   149→        }),
+   150→      });
+   151→      const json = await res.json();
+   152→      if (json.success) {
+   153→        setIsCompleted(true);
+   154→        setFinalScore(scoring.scorePercent);
+   155→        await fetchProgress();
+   156→
+   157→        // ─── Create Action Items for NOK (disfunciones) ───
+   158→        const nokResults = Object.values(results).filter((r: any) => r.status === 'nok');
+   159→        for (const nok of nokResults) {
+   160→          if (!nok.hallazgo && !nok.mejora) continue; // Skip items without description
+   161→          try {
+   162→            await fetch('/api/actions', {
+   163→              method: 'POST',
+   164→              headers: { 'Content-Type': 'application/json' },
+   165→              body: JSON.stringify({
+   166→                sStep,
+   167→                miniStep: 4,
+   168→                itemId: nok.itemId,
+   169→                itemDescription: `Disfunción detectada en autoevaluación: ${nok.itemId}`,
+   170→                hallazgo: nok.hallazgo || nok.itemId,
+   171→                mejora: nok.mejora || '',
+   172→                responsable: null,
+   173→                prioridad: 'media',
+   174→                estado: 'abierta',
+   175→                source: 'autoevaluacion',
+   176→                auditor: null,
+   177→                projectId: currentProject?.id,
+   178→                zoneId: currentZone?.id || null,
+   179→              }),
+   180→            });
+   181→          } catch (actionError) {
+   182→            console.error('Error creating action item from autoevaluación:', actionError);
+   183→          }
+   184→        }
+   185→
+   186→        // ─── Notify responsables of NOK disfunciones ───
+   187→        if (nokResults.length > 0 && currentProject?.id && currentZone?.id) {
+   188→          try {
+   189→            const membersRes = await fetch(`/api/projects/${currentProject.id}/members`);
+   190→            const membersData = await membersRes.json();
+   191→            const allMembers = membersData?.members || [];
+   192→
+   193→            const sStepData = S_STEPS.find(s => s.id === sStep);
+   194→            const disfuncionMessage = `Se han detectado ${nokResults.length} disfunción(es) en la autoevaluación de S${sStep} (${sStepData?.japaneseName || ''}) en la zona "${currentZone.name}". Revisa el Plan de Acción.`;
+   195→
+   196→            // Notify zone responsable
+   197→            const responsableIds = new Set<string>();
+   198→            if (currentZone.responsableId) responsableIds.add(currentZone.responsableId);
+   199→            const responsables = allMembers.filter((m: any) => m.role === 'responsable');
+   200→            for (const resp of responsables) responsableIds.add(resp.userId);
+   201→
+   202→            for (const respId of responsableIds) {
+   203→              await fetch('/api/notifications', {
+   204→                method: 'POST',
+   205→                headers: { 'Content-Type': 'application/json' },
+   206→                body: JSON.stringify({
+   207→                  userId: respId,
+   208→                  type: 'disfuncion',
+   209→                  title: `Disfunciones detectadas: S${sStep} — ${sStepData?.japaneseName || ''}`,
+   210→                  message: disfuncionMessage,
+   211→                  sStep,
+   212→                  zoneId: currentZone.id,
+   213→                  projectId: currentProject.id,
+   214→                }),
+   215→              });
+   216→            }
+   217→          } catch (notifError) {
+   218→            console.error('Error notifying responsables of disfunciones:', notifError);
+   219→          }
+   220→        }
+   221→
+   222→        // Check if Steps 1-4 are now all completed for this S-step in the zone
+   223→        // If so, notify auditor(s) that they can perform Step 5
+   224→        if (currentProject?.id && currentZone?.id) {
+   225→          try {
+   226→            // Fetch all progress for this zone and S-step
+   227→            const progRes = await fetch(`/api/progress?projectId=${currentProject.id}`);
+   228→            const progData = await progRes.json();
+   229→            const allProgress = progData?.data || [];
+   230→
+   231→            // Also fetch employee progress for individual steps (formación = step 1)
+   232→            const empProgRes = await fetch(`/api/employee-progress?projectId=${currentProject.id}&zoneId=${currentZone.id}`);
+   233→            const empProgData = await empProgRes.json();
+   234→            const allEmpProgress = empProgData?.data || [];
+   235→
+   236→            // Check steps 1-4 completed (both zone-level progress AND employee progress)
+   237→            let allStepsCompleted = true;
+   238→            for (let ms = 1; ms <= 4; ms++) {
+   239→              const zoneStep = allProgress.find((p: any) =>
+   240→                p.sStep === sStep &&
+   241→                p.miniStep === ms &&
+   242→                (p.zoneId === currentZone.id || p.zoneId === null) &&
+   243→                p.completed
+   244→              );
+   245→              if (zoneStep) continue; // Zone-level completed
+   246→
+   247→              // Also check employee progress for individual steps
+   248→              const empStep = allEmpProgress.some((ep: any) =>
+   249→                ep.sStep === sStep &&
+   250→                ep.miniStep === ms &&
+   251→                ep.zoneId === currentZone.id &&
+   252→                ep.completed
+   253→              );
+   254→              if (empStep) continue; // Some employee completed this step
+   255→
+   256→              allStepsCompleted = false;
+   257→              break;
+   258→            }
+   259→
+   260→            if (allStepsCompleted) {
+   261→              // Find auditor and responsable users for this project and notify them
+   262→              const membersRes = await fetch(`/api/projects/${currentProject.id}/members`);
+   263→              const membersData = await membersRes.json();
+   264→              const allMembers = membersData?.members || [];
+   265→
+   266→              const sStepData = S_STEPS.find(s => s.id === sStep);
+   267→              const notifMessage = `Los pasos 1-4 de S${sStep} (${sStepData?.japaneseName || ''}) en la zona "${currentZone.name}" han sido completados. La auditoría (Paso 5) está lista para realizarse.`;
+   268→
+   269→              // Notify auditors
+   270→              const auditors = allMembers.filter((m: any) => m.role === 'auditor');
+   271→              for (const auditor of auditors) {
+   272→                await fetch('/api/notifications', {
+   273→                  method: 'POST',
+   274→                  headers: { 'Content-Type': 'application/json' },
+   275→                  body: JSON.stringify({
+   276→                    userId: auditor.userId,
+   277→                    type: 'audit_ready',
+   278→                    title: `Auditoría lista: S${sStep} — ${sStepData?.japaneseName || ''}`,
+   279→                    message: notifMessage,
+   280→                    sStep,
+   281→                    zoneId: currentZone.id,
+   282→                    projectId: currentProject.id,
+   283→                  }),
+   284→                });
+   285→              }
+   286→
+   287→              // Notify responsable of the zone (from zone.responsableId OR from project members)
+   288→              const responsableIds = new Set<string>();
+   289→              if (currentZone.responsableId) responsableIds.add(currentZone.responsableId);
+   290→              const responsables = allMembers.filter((m: any) => m.role === 'responsable');
+   291→              for (const resp of responsables) responsableIds.add(resp.userId);
+   292→              for (const respId of responsableIds) {
+   293→                await fetch('/api/notifications', {
+   294→                  method: 'POST',
+   295→                  headers: { 'Content-Type': 'application/json' },
+   296→                  body: JSON.stringify({
+   297→                    userId: respId,
+   298→                    type: 'audit_ready',
+   299→                    title: `Auditoría lista: S${sStep} — ${sStepData?.japaneseName || ''}`,
+   300→                    message: notifMessage,
+   301→                    sStep,
+   302→                    zoneId: currentZone.id,
+   303→                    projectId: currentProject.id,
+   304→                  }),
+   305→                });
+   306→              }
+   307→            }
+   308→          } catch (notifError) {
+   309→            console.error('Error sending notification to auditor:', notifError);
+   310→          }
+   311→        }
+   312→      }
+   313→    } catch (error) {
+   314→      console.error('Error submitting self-evaluation:', error);
+   315→    } finally {
+   316→      setIsSubmitting(false);
+   317→    }
+   318→  };
+   319→
+   320→  const handleAdminSkip = async () => {
+   321→    try {
+   322→      const res = await fetch(`/api/progress/step?sStep=${sStep}&miniStep=${miniStep}`, {
+   323→        method: 'PUT',
+   324→        headers: { 'Content-Type': 'application/json' },
+   325→        body: JSON.stringify({ completed: true, score: 100, notes: 'Completado por administrador (skip)', projectId: currentProject?.id, zoneId: currentZone?.id || null }),
+   326→      });
+   327→      const json = await res.json();
+   328→      if (json.success) {
+   329→        await fetchProgress();
+   330→        onClose();
+   331→      }
+   332→    } catch (error) {
+   333→      console.error('Error admin skip:', error);
+   334→    }
+   335→  };
+   336→
+   337→  return (
+   338→    <Dialog open={open} onOpenChange={() => onClose()}>
+   339→      <DialogContent size={isFullscreen ? "fullscreen" : "xl"} className="flex flex-col overflow-hidden p-0">
+   340→        <DialogHeader className="px-6 pt-6 pb-2 flex-shrink-0">
+   341→          <DialogTitle className="flex items-center gap-2">
+   342→            <CheckSquare className="h-5 w-5" style={{ color: sStepData?.color }} />
+   343→            <span>Autoevaluación Interna</span>
+   344→            <Badge variant="outline" style={{ borderColor: sStepData?.color, color: sStepData?.color }}>
+   345→              {sStepData?.japaneseName} — {sStepData?.spanishName}
+   346→            </Badge>
+   347→            <button
+   348→              onClick={() => setIsFullscreen(!isFullscreen)}
+   349→              className="ml-auto p-1 rounded hover:bg-muted transition-colors"
+   350→              title={isFullscreen ? "Reducir ventana" : "Pantalla completa"}
+   351→            >
+   352→              {isFullscreen ? <Minimize2 className="h-4 w-4 text-muted-foreground" /> : <Maximize2 className="h-4 w-4 text-muted-foreground" />}
+   353→            </button>
+   354→          </DialogTitle>
+   355→        </DialogHeader>
+   356→
+   357→        {canSkipSteps && !isCompleted && (
+   358→          <div className="flex items-center gap-2 p-2 mx-6 flex-shrink-0 bg-amber-50 border border-amber-200 rounded-lg">
+   359→            <span className="text-xs text-amber-700 font-medium">Modo Admin:</span>
+   360→            <Button
+   361→              variant="outline"
+   362→              size="sm"
+   363→              className="text-xs border-amber-300 text-amber-700 hover:bg-amber-100"
+   364→              onClick={handleAdminSkip}
+   365→            >
+   366→              Completar paso sin autoevaluación
+   367→            </Button>
+   368→          </div>
+   369→        )}
+   370→
+   371→        {isReadOnly && !isCompleted && (
+   372→          <div className="flex items-center gap-2 p-2 mx-6 flex-shrink-0 bg-blue-50 border border-blue-200 rounded-lg">
+   373→            <span className="text-xs text-blue-700 font-medium">Solo lectura: {canSkipSteps ? 'Activa el candado para poder realizar pasos.' : 'Puedes ver pero no modificar.'}</span>
+   374→          </div>
+   375→        )}
+   376→
+   377→        <div className="flex-1 overflow-y-auto px-6 pb-6 min-h-0">
+   378→        {isLoadingTemplate ? (
+   379→          <div className="flex items-center justify-center py-12">
+   380→            <div className="h-8 w-8 border-4 border-green-500 border-t-transparent rounded-full animate-spin" />
+   381→          </div>
+   382→        ) : sections.length === 0 ? (
+   383→          <div className="text-center py-12">
+   384→            <AlertCircle className="h-12 w-12 text-amber-500 mx-auto mb-3" />
+   385→            <h3 className="text-lg font-bold mb-2">No hay checklist configurado</h3>
+   386→            <p className="text-sm text-muted-foreground max-w-md mx-auto">
+   387→              No se encontró una plantilla de autoevaluación para S{sStep}. 
+   388→              Crea una plantilla en <strong>Administración → Plantillas → Auditoría Interna</strong> 
+   389→              o pulsa el botón &quot;Crear plantillas por defecto&quot;.
+   390→            </p>
+   391→          </div>
+   392→        ) : isCompleted ? (
+   393→          <div className="text-center py-8">
+   394→            <CheckCircle className="h-16 w-16 text-green-500 mx-auto mb-3" />
+   395→            <h3 className="text-xl font-bold mb-2">¡Autoevaluación Completada!</h3>
+   396→            <p className="text-lg mb-1">Puntuación: <strong>{finalScore}%</strong></p>
+   397→            <p className="text-muted-foreground">
+   398→              {scoring.okCount} OK / {scoring.nokCount} NOK de {totalItems} puntos de verificación
+   399→            </p>
+   400→          </div>
+   401→        ) : (
+   402→          <div className="space-y-4">
+   403→            {/* Info banner */}
+   404→            <div className="p-3 rounded-lg border-l-4" style={{ borderColor: sStepData?.color, backgroundColor: `${sStepData?.color}08` }}>
+   405→              <p className="text-sm font-medium" style={{ color: sStepData?.color }}>
+   406→                Autoevaluación Interna — {sStepData?.japaneseName}
+   407→              </p>
+   408→              <p className="text-sm text-muted-foreground mt-1">
+   409→                Evalúa cada punto de verificación. Marca OK si cumple, NOK si hay desviación. 
+   410→                Los NOKs generan hallazgos y puntos de mejora como plan de acción.
+   411→              </p>
+   412→            </div>
+   413→
+   414→            {/* Score indicator */}
+   415→            <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
+   416→              <div>
+   417→                <span className="text-sm font-medium">Puntuación</span>
+   418→                <p className="text-xs text-muted-foreground">
+   419→                  {scoring.okCount} OK / {scoring.nokCount} NOK de {totalItems} puntos
+   420→                </p>
+   421→              </div>
+   422→              <div className="flex items-center gap-2">
+   423→                <Badge className="bg-green-100 text-green-800">OK: {scoring.okCount}</Badge>
+   424→                <Badge className="bg-red-100 text-red-800">NOK: {scoring.nokCount}</Badge>
+   425→                <Badge variant={scoring.scorePercent >= notaMinima ? 'default' : 'secondary'}>
+   426→                  {scoring.scorePercent}% (mín. {notaMinima}%)
+   427→                </Badge>
+   428→              </div>
+   429→            </div>
+   430→
+   431→            {/* Checklist sections */}
+   432→            <div className="space-y-3">
+   433→              {sections.map(section => (
+   434→                <Card key={section.id} className="overflow-hidden">
+   435→                  {/* Section header */}
+   436→                  <button
+   437→                    className="w-full p-3 flex items-center gap-2 hover:bg-muted/50 transition-colors text-left"
+   438→                    onClick={() => toggleSection(section.id)}
+   439→                  >
+   440→                    {expandedSections[section.id] ? (
+   441→                      <ChevronDown className="h-4 w-4 text-muted-foreground" />
+   442→                    ) : (
+   443→                      <ChevronRight className="h-4 w-4 text-muted-foreground" />
+   444→                    )}
+   445→                    <Badge variant="outline" className="text-xs font-mono">{section.id}</Badge>
+   446→                    <span className="font-semibold text-sm">{section.title}</span>
+   447→                    <span className="ml-auto text-xs text-muted-foreground">
+   448→                      {section.items.length} puntos
+   449→                    </span>
+   450→                  </button>
+   451→
+   452→                  {/* Section items */}
+   453→                  {expandedSections[section.id] && (
+   454→                    <CardContent className="px-4 pb-4 pt-0 space-y-3">
+   455→                      {section.items.map(item => {
+   456→                        const result = results[item.id];
+   457→                        const isNok = result?.status === 'nok';
+   458→
+   459→                        return (
+   460→                          <div key={item.id} className="border rounded-lg p-3 space-y-2">
+   461→                            {/* Item header: description + status buttons */}
+   462→                            <div className="flex items-start gap-3">
+   463→                              <span className="text-xs font-mono text-muted-foreground shrink-0 mt-0.5">
+   464→                                {item.id}
+   465→                              </span>
+   466→                              <p className="text-sm flex-1">{item.description}</p>
+   467→                              <div className="flex gap-1 shrink-0">
+   468→                                <button
+   469→                                  className={`px-2.5 py-1 rounded text-xs font-medium transition-colors ${
+   470→                                    result?.status === 'ok'
+   471→                                      ? 'bg-green-500 text-white'
+   472→                                      : 'bg-green-50 text-green-700 hover:bg-green-100'
+   473→                                  }`}
+   474→                                  onClick={() => setItemStatus(item.id, 'ok')}
+   475→                                >
+   476→                                  OK
+   477→                                </button>
+   478→                                <button
+   479→                                  className={`px-2.5 py-1 rounded text-xs font-medium transition-colors ${
+   480→                                    result?.status === 'nok'
+   481→                                      ? 'bg-red-500 text-white'
+   482→                                      : 'bg-red-50 text-red-700 hover:bg-red-100'
+   483→                                  }`}
+   484→                                  onClick={() => setItemStatus(item.id, 'nok')}
+   485→                                >
+   486→                                  NOK
+   487→                                </button>
+   488→                                <button
+   489→                                  className={`px-2.5 py-1 rounded text-xs font-medium transition-colors ${
+   490→                                    result?.status === 'na'
+   491→                                      ? 'bg-gray-500 text-white'
+   492→                                      : 'bg-gray-50 text-gray-600 hover:bg-gray-100'
+   493→                                  }`}
+   494→                                  onClick={() => setItemStatus(item.id, 'na')}
+   495→                                >
+   496→                                  N/A
+   497→                                </button>
+   498→                              </div>
+   499→                            </div>
+   500→
+   501→                            {/* "Otros" text field */}
+   502→                            {item.hasOther && (
+   503→                              <Input
+   504→                                placeholder="Especificar..."
+   505→                                value={result?.otherText || ''}
+   506→                                onChange={e => setItemField(item.id, 'otherText', e.target.value)}
+   507→                                className="text-sm"
+   508→                              />
+   509→                            )}
+   510→
+   511→                            {/* NOK details: hallazgo + mejora — OBLIGATORIOS */}
+   512→                            {isNok && (
+   513→                              <div className="space-y-2 pl-6 border-l-2 border-red-200">
+   514→                                <div>
+   515→                                  <label className="text-xs font-medium text-red-700">Referencia del hallazgo (desviación) *</label>
+   516→                                  <Textarea
+   517→                                    placeholder="Obligatorio: describa la desviación encontrada..."
+   518→                                    value={result?.hallazgo || ''}
+   519→                                    onChange={e => setItemField(item.id, 'hallazgo', e.target.value)}
+   520→                                    className={`text-sm mt-1 ${!(result?.hallazgo || '').trim() ? 'border-red-400 focus:border-red-500' : ''}`}
+   521→                                    rows={2}
+   522→                                  />
+   523→                                  {!(result?.hallazgo || '').trim() && (
+   524→                                    <p className="text-[10px] text-red-500 mt-0.5">Campo obligatorio</p>
+   525→                                  )}
+   526→                                </div>
+   527→                                <div>
+   528→                                  <label className="text-xs font-medium text-amber-700">Punto a Mejorar (sugerencia) *</label>
+   529→                                  <Textarea
+   530→                                    placeholder="Obligatorio: sugiera una mejora..."
+   531→                                    value={result?.mejora || ''}
+   532→                                    onChange={e => setItemField(item.id, 'mejora', e.target.value)}
+   533→                                    className={`text-sm mt-1 ${!(result?.mejora || '').trim() ? 'border-amber-400 focus:border-amber-500' : ''}`}
+   534→                                    rows={2}
+   535→                                  />
+   536→                                  {!(result?.mejora || '').trim() && (
+   537→                                    <p className="text-[10px] text-amber-500 mt-0.5">Campo obligatorio</p>
+   538→                                  )}
+   539→                                </div>
+   540→                                <div>
+   541→                                  <Button variant="outline" size="sm" className="text-xs">
+   542→                                    <Camera className="h-3 w-3 mr-1" /> Añadir foto (biblioteca paso 2)
+   543→                                  </Button>
+   544→                                </div>
+   545→                              </div>
+   546→                            )}
+   547→                          </div>
+   548→                        );
+   549→                      })}
+   550→                    </CardContent>
+   551→                  )}
+   552→                </Card>
+   553→              ))}
+   554→            </div>
+   555→
+   556→            {/* Observaciones */}
+   557→            <Card>
+   558→              <CardContent className="p-4">
+   559→                <label className="text-sm font-medium">Observaciones generales</label>
+   560→                <Textarea
+   561→                  placeholder="Observaciones adicionales de la autoevaluación..."
+   562→                  value={observaciones}
+   563→                  onChange={e => setObservaciones(e.target.value)}
+   564→                  className="mt-2"
+   565→                  rows={3}
+   566→                />
+   567→              </CardContent>
+   568→            </Card>
+   569→
+   570→            {/* NOK incomplete warning */}
+   571→            {nokItems.length > 0 && !allNokCompleted && (
+   572→              <div className="p-3 bg-red-50 border border-red-200 rounded-lg flex items-center gap-2">
+   573→                <AlertCircle className="h-4 w-4 text-red-600 shrink-0" />
+   574→                <p className="text-xs text-red-700">
+   575→                  Debes completar los campos <strong>"Referencia del hallazgo"</strong> y <strong>"Punto a Mejorar"</strong> en todos los items NOK ({nokItems.filter(r => !(r.hallazgo || '').trim() || !(r.mejora || '').trim()).length} pendientes)
+   576→                </p>
+   577→              </div>
+   578→            )}
+   579→
+   580→            {/* Submit button */}
+   581→            <div className="flex justify-end">
+   582→              <Button
+   583→                onClick={handleSubmit}
+   584→                disabled={!canSubmit || isSubmitting}
+   585→                style={canSubmit ? { backgroundColor: sStepData?.color } : undefined}
+   586→              >
+   587→                {isSubmitting ? 'Enviando...' : `Completar Autoevaluación (${scoring.scorePercent}%)`}
+   588→              </Button>
+   589→            </div>
+   590→          </div>
+   591→        )}
+   592→        </div>
+   593→      </DialogContent>
+   594→    </Dialog>
+   595→  );
+   596→}
+   597→

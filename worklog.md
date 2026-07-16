@@ -152,3 +152,26 @@ Stage Summary:
 - S1 completo funciona: 5 pasos completados en zona Almacén
 - 4 Action Items en Plan de Acción (3 autoevaluación + 1 auditoría)
 - Notificación de disfunciones enviada al responsable de la zona
+---
+Task ID: S1-testing
+Agent: Main Agent
+Task: Testear los 5 pasos de S1 con el proyecto demo y reportar fallos
+
+Work Log:
+- Analyzed complete codebase structure for all 5 S1 steps
+- Logged in as responsable (resp.produccion@demo.com) and auditor (auditor@demo.com) via browser automation
+- Tested Paso 1 (Formación+Examen): Works correctly, exam passes with correct answers
+- Tested Paso 2 (Fotos): UI shows "0/3 mínimo" instead of required 10
+- Tested Paso 3 (Inventario): Created inventory items via API successfully
+- Tested Paso 4 (Autoevaluación): Shows "No hay checklist configurado" due to template format mismatch
+- Tested Paso 5 (Auditoría): Shows "No hay checklist configurado" due to template format mismatch
+- Tested auto-notification: audit_ready notifications created when /api/notifications/auto called
+- Tested ActionItem creation: Items created with responsable=null (bug)
+- Verified exam API hardcodes 80% pass threshold regardless of template notaMinima
+
+Stage Summary:
+- 6 bugs found and documented
+- 2 CRITICAL: Template format incompatibility (autoeval/auditoria), exam pass threshold hardcoded
+- 2 HIGH: MIN_PHOTOS=3 instead of 10, ActionItems without responsable
+- 1 MEDIUM: Auditor notification not automatic from API
+- 1 LOW: Photo traceability not visible in UI
