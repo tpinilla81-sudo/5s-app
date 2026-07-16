@@ -97,3 +97,26 @@ Stage Summary:
 - All 5 roles login and access project/zones correctly
 - Admin and Gerente can export Excel
 - Credentials: admin@demo.com/admin123, gerente@demo.com/gerente123, resp.almacen@demo.com/resp123, emp1@demo.com/emp123, auditor@demo.com/audit123
+
+---
+Task ID: 5
+Agent: Main Agent
+Task: Fix company deletion when company has associated projects
+
+Work Log:
+- Diagnosed: DELETE /api/companies/[companyId] only soft-deleted (deactivated) companies with projects instead of actually deleting them
+- Added `force=true` query parameter to DELETE endpoint that cascade-deletes all projects and their data before deleting the company
+- Without `force`, companies with projects still get soft-deleted (backward compatible)
+- Updated AdminPanel: replaced simple `confirm()` dialog with a proper Dialog component showing:
+  - "Solo desactivar (conserva los proyectos)" option when company has projects
+  - "Eliminar todo (empresa + N proyecto(s))" force delete option
+  - "Cancelar" option
+- Updated GestorPanel: added delete button (Trash2 icon) to company cards + same Dialog with dark theme
+- Added DialogDescription import to both panels for accessibility
+- Added Trash2 import to GestorPanel
+- Build compiles successfully with no errors
+
+Stage Summary:
+- Companies with projects can now be fully deleted via force=true parameter
+- Both AdminPanel and GestorPanel have improved delete UX with clear options
+- Soft delete is still available as a safer option when company has projects

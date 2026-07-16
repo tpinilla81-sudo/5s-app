@@ -28,6 +28,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
 } from '@/components/ui/dialog'
 import {
   ArrowLeft,
@@ -207,6 +208,7 @@ export default function AdminPanel({ embedded }: AdminPanelProps = {}) {
   const [companyMembers, setCompanyMembers] = useState<Array<{ id: string; userId: string; companyId: string; role: string; user: { id: string; name: string; email: string; role: string; active: boolean } }>>([])
   const [addGerenteUserId, setAddGerenteUserId] = useState('')
   const [isLoadingCompanyDetail, setIsLoadingCompanyDetail] = useState(false)
+  const [deleteCompanyDialog, setDeleteCompanyDialog] = useState<{ open: boolean; companyId: string; companyName: string; projectCount: number }>({ open: false, companyId: '', companyName: '', projectCount: 0 })
 
   // ─── 5S Steps state ────────────────────────────────────────────────────
   const [progress5S, setProgress5S] = useState<Array<{ id: string; sStep: number; miniStep: number; completed: boolean; score: number | null; notes: string | null; zoneId: string | null; zoneName?: string }>>([])
@@ -637,11 +639,28 @@ export default function AdminPanel({ embedded }: AdminPanelProps = {}) {
     }
   }
 
-  const handleDeleteCompany = async (companyId: string) => {
-    if (!confirm('¿Estás seguro de eliminar esta empresa?')) return
+  const handleDeleteCompany = (companyId: string) => {
+    const company = companies.find(c => c.id === companyId)
+    if (!company) return
+    setDeleteCompanyDialog({
+      open: true,
+      companyId: company.id,
+      companyName: company.name,
+      projectCount: company.projectCount,
+    })
+  }
+
+  const confirmDeleteCompany = async (force: boolean) => {
+    const { companyId } = deleteCompanyDialog
+    setDeleteCompanyDialog(d => ({ ...d, open: false }))
     try {
-      const res = await fetch(`/api/companies/${companyId}`, { method: 'DELETE' })
+      const url = force ? `/api/companies/${companyId}?force=true` : `/api/companies/${companyId}`
+      const res = await fetch(url, { method: 'DELETE' })
       if (res.ok) {
+        const data = await res.json()
+        if (data.softDelete) {
+          alert(data.message)
+        }
         await loadCompanies()
         await fetchCompanies()
       } else {
@@ -2297,6 +2316,62 @@ export default function AdminPanel({ embedded }: AdminPanelProps = {}) {
           )}
         </AnimatePresence>
       </main>
+
+      {/* Delete Company Dialog */}
+      <Dialog open={deleteCompanyDialog.open} onOpenChange={(open) => { if (!open) setDeleteCompanyDialog(d => ({ ...d, open: false })) }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-red-500" />
+              Eliminar Empresa
+            </DialogTitle>
+            <DialogDescription>
+              Elige cómo quieres eliminar esta empresa
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              ¿Qué deseas hacer con <strong>{deleteCompanyDialog.companyName}</strong>?
+            </p>
+            {deleteCompanyDialog.projectCount > 0 && (
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
+                <p className="text-sm text-amber-800">
+                  Esta empresa tiene <strong>{deleteCompanyDialog.projectCount} proyecto(s)</strong> asociado(s) con todos sus datos (zonas, auditorías, inventarios, etc.).
+                </p>
+              </div>
+            )}
+            <div className="space-y-2">
+              {deleteCompanyDialog.projectCount > 0 && (
+                <Button
+                  variant="outline"
+                  className="w-full justify-start text-amber-700 border-amber-300 hover:bg-amber-50"
+                  onClick={() => confirmDeleteCompany(false)}
+                >
+                  <AlertTriangle className="h-4 w-4 mr-2" />
+                  Solo desactivar (conserva los proyectos)
+                </Button>
+              )}
+              <Button
+                variant="outline"
+                className="w-full justify-start text-red-700 border-red-300 hover:bg-red-50"
+                onClick={() => confirmDeleteCompany(true)}
+              >
+                <Trash2 className="h-4 w-4 mr-2" />
+                {deleteCompanyDialog.projectCount > 0
+                  ? `Eliminar todo (empresa + ${deleteCompanyDialog.projectCount} proyecto(s))`
+                  : 'Eliminar empresa permanentemente'}
+              </Button>
+              <Button
+                variant="ghost"
+                className="w-full"
+                onClick={() => setDeleteCompanyDialog(d => ({ ...d, open: false }))}
+              >
+                Cancelar
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Reset Password Dialog */}
       <Dialog open={resetPasswordUserId !== null} onOpenChange={(open) => { if (!open) { setResetPasswordUserId(null); setNewPassword('') } }}>

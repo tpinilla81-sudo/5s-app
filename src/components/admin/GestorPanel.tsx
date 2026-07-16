@@ -13,6 +13,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
 } from '@/components/ui/dialog'
 import {
   Crown,
@@ -33,6 +34,7 @@ import {
   Search,
   Mail,
   Database,
+  Trash2,
 } from 'lucide-react'
 import ResourceList from './ResourceList'
 
@@ -148,6 +150,7 @@ export default function GestorPanel() {
   const [sendingEmailFor, setSendingEmailFor] = useState<string | null>(null) // company id being sent email
   const [emailSentFor, setEmailSentFor] = useState<Set<string>>(new Set()) // company ids where email was already sent
   const [pendingCredentials, setPendingCredentials] = useState<Record<string, { name: string; email: string; password: string }>>({}) // companyId -> credentials
+  const [deleteCompanyDialog, setDeleteCompanyDialog] = useState<{ open: boolean; companyId: string; companyName: string; projectCount: number }>({ open: false, companyId: '', companyName: '', projectCount: 0 })
 
   // ─── Data loading ────────────────────────────────────────────────────────
   const loadStats = useCallback(async () => {
@@ -226,6 +229,39 @@ export default function GestorPanel() {
       }
     } catch (error) {
       console.error('Error toggling company active:', error)
+    }
+  }
+
+  const handleDeleteCompany = (companyId: string) => {
+    const company = stats?.companies.find(c => c.id === companyId)
+    if (!company) return
+    setDeleteCompanyDialog({
+      open: true,
+      companyId: company.id,
+      companyName: company.name,
+      projectCount: company.projectCount,
+    })
+  }
+
+  const confirmDeleteCompany = async (force: boolean) => {
+    const { companyId } = deleteCompanyDialog
+    setDeleteCompanyDialog(d => ({ ...d, open: false }))
+    try {
+      const url = force ? `/api/companies/${companyId}?force=true` : `/api/companies/${companyId}`
+      const res = await fetch(url, { method: 'DELETE' })
+      if (res.ok) {
+        const data = await res.json()
+        if (data.softDelete) {
+          alert(data.message)
+        }
+        await loadStats()
+        await fetchCompanies()
+      } else {
+        const data = await res.json()
+        alert(data.error || 'Error al eliminar empresa')
+      }
+    } catch (error) {
+      console.error('Error deleting company:', error)
     }
   }
 
@@ -787,6 +823,15 @@ export default function GestorPanel() {
                             >
                               <Edit3 className="h-4 w-4" />
                             </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleDeleteCompany(company.id)}
+                              className="h-7 w-7 p-0 text-red-400 hover:bg-red-900/30"
+                              title="Eliminar empresa"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
                           </div>
                         </div>
                       </CardContent>
@@ -935,6 +980,62 @@ export default function GestorPanel() {
           )}
         </AnimatePresence>
       </main>
+
+      {/* ═══ DELETE COMPANY DIALOG ═══ */}
+      <Dialog open={deleteCompanyDialog.open} onOpenChange={(open) => { if (!open) setDeleteCompanyDialog(d => ({ ...d, open: false })) }}>
+        <DialogContent className="bg-slate-900 border-violet-700/30 max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-red-400 flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5" />
+              Eliminar Empresa
+            </DialogTitle>
+            <DialogDescription className="text-violet-400">
+              Elige cómo quieres eliminar esta empresa
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <p className="text-sm text-violet-300">
+              ¿Qué deseas hacer con <strong className="text-white">{deleteCompanyDialog.companyName}</strong>?
+            </p>
+            {deleteCompanyDialog.projectCount > 0 && (
+              <div className="bg-amber-900/30 border border-amber-700/30 rounded-lg p-3">
+                <p className="text-sm text-amber-300">
+                  Esta empresa tiene <strong>{deleteCompanyDialog.projectCount} proyecto(s)</strong> asociado(s) con todos sus datos (zonas, auditorías, inventarios, etc.).
+                </p>
+              </div>
+            )}
+            <div className="space-y-2">
+              {deleteCompanyDialog.projectCount > 0 && (
+                <Button
+                  variant="outline"
+                  className="w-full justify-start text-amber-400 border-amber-700/30 hover:bg-amber-900/30 bg-transparent"
+                  onClick={() => confirmDeleteCompany(false)}
+                >
+                  <AlertTriangle className="h-4 w-4 mr-2" />
+                  Solo desactivar (conserva los proyectos)
+                </Button>
+              )}
+              <Button
+                variant="outline"
+                className="w-full justify-start text-red-400 border-red-700/30 hover:bg-red-900/30 bg-transparent"
+                onClick={() => confirmDeleteCompany(true)}
+              >
+                <Trash2 className="h-4 w-4 mr-2" />
+                {deleteCompanyDialog.projectCount > 0
+                  ? `Eliminar todo (empresa + ${deleteCompanyDialog.projectCount} proyecto(s))`
+                  : 'Eliminar empresa permanentemente'}
+              </Button>
+              <Button
+                variant="ghost"
+                className="w-full text-violet-400"
+                onClick={() => setDeleteCompanyDialog(d => ({ ...d, open: false }))}
+              >
+                Cancelar
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* ═══ ASSIGN ADMIN DIALOG ═══ */}
       <Dialog open={!!assigningAdminTo} onOpenChange={(open) => !open && setAssigningAdminTo(null)}>
