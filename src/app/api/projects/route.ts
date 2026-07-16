@@ -185,6 +185,17 @@ export async function POST(request: NextRequest) {
       })
     }
 
+    // Auto-assign default board config to all zones in the new project
+    const defaultConfig = await db.boardConfiguration.findFirst({
+      where: { isDefault: true },
+    })
+    if (defaultConfig && project.zones.length > 0) {
+      await db.zone.updateMany({
+        where: { projectId: project.id },
+        data: { boardConfigId: defaultConfig.id },
+      })
+    }
+
     return NextResponse.json(
       {
         project: {

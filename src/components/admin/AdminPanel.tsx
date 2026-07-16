@@ -164,6 +164,7 @@ export default function AdminPanel({ embedded }: AdminPanelProps = {}) {
   const [newZoneName, setNewZoneName] = useState('')
   const [newZoneColor, setNewZoneColor] = useState(PRESET_COLORS[0])
   const [boardConfigs, setBoardConfigs] = useState<Array<{ id: string; name: string; isDefault: boolean }>>([])
+  const [defaultBoardConfigId, setDefaultBoardConfigId] = useState<string | null>(null)
   const [newMemberName, setNewMemberName] = useState('')
   const [newMemberEmail, setNewMemberEmail] = useState('')
   const [newMemberRole, setNewMemberRole] = useState('empleado')
@@ -171,6 +172,9 @@ export default function AdminPanel({ embedded }: AdminPanelProps = {}) {
   const [newMemberPassword, setNewMemberPassword] = useState('')
   const [addMemberMode, setAddMemberMode] = useState<'existing' | 'new'>('existing')
   const [selectedExistingUserId, setSelectedExistingUserId] = useState('')
+  const [generatedPassword, setGeneratedPassword] = useState<string | null>(null)
+  const [generatedMemberName, setGeneratedMemberName] = useState<string | null>(null)
+  const [sendingCredentials, setSendingCredentials] = useState<string | null>(null)
 
   // ─── Users state ─────────────────────────────────────────────────────────
   const [users, setUsers] = useState<UserData[]>([])
@@ -278,10 +282,19 @@ export default function AdminPanel({ embedded }: AdminPanelProps = {}) {
       const zonesData = await zonesRes.json()
       const membersData = await membersRes.json()
       const configsData = await configsRes.json()
-      setProjectZones(zonesData.zones || [])
+      const zones = zonesData.zones || []
+      setProjectZones(zones)
       setProjectMembers(membersData.members || [])
       if (configsData.success) {
-        setBoardConfigs((configsData.data || []).map((c: any) => ({ id: c.id, name: c.name, isDefault: c.isDefault })))
+        const configs = (configsData.data || []).map((c: any) => ({ id: c.id, name: c.name, isDefault: c.isDefault }))
+        setBoardConfigs(configs)
+      }
+      // Auto-select ALL zones when adding a member (better to remove than to add)
+      setNewMemberZones(zones.map((z: any) => z.id))
+      // Auto-select default board config for new zones
+      const defaultConfig = (configsData.data || []).find((c: any) => c.isDefault)
+      if (defaultConfig) {
+        setDefaultBoardConfigId(defaultConfig.id)
       }
     } catch (error) {
       console.error('Error loading project detail:', error)
@@ -516,7 +529,7 @@ export default function AdminPanel({ embedded }: AdminPanelProps = {}) {
         if (res.ok) {
           setSelectedExistingUserId('')
           setNewMemberRole('empleado')
-          setNewMemberZones([])
+          setNewMemberZones(projectZones.map(z => z.id))
           await loadProjectDetail(selectedProjectId)
         }
       } else {
@@ -537,10 +550,15 @@ export default function AdminPanel({ embedded }: AdminPanelProps = {}) {
           body: JSON.stringify(body),
         })
         if (res.ok) {
+          const data = await res.json()
+          if (data.member?.generatedPassword) {
+            setGeneratedPassword(data.member.generatedPassword)
+            setGeneratedMemberName(data.member.user?.name || newMemberName)
+          }
           setNewMemberName('')
           setNewMemberEmail('')
           setNewMemberRole('empleado')
-          setNewMemberZones([])
+          setNewMemberZones(projectZones.map(z => z.id))
           setNewMemberPassword('')
           await loadProjectDetail(selectedProjectId)
         }
@@ -1215,7 +1233,7 @@ export default function AdminPanel({ embedded }: AdminPanelProps = {}) {
                                                   </SelectContent>
                                                 </Select>
                                                 <div className="space-y-1">
-                                                  <p className="text-[10px] text-muted-foreground font-medium">Zonas asignadas</p>
+                                                  <p className="text-[10px] text-muted-foreground font-medium">Zonas (todas por defecto)</p>
                                                   <div className="space-y-0.5 max-h-32 overflow-y-auto">
                                                     {projectZones.map(z => (
                                                       <label key={z.id} className="flex items-center gap-1.5 text-xs cursor-pointer hover:bg-gray-50 rounded px-1 py-0.5">
@@ -1261,7 +1279,7 @@ export default function AdminPanel({ embedded }: AdminPanelProps = {}) {
                                                   </SelectContent>
                                                 </Select>
                                                 <div className="space-y-1">
-                                                  <p className="text-[10px] text-muted-foreground font-medium">Zonas asignadas</p>
+                                                  <p className="text-[10px] text-muted-foreground font-medium">Zonas (todas por defecto)</p>
                                                   <div className="space-y-0.5 max-h-32 overflow-y-auto">
                                                     {projectZones.map(z => (
                                                       <label key={z.id} className="flex items-center gap-1.5 text-xs cursor-pointer hover:bg-gray-50 rounded px-1 py-0.5">
@@ -1290,6 +1308,26 @@ export default function AdminPanel({ embedded }: AdminPanelProps = {}) {
                                           )}
                                         </CardContent>
                                       </Card>
+
+                                      {/* Generated password notification */}
+                                      {generatedPassword && (
+                                        <div className="mb-3 p-3 bg-green-50 border border-green-200 rounded-lg flex items-start gap-3">
+                                          <ShieldCheck className="h-5 w-5 text-green-600 shrink-0 mt-0.5" />
+                                          <div className="flex-1 min-w-0">
+                                            <p className="text-xs font-semibold text-green-800">Contraseña generada para {generatedMemberName}</p>
+                                            <div className="flex items-center gap-2 mt-1">
+                                              <code className="text-sm font-mono bg-green-100 px-2 py-0.5 rounded text-green-900 select-all">{generatedPassword}</code>
+                                              <Button size="sm" variant="outline" className="h-6 text-[10px] gap-1" onClick={() => { navigator.clipboard.writeText(generatedPassword) }}>
+                                                <Save className="h-3 w-3" /> Copiar
+                                              </Button>
+                                            </div>
+                                            <p className="text-[10px] text-green-700 mt-1">Guarda esta contraseña. No se volverá a mostrar.</p>
+                                          </div>
+                                          <button onClick={() => { setGeneratedPassword(null); setGeneratedMemberName(null) }} className="text-green-400 hover:text-green-600">
+                                            <X className="h-4 w-4" />
+                                          </button>
+                                        </div>
+                                      )}
 
                                       {/* Members table */}
                                       {projectMembers.length === 0 ? (
@@ -1329,10 +1367,42 @@ export default function AdminPanel({ embedded }: AdminPanelProps = {}) {
                                                     ) : <span className="text-muted-foreground">-</span>}
                                                   </TableCell>
                                                   <TableCell className="text-center">
-                                                    <Button variant="outline" size="sm" className="h-7 text-[10px] text-red-500 border-red-200 hover:bg-red-50 hover:text-red-700 hover:border-red-300 gap-1" onClick={() => handleRemoveMember(member.id, member.user.name)} title="Eliminar miembro del proyecto">
-                                                      <Trash2 className="h-3 w-3" />
-                                                      Eliminar
-                                                    </Button>
+                                                    <div className="flex items-center justify-center gap-1">
+                                                      <Button variant="outline" size="sm" className="h-7 text-[10px] text-blue-500 border-blue-200 hover:bg-blue-50 hover:text-blue-700 hover:border-blue-300 gap-1" onClick={async () => {
+                                                        const pwd = prompt(`Introduce la contraseña para enviar a ${member.user.name}:\n(Por defecto: 123456)`)
+                                                        if (pwd === null) return
+                                                        const finalPwd = pwd.length >= 6 ? pwd : '123456'
+                                                        setSendingCredentials(member.id)
+                                                        try {
+                                                          const res = await fetch(`/api/projects/${selectedProjectId}/send-credentials`, {
+                                                            method: 'POST',
+                                                            headers: { 'Content-Type': 'application/json' },
+                                                            body: JSON.stringify({ memberId: member.id, password: finalPwd }),
+                                                          })
+                                                          const data = await res.json()
+                                                          if (data.success) {
+                                                            if (data.testingMode) {
+                                                              alert(`✉️ Email enviado en modo de prueba a: ${data.redirectedTo}\n(El email real iría a: ${member.user.email})`)
+                                                            } else {
+                                                              alert(`✉️ Email de bienvenida enviado a: ${member.user.email}`)
+                                                            }
+                                                          } else {
+                                                            alert(`Error al enviar email: ${data.error}`)
+                                                          }
+                                                        } catch (err) {
+                                                          alert('Error de conexión al enviar credenciales')
+                                                        } finally {
+                                                          setSendingCredentials(null)
+                                                        }
+                                                      }} title="Enviar credenciales por email" disabled={sendingCredentials === member.id}>
+                                                        {sendingCredentials === member.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <Mail className="h-3 w-3" />}
+                                                        Enviar
+                                                      </Button>
+                                                      <Button variant="outline" size="sm" className="h-7 text-[10px] text-red-500 border-red-200 hover:bg-red-50 hover:text-red-700 hover:border-red-300 gap-1" onClick={() => handleRemoveMember(member.id, member.user.name)} title="Eliminar miembro del proyecto">
+                                                        <Trash2 className="h-3 w-3" />
+                                                        Eliminar
+                                                      </Button>
+                                                    </div>
                                                   </TableCell>
                                                 </TableRow>
                                               ))}

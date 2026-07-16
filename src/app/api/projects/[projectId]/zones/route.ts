@@ -96,6 +96,18 @@ export async function POST(
       },
     })
 
+    // Auto-assign default board config if one exists
+    const defaultConfig = await db.boardConfiguration.findFirst({
+      where: { isDefault: true },
+    })
+    if (defaultConfig) {
+      await db.zone.update({
+        where: { id: zone.id },
+        data: { boardConfigId: defaultConfig.id },
+      })
+      zone.boardConfigId = defaultConfig.id
+    }
+
     return NextResponse.json({ zone }, { status: 201 })
   } catch (error) {
     console.error('Add zone error:', error)

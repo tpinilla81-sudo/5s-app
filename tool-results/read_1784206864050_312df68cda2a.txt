@@ -1,0 +1,502 @@
+  1000→  1000→                        disabled={!newProjectName.trim() || !newProjectCompany.trim() || newProjectZones.filter(z => z.name.trim()).length === 0}
+  1001→  1001→                        className="bg-gradient-to-r from-purple-500 to-purple-600 text-white"
+  1002→  1002→                      >
+  1003→  1003→                        Crear Proyecto
+  1004→  1004→                      </Button>
+  1005→  1005→                    </div>
+  1006→  1006→                  </CardContent>
+  1007→  1007→                </Card>
+  1008→  1008→              )}
+  1009→  1009→
+  1010→  1010→              {/* Projects list */}
+  1011→  1011→              {isLoadingProjects ? (
+  1012→  1012→                <div className="flex justify-center py-12"><Loader2 className="h-8 w-8 text-purple-500 animate-spin" /></div>
+  1013→  1013→              ) : allProjects.length === 0 ? (
+  1014→  1014→                <div className="text-center py-12 text-muted-foreground">
+  1015→  1015→                  <Building2 className="h-12 w-12 mx-auto mb-3 opacity-30" />
+  1016→  1016→                  <p className="text-sm">No hay proyectos creados</p>
+  1017→  1017→                  <p className="text-xs mt-1">Crea un proyecto para comenzar la implementación 5S</p>
+  1018→  1018→                </div>
+  1019→  1019→              ) : (
+  1020→  1020→                <div className="space-y-3">
+  1021→  1021→                  {allProjects.map(project => (
+  1022→  1022→                    <Card key={project.id} className={`transition-all ${selectedProjectId === project.id ? 'border-purple-300 shadow-md' : 'hover:border-gray-300'}`}>
+  1023→  1023→                      <CardContent className="p-4">
+  1024→  1024→                        {/* Project header row */}
+  1025→  1025→                        <div className="flex items-center justify-between">
+  1026→  1026→                          <div className="flex items-center gap-3 cursor-pointer flex-1" onClick={() => handleSelectProject(project.id)}>
+  1027→  1027→                            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-purple-100 to-purple-50 flex items-center justify-center">
+  1028→  1028→                              <Building2 className="h-5 w-5 text-purple-500" />
+  1029→  1029→                            </div>
+  1030→  1030→                            <div className="flex-1">
+  1031→  1031→                              {editingProject === project.id ? (
+  1032→  1032→                                <div className="space-y-2" onClick={e => e.stopPropagation()}>
+  1033→  1033→                                  <div className="grid grid-cols-2 gap-2">
+  1034→  1034→                                    <Input value={editProjectData.name} onChange={e => setEditProjectData(d => ({ ...d, name: e.target.value }))} className="text-sm" />
+  1035→  1035→                                    <Input value={editProjectData.company} onChange={e => setEditProjectData(d => ({ ...d, company: e.target.value }))} className="text-sm" />
+  1036→  1036→                                  </div>
+  1037→  1037→                                  <Input value={editProjectData.description} onChange={e => setEditProjectData(d => ({ ...d, description: e.target.value }))} className="text-sm" placeholder="Descripción" />
+  1038→  1038→                                  <div className="flex gap-2">
+  1039→  1039→                                    <Button size="sm" onClick={() => handleUpdateProject(project.id)} className="bg-purple-600 text-white h-7"><Check className="h-3 w-3 mr-1" />Guardar</Button>
+  1040→  1040→                                    <Button size="sm" variant="outline" onClick={() => setEditingProject(null)} className="h-7">Cancelar</Button>
+  1041→  1041→                                  </div>
+  1042→  1042→                                </div>
+  1043→  1043→                              ) : (
+  1044→  1044→                                <>
+  1045→  1045→                                  <h3 className="font-semibold text-sm">{project.name}</h3>
+  1046→  1046→                                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+  1047→  1047→                                    <span>{project.company}</span>
+  1048→  1048→                                    <span>·</span>
+  1049→  1049→                                    <span>{project.zones.length} zonas</span>
+  1050→  1050→                                    <span>·</span>
+  1051→  1051→                                    <span>{project.memberCount} miembros</span>
+  1052→  1052→                                    {!project.active && <Badge className="bg-red-100 text-red-700 border border-red-200 ml-1">Inactivo</Badge>}
+  1053→  1053→                                  </div>
+  1054→  1054→                                </>
+  1055→  1055→                              )}
+  1056→  1056→                            </div>
+  1057→  1057→                          </div>
+  1058→  1058→                          {editingProject !== project.id && (
+  1059→  1059→                            <div className="flex items-center gap-1">
+  1060→  1060→                              <Button
+  1061→  1061→                                variant="ghost" size="sm" className="h-8 w-8 p-0 text-blue-500 hover:text-blue-700"
+  1062→  1062→                                onClick={() => {
+  1063→  1063→                                  setEditingProject(project.id)
+  1064→  1064→                                  setEditProjectData({ name: project.name, description: project.description || '', company: project.company })
+  1065→  1065→                                }}
+  1066→  1066→                                title="Editar proyecto"
+  1067→  1067→                              >
+  1068→  1068→                                <Edit3 className="h-4 w-4" />
+  1069→  1069→                              </Button>
+  1070→  1070→                              <Button
+  1071→  1071→                                variant="ghost" size="sm" className="h-8 w-8 p-0 text-red-400 hover:text-red-600"
+  1072→  1072→                                onClick={() => handleDeleteProject(project.id)}
+  1073→  1073→                                title="Eliminar proyecto"
+  1074→  1074→                              >
+  1075→  1075→                                <Trash2 className="h-4 w-4" />
+  1076→  1076→                              </Button>
+  1077→  1077→                            </div>
+  1078→  1078→                          )}
+  1079→  1079→                        </div>
+  1080→  1080→
+  1081→  1081→                        {/* Expanded project detail */}
+  1082→  1082→                        <AnimatePresence>
+  1083→  1083→                          {selectedProjectId === project.id && (
+  1084→  1084→                            <motion.div
+  1085→  1085→                              initial={{ height: 0, opacity: 0 }}
+  1086→  1086→                              animate={{ height: 'auto', opacity: 1 }}
+  1087→  1087→                              exit={{ height: 0, opacity: 0 }}
+  1088→  1088→                              transition={{ duration: 0.2 }}
+  1089→  1089→                              className="overflow-hidden"
+  1090→  1090→                            >
+  1091→  1091→                              <div className="mt-4 pt-4 border-t space-y-4">
+  1092→  1092→                                {isLoadingDetail ? (
+  1093→  1093→                                  <div className="flex justify-center py-4"><Loader2 className="h-5 w-5 text-purple-500 animate-spin" /></div>
+  1094→  1094→                                ) : (
+  1095→  1095→                                  <>
+  1096→  1096→                                    {/* Zones */}
+  1097→  1097→                                    <div>
+  1098→  1098→                                      <h4 className="text-xs font-semibold text-muted-foreground uppercase mb-2 flex items-center gap-1">
+  1099→  1099→                                        <MapPin className="h-3 w-3" /> Zonas
+  1100→  1100→                                      </h4>
+  1101→  1101→                                      <div className="flex flex-wrap gap-2 mb-2">
+  1102→  1102→                                        {projectZones.map(zone => (
+  1103→  1103→                                          <div key={zone.id} className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border bg-white text-xs">
+  1104→  1104→                                            <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: zone.color }} />
+  1105→  1105→                                            <span className="font-medium">{zone.name}</span>
+  1106→  1106→                                            {/* Board config selector */}
+  1107→  1107→                                            <select
+  1108→  1108→                                              value={zone.boardConfigId || ''}
+  1109→  1109→                                              onChange={e => handleZoneBoardConfig(zone.id, e.target.value)}
+  1110→  1110→                                              className="h-6 text-[10px] border rounded px-1 bg-gray-50 ml-1"
+  1111→  1111→                                            >
+  1112→  1112→                                              <option value="">— Sin tablero —</option>
+  1113→  1113→                                              {boardConfigs.map(bc => (
+  1114→  1114→                                                <option key={bc.id} value={bc.id}>
+  1115→  1115→                                                  {bc.name}{bc.isDefault ? ' ★' : ''}
+  1116→  1116→                                                </option>
+  1117→  1117→                                              ))}
+  1118→  1118→                                            </select>
+  1119→  1119→                                            {zone.boardConfig && (
+  1120→  1120→                                              <Badge className="text-[9px] px-1 py-0 bg-indigo-100 text-indigo-700 border-0">
+  1121→  1121→                                                {zone.boardConfig.name}
+  1122→  1122→                                              </Badge>
+  1123→  1123→                                            )}
+  1124→  1124→                                            <button onClick={() => handleDeleteZone(zone.id, zone.name)} className="text-red-400 hover:text-red-600 ml-1" title="Eliminar zona"><Trash2 className="h-3 w-3" /></button>
+  1125→  1125→                                          </div>
+  1126→  1126→                                        ))}
+  1127→  1127→                                      </div>
+  1128→  1128→                                      <div className="flex items-center gap-2">
+  1129→  1129→                                        <div className="flex gap-1">
+  1130→  1130→                                          {PRESET_COLORS.map(c => (
+  1131→  1131→                                            <button key={c} type="button" className={`w-5 h-5 rounded-full border-2 ${newZoneColor === c ? 'border-gray-800' : 'border-transparent'}`} style={{ backgroundColor: c }} onClick={() => setNewZoneColor(c)} />
+  1132→  1132→                                          ))}
+  1133→  1133→                                        </div>
+  1134→  1134→                                        <Input placeholder="Nueva zona" value={newZoneName} onChange={e => setNewZoneName(e.target.value)} className="h-8 text-xs max-w-[200px]" />
+  1135→  1135→                                        <Button size="sm" onClick={handleAddZone} disabled={!newZoneName.trim()} className="h-8 text-xs bg-purple-600 text-white">
+  1136→  1136→                                          <Plus className="h-3 w-3 mr-1" /> Agregar
+  1137→  1137→                                        </Button>
+  1138→  1138→                                      </div>
+  1139→  1139→                                    </div>
+  1140→  1140→
+  1141→  1141→                                    {/* Members */}
+  1142→  1142→                                    <div>
+  1143→  1143→                                      <h4 className="text-xs font-semibold text-muted-foreground uppercase mb-2 flex items-center gap-1">
+  1144→  1144→                                        <Users className="h-3 w-3" /> Miembros del Proyecto
+  1145→  1145→                                      </h4>
+  1146→  1146→
+  1147→  1147→                                      {/* Add member form */}
+  1148→  1148→                                      <Card className="mb-3 border-gray-200">
+  1149→  1149→                                        <CardContent className="p-3">
+  1150→  1150→                                          {/* Mode toggle */}
+  1151→  1151→                                          <div className="flex gap-2 mb-3">
+  1152→  1152→                                            <button
+  1153→  1153→                                              type="button"
+  1154→  1154→                                              onClick={() => setAddMemberMode('existing')}
+  1155→  1155→                                              className={`flex-1 text-xs px-3 py-1.5 rounded-md font-medium transition-colors ${
+  1156→  1156→                                                addMemberMode === 'existing'
+  1157→  1157→                                                  ? 'bg-purple-100 text-purple-700 border border-purple-200'
+  1158→  1158→                                                  : 'bg-gray-50 text-gray-500 border border-gray-200 hover:bg-gray-100'
+  1159→  1159→                                              }`}
+  1160→  1160→                                            >
+  1161→  1161→                                              <UserPlus className="h-3 w-3 inline mr-1" />
+  1162→  1162→                                              Usuario Existente
+  1163→  1163→                                            </button>
+  1164→  1164→                                            <button
+  1165→  1165→                                              type="button"
+  1166→  1166→                                              onClick={() => setAddMemberMode('new')}
+  1167→  1167→                                              className={`flex-1 text-xs px-3 py-1.5 rounded-md font-medium transition-colors ${
+  1168→  1168→                                                addMemberMode === 'new'
+  1169→  1169→                                                  ? 'bg-purple-100 text-purple-700 border border-purple-200'
+  1170→  1170→                                                  : 'bg-gray-50 text-gray-500 border border-gray-200 hover:bg-gray-100'
+  1171→  1171→                                              }`}
+  1172→  1172→                                            >
+  1173→  1173→                                              <Plus className="h-3 w-3 inline mr-1" />
+  1174→  1174→                                              Nuevo Usuario
+  1175→  1175→                                            </button>
+  1176→  1176→                                          </div>
+  1177→  1177→
+  1178→  1178→                                          {addMemberMode === 'existing' ? (
+  1179→  1179→                                            /* Existing user selection */
+  1180→  1180→                                            <div className="space-y-2">
+  1181→  1181→                                              <Select value={selectedExistingUserId} onValueChange={setSelectedExistingUserId}>
+  1182→  1182→                                                <SelectTrigger className="h-8 text-xs">
+  1183→  1183→                                                  <SelectValue placeholder="Seleccionar usuario existente..." />
+  1184→  1184→                                                </SelectTrigger>
+  1185→  1185→                                                <SelectContent>
+  1186→  1186→                                                  {users
+  1187→  1187→                                                    .filter(u => !projectMembers.some(m => m.user.id === u.id))
+  1188→  1188→                                                    .map(u => (
+  1189→  1189→                                                      <SelectItem key={u.id} value={u.id}>
+  1190→  1190→                                                        <div className="flex items-center gap-2">
+  1191→  1191→                                                          <span>{u.name}</span>
+  1192→  1192→                                                          <span className="text-muted-foreground">({u.email})</span>
+  1193→  1193→                                                          <Badge className={`${ROLE_COLORS[u.role] || ''} border text-[9px] py-0`}>
+  1194→  1194→                                                            {ROLE_LABELS[u.role] || u.role}
+  1195→  1195→                                                          </Badge>
+  1196→  1196→                                                          {u.projects.length === 0 && (
+  1197→  1197→                                                            <Badge className="bg-amber-100 text-amber-700 border border-amber-200 text-[9px] py-0">
+  1198→  1198→                                                              Sin proyecto
+  1199→  1199→                                                            </Badge>
+  1200→  1200→                                                          )}
+  1201→  1201→                                                        </div>
+  1202→  1202→                                                      </SelectItem>
+  1203→  1203→                                                    ))}
+  1204→  1204→                                                </SelectContent>
+  1205→  1205→                                              </Select>
+  1206→  1206→                                              <div className="grid grid-cols-2 gap-2">
+  1207→  1207→                                                <Select value={newMemberRole} onValueChange={setNewMemberRole}>
+  1208→  1208→                                                  <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+  1209→  1209→                                                  <SelectContent>
+  1210→  1210→                                                    <SelectItem value="admin">Administrador</SelectItem>
+  1211→  1211→                                                    <SelectItem value="gerente">Gerente</SelectItem>
+  1212→  1212→                                                    <SelectItem value="responsable">Responsable</SelectItem>
+  1213→  1213→                                                    <SelectItem value="empleado">Empleado</SelectItem>
+  1214→  1214→                                                    <SelectItem value="auditor">Auditor</SelectItem>
+  1215→  1215→                                                  </SelectContent>
+  1216→  1216→                                                </Select>
+  1217→  1217→                                                <div className="space-y-1">
+  1218→  1218→                                                  <p className="text-[10px] text-muted-foreground font-medium">Zonas asignadas</p>
+  1219→  1219→                                                  <div className="space-y-0.5 max-h-32 overflow-y-auto">
+  1220→  1220→                                                    {projectZones.map(z => (
+  1221→  1221→                                                      <label key={z.id} className="flex items-center gap-1.5 text-xs cursor-pointer hover:bg-gray-50 rounded px-1 py-0.5">
+  1222→  1222→                                                        <Checkbox
+  1223→  1223→                                                          checked={newMemberZones.includes(z.id)}
+  1224→  1224→                                                          onCheckedChange={(checked) => {
+  1225→  1225→                                                            if (checked) {
+  1226→  1226→                                                              setNewMemberZones([...newMemberZones, z.id])
+  1227→  1227→                                                            } else {
+  1228→  1228→                                                              setNewMemberZones(newMemberZones.filter(id => id !== z.id))
+  1229→  1229→                                                            }
+  1230→  1230→                                                          }}
+  1231→  1231→                                                          className="h-3.5 w-3.5"
+  1232→  1232→                                                        />
+  1233→  1233→                                                        <div className="w-2 h-2 rounded-full" style={{ backgroundColor: z.color }} />
+  1234→  1234→                                                        <span>{z.name}</span>
+  1235→  1235→                                                      </label>
+  1236→  1236→                                                    ))}
+  1237→  1237→                                                  </div>
+  1238→  1238→                                                </div>
+  1239→  1239→                                              </div>
+  1240→  1240→                                              <Button size="sm" onClick={handleAddMember} disabled={!selectedExistingUserId} className="w-full h-8 text-xs bg-purple-600 text-white">
+  1241→  1241→                                                <UserPlus className="h-3 w-3 mr-1" /> Asignar al Proyecto
+  1242→  1242→                                              </Button>
+  1243→  1243→                                            </div>
+  1244→  1244→                                          ) : (
+  1245→  1245→                                            /* New user form */
+  1246→  1246→                                            <>
+  1247→  1247→                                              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+  1248→  1248→                                                <Input placeholder="Nombre" value={newMemberName} onChange={e => setNewMemberName(e.target.value)} className="h-8 text-xs" />
+  1249→  1249→                                                <Input placeholder="Email" type="email" value={newMemberEmail} onChange={e => setNewMemberEmail(e.target.value)} className="h-8 text-xs" />
+  1250→  1250→                                                <Input placeholder="Contraseña (mín. 6 chars)" type="password" value={newMemberPassword} onChange={e => setNewMemberPassword(e.target.value)} className="h-8 text-xs" />
+  1251→  1251→                                              </div>
+  1252→  1252→                                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-2">
+  1253→  1253→                                                <Select value={newMemberRole} onValueChange={setNewMemberRole}>
+  1254→  1254→                                                  <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+  1255→  1255→                                                  <SelectContent>
+  1256→  1256→                                                    <SelectItem value="admin">Administrador</SelectItem>
+  1257→  1257→                                                    <SelectItem value="gerente">Gerente</SelectItem>
+  1258→  1258→                                                    <SelectItem value="responsable">Responsable</SelectItem>
+  1259→  1259→                                                    <SelectItem value="empleado">Empleado</SelectItem>
+  1260→  1260→                                                    <SelectItem value="auditor">Auditor</SelectItem>
+  1261→  1261→                                                  </SelectContent>
+  1262→  1262→                                                </Select>
+  1263→  1263→                                                <div className="space-y-1">
+  1264→  1264→                                                  <p className="text-[10px] text-muted-foreground font-medium">Zonas asignadas</p>
+  1265→  1265→                                                  <div className="space-y-0.5 max-h-32 overflow-y-auto">
+  1266→  1266→                                                    {projectZones.map(z => (
+  1267→  1267→                                                      <label key={z.id} className="flex items-center gap-1.5 text-xs cursor-pointer hover:bg-gray-50 rounded px-1 py-0.5">
+  1268→  1268→                                                        <Checkbox
+  1269→  1269→                                                          checked={newMemberZones.includes(z.id)}
+  1270→  1270→                                                          onCheckedChange={(checked) => {
+  1271→  1271→                                                            if (checked) {
+  1272→  1272→                                                              setNewMemberZones([...newMemberZones, z.id])
+  1273→  1273→                                                            } else {
+  1274→  1274→                                                              setNewMemberZones(newMemberZones.filter(id => id !== z.id))
+  1275→  1275→                                                            }
+  1276→  1276→                                                          }}
+  1277→  1277→                                                          className="h-3.5 w-3.5"
+  1278→  1278→                                                        />
+  1279→  1279→                                                        <div className="w-2 h-2 rounded-full" style={{ backgroundColor: z.color }} />
+  1280→  1280→                                                        <span>{z.name}</span>
+  1281→  1281→                                                      </label>
+  1282→  1282→                                                    ))}
+  1283→  1283→                                                  </div>
+  1284→  1284→                                                </div>
+  1285→  1285→                                              </div>
+  1286→  1286→                                              <Button size="sm" onClick={handleAddMember} disabled={!newMemberName.trim() || !newMemberEmail.trim()} className="w-full h-8 text-xs bg-purple-600 text-white mt-2">
+  1287→  1287→                                                <Plus className="h-3 w-3 mr-1" /> Crear y Añadir
+  1288→  1288→                                              </Button>
+  1289→  1289→                                            </>
+  1290→  1290→                                          )}
+  1291→  1291→                                        </CardContent>
+  1292→  1292→                                      </Card>
+  1293→  1293→
+  1294→  1294→                                      {/* Members table */}
+  1295→  1295→                                      {projectMembers.length === 0 ? (
+  1296→  1296→                                        <p className="text-xs text-muted-foreground text-center py-4">No hay miembros en este proyecto</p>
+  1297→  1297→                                      ) : (
+  1298→  1298→                                        <div className="rounded-lg border overflow-hidden">
+  1299→  1299→                                          <Table>
+  1300→  1300→                                            <TableHeader>
+  1301→  1301→                                              <TableRow>
+  1302→  1302→                                                <TableHead className="text-xs">Nombre</TableHead>
+  1303→  1303→                                                <TableHead className="text-xs">Email</TableHead>
+  1304→  1304→                                                <TableHead className="text-xs">Rol</TableHead>
+  1305→  1305→                                                <TableHead className="text-xs">Zona</TableHead>
+  1306→  1306→                                                <TableHead className="text-xs text-center">Acciones</TableHead>
+  1307→  1307→                                              </TableRow>
+  1308→  1308→                                            </TableHeader>
+  1309→  1309→                                            <TableBody>
+  1310→  1310→                                              {projectMembers.map(member => (
+  1311→  1311→                                                <TableRow key={member.id}>
+  1312→  1312→                                                  <TableCell className="text-xs font-medium">{member.user.name}</TableCell>
+  1313→  1313→                                                  <TableCell className="text-xs text-muted-foreground">{member.user.email}</TableCell>
+  1314→  1314→                                                  <TableCell>
+  1315→  1315→                                                    <Badge className={`${ROLE_COLORS[member.role] || ''} border text-[10px]`}>
+  1316→  1316→                                                      {ROLE_LABELS[member.role] || member.role}
+  1317→  1317→                                                    </Badge>
+  1318→  1318→                                                  </TableCell>
+  1319→  1319→                                                  <TableCell className="text-xs">
+  1320→  1320→                                                    {member.zones.length > 0 ? (
+  1321→  1321→                                                      <div className="flex flex-wrap gap-1">
+  1322→  1322→                                                        {member.zones.map(z => (
+  1323→  1323→                                                          <span key={z.id} className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-gray-50 border text-[10px]">
+  1324→  1324→                                                            <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: z.color }} />
+  1325→  1325→                                                            {z.name}
+  1326→  1326→                                                          </span>
+  1327→  1327→                                                        ))}
+  1328→  1328→                                                      </div>
+  1329→  1329→                                                    ) : <span className="text-muted-foreground">-</span>}
+  1330→  1330→                                                  </TableCell>
+  1331→  1331→                                                  <TableCell className="text-center">
+  1332→  1332→                                                    <Button variant="outline" size="sm" className="h-7 text-[10px] text-red-500 border-red-200 hover:bg-red-50 hover:text-red-700 hover:border-red-300 gap-1" onClick={() => handleRemoveMember(member.id, member.user.name)} title="Eliminar miembro del proyecto">
+  1333→  1333→                                                      <Trash2 className="h-3 w-3" />
+  1334→  1334→                                                      Eliminar
+  1335→  1335→                                                    </Button>
+  1336→  1336→                                                  </TableCell>
+  1337→  1337→                                                </TableRow>
+  1338→  1338→                                              ))}
+  1339→  1339→                                            </TableBody>
+  1340→  1340→                                          </Table>
+  1341→  1341→                                        </div>
+  1342→  1342→                                      )}
+  1343→  1343→                                    </div>
+  1344→  1344→                                  </>
+  1345→  1345→                                )}
+  1346→  1346→                              </div>
+  1347→  1347→                            </motion.div>
+  1348→  1348→                          )}
+  1349→  1349→                        </AnimatePresence>
+  1350→  1350→                      </CardContent>
+  1351→  1351→                    </Card>
+  1352→  1352→                  ))}
+  1353→  1353→                </div>
+  1354→  1354→              )}
+  1355→  1355→
+  1356→  1356→              {/* ═══ USERS TAB ═══ */}
+  1357→  1357→            </motion.div>
+  1358→  1358→          )}
+  1359→  1359→
+  1360→  1360→          {activeTab === 'users' && (
+  1361→  1361→            <motion.div key="users" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="space-y-4">
+  1362→  1362→              {/* New user button */}
+  1363→  1363→              <div className="flex justify-between items-center">
+  1364→  1364→                <p className="text-sm text-muted-foreground">
+  1365→  1365→                  Gestiona los usuarios del sistema y sus accesos
+  1366→  1366→                </p>
+  1367→  1367→                <Button
+  1368→  1368→                  onClick={() => setShowNewUser(true)}
+  1369→  1369→                  className="bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white"
+  1370→  1370→                  size="sm"
+  1371→  1371→                >
+  1372→  1372→                  <UserPlus className="h-4 w-4 mr-1" /> Nuevo Usuario
+  1373→  1373→                </Button>
+  1374→  1374→              </div>
+  1375→  1375→
+  1376→  1376→              {/* New user form */}
+  1377→  1377→              {showNewUser && (
+  1378→  1378→                <Card className="border-purple-200 bg-purple-50/30">
+  1379→  1379→                  <CardHeader className="pb-3">
+  1380→  1380→                    <CardTitle className="text-sm flex items-center gap-2">
+  1381→  1381→                      <UserPlus className="h-4 w-4 text-purple-500" />
+  1382→  1382→                      Crear Nuevo Usuario
+  1383→  1383→                    </CardTitle>
+  1384→  1384→                  </CardHeader>
+  1385→  1385→                  <CardContent className="space-y-3">
+  1386→  1386→                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+  1387→  1387→                      <div className="space-y-1">
+  1388→  1388→                        <Label className="text-xs">Nombre completo *</Label>
+  1389→  1389→                        <div className="relative">
+  1390→  1390→                          <User className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+  1391→  1391→                          <Input placeholder="Juan Pérez" value={newUserName} onChange={e => setNewUserName(e.target.value)} className="pl-9 h-9" />
+  1392→  1392→                        </div>
+  1393→  1393→                      </div>
+  1394→  1394→                      <div className="space-y-1">
+  1395→  1395→                        <Label className="text-xs">Email *</Label>
+  1396→  1396→                        <div className="relative">
+  1397→  1397→                          <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+  1398→  1398→                          <Input placeholder="email@ejemplo.com" type="email" value={newUserEmail} onChange={e => setNewUserEmail(e.target.value)} className="pl-9 h-9" />
+  1399→  1399→                        </div>
+  1400→  1400→                      </div>
+  1401→  1401→                      <div className="space-y-1">
+  1402→  1402→                        <Label className="text-xs">Contraseña *</Label>
+  1403→  1403→                        <div className="relative">
+  1404→  1404→                          <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+  1405→  1405→                          <Input placeholder="Mínimo 6 caracteres" type="password" value={newUserPassword} onChange={e => setNewUserPassword(e.target.value)} className="pl-9 h-9" />
+  1406→  1406→                        </div>
+  1407→  1407→                      </div>
+  1408→  1408→                      <div className="space-y-1">
+  1409→  1409→                        <Label className="text-xs">Rol</Label>
+  1410→  1410→                        <Select value={newUserRole} onValueChange={setNewUserRole}>
+  1411→  1411→                          <SelectTrigger className="h-9">
+  1412→  1412→                            <Shield className="h-3.5 w-3.5 mr-2 text-muted-foreground" />
+  1413→  1413→                            <SelectValue />
+  1414→  1414→                          </SelectTrigger>
+  1415→  1415→                          <SelectContent>
+  1416→  1416→                            <SelectItem value="admin">Administrador</SelectItem>
+  1417→  1417→                            <SelectItem value="gerente">Gerente</SelectItem>
+  1418→  1418→                            <SelectItem value="responsable">Responsable</SelectItem>
+  1419→  1419→                            <SelectItem value="empleado">Empleado</SelectItem>
+  1420→  1420→                            <SelectItem value="auditor">Auditor</SelectItem>
+  1421→  1421→                          </SelectContent>
+  1422→  1422→                        </Select>
+  1423→  1423→                      </div>
+  1424→  1424→                    </div>
+  1425→  1425→                    <div className="flex gap-2 justify-end">
+  1426→  1426→                      <Button variant="outline" size="sm" onClick={() => setShowNewUser(false)}>Cancelar</Button>
+  1427→  1427→                      <Button size="sm" onClick={handleCreateUser} disabled={!newUserName.trim() || !newUserEmail.trim() || !newUserPassword.trim() || newUserPassword.length < 6} className="bg-purple-600 text-white">
+  1428→  1428→                        Crear Usuario
+  1429→  1429→                      </Button>
+  1430→  1430→                    </div>
+  1431→  1431→                  </CardContent>
+  1432→  1432→                </Card>
+  1433→  1433→              )}
+  1434→  1434→
+  1435→  1435→              {/* Users table */}
+  1436→  1436→              {isLoadingUsers ? (
+  1437→  1437→                <div className="flex justify-center py-12"><Loader2 className="h-8 w-8 text-purple-500 animate-spin" /></div>
+  1438→  1438→              ) : users.length === 0 ? (
+  1439→  1439→                <div className="text-center py-12 text-muted-foreground">
+  1440→  1440→                  <Users className="h-12 w-12 mx-auto mb-3 opacity-30" />
+  1441→  1441→                  <p className="text-sm">No hay usuarios en el sistema</p>
+  1442→  1442→                </div>
+  1443→  1443→              ) : (
+  1444→  1444→                <div className="rounded-lg border overflow-hidden">
+  1445→  1445→                  <Table>
+  1446→  1446→                    <TableHeader>
+  1447→  1447→                      <TableRow>
+  1448→  1448→                        <TableHead className="text-xs">Nombre</TableHead>
+  1449→  1449→                        <TableHead className="text-xs">Email</TableHead>
+  1450→  1450→                        <TableHead className="text-xs">Rol</TableHead>
+  1451→  1451→                        <TableHead className="text-xs">Estado</TableHead>
+  1452→  1452→                        <TableHead className="text-xs">Proyectos</TableHead>
+  1453→  1453→                        <TableHead className="text-xs">Acciones</TableHead>
+  1454→  1454→                      </TableRow>
+  1455→  1455→                    </TableHeader>
+  1456→  1456→                    <TableBody>
+  1457→  1457→                      {users.map(user => (
+  1458→  1458→                        <TableRow key={user.id} className={!user.active ? 'opacity-50' : ''}>
+  1459→  1459→                          <TableCell className="text-xs font-medium">
+  1460→  1460→                            {editingUser === user.id ? (
+  1461→  1461→                              <Input value={editUserData.name} onChange={e => setEditUserData(d => ({ ...d, name: e.target.value }))} className="h-7 text-xs" />
+  1462→  1462→                            ) : (
+  1463→  1463→                              user.name
+  1464→  1464→                            )}
+  1465→  1465→                          </TableCell>
+  1466→  1466→                          <TableCell className="text-xs text-muted-foreground">
+  1467→  1467→                            {editingUser === user.id ? (
+  1468→  1468→                              <Input value={editUserData.email} onChange={e => setEditUserData(d => ({ ...d, email: e.target.value }))} className="h-7 text-xs" />
+  1469→  1469→                            ) : (
+  1470→  1470→                              user.email
+  1471→  1471→                            )}
+  1472→  1472→                          </TableCell>
+  1473→  1473→                          <TableCell>
+  1474→  1474→                            {editingUser === user.id ? (
+  1475→  1475→                              <Select value={editUserData.role} onValueChange={v => setEditUserData(d => ({ ...d, role: v }))}>
+  1476→  1476→                                <SelectTrigger className="h-7 text-xs"><SelectValue /></SelectTrigger>
+  1477→  1477→                                <SelectContent>
+  1478→  1478→                                  <SelectItem value="admin">Administrador</SelectItem>
+  1479→  1479→                                  <SelectItem value="gerente">Gerente</SelectItem>
+  1480→  1480→                                  <SelectItem value="responsable">Responsable</SelectItem>
+  1481→  1481→                                  <SelectItem value="empleado">Empleado</SelectItem>
+  1482→  1482→                                  <SelectItem value="auditor">Auditor</SelectItem>
+  1483→  1483→                                </SelectContent>
+  1484→  1484→                              </Select>
+  1485→  1485→                            ) : (
+  1486→  1486→                              <Badge className={`${ROLE_COLORS[user.role] || ''} border text-[10px]`}>
+  1487→  1487→                                {ROLE_LABELS[user.role] || user.role}
+  1488→  1488→                              </Badge>
+  1489→  1489→                            )}
+  1490→  1490→                          </TableCell>
+  1491→  1491→                          <TableCell>
+  1492→  1492→                            {editingUser === user.id ? (
+  1493→  1493→                              <Select value={editUserData.active ? 'true' : 'false'} onValueChange={v => setEditUserData(d => ({ ...d, active: v === 'true' }))}>
+  1494→  1494→                                <SelectTrigger className="h-7 text-xs"><SelectValue /></SelectTrigger>
+  1495→  1495→                                <SelectContent>
+  1496→  1496→                                  <SelectItem value="true">Activo</SelectItem>
+  1497→  1497→                                  <SelectItem value="false">Inactivo</SelectItem>
+  1498→  1498→                                </SelectContent>
+  1499→  1499→                              </Select>
+
+[showing lines 1000-1499 of 2002; use offset=1500 with limit to continue reading]

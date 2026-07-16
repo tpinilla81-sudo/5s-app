@@ -43,6 +43,8 @@ import {
   UserCheck,
   HardHat,
   ClipboardCheck,
+  Mail,
+  ShieldCheck,
 } from 'lucide-react'
 import { Checkbox } from '@/components/ui/checkbox'
 
@@ -100,6 +102,9 @@ export default function TeamManagement({ open, onClose }: TeamManagementProps) {
   const [newMemberRole, setNewMemberRole] = useState('empleado')
   const [newMemberZones, setNewMemberZones] = useState<string[]>([])
   const [isLoadingMembers, setIsLoadingMembers] = useState(false)
+  const [generatedPassword, setGeneratedPassword] = useState<string | null>(null)
+  const [generatedMemberName, setGeneratedMemberName] = useState<string | null>(null)
+  const [sendingCredentials, setSendingCredentials] = useState<string | null>(null)
 
   const fetchZones = useCallback(async () => {
     if (!currentProject) return
@@ -107,7 +112,10 @@ export default function TeamManagement({ open, onClose }: TeamManagementProps) {
     try {
       const res = await fetch(`/api/projects/${currentProject.id}/zones`)
       const data = await res.json()
-      setZones(data.zones || [])
+      const fetchedZones = data.zones || []
+      setZones(fetchedZones)
+      // Auto-select ALL zones when adding a member (better to remove than to add)
+      setNewMemberZones(fetchedZones.map((z: any) => z.id))
     } catch (error) {
       console.error('Fetch zones error:', error)
     } finally {
@@ -190,10 +198,15 @@ export default function TeamManagement({ open, onClose }: TeamManagementProps) {
         }),
       })
       if (res.ok) {
+        const data = await res.json()
+        if (data.member?.generatedPassword) {
+          setGeneratedPassword(data.member.generatedPassword)
+          setGeneratedMemberName(data.member.user?.name || newMemberName)
+        }
         setNewMemberName('')
         setNewMemberEmail('')
         setNewMemberRole('empleado')
-        setNewMemberZones([])
+        setNewMemberZones(zones.map(z => z.id))
         await fetchMembers()
         await fetchZones()
       }
@@ -479,7 +492,7 @@ export default function TeamManagement({ open, onClose }: TeamManagementProps) {
                         </Select>
                       </div>
                       <div className="space-y-1">
-                        <Label className="text-xs">Zonas</Label>
+                        <Label className="text-xs">Zonas (todas por defecto)</Label>
                         <div className="space-y-0.5 max-h-32 overflow-y-auto border rounded-md p-2">
                           {zones.map((zone) => (
                             <label key={zone.id} className="flex items-center gap-1.5 text-sm cursor-pointer hover:bg-gray-50 rounded px-1 py-0.5">
@@ -516,6 +529,26 @@ export default function TeamManagement({ open, onClose }: TeamManagementProps) {
                   </CardContent>
                 </Card>
 
+                {/* Generated password notification */}
+                {generatedPassword && (
+                  <div className="p-3 bg-green-50 border border-green-200 rounded-lg flex items-start gap-3">
+                    <ShieldCheck className="h-5 w-5 text-green-600 shrink-0 mt-0.5" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-semibold text-green-800">Contraseña generada para {generatedMemberName}</p>
+                      <div className="flex items-center gap-2 mt-1">
+                        <code className="text-sm font-mono bg-green-100 px-2 py-0.5 rounded text-green-900 select-all">{generatedPassword}</code>
+                        <Button size="sm" variant="outline" className="h-6 text-[10px] gap-1" onClick={() => { navigator.clipboard.writeText(generatedPassword) }}>
+                          Copiar
+                        </Button>
+                      </div>
+                      <p className="text-[10px] text-green-700 mt-1">Guarda esta contraseña. No se volverá a mostrar.</p>
+                    </div>
+                    <button onClick={() => { setGeneratedPassword(null); setGeneratedMemberName(null) }} className="text-green-400 hover:text-green-600">
+                      <X className="h-4 w-4" />
+                    </button>
+                  </div>
+                )}
+
                 {/* Members table */}
                 {isLoadingMembers ? (
                   <div className="flex justify-center py-8">
@@ -534,6 +567,7 @@ export default function TeamManagement({ open, onClose }: TeamManagementProps) {
                           <TableHead>Email</TableHead>
                           <TableHead>Rol</TableHead>
                           <TableHead>Zona</TableHead>
+                          <TableHead className="text-center">Acciones</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -565,6 +599,38 @@ export default function TeamManagement({ open, onClose }: TeamManagementProps) {
                               ) : (
                                 <span className="text-muted-foreground">-</span>
                               )}
+                            </TableCell>
+                            <TableCell className="text-center">
+                              <Button variant="outline" size="sm" className="h-7 text-[10px] text-blue-500 border-blue-200 hover:bg-blue-50 hover:text-blue-700 hover:border-blue-300 gap-1" onClick={async () => {
+                                const pwd = prompt(`Introduce la contraseña para enviar a ${member.user.name}:\n(Por defecto: 123456)`)
+                                if (pwd === null) return
+                                const finalPwd = pwd.length >= 6 ? pwd : '123456'
+                                setSendingCredentials(member.id)
+                                try {
+                                  const res = await fetch(`/api/projects/${currentProject?.id}/send-credentials`, {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ memberId: member.id, password: finalPwd }),
+                                  })
+                                  const data = await res.json()
+                                  if (data.success) {
+                                    if (data.testingMode) {
+                                      alert(`Email enviado en modo de prueba a: ${data.redirectedTo}\n(El email real iría a: ${member.user.email})`)
+                                    } else {
+                                      alert(`Email de bienvenida enviado a: ${member.user.email}`)
+                                    }
+                                  } else {
+                                    alert(`Error al enviar email: ${data.error}`)
+                                  }
+                                } catch (err) {
+                                  alert('Error de conexión al enviar credenciales')
+                                } finally {
+                                  setSendingCredentials(null)
+                                }
+                              }} title="Enviar credenciales por email" disabled={sendingCredentials === member.id}>
+                                {sendingCredentials === member.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <Mail className="h-3 w-3" />}
+                                Enviar
+                              </Button>
                             </TableCell>
                           </TableRow>
                         ))}

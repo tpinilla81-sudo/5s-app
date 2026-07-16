@@ -136,9 +136,9 @@ export async function POST(
       )
     }
 
-    // Validate zoneIds if provided
+    // Validate zoneIds if provided — if none provided, auto-assign ALL project zones
     const validZoneIds: string[] = []
-    if (zoneIds && Array.isArray(zoneIds)) {
+    if (zoneIds && Array.isArray(zoneIds) && zoneIds.length > 0) {
       for (const zoneId of zoneIds) {
         if (!zoneId || zoneId === 'none') continue
         const zone = await db.zone.findUnique({
@@ -148,6 +148,13 @@ export async function POST(
           validZoneIds.push(zoneId)
         }
       }
+    } else {
+      // Auto-assign ALL zones in the project (better to remove than to add)
+      const allZones = await db.zone.findMany({
+        where: { projectId },
+        select: { id: true },
+      })
+      validZoneIds.push(...allZones.map(z => z.id))
     }
 
     // Create member with zones

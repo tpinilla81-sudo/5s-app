@@ -327,3 +327,120 @@ export async function sendCompanyCreatedEmail(params: {
     html,
   })
 }
+
+/**
+ * Send welcome email to a newly created resource/employee with their credentials.
+ */
+export async function sendResourceWelcomeEmail(params: {
+  resourceName: string
+  resourceEmail: string
+  resourcePassword: string
+  projectName: string
+  zoneNames: string[]
+  role: string
+  appUrl: string
+}): Promise<{ success: boolean; error?: string }> {
+  const { resourceName, resourceEmail, resourcePassword, projectName, zoneNames, role, appUrl } = params
+
+  const roleLabels: Record<string, string> = {
+    admin: 'Administrador',
+    gerente: 'Gerente',
+    responsable: 'Responsable',
+    empleado: 'Empleado',
+    auditor: 'Auditor',
+  }
+  const roleLabel = roleLabels[role] || role
+
+  const zonesSection = zoneNames.length > 0
+    ? `<p style="margin:0 0 4px;color:#374151;font-size:15px;"><strong>Zonas asignadas:</strong> ${zoneNames.join(', ')}</p>`
+    : ''
+
+  const html = `
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Bienvenido a 5S App</title>
+</head>
+<body style="margin:0;padding:0;background:#f4f5f7;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f5f7;padding:40px 0;">
+    <tr>
+      <td align="center">
+        <table width="600" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.08);">
+          <!-- Header -->
+          <tr>
+            <td style="background:linear-gradient(135deg,#3b82f6,#1d4ed8);padding:40px 40px 30px;text-align:center;">
+              <h1 style="margin:0;color:#ffffff;font-size:28px;font-weight:700;">5S App</h1>
+              <p style="margin:8px 0 0;color:#bfdbfe;font-size:16px;">Metodología 5S Digital</p>
+            </td>
+          </tr>
+          <!-- Body -->
+          <tr>
+            <td style="padding:40px;">
+              <h2 style="margin:0 0 16px;color:#1f2937;font-size:22px;">¡Bienvenido, ${resourceName}!</h2>
+              <p style="margin:0 0 20px;color:#4b5563;font-size:16px;line-height:1.6;">
+                Has sido registrado como <strong>${roleLabel}</strong> en el proyecto <strong>${projectName}</strong> de la plataforma 5S App.
+              </p>
+
+              ${zonesSection}
+
+              <!-- Credentials Box -->
+              <table width="100%" cellpadding="0" cellspacing="0" style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;margin:16px 0 24px;">
+                <tr>
+                  <td style="padding:20px 24px;">
+                    <p style="margin:0 0 12px;color:#1e40af;font-size:14px;font-weight:600;">Tus credenciales de acceso:</p>
+                    <table cellpadding="0" cellspacing="0">
+                      <tr>
+                        <td style="padding:4px 0;color:#374151;font-size:15px;"><strong>Email:</strong></td>
+                        <td style="padding:4px 12px;color:#3b82f6;font-size:15px;font-weight:600;">${resourceEmail}</td>
+                      </tr>
+                      <tr>
+                        <td style="padding:4px 0;color:#374151;font-size:15px;"><strong>Contraseña:</strong></td>
+                        <td style="padding:4px 12px;color:#3b82f6;font-size:15px;font-weight:600;">${resourcePassword}</td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- CTA Button -->
+              <table cellpadding="0" cellspacing="0" style="margin:0 0 24px;">
+                <tr>
+                  <td style="background:#3b82f6;border-radius:8px;">
+                    <a href="${appUrl}" style="display:inline-block;padding:14px 32px;color:#ffffff;font-size:16px;font-weight:600;text-decoration:none;">
+                      Acceder a 5S App
+                    </a>
+                  </td>
+                </tr>
+              </table>
+
+              <p style="margin:0 0 16px;color:#6b7280;font-size:14px;line-height:1.5;">
+                <strong>Recomendación:</strong> Cambia tu contraseña después de iniciar sesión por primera vez.
+              </p>
+            </td>
+          </tr>
+          <!-- Footer -->
+          <tr>
+            <td style="background:#f9fafb;padding:24px 40px;border-top:1px solid #e5e7eb;">
+              <p style="margin:0;color:#9ca3af;font-size:13px;text-align:center;">
+                Este correo fue enviado automáticamente por 5S App. No respondas a este correo.
+              </p>
+              <p style="margin:8px 0 0;color:#9ca3af;font-size:13px;text-align:center;">
+                © ${new Date().getFullYear()} 5S App — Metodología 5S Digital
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`
+
+  return sendEmail({
+    to: resourceEmail,
+    subject: `Bienvenido a 5S App — ${roleLabel} en ${projectName}`,
+    html,
+  })
+}

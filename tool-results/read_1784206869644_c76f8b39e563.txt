@@ -1,0 +1,502 @@
+  1500→  1500→                            ) : (
+  1501→  1501→                              <Badge className={user.active ? 'bg-green-100 text-green-700 border-green-200' : 'bg-red-100 text-red-700 border-red-200'} variant="outline">
+  1502→  1502→                                {user.active ? 'Activo' : 'Inactivo'}
+  1503→  1503→                              </Badge>
+  1504→  1504→                            )}
+  1505→  1505→                          </TableCell>
+  1506→  1506→                          <TableCell className="text-xs">
+  1507→  1507→                            {user.projects.length === 0 ? (
+  1508→  1508→                              <span className="text-muted-foreground">Ninguno</span>
+  1509→  1509→                            ) : (
+  1510→  1510→                              <div className="space-y-0.5">
+  1511→  1511→                                {user.projects.map((p, i) => (
+  1512→  1512→                                  <div key={i} className="flex items-center gap-1 flex-wrap">
+  1513→  1513→                                    <span>{p.projectName}</span>
+  1514→  1514→                                    <Badge className={`${ROLE_COLORS[p.role] || ''} border text-[9px] px-1 py-0`}>
+  1515→  1515→                                      {ROLE_LABELS[p.role]}
+  1516→  1516→                                    </Badge>
+  1517→  1517→                                    {p.zones.length > 0 && (
+  1518→  1518→                                      <span className="text-[9px] text-muted-foreground">
+  1519→  1519→                                        ({p.zones.map(z => z.name).join(', ')})
+  1520→  1520→                                      </span>
+  1521→  1521→                                    )}
+  1522→  1522→                                  </div>
+  1523→  1523→                                ))}
+  1524→  1524→                              </div>
+  1525→  1525→                            )}
+  1526→  1526→                          </TableCell>
+  1527→  1527→                          <TableCell>
+  1528→  1528→                            <div className="flex items-center gap-1">
+  1529→  1529→                              {editingUser === user.id ? (
+  1530→  1530→                                <>
+  1531→  1531→                                  <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-green-500" onClick={() => handleUpdateUser(user.id)}><Check className="h-3.5 w-3.5" /></Button>
+  1532→  1532→                                  <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => setEditingUser(null)}><X className="h-3.5 w-3.5" /></Button>
+  1533→  1533→                                </>
+  1534→  1534→                              ) : (
+  1535→  1535→                                <>
+  1536→  1536→                                  <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-blue-500" onClick={() => { setEditingUser(user.id); setEditUserData({ name: user.name, email: user.email, role: user.role, active: user.active }) }} title="Editar">
+  1537→  1537→                                    <Edit3 className="h-3.5 w-3.5" />
+  1538→  1538→                                  </Button>
+  1539→  1539→                                  <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-amber-500" onClick={() => { setResetPasswordUserId(user.id); setNewPassword('') }} title="Cambiar contraseña">
+  1540→  1540→                                    <Key className="h-3.5 w-3.5" />
+  1541→  1541→                                  </Button>
+  1542→  1542→                                  <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => handleToggleActive(user.id, user.active)} title={user.active ? 'Desactivar' : 'Activar'}>
+  1543→  1543→                                    {user.active ? <EyeOff className="h-3.5 w-3.5 text-muted-foreground" /> : <Eye className="h-3.5 w-3.5 text-green-500" />}
+  1544→  1544→                                  </Button>
+  1545→  1545→                                  <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-red-400 hover:text-red-600" onClick={() => handleDeleteUser(user.id)} title="Eliminar">
+  1546→  1546→                                    <Trash2 className="h-3.5 w-3.5" />
+  1547→  1547→                                  </Button>
+  1548→  1548→                                </>
+  1549→  1549→                              )}
+  1550→  1550→                            </div>
+  1551→  1551→                          </TableCell>
+  1552→  1552→                        </TableRow>
+  1553→  1553→                      ))}
+  1554→  1554→                    </TableBody>
+  1555→  1555→                  </Table>
+  1556→  1556→                </div>
+  1557→  1557→              )}
+  1558→  1558→            </motion.div>
+  1559→  1559→          )}
+  1560→  1560→
+  1561→  1561→          {/* ═══ COMPANIES TAB ═══ */}
+  1562→  1562→          {activeTab === 'companies' && (
+  1563→  1563→            <motion.div key="companies" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="space-y-4">
+  1564→  1564→              <div className="flex justify-between items-center">
+  1565→  1565→                <p className="text-sm text-muted-foreground">
+  1566→  1566→                  Gestiona las empresas y asigna gerentes
+  1567→  1567→                </p>
+  1568→  1568→                <Button
+  1569→  1569→                  onClick={() => setShowNewCompany(true)}
+  1570→  1570→                  className="bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white"
+  1571→  1571→                  size="sm"
+  1572→  1572→                >
+  1573→  1573→                  <Plus className="h-4 w-4 mr-1" /> Nueva Empresa
+  1574→  1574→                </Button>
+  1575→  1575→              </div>
+  1576→  1576→
+  1577→  1577→              {/* New company form */}
+  1578→  1578→              {showNewCompany && (
+  1579→  1579→                <Card className="border-purple-200 bg-purple-50/30">
+  1580→  1580→                  <CardHeader className="pb-3">
+  1581→  1581→                    <CardTitle className="text-sm flex items-center gap-2">
+  1582→  1582→                      <Plus className="h-4 w-4 text-purple-500" />
+  1583→  1583→                      Crear Nueva Empresa
+  1584→  1584→                    </CardTitle>
+  1585→  1585→                  </CardHeader>
+  1586→  1586→                  <CardContent className="space-y-3">
+  1587→  1587→                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+  1588→  1588→                      <div className="space-y-1">
+  1589→  1589→                        <Label className="text-xs">Nombre de la Empresa *</Label>
+  1590→  1590→                        <Input placeholder="Nombre" value={newCompanyName} onChange={e => setNewCompanyName(e.target.value)} />
+  1591→  1591→                      </div>
+  1592→  1592→                      <div className="space-y-1">
+  1593→  1593→                        <Label className="text-xs">Descripción</Label>
+  1594→  1594→                        <Input placeholder="Descripción (opcional)" value={newCompanyDesc} onChange={e => setNewCompanyDesc(e.target.value)} />
+  1595→  1595→                      </div>
+  1596→  1596→                    </div>
+  1597→  1597→                    <div className="flex gap-2 justify-end">
+  1598→  1598→                      <Button variant="outline" size="sm" onClick={() => setShowNewCompany(false)}>Cancelar</Button>
+  1599→  1599→                      <Button size="sm" onClick={handleCreateCompany} disabled={!newCompanyName.trim()} className="bg-gradient-to-r from-purple-500 to-purple-600 text-white">
+  1600→  1600→                        Crear Empresa
+  1601→  1601→                      </Button>
+  1602→  1602→                    </div>
+  1603→  1603→                  </CardContent>
+  1604→  1604→                </Card>
+  1605→  1605→              )}
+  1606→  1606→
+  1607→  1607→              {/* Companies list */}
+  1608→  1608→              {isLoadingCompanies ? (
+  1609→  1609→                <div className="flex justify-center py-12"><Loader2 className="h-8 w-8 text-purple-500 animate-spin" /></div>
+  1610→  1610→              ) : companies.length === 0 ? (
+  1611→  1611→                <div className="text-center py-12 text-muted-foreground">
+  1612→  1612→                  <Building2 className="h-12 w-12 mx-auto mb-3 opacity-30" />
+  1613→  1613→                  <p className="text-sm">No hay empresas creadas</p>
+  1614→  1614→                  <p className="text-xs mt-1">Crea una empresa para organizar los proyectos por organización</p>
+  1615→  1615→                </div>
+  1616→  1616→              ) : (
+  1617→  1617→                <div className="space-y-3">
+  1618→  1618→                  {companies.map(company => (
+  1619→  1619→                    <Card key={company.id} className={`transition-all ${expandedCompanyId === company.id ? 'border-purple-300 shadow-md' : 'hover:border-gray-300'}`}>
+  1620→  1620→                      <CardContent className="p-4">
+  1621→  1621→                        <div className="flex items-center justify-between">
+  1622→  1622→                          <div className="flex items-center gap-3 cursor-pointer flex-1" onClick={() => setExpandedCompanyId(expandedCompanyId === company.id ? null : company.id)}>
+  1623→  1623→                            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-teal-100 to-teal-50 flex items-center justify-center">
+  1624→  1624→                              <Building2 className="h-5 w-5 text-teal-600" />
+  1625→  1625→                            </div>
+  1626→  1626→                            <div className="flex-1">
+  1627→  1627→                              {editingCompany === company.id ? (
+  1628→  1628→                                <div className="space-y-2" onClick={e => e.stopPropagation()}>
+  1629→  1629→                                  <div className="grid grid-cols-2 gap-2">
+  1630→  1630→                                    <Input value={editCompanyData.name} onChange={e => setEditCompanyData(d => ({ ...d, name: e.target.value }))} className="text-sm" />
+  1631→  1631→                                    <Input value={editCompanyData.description} onChange={e => setEditCompanyData(d => ({ ...d, description: e.target.value }))} className="text-sm" placeholder="Descripción" />
+  1632→  1632→                                  </div>
+  1633→  1633→                                  <div className="flex gap-2">
+  1634→  1634→                                    <Button size="sm" onClick={() => handleUpdateCompany(company.id)} className="bg-purple-600 text-white h-7"><Check className="h-3 w-3 mr-1" />Guardar</Button>
+  1635→  1635→                                    <Button size="sm" variant="outline" onClick={() => setEditingCompany(null)} className="h-7">Cancelar</Button>
+  1636→  1636→                                  </div>
+  1637→  1637→                                </div>
+  1638→  1638→                              ) : (
+  1639→  1639→                                <>
+  1640→  1640→                                  <h3 className="font-semibold text-sm">{company.name}</h3>
+  1641→  1641→                                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+  1642→  1642→                                    <span>{company.projectCount} proyectos</span>
+  1643→  1643→                                    <span>·</span>
+  1644→  1644→                                    <span>{company.memberCount} gerentes</span>
+  1645→  1645→                                    {!company.active && <Badge className="bg-red-100 text-red-700 border border-red-200 ml-1">Inactiva</Badge>}
+  1646→  1646→                                  </div>
+  1647→  1647→                                </>
+  1648→  1648→                              )}
+  1649→  1649→                            </div>
+  1650→  1650→                          </div>
+  1651→  1651→                          {editingCompany !== company.id && (
+  1652→  1652→                            <div className="flex items-center gap-1">
+  1653→  1653→                              <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-blue-500 hover:text-blue-700" onClick={() => { setEditingCompany(company.id); setEditCompanyData({ name: company.name, description: company.description || '' }) }} title="Editar empresa"><Edit3 className="h-4 w-4" /></Button>
+  1654→  1654→                              <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-red-400 hover:text-red-600" onClick={() => handleDeleteCompany(company.id)} title="Eliminar empresa"><Trash2 className="h-4 w-4" /></Button>
+  1655→  1655→                            </div>
+  1656→  1656→                          )}
+  1657→  1657→                        </div>
+  1658→  1658→
+  1659→  1659→                        {/* Expanded company detail: gerentes */}
+  1660→  1660→                        <AnimatePresence>
+  1661→  1661→                          {expandedCompanyId === company.id && (
+  1662→  1662→                            <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.2 }} className="overflow-hidden">
+  1663→  1663→                              <div className="mt-4 pt-4 border-t space-y-4">
+  1664→  1664→                                {isLoadingCompanyDetail ? (
+  1665→  1665→                                  <div className="flex justify-center py-4"><Loader2 className="h-5 w-5 text-purple-500 animate-spin" /></div>
+  1666→  1666→                                ) : (
+  1667→  1667→                                  <>
+  1668→  1668→                                    <div>
+  1669→  1669→                                      <h4 className="text-xs font-semibold text-muted-foreground uppercase mb-2 flex items-center gap-1">
+  1670→  1670→                                        <Shield className="h-3 w-3" /> Gerentes asignados
+  1671→  1671→                                      </h4>
+  1672→  1672→                                      {companyMembers.length > 0 ? (
+  1673→  1673→                                        <div className="space-y-1.5 mb-3">
+  1674→  1674→                                          {companyMembers.map((m) => (
+  1675→  1675→                                            <div key={m.id} className="flex items-center justify-between p-2 rounded-lg border bg-white text-xs">
+  1676→  1676→                                              <div className="flex items-center gap-2">
+  1677→  1677→                                                <div className="w-7 h-7 rounded-full bg-teal-100 flex items-center justify-center text-teal-700 font-bold text-xs">{m.user.name.charAt(0)}</div>
+  1678→  1678→                                                <div>
+  1679→  1679→                                                  <p className="font-medium">{m.user.name}</p>
+  1680→  1680→                                                  <p className="text-muted-foreground">{m.user.email}</p>
+  1681→  1681→                                                </div>
+  1682→  1682→                                                <Badge className={`${ROLE_COLORS[m.role] || ROLE_COLORS.gerente} border text-[9px] py-0`}>
+  1683→  1683→                                                  {ROLE_LABELS[m.role] || m.role}
+  1684→  1684→                                                </Badge>
+  1685→  1685→                                              </div>
+  1686→  1686→                                              <Button variant="ghost" size="sm" className="h-6 w-6 p-0 text-red-400 hover:text-red-600" onClick={() => handleRemoveCompanyMember(m.userId, m.user.name)}>
+  1687→  1687→                                                <X className="h-3 w-3" />
+  1688→  1688→                                              </Button>
+  1689→  1689→                                            </div>
+  1690→  1690→                                          ))}
+  1691→  1691→                                        </div>
+  1692→  1692→                                      ) : (
+  1693→  1693→                                        <p className="text-xs text-muted-foreground mb-3">No hay gerentes asignados a esta empresa</p>
+  1694→  1694→                                      )}
+  1695→  1695→
+  1696→  1696→                                      {/* Add gerente */}
+  1697→  1697→                                      <div className="flex items-center gap-2">
+  1698→  1698→                                        <Select value={addGerenteUserId || undefined} onValueChange={setAddGerenteUserId}>
+  1699→  1699→                                          <SelectTrigger className="h-8 text-xs flex-1">
+  1700→  1700→                                            <SelectValue placeholder="Seleccionar usuario para asignar..." />
+  1701→  1701→                                          </SelectTrigger>
+  1702→  1702→                                          <SelectContent>
+  1703→  1703→                                            {users
+  1704→  1704→                                              .filter(u => u.active && !companyMembers.some(m => m.userId === u.id))
+  1705→  1705→                                              .map(u => (
+  1706→  1706→                                                <SelectItem key={u.id} value={u.id}>
+  1707→  1707→                                                  <div className="flex items-center gap-2">
+  1708→  1708→                                                    <span>{u.name}</span>
+  1709→  1709→                                                    <span className="text-muted-foreground">({u.email})</span>
+  1710→  1710→                                                    <Badge className={`${ROLE_COLORS[u.role] || ''} border text-[9px] py-0`}>
+  1711→  1711→                                                      {ROLE_LABELS[u.role] || u.role}
+  1712→  1712→                                                    </Badge>
+  1713→  1713→                                                  </div>
+  1714→  1714→                                                </SelectItem>
+  1715→  1715→                                              ))}
+  1716→  1716→                                          </SelectContent>
+  1717→  1717→                                        </Select>
+  1718→  1718→                                        <Button size="sm" onClick={handleAddGerente} disabled={!addGerenteUserId} className="h-8 text-xs bg-purple-600 text-white">
+  1719→  1719→                                          <UserPlus className="h-3 w-3 mr-1" /> Asignar
+  1720→  1720→                                        </Button>
+  1721→  1721→                                      </div>
+  1722→  1722→                                    </div>
+  1723→  1723→                                  </>
+  1724→  1724→                                )}
+  1725→  1725→                              </div>
+  1726→  1726→                            </motion.div>
+  1727→  1727→                          )}
+  1728→  1728→                        </AnimatePresence>
+  1729→  1729→                      </CardContent>
+  1730→  1730→                    </Card>
+  1731→  1731→                  ))}
+  1732→  1732→                </div>
+  1733→  1733→              )}
+  1734→  1734→            </motion.div>
+  1735→  1735→          )}
+  1736→  1736→
+  1737→  1737→          {/* ═══ 5S Y PASOS TAB ═══ */}
+  1738→  1738→          {/* 5S y Pasos tab removed - scores now shown on the board above steps 4/5 dots */}
+  1739→  1739→          {false && (
+  1740→  1740→            <motion.div key="5s-steps" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="space-y-4">
+  1741→  1741→              <div className="flex justify-between items-center">
+  1742→  1742→                <div>
+  1743→  1743→                  <p className="text-sm text-muted-foreground">
+  1744→  1744→                    Gestiona las puntuaciones de Autoevaluación (Paso 4) y Auditoría (Paso 5) de cada S
+  1745→  1745→                  </p>
+  1746→  1746→                </div>
+  1747→  1747→              </div>
+  1748→  1748→
+  1749→  1749→              {/* Project & Zone selectors */}
+  1750→  1750→              <div className="flex gap-3 items-end">
+  1751→  1751→                <div className="space-y-1 flex-1">
+  1752→  1752→                  <Label className="text-xs">Proyecto</Label>
+  1753→  1753→                  <Select
+  1754→  1754→                    value={selected5SProjectId || ''}
+  1755→  1755→                    onValueChange={val => {
+  1756→  1756→                      setSelected5SProjectId(val || null)
+  1757→  1757→                      setSelected5SZoneId(null)
+  1758→  1758→                    }}
+  1759→  1759→                  >
+  1760→  1760→                    <SelectTrigger>
+  1761→  1761→                      <SelectValue placeholder="Seleccionar proyecto" />
+  1762→  1762→                    </SelectTrigger>
+  1763→  1763→                    <SelectContent>
+  1764→  1764→                      {allProjects.map(p => (
+  1765→  1765→                        <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+  1766→  1766→                      ))}
+  1767→  1767→                    </SelectContent>
+  1768→  1768→                  </Select>
+  1769→  1769→                </div>
+  1770→  1770→                <div className="space-y-1 flex-1">
+  1771→  1771→                  <Label className="text-xs">Zona (opcional)</Label>
+  1772→  1772→                  <Select
+  1773→  1773→                    value={selected5SZoneId || '__all__'}
+  1774→  1774→                    onValueChange={val => setSelected5SZoneId(val === '__all__' ? null : val)}
+  1775→  1775→                  >
+  1776→  1776→                    <SelectTrigger>
+  1777→  1777→                      <SelectValue placeholder="Todas las zonas" />
+  1778→  1778→                    </SelectTrigger>
+  1779→  1779→                    <SelectContent>
+  1780→  1780→                      <SelectItem value="__all__">Todas las zonas</SelectItem>
+  1781→  1781→                      {allProjects.find(p => p.id === selected5SProjectId)?.zones.map(z => (
+  1782→  1782→                        <SelectItem key={z.id} value={z.id}>{z.name}</SelectItem>
+  1783→  1783→                      ))}
+  1784→  1784→                    </SelectContent>
+  1785→  1785→                  </Select>
+  1786→  1786→                </div>
+  1787→  1787→              </div>
+  1788→  1788→
+  1789→  1789→              {!selected5SProjectId ? (
+  1790→  1790→                <div className="text-center py-12 text-muted-foreground">
+  1791→  1791→                  <CheckSquare className="h-12 w-12 mx-auto mb-3 opacity-30" />
+  1792→  1792→                  <p className="text-sm">Selecciona un proyecto para ver las puntuaciones</p>
+  1793→  1793→                </div>
+  1794→  1794→              ) : isLoading5S ? (
+  1795→  1795→                <div className="flex justify-center py-12"><Loader2 className="h-8 w-8 text-purple-500 animate-spin" /></div>
+  1796→  1796→              ) : (
+  1797→  1797→                <div className="space-y-4">
+  1798→  1798→                  {/* S Steps table */}
+  1799→  1799→                  {['S1 Seiri', 'S2 Seiton', 'S3 Seiso', 'S4 Seiketsu', 'S5 Shitsuke'].map((sLabel, sIdx) => {
+  1800→  1800→                    const sStep = sIdx + 1
+  1801→  1801→                    const sColors = ['#8B5CF6', '#EAB308', '#3B82F6', '#F43F5E', '#F97316']
+  1802→  1802→                    const color = sColors[sIdx]
+  1803→  1803→
+  1804→  1804→                    // Filter progress for this S and selected zone
+  1805→  1805→                    const sProgress = progress5S.filter(p =>
+  1806→  1806→                      p.sStep === sStep &&
+  1807→  1807→                      (!selected5SZoneId || p.zoneId === selected5SZoneId)
+  1808→  1808→                    )
+  1809→  1809→
+  1810→  1810→                    const step4Records = sProgress.filter(p => p.miniStep === 4)
+  1811→  1811→                    const step5Records = sProgress.filter(p => p.miniStep === 5)
+  1812→  1812→
+  1813→  1813→                    return (
+  1814→  1814→                      <Card key={sStep} className="overflow-hidden">
+  1815→  1815→                        <div
+  1816→  1816→                          className="flex items-center gap-3 px-4 py-3"
+  1817→  1817→                          style={{ backgroundColor: `${color}10`, borderLeft: `4px solid ${color}` }}
+  1818→  1818→                        >
+  1819→  1819→                          <div
+  1820→  1820→                            className="w-8 h-8 rounded-lg flex items-center justify-center text-white text-sm font-bold"
+  1821→  1821→                            style={{ backgroundColor: color }}
+  1822→  1822→                          >
+  1823→  1823→                            S{sStep}
+  1824→  1824→                          </div>
+  1825→  1825→                          <div>
+  1826→  1826→                            <h3 className="font-semibold text-sm" style={{ color }}>{sLabel}</h3>
+  1827→  1827→                            <p className="text-xs text-muted-foreground">
+  1828→  1828→                              {step4Records.length} autoevaluación(es) · {step5Records.length} auditoría(s)
+  1829→  1829→                            </p>
+  1830→  1830→                          </div>
+  1831→  1831→                        </div>
+  1832→  1832→                        <CardContent className="p-0">
+  1833→  1833→                          <Table>
+  1834→  1834→                            <TableHeader>
+  1835→  1835→                              <TableRow>
+  1836→  1836→                                <TableHead className="text-xs">Zona</TableHead>
+  1837→  1837→                                <TableHead className="text-xs">Paso</TableHead>
+  1838→  1838→                                <TableHead className="text-xs">Estado</TableHead>
+  1839→  1839→                                <TableHead className="text-xs">Puntuación</TableHead>
+  1840→  1840→                                <TableHead className="text-xs">Notas</TableHead>
+  1841→  1841→                                <TableHead className="text-xs w-20">Acciones</TableHead>
+  1842→  1842→                              </TableRow>
+  1843→  1843→                            </TableHeader>
+  1844→  1844→                            <TableBody>
+  1845→  1845→                              {/* Step 4 rows */}
+  1846→  1846→                              {step4Records.length === 0 && step5Records.length === 0 && (
+  1847→  1847→                                <TableRow>
+  1848→  1848→                                  <TableCell colSpan={6} className="text-center text-xs text-muted-foreground py-4">
+  1849→  1849→                                    Sin registros para esta S
+  1850→  1850→                                  </TableCell>
+  1851→  1851→                                </TableRow>
+  1852→  1852→                              )}
+  1853→  1853→                              {step4Records.map(record => (
+  1854→  1854→                                <TableRow key={record.id}>
+  1855→  1855→                                  <TableCell className="text-xs">{record.zoneName || 'Sin zona'}</TableCell>
+  1856→  1856→                                  <TableCell className="text-xs">
+  1857→  1857→                                    <div className="flex items-center gap-1">
+  1858→  1858→                                      <CheckSquare className="h-3 w-3" style={{ color }} />
+  1859→  1859→                                      <span>4 - Autoevaluación</span>
+  1860→  1860→                                    </div>
+  1861→  1861→                                  </TableCell>
+  1862→  1862→                                  <TableCell>
+  1863→  1863→                                    <Badge className={record.completed ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}>
+  1864→  1864→                                      {record.completed ? 'Completado' : 'Pendiente'}
+  1865→  1865→                                    </Badge>
+  1866→  1866→                                  </TableCell>
+  1867→  1867→                                  <TableCell>
+  1868→  1868→                                    {editingScore === record.id ? (
+  1869→  1869→                                      <div className="flex items-center gap-1">
+  1870→  1870→                                        <Input
+  1871→  1871→                                          type="number"
+  1872→  1872→                                          min={0}
+  1873→  1873→                                          max={100}
+  1874→  1874→                                          value={editScoreValue}
+  1875→  1875→                                          onChange={e => setEditScoreValue(e.target.value)}
+  1876→  1876→                                          className="w-16 h-7 text-xs"
+  1877→  1877→                                        />
+  1878→  1878→                                        <Button
+  1879→  1879→                                          size="sm"
+  1880→  1880→                                          variant="ghost"
+  1881→  1881→                                          className="h-7 w-7 p-0 text-green-600"
+  1882→  1882→                                          onClick={async () => {
+  1883→  1883→                                            const newScore = parseInt(editScoreValue)
+  1884→  1884→                                            if (isNaN(newScore) || newScore < 0 || newScore > 100) return
+  1885→  1885→                                            try {
+  1886→  1886→                                              const res = await fetch(`/api/progress/step?sStep=${sStep}&miniStep=4`, {
+  1887→  1887→                                                method: 'PUT',
+  1888→  1888→                                                headers: { 'Content-Type': 'application/json' },
+  1889→  1889→                                                body: JSON.stringify({
+  1890→  1890→                                                  score: newScore,
+  1891→  1891→                                                  completed: newScore >= 70,
+  1892→  1892→                                                  notes: editNotesValue,
+  1893→  1893→                                                  projectId: selected5SProjectId,
+  1894→  1894→                                                  zoneId: record.zoneId,
+  1895→  1895→                                                }),
+  1896→  1896→                                              })
+  1897→  1897→                                              if (res.ok) {
+  1898→  1898→                                                setEditingScore(null)
+  1899→  1899→                                                await load5SProgress()
+  1900→  1900→                                              }
+  1901→  1901→                                            } catch (error) {
+  1902→  1902→                                              console.error('Error updating score:', error)
+  1903→  1903→                                            }
+  1904→  1904→                                          }}
+  1905→  1905→                                        >
+  1906→  1906→                                          <Save className="h-3 w-3" />
+  1907→  1907→                                        </Button>
+  1908→  1908→                                        <Button
+  1909→  1909→                                          size="sm"
+  1910→  1910→                                          variant="ghost"
+  1911→  1911→                                          className="h-7 w-7 p-0 text-red-400"
+  1912→  1912→                                          onClick={() => setEditingScore(null)}
+  1913→  1913→                                        >
+  1914→  1914→                                          <X className="h-3 w-3" />
+  1915→  1915→                                        </Button>
+  1916→  1916→                                      </div>
+  1917→  1917→                                    ) : (
+  1918→  1918→                                      <span className="font-bold text-sm">
+  1919→  1919→                                        {record.score !== null ? `${record.score}%` : '—'}
+  1920→  1920→                                      </span>
+  1921→  1921→                                    )}
+  1922→  1922→                                  </TableCell>
+  1923→  1923→                                  <TableCell className="text-xs text-muted-foreground">
+  1924→  1924→                                    {editingScore === record.id ? (
+  1925→  1925→                                      <Input
+  1926→  1926→                                        value={editNotesValue}
+  1927→  1927→                                        onChange={e => setEditNotesValue(e.target.value)}
+  1928→  1928→                                        placeholder="Notas..."
+  1929→  1929→                                        className="h-7 text-xs w-32"
+  1930→  1930→                                      />
+  1931→  1931→                                    ) : (
+  1932→  1932→                                      <span title={record.notes || ''}>
+  1933→  1933→                                        {record.notes ? (record.notes.length > 30 ? record.notes.slice(0, 30) + '…' : record.notes) : '—'}
+  1934→  1934→                                      </span>
+  1935→  1935→                                    )}
+  1936→  1936→                                  </TableCell>
+  1937→  1937→                                  <TableCell>
+  1938→  1938→                                    <Button
+  1939→  1939→                                      variant="ghost"
+  1940→  1940→                                      size="sm"
+  1941→  1941→                                      className="h-7 w-7 p-0"
+  1942→  1942→                                      onClick={() => {
+  1943→  1943→                                        setEditingScore(record.id)
+  1944→  1944→                                        setEditScoreValue(record.score !== null ? String(record.score) : '')
+  1945→  1945→                                        setEditNotesValue(record.notes || '')
+  1946→  1946→                                      }}
+  1947→  1947→                                    >
+  1948→  1948→                                      <Edit3 className="h-3 w-3 text-blue-500" />
+  1949→  1949→                                    </Button>
+  1950→  1950→                                  </TableCell>
+  1951→  1951→                                </TableRow>
+  1952→  1952→                              ))}
+  1953→  1953→                              {/* Step 5 rows */}
+  1954→  1954→                              {step5Records.map(record => (
+  1955→  1955→                                <TableRow key={record.id}>
+  1956→  1956→                                  <TableCell className="text-xs">{record.zoneName || 'Sin zona'}</TableCell>
+  1957→  1957→                                  <TableCell className="text-xs">
+  1958→  1958→                                    <div className="flex items-center gap-1">
+  1959→  1959→                                      <ShieldCheck className="h-3 w-3" style={{ color }} />
+  1960→  1960→                                      <span>5 - Auditoría</span>
+  1961→  1961→                                    </div>
+  1962→  1962→                                  </TableCell>
+  1963→  1963→                                  <TableCell>
+  1964→  1964→                                    <Badge className={record.completed ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}>
+  1965→  1965→                                      {record.completed ? 'Apto' : 'No Apto'}
+  1966→  1966→                                    </Badge>
+  1967→  1967→                                  </TableCell>
+  1968→  1968→                                  <TableCell>
+  1969→  1969→                                    {editingScore === record.id ? (
+  1970→  1970→                                      <div className="flex items-center gap-1">
+  1971→  1971→                                        <Input
+  1972→  1972→                                          type="number"
+  1973→  1973→                                          min={0}
+  1974→  1974→                                          max={100}
+  1975→  1975→                                          value={editScoreValue}
+  1976→  1976→                                          onChange={e => setEditScoreValue(e.target.value)}
+  1977→  1977→                                          className="w-16 h-7 text-xs"
+  1978→  1978→                                        />
+  1979→  1979→                                        <Button
+  1980→  1980→                                          size="sm"
+  1981→  1981→                                          variant="ghost"
+  1982→  1982→                                          className="h-7 w-7 p-0 text-green-600"
+  1983→  1983→                                          onClick={async () => {
+  1984→  1984→                                            const newScore = parseInt(editScoreValue)
+  1985→  1985→                                            if (isNaN(newScore) || newScore < 0 || newScore > 100) return
+  1986→  1986→                                            try {
+  1987→  1987→                                              const res = await fetch(`/api/progress/step?sStep=${sStep}&miniStep=5`, {
+  1988→  1988→                                                method: 'PUT',
+  1989→  1989→                                                headers: { 'Content-Type': 'application/json' },
+  1990→  1990→                                                body: JSON.stringify({
+  1991→  1991→                                                  score: newScore,
+  1992→  1992→                                                  completed: newScore >= 75,
+  1993→  1993→                                                  notes: editNotesValue,
+  1994→  1994→                                                  projectId: selected5SProjectId,
+  1995→  1995→                                                  zoneId: record.zoneId,
+  1996→  1996→                                                }),
+  1997→  1997→                                              })
+  1998→  1998→                                              if (res.ok) {
+  1999→  1999→                                                setEditingScore(null)
+
+[showing lines 1500-1999 of 2002; use offset=2000 with limit to continue reading]

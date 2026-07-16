@@ -154,8 +154,14 @@ export default function ProjectSetup() {
     name: '',
     email: '',
     role: 'empleado',
-    zoneIds: [],
+    zoneIds: [], // Will be populated when zones are defined
   })
+
+  // Auto-select all zones when zones change (better to remove than to add)
+  useEffect(() => {
+    const allZoneIds = zones.map((_, i) => `zone-${i}`)
+    setNewMember(prev => ({ ...prev, zoneIds: allZoneIds }))
+  }, [zones.length])
 
   // Fetch the admin's company data on mount
   useEffect(() => {
@@ -344,7 +350,9 @@ export default function ProjectSetup() {
   const handleAddMember = () => {
     if (newMember.name.trim() && newMember.email.trim()) {
       setMembers([...members, { ...newMember }])
-      setNewMember({ name: '', email: '', role: 'empleado', zoneIds: [] })
+      // Auto-select ALL zones for the next member (better to remove than to add)
+      const allZoneIds = zones.map((_, i) => `zone-${i}`)
+      setNewMember({ name: '', email: '', role: 'empleado', zoneIds: allZoneIds })
     }
   }
 
@@ -939,7 +947,7 @@ export default function ProjectSetup() {
                       </Select>
                     </div>
                     <div className="space-y-1">
-                      <Label className="text-xs">Zonas asignadas</Label>
+                      <Label className="text-xs">Zonas (todas por defecto)</Label>
                       <div className="space-y-0.5 max-h-32 overflow-y-auto border rounded-md p-2">
                         {zones.filter((z) => z.name.trim()).map((zone, i) => (
                           <label key={i} className="flex items-center gap-1.5 text-sm cursor-pointer hover:bg-gray-50 rounded px-1 py-0.5">
