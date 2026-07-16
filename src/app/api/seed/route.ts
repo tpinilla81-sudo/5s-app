@@ -396,11 +396,11 @@ const AUDIT_TEMPLATES: Record<number, { criteria: Array<{ criterion: string; wei
 export async function POST() {
   try {
     // Only create gestor (app owner) — no demo data, no admin user
-    const existingGestor = await db.user.findUnique({ where: { email: 'gestor@cincos.com' } })
+    const existingGestor = await db.user.findUnique({ where: { email: 't_pinilla@outlook.com' } })
     if (!existingGestor) {
       await db.user.create({
         data: {
-          email: 'gestor@cincos.com',
+          email: 't_pinilla@outlook.com',
           name: 'Gestor',
           password: hashPassword('gestor123'),
           role: 'gestor',
@@ -538,7 +538,7 @@ export async function POST() {
         templatesCreated: templates.length,
         users: userCount,
         projects: projectCount,
-        gestorCredentials: 'gestor@cincos.com / gestor123',
+        gestorCredentials: 't_pinilla@outlook.com / gestor123',
       },
     })
   } catch (error) {
