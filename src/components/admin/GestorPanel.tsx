@@ -32,7 +32,9 @@ import {
   UserPlus,
   Search,
   Mail,
+  Database,
 } from 'lucide-react'
+import ResourceList from './ResourceList'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -118,9 +120,7 @@ const ROLE_COLORS: Record<string, string> = {
   auditor: 'bg-orange-100 text-orange-700 border-orange-200',
 }
 
-type GestorTab = 'dashboard' | 'empresas' | 'admins'
-
-// ─── Component ───────────────────────────────────────────────────────────────
+type GestorTab = 'dashboard' | 'empresas' | 'admins' | 'recursos'
 
 export default function GestorPanel() {
   const { setCurrentView, fetchProjects, fetchCompanies, projects, setCurrentProject, currentProject } = use5SStore()
@@ -385,6 +385,7 @@ export default function GestorPanel() {
     { key: 'dashboard', label: 'KPIs', icon: <Activity className="h-4 w-4" /> },
     { key: 'empresas', label: 'Empresas', icon: <Building2 className="h-4 w-4" /> },
     { key: 'admins', label: 'Administradores', icon: <Shield className="h-4 w-4" /> },
+    { key: 'recursos', label: 'Recursos', icon: <Database className="h-4 w-4" /> },
   ]
 
   // ─── Send invitation email manually ────────────────────────────────────
@@ -923,6 +924,13 @@ export default function GestorPanel() {
                   </CardContent>
                 </Card>
               )}
+            </motion.div>
+          )}
+
+          {/* ═══ RECURSOS TAB ═══ */}
+          {activeTab === 'recursos' && (
+            <motion.div key="recursos" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+              <ResourceList showAllCompanies={true} dark={true} />
             </motion.div>
           )}
         </AnimatePresence>

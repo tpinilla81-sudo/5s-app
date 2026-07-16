@@ -1,0 +1,735 @@
+     1→     1→'use client'
+     2→     2→
+     3→     3→import { useState, useEffect, useCallback } from 'react'
+     4→     4→import { motion, AnimatePresence } from 'framer-motion'
+     5→     5→import { use5SStore } from '@/lib/store'
+     6→     6→import { Button } from '@/components/ui/button'
+     7→     7→import { Input } from '@/components/ui/input'
+     8→     8→import { Label } from '@/components/ui/label'
+     9→     9→import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+    10→    10→import {
+    11→    11→  Select,
+    12→    12→  SelectContent,
+    13→    13→  SelectItem,
+    14→    14→  SelectTrigger,
+    15→    15→  SelectValue,
+    16→    16→} from '@/components/ui/select'
+    17→    17→import { Badge } from '@/components/ui/badge'
+    18→    18→import {
+    19→    19→  Table,
+    20→    20→  TableBody,
+    21→    21→  TableCell,
+    22→    22→  TableHead,
+    23→    23→  TableHeader,
+    24→    24→  TableRow,
+    25→    25→} from '@/components/ui/table'
+    26→    26→import {
+    27→    27→  Dialog,
+    28→    28→  DialogContent,
+    29→    29→  DialogHeader,
+    30→    30→  DialogTitle,
+    31→    31→} from '@/components/ui/dialog'
+    32→    32→import {
+    33→    33→  Loader2,
+    34→    34→  Plus,
+    35→    35→  Trash2,
+    36→    36→  X,
+    37→    37→  Building2,
+    38→    38→  MapPin,
+    39→    39→  Users,
+    40→    40→  UserPlus,
+    41→    41→  Shield,
+    42→    42→  Crown,
+    43→    43→  UserCheck,
+    44→    44→  HardHat,
+    45→    45→  ClipboardCheck,
+    46→    46→  Mail,
+    47→    47→  ShieldCheck,
+    48→    48→} from 'lucide-react'
+    49→    49→import { Checkbox } from '@/components/ui/checkbox'
+    50→    50→
+    51→    51→const PRESET_COLORS = [
+    52→    52→  '#8B5CF6', '#EAB308', '#3B82F6', '#F43F5E',
+    53→    53→  '#F97316', '#22C55E', '#06B6D4', '#EC4899',
+    54→    54→]
+    55→    55→
+    56→    56→interface ZoneData {
+    57→    57→  id: string
+    58→    58→  name: string
+    59→    59→  description: string | null
+    60→    60→  color: string
+    61→    61→  memberCount?: number
+    62→    62→}
+    63→    63→
+    64→    64→interface MemberData {
+    65→    65→  id: string
+    66→    66→  role: string
+    67→    67→  user: {
+    68→    68→    id: string
+    69→    69→    email: string
+    70→    70→    name: string
+    71→    71→    role: string
+    72→    72→    avatar: string | null
+    73→    73→    active: boolean
+    74→    74→  }
+    75→    75→  zones: Array<{
+    76→    76→    id: string
+    77→    77→    name: string
+    78→    78→    color: string
+    79→    79→  }>
+    80→    80→}
+    81→    81→
+    82→    82→interface TeamManagementProps {
+    83→    83→  open: boolean
+    84→    84→  onClose: () => void
+    85→    85→}
+    86→    86→
+    87→    87→export default function TeamManagement({ open, onClose }: TeamManagementProps) {
+    88→    88→  const { currentProject } = use5SStore()
+    89→    89→  const [activeTab, setActiveTab] = useState<'info' | 'zones' | 'members' | 'permissions'>('info')
+    90→    90→
+    91→    91→  // Zones state
+    92→    92→  const [zones, setZones] = useState<ZoneData[]>([])
+    93→    93→  const [newZoneName, setNewZoneName] = useState('')
+    94→    94→  const [newZoneDesc, setNewZoneDesc] = useState('')
+    95→    95→  const [newZoneColor, setNewZoneColor] = useState(PRESET_COLORS[0])
+    96→    96→  const [isLoadingZones, setIsLoadingZones] = useState(false)
+    97→    97→
+    98→    98→  // Members state
+    99→    99→  const [members, setMembers] = useState<MemberData[]>([])
+   100→   100→  const [newMemberName, setNewMemberName] = useState('')
+   101→   101→  const [newMemberEmail, setNewMemberEmail] = useState('')
+   102→   102→  const [newMemberRole, setNewMemberRole] = useState('empleado')
+   103→   103→  const [newMemberZones, setNewMemberZones] = useState<string[]>([])
+   104→   104→  const [isLoadingMembers, setIsLoadingMembers] = useState(false)
+   105→   105→  const [generatedPassword, setGeneratedPassword] = useState<string | null>(null)
+   106→   106→  const [generatedMemberName, setGeneratedMemberName] = useState<string | null>(null)
+   107→   107→  const [sendingCredentials, setSendingCredentials] = useState<string | null>(null)
+   108→   108→
+   109→   109→  const fetchZones = useCallback(async () => {
+   110→   110→    if (!currentProject) return
+   111→   111→    setIsLoadingZones(true)
+   112→   112→    try {
+   113→   113→      const res = await fetch(`/api/projects/${currentProject.id}/zones`)
+   114→   114→      const data = await res.json()
+   115→   115→      const fetchedZones = data.zones || []
+   116→   116→      setZones(fetchedZones)
+   117→   117→      // Auto-select ALL zones when adding a member (better to remove than to add)
+   118→   118→      setNewMemberZones(fetchedZones.map((z: any) => z.id))
+   119→   119→    } catch (error) {
+   120→   120→      console.error('Fetch zones error:', error)
+   121→   121→    } finally {
+   122→   122→      setIsLoadingZones(false)
+   123→   123→    }
+   124→   124→  }, [currentProject])
+   125→   125→
+   126→   126→  const fetchMembers = useCallback(async () => {
+   127→   127→    if (!currentProject) return
+   128→   128→    setIsLoadingMembers(true)
+   129→   129→    try {
+   130→   130→      const res = await fetch(`/api/projects/${currentProject.id}/members`)
+   131→   131→      const data = await res.json()
+   132→   132→      setMembers(data.members || [])
+   133→   133→    } catch (error) {
+   134→   134→      console.error('Fetch members error:', error)
+   135→   135→    } finally {
+   136→   136→      setIsLoadingMembers(false)
+   137→   137→    }
+   138→   138→  }, [currentProject])
+   139→   139→
+   140→   140→  useEffect(() => {
+   141→   141→    if (open && currentProject) {
+   142→   142→      fetchZones()
+   143→   143→      fetchMembers()
+   144→   144→    }
+   145→   145→  }, [open, currentProject, fetchZones, fetchMembers])
+   146→   146→
+   147→   147→  const handleAddZone = async () => {
+   148→   148→    if (!currentProject || !newZoneName.trim()) return
+   149→   149→    try {
+   150→   150→      const res = await fetch(`/api/projects/${currentProject.id}/zones`, {
+   151→   151→        method: 'POST',
+   152→   152→        headers: { 'Content-Type': 'application/json' },
+   153→   153→        body: JSON.stringify({
+   154→   154→          name: newZoneName,
+   155→   155→          description: newZoneDesc || undefined,
+   156→   156→          color: newZoneColor,
+   157→   157→        }),
+   158→   158→      })
+   159→   159→      if (res.ok) {
+   160→   160→        setNewZoneName('')
+   161→   161→        setNewZoneDesc('')
+   162→   162→        setNewZoneColor(PRESET_COLORS[zones.length % PRESET_COLORS.length])
+   163→   163→        await fetchZones()
+   164→   164→      }
+   165→   165→    } catch (error) {
+   166→   166→      console.error('Add zone error:', error)
+   167→   167→    }
+   168→   168→  }
+   169→   169→
+   170→   170→  const handleDeleteZone = async (zoneId: string) => {
+   171→   171→    if (!currentProject) return
+   172→   172→    try {
+   173→   173→      const res = await fetch(`/api/projects/${currentProject.id}/zones`, {
+   174→   174→        method: 'DELETE',
+   175→   175→        headers: { 'Content-Type': 'application/json' },
+   176→   176→        body: JSON.stringify({ zoneId }),
+   177→   177→      })
+   178→   178→      if (res.ok) {
+   179→   179→        await fetchZones()
+   180→   180→        await fetchMembers()
+   181→   181→      }
+   182→   182→    } catch (error) {
+   183→   183→      console.error('Delete zone error:', error)
+   184→   184→    }
+   185→   185→  }
+   186→   186→
+   187→   187→  const handleAddMember = async () => {
+   188→   188→    if (!currentProject || !newMemberName.trim() || !newMemberEmail.trim()) return
+   189→   189→    try {
+   190→   190→      const res = await fetch(`/api/projects/${currentProject.id}/members`, {
+   191→   191→        method: 'POST',
+   192→   192→        headers: { 'Content-Type': 'application/json' },
+   193→   193→        body: JSON.stringify({
+   194→   194→          email: newMemberEmail,
+   195→   195→          name: newMemberName,
+   196→   196→          role: newMemberRole,
+   197→   197→          zoneIds: newMemberZones.length > 0 ? newMemberZones : undefined,
+   198→   198→        }),
+   199→   199→      })
+   200→   200→      if (res.ok) {
+   201→   201→        const data = await res.json()
+   202→   202→        if (data.member?.generatedPassword) {
+   203→   203→          setGeneratedPassword(data.member.generatedPassword)
+   204→   204→          setGeneratedMemberName(data.member.user?.name || newMemberName)
+   205→   205→        }
+   206→   206→        setNewMemberName('')
+   207→   207→        setNewMemberEmail('')
+   208→   208→        setNewMemberRole('empleado')
+   209→   209→        setNewMemberZones(zones.map(z => z.id))
+   210→   210→        await fetchMembers()
+   211→   211→        await fetchZones()
+   212→   212→      }
+   213→   213→    } catch (error) {
+   214→   214→      console.error('Add member error:', error)
+   215→   215→    }
+   216→   216→  }
+   217→   217→
+   218→   218→  const getRoleLabel = (role: string) => {
+   219→   219→    const map: Record<string, string> = {
+   220→   220→      admin: 'Administrador',
+   221→   221→      gerente: 'Gerente',
+   222→   222→      responsable: 'Responsable',
+   223→   223→      empleado: 'Empleado',
+   224→   224→      auditor: 'Auditor',
+   225→   225→    }
+   226→   226→    return map[role] || role
+   227→   227→  }
+   228→   228→
+   229→   229→  const getRoleBadgeColor = (role: string) => {
+   230→   230→    const map: Record<string, string> = {
+   231→   231→      admin: 'bg-purple-100 text-purple-700 border-purple-200',
+   232→   232→      gerente: 'bg-indigo-100 text-indigo-700 border-indigo-200',
+   233→   233→      responsable: 'bg-blue-100 text-blue-700 border-blue-200',
+   234→   234→      empleado: 'bg-green-100 text-green-700 border-green-200',
+   235→   235→      auditor: 'bg-orange-100 text-orange-700 border-orange-200',
+   236→   236→    }
+   237→   237→    return map[role] || 'bg-gray-100 text-gray-700 border-gray-200'
+   238→   238→  }
+   239→   239→
+   240→   240→  const tabs = [
+   241→   241→    { key: 'info' as const, label: 'Información', icon: Building2 },
+   242→   242→    { key: 'zones' as const, label: 'Zonas', icon: MapPin },
+   243→   243→    { key: 'members' as const, label: 'Miembros', icon: Users },
+   244→   244→    { key: 'permissions' as const, label: 'Permisos', icon: Shield },
+   245→   245→  ]
+   246→   246→
+   247→   247→  return (
+   248→   248→    <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
+   249→   249→      <DialogContent className="max-w-2xl max-h-[85vh] overflow-hidden flex flex-col p-0">
+   250→   250→        <DialogHeader className="px-6 pt-6 pb-2">
+   251→   251→          <DialogTitle className="flex items-center gap-2">
+   252→   252→            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center text-white font-bold text-sm">
+   253→   253→              5S
+   254→   254→            </div>
+   255→   255→            Gestión del Proyecto
+   256→   256→          </DialogTitle>
+   257→   257→        </DialogHeader>
+   258→   258→
+   259→   259→        {/* Tabs */}
+   260→   260→        <div className="flex border-b px-6">
+   261→   261→          {tabs.map((tab) => {
+   262→   262→            const Icon = tab.icon
+   263→   263→            return (
+   264→   264→              <button
+   265→   265→                key={tab.key}
+   266→   266→                onClick={() => setActiveTab(tab.key)}
+   267→   267→                className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
+   268→   268→                  activeTab === tab.key
+   269→   269→                    ? 'border-green-500 text-green-600'
+   270→   270→                    : 'border-transparent text-muted-foreground hover:text-foreground'
+   271→   271→                }`}
+   272→   272→              >
+   273→   273→                <Icon className="h-4 w-4" />
+   274→   274→                {tab.label}
+   275→   275→              </button>
+   276→   276→            )
+   277→   277→          })}
+   278→   278→        </div>
+   279→   279→
+   280→   280→        {/* Content */}
+   281→   281→        <div className="flex-1 overflow-y-auto px-6 py-4">
+   282→   282→          <AnimatePresence mode="wait">
+   283→   283→            {/* Info Tab */}
+   284→   284→            {activeTab === 'info' && currentProject && (
+   285→   285→              <motion.div
+   286→   286→                key="info"
+   287→   287→                initial={{ opacity: 0, y: 10 }}
+   288→   288→                animate={{ opacity: 1, y: 0 }}
+   289→   289→                exit={{ opacity: 0, y: -10 }}
+   290→   290→                className="space-y-4"
+   291→   291→              >
+   292→   292→                <Card>
+   293→   293→                  <CardContent className="pt-6 space-y-3">
+   294→   294→                    <div className="flex justify-between text-sm">
+   295→   295→                      <span className="text-muted-foreground">Proyecto</span>
+   296→   296→                      <span className="font-semibold">{currentProject.name}</span>
+   297→   297→                    </div>
+   298→   298→                    <div className="flex justify-between text-sm">
+   299→   299→                      <span className="text-muted-foreground">Empresa</span>
+   300→   300→                      <span className="font-semibold">{currentProject.company}</span>
+   301→   301→                    </div>
+   302→   302→                    {currentProject.description && (
+   303→   303→                      <div className="flex justify-between text-sm">
+   304→   304→                        <span className="text-muted-foreground">Descripción</span>
+   305→   305→                        <span className="font-semibold text-right max-w-[60%]">
+   306→   306→                          {currentProject.description}
+   307→   307→                        </span>
+   308→   308→                      </div>
+   309→   309→                    )}
+   310→   310→                    <div className="flex justify-between text-sm">
+   311→   311→                      <span className="text-muted-foreground">Fecha de inicio</span>
+   312→   312→                      <span className="font-semibold">
+   313→   313→                        {new Date(currentProject.startDate).toLocaleDateString('es-ES')}
+   314→   314→                      </span>
+   315→   315→                    </div>
+   316→   316→                    <div className="flex justify-between text-sm">
+   317→   317→                      <span className="text-muted-foreground">Zonas</span>
+   318→   318→                      <span className="font-semibold">{zones.length}</span>
+   319→   319→                    </div>
+   320→   320→                    <div className="flex justify-between text-sm">
+   321→   321→                      <span className="text-muted-foreground">Miembros</span>
+   322→   322→                      <span className="font-semibold">{members.length}</span>
+   323→   323→                    </div>
+   324→   324→                  </CardContent>
+   325→   325→                </Card>
+   326→   326→              </motion.div>
+   327→   327→            )}
+   328→   328→
+   329→   329→            {/* Zones Tab */}
+   330→   330→            {activeTab === 'zones' && (
+   331→   331→              <motion.div
+   332→   332→                key="zones"
+   333→   333→                initial={{ opacity: 0, y: 10 }}
+   334→   334→                animate={{ opacity: 1, y: 0 }}
+   335→   335→                exit={{ opacity: 0, y: -10 }}
+   336→   336→                className="space-y-4"
+   337→   337→              >
+   338→   338→                {/* Add zone form */}
+   339→   339→                <Card>
+   340→   340→                  <CardHeader className="pb-3">
+   341→   341→                    <CardTitle className="text-sm flex items-center gap-2">
+   342→   342→                      <Plus className="h-4 w-4 text-green-500" />
+   343→   343→                      Agregar Zona
+   344→   344→                    </CardTitle>
+   345→   345→                  </CardHeader>
+   346→   346→                  <CardContent className="space-y-3">
+   347→   347→                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+   348→   348→                      <div className="space-y-1">
+   349→   349→                        <Label className="text-xs">Nombre *</Label>
+   350→   350→                        <Input
+   351→   351→                          placeholder="Nombre de la zona"
+   352→   352→                          value={newZoneName}
+   353→   353→                          onChange={(e) => setNewZoneName(e.target.value)}
+   354→   354→                        />
+   355→   355→                      </div>
+   356→   356→                      <div className="space-y-1">
+   357→   357→                        <Label className="text-xs">Descripción</Label>
+   358→   358→                        <Input
+   359→   359→                          placeholder="Descripción (opcional)"
+   360→   360→                          value={newZoneDesc}
+   361→   361→                          onChange={(e) => setNewZoneDesc(e.target.value)}
+   362→   362→                        />
+   363→   363→                      </div>
+   364→   364→                    </div>
+   365→   365→                    <div className="space-y-1">
+   366→   366→                      <Label className="text-xs">Color</Label>
+   367→   367→                      <div className="flex gap-2 flex-wrap">
+   368→   368→                        {PRESET_COLORS.map((color) => (
+   369→   369→                          <button
+   370→   370→                            key={color}
+   371→   371→                            type="button"
+   372→   372→                            onClick={() => setNewZoneColor(color)}
+   373→   373→                            className={`w-7 h-7 rounded-full border-2 transition-all ${
+   374→   374→                              newZoneColor === color
+   375→   375→                                ? 'border-gray-800 scale-110 shadow-md'
+   376→   376→                                : 'border-transparent hover:scale-105'
+   377→   377→                            }`}
+   378→   378→                            style={{ backgroundColor: color }}
+   379→   379→                          />
+   380→   380→                        ))}
+   381→   381→                      </div>
+   382→   382→                    </div>
+   383→   383→                    <Button
+   384→   384→                      onClick={handleAddZone}
+   385→   385→                      disabled={!newZoneName.trim()}
+   386→   386→                      className="w-full bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white"
+   387→   387→                      size="sm"
+   388→   388→                    >
+   389→   389→                      <Plus className="h-4 w-4 mr-1" />
+   390→   390→                      Agregar Zona
+   391→   391→                    </Button>
+   392→   392→                  </CardContent>
+   393→   393→                </Card>
+   394→   394→
+   395→   395→                {/* Zones list */}
+   396→   396→                {isLoadingZones ? (
+   397→   397→                  <div className="flex justify-center py-8">
+   398→   398→                    <Loader2 className="h-6 w-6 text-green-500 animate-spin" />
+   399→   399→                  </div>
+   400→   400→                ) : zones.length === 0 ? (
+   401→   401→                  <p className="text-sm text-muted-foreground text-center py-8">
+   402→   402→                    No hay zonas en el proyecto
+   403→   403→                  </p>
+   404→   404→                ) : (
+   405→   405→                  <div className="space-y-2">
+   406→   406→                    {zones.map((zone) => (
+   407→   407→                      <div
+   408→   408→                        key={zone.id}
+   409→   409→                        className="flex items-center justify-between p-3 rounded-lg border bg-white"
+   410→   410→                      >
+   411→   411→                        <div className="flex items-center gap-3">
+   412→   412→                          <div
+   413→   413→                            className="w-4 h-4 rounded-full"
+   414→   414→                            style={{ backgroundColor: zone.color }}
+   415→   415→                          />
+   416→   416→                          <div>
+   417→   417→                            <p className="text-sm font-medium">{zone.name}</p>
+   418→   418→                            {zone.description && (
+   419→   419→                              <p className="text-xs text-muted-foreground">
+   420→   420→                                {zone.description}
+   421→   421→                              </p>
+   422→   422→                            )}
+   423→   423→                          </div>
+   424→   424→                        </div>
+   425→   425→                        <Button
+   426→   426→                          variant="ghost"
+   427→   427→                          size="sm"
+   428→   428→                          onClick={() => handleDeleteZone(zone.id)}
+   429→   429→                          className="text-red-500 hover:text-red-700 hover:bg-red-50 h-8 w-8 p-0"
+   430→   430→                        >
+   431→   431→                          <Trash2 className="h-4 w-4" />
+   432→   432→                        </Button>
+   433→   433→                      </div>
+   434→   434→                    ))}
+   435→   435→                  </div>
+   436→   436→                )}
+   437→   437→              </motion.div>
+   438→   438→            )}
+   439→   439→
+   440→   440→            {/* Members Tab */}
+   441→   441→            {activeTab === 'members' && (
+   442→   442→              <motion.div
+   443→   443→                key="members"
+   444→   444→                initial={{ opacity: 0, y: 10 }}
+   445→   445→                animate={{ opacity: 1, y: 0 }}
+   446→   446→                exit={{ opacity: 0, y: -10 }}
+   447→   447→                className="space-y-4"
+   448→   448→              >
+   449→   449→                {/* Add member form */}
+   450→   450→                <Card>
+   451→   451→                  <CardHeader className="pb-3">
+   452→   452→                    <CardTitle className="text-sm flex items-center gap-2">
+   453→   453→                      <UserPlus className="h-4 w-4 text-green-500" />
+   454→   454→                      Agregar Miembro
+   455→   455→                    </CardTitle>
+   456→   456→                  </CardHeader>
+   457→   457→                  <CardContent className="space-y-3">
+   458→   458→                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+   459→   459→                      <div className="space-y-1">
+   460→   460→                        <Label className="text-xs">Nombre *</Label>
+   461→   461→                        <Input
+   462→   462→                          placeholder="Nombre completo"
+   463→   463→                          value={newMemberName}
+   464→   464→                          onChange={(e) => setNewMemberName(e.target.value)}
+   465→   465→                        />
+   466→   466→                      </div>
+   467→   467→                      <div className="space-y-1">
+   468→   468→                        <Label className="text-xs">Email *</Label>
+   469→   469→                        <Input
+   470→   470→                          type="email"
+   471→   471→                          placeholder="email@ejemplo.com"
+   472→   472→                          value={newMemberEmail}
+   473→   473→                          onChange={(e) => setNewMemberEmail(e.target.value)}
+   474→   474→                        />
+   475→   475→                      </div>
+   476→   476→                      <div className="space-y-1">
+   477→   477→                        <Label className="text-xs">Rol</Label>
+   478→   478→                        <Select
+   479→   479→                          value={newMemberRole}
+   480→   480→                          onValueChange={setNewMemberRole}
+   481→   481→                        >
+   482→   482→                          <SelectTrigger className="w-full">
+   483→   483→                            <SelectValue />
+   484→   484→                          </SelectTrigger>
+   485→   485→                          <SelectContent>
+   486→   486→                            <SelectItem value="admin">Administrador</SelectItem>
+   487→   487→                            <SelectItem value="gerente">Gerente</SelectItem>
+   488→   488→                            <SelectItem value="responsable">Responsable</SelectItem>
+   489→   489→                            <SelectItem value="empleado">Empleado</SelectItem>
+   490→   490→                            <SelectItem value="auditor">Auditor</SelectItem>
+   491→   491→                          </SelectContent>
+   492→   492→                        </Select>
+   493→   493→                      </div>
+   494→   494→                      <div className="space-y-1">
+   495→   495→                        <Label className="text-xs">Zonas (todas por defecto)</Label>
+   496→   496→                        <div className="space-y-0.5 max-h-32 overflow-y-auto border rounded-md p-2">
+   497→   497→                          {zones.map((zone) => (
+   498→   498→                            <label key={zone.id} className="flex items-center gap-1.5 text-sm cursor-pointer hover:bg-gray-50 rounded px-1 py-0.5">
+   499→   499→                              <Checkbox
+   500→   500→                                checked={newMemberZones.includes(zone.id)}
+   501→   501→                                onCheckedChange={(checked) => {
+   502→   502→                                  if (checked) {
+   503→   503→                                    setNewMemberZones([...newMemberZones, zone.id])
+   504→   504→                                  } else {
+   505→   505→                                    setNewMemberZones(newMemberZones.filter(id => id !== zone.id))
+   506→   506→                                  }
+   507→   507→                                }}
+   508→   508→                                className="h-4 w-4"
+   509→   509→                              />
+   510→   510→                              <div
+   511→   511→                                className="w-2.5 h-2.5 rounded-full"
+   512→   512→                                style={{ backgroundColor: zone.color }}
+   513→   513→                              />
+   514→   514→                              <span>{zone.name}</span>
+   515→   515→                            </label>
+   516→   516→                          ))}
+   517→   517→                        </div>
+   518→   518→                      </div>
+   519→   519→                    </div>
+   520→   520→                    <Button
+   521→   521→                      onClick={handleAddMember}
+   522→   522→                      disabled={!newMemberName.trim() || !newMemberEmail.trim()}
+   523→   523→                      className="w-full bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white"
+   524→   524→                      size="sm"
+   525→   525→                    >
+   526→   526→                      <UserPlus className="h-4 w-4 mr-1" />
+   527→   527→                      Agregar Miembro
+   528→   528→                    </Button>
+   529→   529→                  </CardContent>
+   530→   530→                </Card>
+   531→   531→
+   532→   532→                {/* Generated password notification */}
+   533→   533→                {generatedPassword && (
+   534→   534→                  <div className="p-3 bg-green-50 border border-green-200 rounded-lg flex items-start gap-3">
+   535→   535→                    <ShieldCheck className="h-5 w-5 text-green-600 shrink-0 mt-0.5" />
+   536→   536→                    <div className="flex-1 min-w-0">
+   537→   537→                      <p className="text-xs font-semibold text-green-800">Contraseña generada para {generatedMemberName}</p>
+   538→   538→                      <div className="flex items-center gap-2 mt-1">
+   539→   539→                        <code className="text-sm font-mono bg-green-100 px-2 py-0.5 rounded text-green-900 select-all">{generatedPassword}</code>
+   540→   540→                        <Button size="sm" variant="outline" className="h-6 text-[10px] gap-1" onClick={() => { navigator.clipboard.writeText(generatedPassword) }}>
+   541→   541→                          Copiar
+   542→   542→                        </Button>
+   543→   543→                      </div>
+   544→   544→                      <p className="text-[10px] text-green-700 mt-1">Guarda esta contraseña. No se volverá a mostrar.</p>
+   545→   545→                    </div>
+   546→   546→                    <button onClick={() => { setGeneratedPassword(null); setGeneratedMemberName(null) }} className="text-green-400 hover:text-green-600">
+   547→   547→                      <X className="h-4 w-4" />
+   548→   548→                    </button>
+   549→   549→                  </div>
+   550→   550→                )}
+   551→   551→
+   552→   552→                {/* Members table */}
+   553→   553→                {isLoadingMembers ? (
+   554→   554→                  <div className="flex justify-center py-8">
+   555→   555→                    <Loader2 className="h-6 w-6 text-green-500 animate-spin" />
+   556→   556→                  </div>
+   557→   557→                ) : members.length === 0 ? (
+   558→   558→                  <p className="text-sm text-muted-foreground text-center py-8">
+   559→   559→                    No hay miembros en el proyecto
+   560→   560→                  </p>
+   561→   561→                ) : (
+   562→   562→                  <div className="rounded-lg border overflow-hidden">
+   563→   563→                    <Table>
+   564→   564→                      <TableHeader>
+   565→   565→                        <TableRow>
+   566→   566→                          <TableHead>Nombre</TableHead>
+   567→   567→                          <TableHead>Email</TableHead>
+   568→   568→                          <TableHead>Rol</TableHead>
+   569→   569→                          <TableHead>Zona</TableHead>
+   570→   570→                          <TableHead className="text-center">Acciones</TableHead>
+   571→   571→                        </TableRow>
+   572→   572→                      </TableHeader>
+   573→   573→                      <TableBody>
+   574→   574→                        {members.map((member) => (
+   575→   575→                          <TableRow key={member.id}>
+   576→   576→                            <TableCell className="font-medium text-sm">
+   577→   577→                              {member.user.name}
+   578→   578→                            </TableCell>
+   579→   579→                            <TableCell className="text-sm text-muted-foreground">
+   580→   580→                              {member.user.email}
+   581→   581→                            </TableCell>
+   582→   582→                            <TableCell>
+   583→   583→                              <Badge
+   584→   584→                                className={`${getRoleBadgeColor(member.role)} border`}
+   585→   585→                              >
+   586→   586→                                {getRoleLabel(member.role)}
+   587→   587→                              </Badge>
+   588→   588→                            </TableCell>
+   589→   589→                            <TableCell className="text-sm">
+   590→   590→                              {member.zones.length > 0 ? (
+   591→   591→                                <div className="flex flex-wrap gap-1">
+   592→   592→                                  {member.zones.map(z => (
+   593→   593→                                    <span key={z.id} className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-gray-50 border text-[10px]">
+   594→   594→                                      <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: z.color }} />
+   595→   595→                                      {z.name}
+   596→   596→                                    </span>
+   597→   597→                                  ))}
+   598→   598→                                </div>
+   599→   599→                              ) : (
+   600→   600→                                <span className="text-muted-foreground">-</span>
+   601→   601→                              )}
+   602→   602→                            </TableCell>
+   603→   603→                            <TableCell className="text-center">
+   604→   604→                              <Button variant="outline" size="sm" className="h-7 text-[10px] text-blue-500 border-blue-200 hover:bg-blue-50 hover:text-blue-700 hover:border-blue-300 gap-1" onClick={async () => {
+   605→   605→                                const pwd = prompt(`Introduce la contraseña para enviar a ${member.user.name}:\n(Por defecto: 123456)`)
+   606→   606→                                if (pwd === null) return
+   607→   607→                                const finalPwd = pwd.length >= 6 ? pwd : '123456'
+   608→   608→                                setSendingCredentials(member.id)
+   609→   609→                                try {
+   610→   610→                                  const res = await fetch(`/api/projects/${currentProject?.id}/send-credentials`, {
+   611→   611→                                    method: 'POST',
+   612→   612→                                    headers: { 'Content-Type': 'application/json' },
+   613→   613→                                    body: JSON.stringify({ memberId: member.id, password: finalPwd }),
+   614→   614→                                  })
+   615→   615→                                  const data = await res.json()
+   616→   616→                                  if (data.success) {
+   617→   617→                                    if (data.testingMode) {
+   618→   618→                                      alert(`Email enviado en modo de prueba a: ${data.redirectedTo}\n(El email real iría a: ${member.user.email})`)
+   619→   619→                                    } else {
+   620→   620→                                      alert(`Email de bienvenida enviado a: ${member.user.email}`)
+   621→   621→                                    }
+   622→   622→                                  } else {
+   623→   623→                                    alert(`Error al enviar email: ${data.error}`)
+   624→   624→                                  }
+   625→   625→                                } catch (err) {
+   626→   626→                                  alert('Error de conexión al enviar credenciales')
+   627→   627→                                } finally {
+   628→   628→                                  setSendingCredentials(null)
+   629→   629→                                }
+   630→   630→                              }} title="Enviar credenciales por email" disabled={sendingCredentials === member.id}>
+   631→   631→                                {sendingCredentials === member.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <Mail className="h-3 w-3" />}
+   632→   632→                                Enviar
+   633→   633→                              </Button>
+   634→   634→                            </TableCell>
+   635→   635→                          </TableRow>
+   636→   636→                        ))}
+   637→   637→                      </TableBody>
+   638→   638→                    </Table>
+   639→   639→                  </div>
+   640→   640→                )}
+   641→   641→              </motion.div>
+   642→   642→            )}
+   643→   643→            {/* Permissions Tab */}
+   644→   644→            {activeTab === 'permissions' && (
+   645→   645→              <motion.div
+   646→   646→                key="permissions"
+   647→   647→                initial={{ opacity: 0, y: 10 }}
+   648→   648→                animate={{ opacity: 1, y: 0 }}
+   649→   649→                exit={{ opacity: 0, y: -10 }}
+   650→   650→                className="space-y-4"
+   651→   651→              >
+   652→   652→                <p className="text-sm text-muted-foreground">
+   653→   653→                  A continuación se muestra el resumen de permisos de cada rol. Para ver la ficha completa, usa el botón <strong>Permisos</strong> en la barra de navegación.
+   654→   654→                </p>
+   655→   655→
+   656→   656→                {/* Admin */}
+   657→   657→                <Card className="border-purple-200 bg-purple-50/50">
+   658→   658→                  <CardContent className="pt-4">
+   659→   659→                    <div className="flex items-center gap-3 mb-2">
+   660→   660→                      <div className="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center">
+   661→   661→                        <Crown className="h-4 w-4 text-purple-600" />
+   662→   662→                      </div>
+   663→   663→                      <h3 className="font-bold text-purple-700">Administrador</h3>
+   664→   664→                      <Badge className="bg-purple-100 text-purple-700 border-purple-200 border text-[10px]">
+   665→   665→                        Acceso completo
+   666→   666→                      </Badge>
+   667→   667→                    </div>
+   668→   668→                    <p className="text-xs text-muted-foreground">
+   669→   669→                      Control total: puede gestionar proyecto, equipo, zonas, plantillas, formación, inventario, fotos, autoevaluaciones y auditorías. Puede eliminar el proyecto y reiniciar datos.
+   670→   670→                    </p>
+   671→   671→                  </CardContent>
+   672→   672→                </Card>
+   673→   673→
+   674→   674→                {/* Responsable */}
+   675→   675→                <Card className="border-blue-200 bg-blue-50/50">
+   676→   676→                  <CardContent className="pt-4">
+   677→   677→                    <div className="flex items-center gap-3 mb-2">
+   678→   678→                      <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
+   679→   679→                        <UserCheck className="h-4 w-4 text-blue-600" />
+   680→   680→                      </div>
+   681→   681→                      <h3 className="font-bold text-blue-700">Responsable</h3>
+   682→   682→                      <Badge className="bg-blue-100 text-blue-700 border-blue-200 border text-[10px]">
+   683→   683→                        Gestión de equipo
+   684→   684→                      </Badge>
+   685→   685→                    </div>
+   686→   686→                    <p className="text-xs text-muted-foreground">
+   687→   687→                      Gestiona equipo y zonas. Completa pasos, gestiona formación, inventario y aprueba auditorías. No puede eliminar el proyecto ni reiniciar datos.
+   688→   688→                    </p>
+   689→   689→                  </CardContent>
+   690→   690→                </Card>
+   691→   691→
+   692→   692→                {/* Empleado */}
+   693→   693→                <Card className="border-green-200 bg-green-50/50">
+   694→   694→                  <CardContent className="pt-4">
+   695→   695→                    <div className="flex items-center gap-3 mb-2">
+   696→   696→                      <div className="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center">
+   697→   697→                        <HardHat className="h-4 w-4 text-green-600" />
+   698→   698→                      </div>
+   699→   699→                      <h3 className="font-bold text-green-700">Empleado</h3>
+   700→   700→                      <Badge className="bg-green-100 text-green-700 border-green-200 border text-[10px]">
+   701→   701→                        Ejecución
+   702→   702→                      </Badge>
+   703→   703→                    </div>
+   704→   704→                    <p className="text-xs text-muted-foreground">
+   705→   705→                      Participa en la implementación: formación, exámenes, subir fotos, editar inventario, autoevaluación. Solo lectura en auditorías. No gestiona equipo ni proyecto.
+   706→   706→                    </p>
+   707→   707→                  </CardContent>
+   708→   708→                </Card>
+   709→   709→
+   710→   710→                {/* Auditor */}
+   711→   711→                <Card className="border-orange-200 bg-orange-50/50">
+   712→   712→                  <CardContent className="pt-4">
+   713→   713→                    <div className="flex items-center gap-3 mb-2">
+   714→   714→                      <div className="w-8 h-8 rounded-full bg-orange-100 flex items-center justify-center">
+   715→   715→                        <ClipboardCheck className="h-4 w-4 text-orange-600" />
+   716→   716→                      </div>
+   717→   717→                      <h3 className="font-bold text-orange-700">Auditor</h3>
+   718→   718→                      <Badge className="bg-orange-100 text-orange-700 border-orange-200 border text-[10px]">
+   719→   719→                        Auditoría externa
+   720→   720→                      </Badge>
+   721→   721→                    </div>
+   722→   722→                    <p className="text-xs text-muted-foreground">
+   723→   723→                      Especializado en auditoría externa. Puede ver datos (solo lectura) y realizar/aprobar auditorías. Sin edición de datos, gestión de equipo ni proyecto.
+   724→   724→                    </p>
+   725→   725→                  </CardContent>
+   726→   726→                </Card>
+   727→   727→              </motion.div>
+   728→   728→            )}
+   729→   729→          </AnimatePresence>
+   730→   730→        </div>
+   731→   731→      </DialogContent>
+   732→   732→    </Dialog>
+   733→   733→  )
+   734→   734→}
+   735→   735→

@@ -87,6 +87,16 @@ export async function GET(request: NextRequest) {
       avatar: user.avatar,
       active: user.active,
       plainPassword: user.plainPassword,
+      phone: user.phone,
+      address: user.address,
+      city: user.city,
+      province: user.province,
+      postalCode: user.postalCode,
+      country: user.country,
+      notes: user.notes,
+      department: user.department,
+      position: user.position,
+      employeeId: user.employeeId,
       createdAt: user.createdAt,
       companies: user.companyMemberships.map(cm => ({
         id: cm.company.id,
@@ -165,7 +175,7 @@ export async function POST(request: NextRequest) {
 export async function PUT(request: NextRequest) {
   try {
     const body = await request.json()
-    const { id, name, email, role, active, password } = body
+    const { id, name, email, role, active, password, phone, address, city, province, postalCode, country, notes, department, position, employeeId } = body
 
     if (!id) {
       return NextResponse.json({ success: false, error: 'ID de usuario requerido' }, { status: 400 })
@@ -189,6 +199,16 @@ export async function PUT(request: NextRequest) {
     if (email !== undefined) updateData.email = email.trim().toLowerCase()
     if (role !== undefined) updateData.role = role
     if (active !== undefined) updateData.active = active
+    if (phone !== undefined) updateData.phone = phone
+    if (address !== undefined) updateData.address = address
+    if (city !== undefined) updateData.city = city
+    if (province !== undefined) updateData.province = province
+    if (postalCode !== undefined) updateData.postalCode = postalCode
+    if (country !== undefined) updateData.country = country
+    if (notes !== undefined) updateData.notes = notes
+    if (department !== undefined) updateData.department = department
+    if (position !== undefined) updateData.position = position
+    if (employeeId !== undefined) updateData.employeeId = employeeId
     if (password && password.length >= 6) {
       updateData.password = hashPassword(password)
       updateData.plainPassword = password
@@ -207,6 +227,16 @@ export async function PUT(request: NextRequest) {
         name: user.name,
         role: user.role,
         active: user.active,
+        phone: user.phone,
+        address: user.address,
+        city: user.city,
+        province: user.province,
+        postalCode: user.postalCode,
+        country: user.country,
+        notes: user.notes,
+        department: user.department,
+        position: user.position,
+        employeeId: user.employeeId,
       },
     })
   } catch (error) {

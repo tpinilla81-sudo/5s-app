@@ -42,3 +42,37 @@ Stage Summary:
 - App URL: https://5s-app-one.vercel.app (HTTP 200)
 - Email: WORKING - Resend API key updated and verified
 - Code changes: removed invalid fallback key from email.ts and config route
+
+---
+Task ID: 3
+Agent: Main Agent
+Task: Add complete resource listing with addresses, passwords, editable fields, Excel export, and gestor access to all company data
+
+Work Log:
+- Expanded Prisma User schema with new fields: phone, address, city, province, postalCode, country, notes, department, position, employeeId
+- Updated /api/users GET to include all new fields in response
+- Updated /api/users PUT to accept and persist all new fields
+- Created /api/resources/export/route.ts - Excel export endpoint using xlsx library, supports gestor (all companies) and admin (own company)
+- Created ResourceList.tsx component - reusable editable table with:
+  - Search/filter by name, email, phone, employee ID, department, company, project
+  - Inline editing of all fields (name, email, phone, address, city, province, postal code, country, department, position, employee ID, notes)
+  - Expandable detail rows showing all contact/location data
+  - Password visibility toggle and copy to clipboard
+  - Password reset dialog with auto-generated password
+  - Excel export button
+  - Dark/light theme support (dark for GestorPanel, light for AdminPanel)
+  - Company column shown only in gestor mode (showAllCompanies)
+- Added "Recursos" tab to GestorPanel with showAllCompanies=true, dark=true
+- Added "Recursos" tab to AdminPanel with showAllCompanies=false, dark=false
+- Added Database icon from lucide-react to both panels
+- Updated package.json build script to include prisma db push --accept-data-loss (auto-migrate on deploy)
+- Deployed to Vercel production successfully
+
+Stage Summary:
+- Gestor sees ALL resources from ALL companies in dark-themed "Recursos" tab
+- Admin sees only their company's resources in light-themed "Recursos" tab
+- All resource fields editable inline (contact info, address, department, etc.)
+- Password management: view/copy existing passwords, reset with auto-generated passwords
+- Excel export: downloads .xlsx file with all resource data including passwords
+- Prisma schema auto-migrates on Vercel build (prisma db push)
+- App URL: https://5s-app-one.vercel.app

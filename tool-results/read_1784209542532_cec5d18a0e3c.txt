@@ -1,0 +1,2002 @@
+     1→     1→'use client'
+     2→     2→
+     3→     3→import { useState, useEffect, useCallback } from 'react'
+     4→     4→import { motion, AnimatePresence } from 'framer-motion'
+     5→     5→import { use5SStore } from '@/lib/store'
+     6→     6→import { Button } from '@/components/ui/button'
+     7→     7→import { Input } from '@/components/ui/input'
+     8→     8→import { Label } from '@/components/ui/label'
+     9→     9→import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+    10→    10→import {
+    11→    11→  Select,
+    12→    12→  SelectContent,
+    13→    13→  SelectItem,
+    14→    14→  SelectTrigger,
+    15→    15→  SelectValue,
+    16→    16→} from '@/components/ui/select'
+    17→    17→import { Badge } from '@/components/ui/badge'
+    18→    18→import {
+    19→    19→  Table,
+    20→    20→  TableBody,
+    21→    21→  TableCell,
+    22→    22→  TableHead,
+    23→    23→  TableHeader,
+    24→    24→  TableRow,
+    25→    25→} from '@/components/ui/table'
+    26→    26→import {
+    27→    27→  Dialog,
+    28→    28→  DialogContent,
+    29→    29→  DialogHeader,
+    30→    30→  DialogTitle,
+    31→    31→} from '@/components/ui/dialog'
+    32→    32→import {
+    33→    33→  ArrowLeft,
+    34→    34→  Plus,
+    35→    35→  Trash2,
+    36→    36→  Edit3,
+    37→    37→  Check,
+    38→    38→  X,
+    39→    39→  Building2,
+    40→    40→  Users,
+    41→    41→  Key,
+    42→    42→  Mail,
+    43→    43→  Lock,
+    44→    44→  User,
+    45→    45→  Shield,
+    46→    46→  MapPin,
+    47→    47→  UserPlus,
+    48→    48→  Loader2,
+    49→    49→  AlertTriangle,
+    50→    50→  Eye,
+    51→    51→  EyeOff,
+    52→    52→  CheckSquare,
+    53→    53→  ShieldCheck,
+    54→    54→  Save,
+    55→    55→  BookOpen,
+    56→    56→  LayoutGrid,
+    57→    57→  Sparkles,
+    58→    58→} from 'lucide-react'
+    59→    59→import { Checkbox } from '@/components/ui/checkbox'
+    60→    60→import { S_STEPS } from '@/lib/5s-constants'
+    61→    61→import TemplateManager from './TemplateManager'
+    62→    62→import Tablero5S from './Tablero5S'
+    63→    63→import MejoraContinuaAdmin from './MejoraContinuaAdmin'
+    64→    64→
+    65→    65→
+    66→    66→// ─── Types ───────────────────────────────────────────────────────────────────
+    67→    67→
+    68→    68→interface UserData {
+    69→    69→  id: string
+    70→    70→  email: string
+    71→    71→  name: string
+    72→    72→  role: string
+    73→    73→  active: boolean
+    74→    74→  plainPassword?: string | null
+    75→    75→  createdAt: string
+    76→    76→  projects: Array<{
+    77→    77→    projectId: string
+    78→    78→    projectName: string
+    79→    79→    projectCompany: string
+    80→    80→    role: string
+    81→    81→    zones: Array<{ id: string; name: string; color: string }>
+    82→    82→  }>
+    83→    83→}
+    84→    84→
+    85→    85→interface ProjectData {
+    86→    86→  id: string
+    87→    87→  name: string
+    88→    88→  description: string | null
+    89→    89→  company: string
+    90→    90→  startDate: string
+    91→    91→  active: boolean
+    92→    92→  zones: Array<{ id: string; name: string; description: string | null; color: string }>
+    93→    93→  memberCount: number
+    94→    94→}
+    95→    95→
+    96→    96→interface ZoneData {
+    97→    97→  id: string
+    98→    98→  name: string
+    99→    99→  description: string | null
+   100→   100→  color: string
+   101→   101→  boardConfigId: string | null
+   102→   102→  boardConfig?: { id: string; name: string } | null
+   103→   103→}
+   104→   104→
+   105→   105→interface MemberData {
+   106→   106→  id: string
+   107→   107→  role: string
+   108→   108→  user: { id: string; email: string; name: string; role: string; active: boolean; plainPassword?: string | null }
+   109→   109→  zones: Array<{ id: string; name: string; color: string }>
+   110→   110→}
+   111→   111→
+   112→   112→// ─── Helpers ─────────────────────────────────────────────────────────────────
+   113→   113→
+   114→   114→const ROLE_LABELS: Record<string, string> = {
+   115→   115→  gestor: 'Gestor (Dueño)',
+   116→   116→  admin: 'Admin de Empresa',
+   117→   117→  gerente: 'Gerente',
+   118→   118→  responsable: 'Responsable',
+   119→   119→  empleado: 'Empleado',
+   120→   120→  auditor: 'Auditor',
+   121→   121→}
+   122→   122→
+   123→   123→const ROLE_COLORS: Record<string, string> = {
+   124→   124→  gestor: 'bg-red-100 text-red-700 border-red-200',
+   125→   125→  admin: 'bg-purple-100 text-purple-700 border-purple-200',
+   126→   126→  gerente: 'bg-indigo-100 text-indigo-700 border-indigo-200',
+   127→   127→  responsable: 'bg-blue-100 text-blue-700 border-blue-200',
+   128→   128→  empleado: 'bg-green-100 text-green-700 border-green-200',
+   129→   129→  auditor: 'bg-orange-100 text-orange-700 border-orange-200',
+   130→   130→}
+   131→   131→
+   132→   132→const PRESET_COLORS = ['#8B5CF6', '#EAB308', '#3B82F6', '#F43F5E', '#F97316', '#22C55E', '#06B6D4', '#EC4899']
+   133→   133→
+   134→   134→// ─── Component ───────────────────────────────────────────────────────────────
+   135→   135→
+   136→   136→interface AdminPanelProps {
+   137→   137→  embedded?: boolean;
+   138→   138→}
+   139→   139→
+   140→   140→export default function AdminPanel({ embedded }: AdminPanelProps = {}) {
+   141→   141→  const { setCurrentView, fetchProjects, fetchCompanies, projects, setCurrentProject, currentProject } = use5SStore()
+   142→   142→  const [activeTab, setActiveTab] = useState<'companies' | 'users' | 'projects' | 'plantillas' | 'tablero5s' | 'mejora'>('companies')
+   143→   143→
+   144→   144→  // ─── Projects state ──────────────────────────────────────────────────────
+   145→   145→  const [allProjects, setAllProjects] = useState<ProjectData[]>([])
+   146→   146→  const [isLoadingProjects, setIsLoadingProjects] = useState(false)
+   147→   147→  const [editingProject, setEditingProject] = useState<string | null>(null)
+   148→   148→  const [editProjectData, setEditProjectData] = useState({ name: '', description: '', company: '' })
+   149→   149→
+   150→   150→  // New project form
+   151→   151→  const [showNewProject, setShowNewProject] = useState(false)
+   152→   152→  const [newProjectName, setNewProjectName] = useState('')
+   153→   153→  const [newProjectCompany, setNewProjectCompany] = useState('')
+   154→   154→  const [isNewCompanyCustom, setIsNewCompanyCustom] = useState(false)
+   155→   155→  const [newProjectDesc, setNewProjectDesc] = useState('')
+   156→   156→  const [newProjectZones, setNewProjectZones] = useState<Array<{ name: string; color: string }>>([
+   157→   157→    { name: '', color: PRESET_COLORS[0] },
+   158→   158→  ])
+   159→   159→
+   160→   160→  // Project detail (zones + members)
+   161→   161→  const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null)
+   162→   162→  const [projectZones, setProjectZones] = useState<ZoneData[]>([])
+   163→   163→  const [projectMembers, setProjectMembers] = useState<MemberData[]>([])
+   164→   164→  const [isLoadingDetail, setIsLoadingDetail] = useState(false)
+   165→   165→  const [newZoneName, setNewZoneName] = useState('')
+   166→   166→  const [newZoneColor, setNewZoneColor] = useState(PRESET_COLORS[0])
+   167→   167→  const [boardConfigs, setBoardConfigs] = useState<Array<{ id: string; name: string; isDefault: boolean }>>([])
+   168→   168→  const [defaultBoardConfigId, setDefaultBoardConfigId] = useState<string | null>(null)
+   169→   169→  const [newMemberName, setNewMemberName] = useState('')
+   170→   170→  const [newMemberEmail, setNewMemberEmail] = useState('')
+   171→   171→  const [newMemberRole, setNewMemberRole] = useState('empleado')
+   172→   172→  const [newMemberZones, setNewMemberZones] = useState<string[]>([])
+   173→   173→  const [newMemberPassword, setNewMemberPassword] = useState('')
+   174→   174→  const [addMemberMode, setAddMemberMode] = useState<'existing' | 'new'>('existing')
+   175→   175→  const [selectedExistingUserId, setSelectedExistingUserId] = useState('')
+   176→   176→  const [generatedPassword, setGeneratedPassword] = useState<string | null>(null)
+   177→   177→  const [generatedMemberName, setGeneratedMemberName] = useState<string | null>(null)
+   178→   178→  const [sendingCredentials, setSendingCredentials] = useState<string | null>(null)
+   179→   179→
+   180→   180→  // ─── Users state ─────────────────────────────────────────────────────────
+   181→   181→  const [users, setUsers] = useState<UserData[]>([])
+   182→   182→  const [isLoadingUsers, setIsLoadingUsers] = useState(false)
+   183→   183→  const [editingUser, setEditingUser] = useState<string | null>(null)
+   184→   184→  const [editUserData, setEditUserData] = useState({ name: '', email: '', role: '', active: true })
+   185→   185→  const [resetPasswordUserId, setResetPasswordUserId] = useState<string | null>(null)
+   186→   186→  const [newPassword, setNewPassword] = useState('')
+   187→   187→  const [showPassword, setShowPassword] = useState(false)
+   188→   188→
+   189→   189→  // New user form
+   190→   190→  const [showNewUser, setShowNewUser] = useState(false)
+   191→   191→  const [newUserName, setNewUserName] = useState('')
+   192→   192→  const [newUserEmail, setNewUserEmail] = useState('')
+   193→   193→  const [newUserPassword, setNewUserPassword] = useState('')
+   194→   194→  const [newUserRole, setNewUserRole] = useState('empleado')
+   195→   195→
+   196→   196→  // ─── Companies state ────────────────────────────────────────────────────
+   197→   197→  const [companies, setCompanies] = useState<Array<{ id: string; name: string; description: string | null; active: boolean; projectCount: number; memberCount: number }>>([])
+   198→   198→  const [isLoadingCompanies, setIsLoadingCompanies] = useState(false)
+   199→   199→  const [showNewCompany, setShowNewCompany] = useState(false)
+   200→   200→  const [newCompanyName, setNewCompanyName] = useState('')
+   201→   201→  const [newCompanyDesc, setNewCompanyDesc] = useState('')
+   202→   202→  const [editingCompany, setEditingCompany] = useState<string | null>(null)
+   203→   203→  const [editCompanyData, setEditCompanyData] = useState({ name: '', description: '' })
+   204→   204→  const [expandedCompanyId, setExpandedCompanyId] = useState<string | null>(null)
+   205→   205→  const [companyMembers, setCompanyMembers] = useState<Array<{ id: string; userId: string; companyId: string; role: string; user: { id: string; name: string; email: string; role: string; active: boolean } }>>([])
+   206→   206→  const [addGerenteUserId, setAddGerenteUserId] = useState('')
+   207→   207→  const [isLoadingCompanyDetail, setIsLoadingCompanyDetail] = useState(false)
+   208→   208→
+   209→   209→  // ─── 5S Steps state ────────────────────────────────────────────────────
+   210→   210→  const [progress5S, setProgress5S] = useState<Array<{ id: string; sStep: number; miniStep: number; completed: boolean; score: number | null; notes: string | null; zoneId: string | null; zoneName?: string }>>([])
+   211→   211→  const [isLoading5S, setIsLoading5S] = useState(false)
+   212→   212→  const [editingScore, setEditingScore] = useState<string | null>(null) // progress record id
+   213→   213→  const [editScoreValue, setEditScoreValue] = useState('')
+   214→   214→  const [editNotesValue, setEditNotesValue] = useState('')
+   215→   215→  const [selected5SProjectId, setSelected5SProjectId] = useState<string | null>(null)
+   216→   216→  const [selected5SZoneId, setSelected5SZoneId] = useState<string | null>(null)
+   217→   217→
+   218→   218→  // ─── Data loading ────────────────────────────────────────────────────────
+   219→   219→  const loadProjects = useCallback(async () => {
+   220→   220→    setIsLoadingProjects(true)
+   221→   221→    try {
+   222→   222→      const res = await fetch('/api/projects')
+   223→   223→      const data = await res.json()
+   224→   224→      setAllProjects(data.projects || [])
+   225→   225→    } catch (error) {
+   226→   226→      console.error('Error loading projects:', error)
+   227→   227→    } finally {
+   228→   228→      setIsLoadingProjects(false)
+   229→   229→    }
+   230→   230→  }, [])
+   231→   231→
+   232→   232→  const loadUsers = useCallback(async () => {
+   233→   233→    setIsLoadingUsers(true)
+   234→   234→    try {
+   235→   235→      const res = await fetch('/api/users')
+   236→   236→      const data = await res.json()
+   237→   237→      setUsers(data.users || [])
+   238→   238→    } catch (error) {
+   239→   239→      console.error('Error loading users:', error)
+   240→   240→    } finally {
+   241→   241→      setIsLoadingUsers(false)
+   242→   242→    }
+   243→   243→  }, [])
+   244→   244→
+   245→   245→  const loadCompanies = useCallback(async () => {
+   246→   246→    setIsLoadingCompanies(true)
+   247→   247→    try {
+   248→   248→      const res = await fetch('/api/companies')
+   249→   249→      const data = await res.json()
+   250→   250→      if (data.success) {
+   251→   251→        setCompanies(data.companies || [])
+   252→   252→      }
+   253→   253→    } catch (error) {
+   254→   254→      console.error('Error loading companies:', error)
+   255→   255→    } finally {
+   256→   256→      setIsLoadingCompanies(false)
+   257→   257→    }
+   258→   258→  }, [])
+   259→   259→
+   260→   260→  const loadCompanyDetail = useCallback(async (companyId: string) => {
+   261→   261→    setIsLoadingCompanyDetail(true)
+   262→   262→    try {
+   263→   263→      const res = await fetch(`/api/companies/${companyId}`)
+   264→   264→      const data = await res.json()
+   265→   265→      if (data.success) {
+   266→   266→        setCompanyMembers(data.company?.members || [])
+   267→   267→      }
+   268→   268→    } catch (error) {
+   269→   269→      console.error('Error loading company detail:', error)
+   270→   270→    } finally {
+   271→   271→      setIsLoadingCompanyDetail(false)
+   272→   272→    }
+   273→   273→  }, [])
+   274→   274→
+   275→   275→  const loadProjectDetail = useCallback(async (projectId: string) => {
+   276→   276→    setIsLoadingDetail(true)
+   277→   277→    try {
+   278→   278→      const [zonesRes, membersRes, configsRes] = await Promise.all([
+   279→   279→        fetch(`/api/projects/${projectId}/zones`),
+   280→   280→        fetch(`/api/projects/${projectId}/members`),
+   281→   281→        fetch('/api/board-configs'),
+   282→   282→      ])
+   283→   283→      const zonesData = await zonesRes.json()
+   284→   284→      const membersData = await membersRes.json()
+   285→   285→      const configsData = await configsRes.json()
+   286→   286→      const zones = zonesData.zones || []
+   287→   287→      setProjectZones(zones)
+   288→   288→      setProjectMembers(membersData.members || [])
+   289→   289→      if (configsData.success) {
+   290→   290→        const configs = (configsData.data || []).map((c: any) => ({ id: c.id, name: c.name, isDefault: c.isDefault }))
+   291→   291→        setBoardConfigs(configs)
+   292→   292→      }
+   293→   293→      // Auto-select ALL zones when adding a member (better to remove than to add)
+   294→   294→      setNewMemberZones(zones.map((z: any) => z.id))
+   295→   295→      // Auto-select default board config for new zones
+   296→   296→      const defaultConfig = (configsData.data || []).find((c: any) => c.isDefault)
+   297→   297→      if (defaultConfig) {
+   298→   298→        setDefaultBoardConfigId(defaultConfig.id)
+   299→   299→      }
+   300→   300→    } catch (error) {
+   301→   301→      console.error('Error loading project detail:', error)
+   302→   302→    } finally {
+   303→   303→      setIsLoadingDetail(false)
+   304→   304→    }
+   305→   305→  }, [])
+   306→   306→
+   307→   307→  const load5SProgress = useCallback(async () => {
+   308→   308→    setIsLoading5S(true)
+   309→   309→    try {
+   310→   310→      const params = new URLSearchParams()
+   311→   311→      if (selected5SProjectId) params.set('projectId', selected5SProjectId)
+   312→   312→      const res = await fetch(`/api/progress?${params.toString()}`)
+   313→   313→      const data = await res.json()
+   314→   314→      const progressData = data?.data ? data.data : (Array.isArray(data) ? data : [])
+   315→   315→      // Enrich with zone names
+   316→   316→      if (selected5SProjectId) {
+   317→   317→        const zonesRes = await fetch(`/api/projects/${selected5SProjectId}/zones`)
+   318→   318→        const zonesData = await zonesRes.json()
+   319→   319→        const zones = zonesData.zones || []
+   320→   320→        const enriched = progressData.map((p: any) => ({
+   321→   321→          ...p,
+   322→   322→          zoneName: zones.find((z: any) => z.id === p.zoneId)?.name || (p.zoneId ? 'Zona sin nombre' : 'Sin zona'),
+   323→   323→        }))
+   324→   324→        setProgress5S(enriched)
+   325→   325→      } else {
+   326→   326→        setProgress5S(progressData)
+   327→   327→      }
+   328→   328→    } catch (error) {
+   329→   329→      console.error('Error loading 5S progress:', error)
+   330→   330→    } finally {
+   331→   331→      setIsLoading5S(false)
+   332→   332→    }
+   333→   333→  }, [selected5SProjectId])
+   334→   334→
+   335→   335→  useEffect(() => {
+   336→   336→    loadProjects()
+   337→   337→    loadUsers()
+   338→   338→    loadCompanies()
+   339→   339→  }, [loadProjects, loadUsers, loadCompanies])
+   340→   340→
+   341→   341→  useEffect(() => {
+   342→   342→    if (activeTab === '5s-steps') {
+   343→   343→      load5SProgress()
+   344→   344→    }
+   345→   345→  }, [activeTab, load5SProgress])
+   346→   346→
+   347→   347→  useEffect(() => {
+   348→   348→    if (selectedProjectId) {
+   349→   349→      loadProjectDetail(selectedProjectId)
+   350→   350→    }
+   351→   351→  }, [selectedProjectId, loadProjectDetail])
+   352→   352→
+   353→   353→  useEffect(() => {
+   354→   354→    if (expandedCompanyId) {
+   355→   355→      loadCompanyDetail(expandedCompanyId)
+   356→   356→    }
+   357→   357→  }, [expandedCompanyId, loadCompanyDetail])
+   358→   358→
+   359→   359→  // ─── Project actions ─────────────────────────────────────────────────────
+   360→   360→  const handleCreateProject = async () => {
+   361→   361→    if (!newProjectName.trim() || !newProjectCompany.trim()) return
+   362→   362→    const validZones = newProjectZones.filter(z => z.name.trim())
+   363→   363→    if (validZones.length === 0) return
+   364→   364→
+   365→   365→    try {
+   366→   366→      const res = await fetch('/api/projects', {
+   367→   367→        method: 'POST',
+   368→   368→        headers: { 'Content-Type': 'application/json' },
+   369→   369→        body: JSON.stringify({
+   370→   370→          name: newProjectName,
+   371→   371→          description: newProjectDesc || undefined,
+   372→   372→          company: newProjectCompany,
+   373→   373→          companyId: companies.find(c => c.name === newProjectCompany)?.id || undefined,
+   374→   374→          zones: validZones.map(z => ({ name: z.name, color: z.color })),
+   375→   375→        }),
+   376→   376→      })
+   377→   377→      if (res.ok) {
+   378→   378→        const data = await res.json()
+   379→   379→        // Auto-add current user as admin
+   380→   380→        const { currentUser } = use5SStore.getState()
+   381→   381→        if (currentUser) {
+   382→   382→          await fetch(`/api/projects/${data.project.id}/members`, {
+   383→   383→            method: 'POST',
+   384→   384→            headers: { 'Content-Type': 'application/json' },
+   385→   385→            body: JSON.stringify({ email: currentUser.email, name: currentUser.name, role: 'admin', zoneIds: data.project.zones?.map((z: any) => z.id) || [] }),
+   386→   386→          })
+   387→   387→        }
+   388→   388→        setShowNewProject(false)
+   389→   389→        setNewProjectName('')
+   390→   390→        setNewProjectCompany('')
+   391→   391→        setIsNewCompanyCustom(false)
+   392→   392→        setNewProjectDesc('')
+   393→   393→        setNewProjectZones([{ name: '', color: PRESET_COLORS[0] }])
+   394→   394→        await loadProjects()
+   395→   395→        await fetchProjects()
+   396→   396→      }
+   397→   397→    } catch (error) {
+   398→   398→      console.error('Error creating project:', error)
+   399→   399→    }
+   400→   400→  }
+   401→   401→
+   402→   402→  const handleUpdateProject = async (projectId: string) => {
+   403→   403→    try {
+   404→   404→      const res = await fetch(`/api/projects/${projectId}`, {
+   405→   405→        method: 'PUT',
+   406→   406→        headers: { 'Content-Type': 'application/json' },
+   407→   407→        body: JSON.stringify(editProjectData),
+   408→   408→      })
+   409→   409→      if (res.ok) {
+   410→   410→        setEditingProject(null)
+   411→   411→        await loadProjects()
+   412→   412→        await fetchProjects()
+   413→   413→      }
+   414→   414→    } catch (error) {
+   415→   415→      console.error('Error updating project:', error)
+   416→   416→    }
+   417→   417→  }
+   418→   418→
+   419→   419→  const handleDeleteProject = async (projectId: string) => {
+   420→   420→    if (!confirm('¿Estás seguro de eliminar este proyecto? Se eliminarán todos los datos asociados (inventarios, progresos, auditorías, etc.).')) return
+   421→   421→    try {
+   422→   422→      const res = await fetch(`/api/projects/${projectId}`, { method: 'DELETE' })
+   423→   423→      if (res.ok) {
+   424→   424→        if (currentProject?.id === projectId) {
+   425→   425→          const remaining = allProjects.filter(p => p.id !== projectId)
+   426→   426→          setCurrentProject(remaining.length > 0 ? remaining[0] : null)
+   427→   427→        }
+   428→   428→        await loadProjects()
+   429→   429→        await fetchProjects()
+   430→   430→      }
+   431→   431→    } catch (error) {
+   432→   432→      console.error('Error deleting project:', error)
+   433→   433→    }
+   434→   434→  }
+   435→   435→
+   436→   436→  const handleSelectProject = (projectId: string) => {
+   437→   437→    if (selectedProjectId === projectId) {
+   438→   438→      setSelectedProjectId(null)
+   439→   439→    } else {
+   440→   440→      setSelectedProjectId(projectId)
+   441→   441→    }
+   442→   442→  }
+   443→   443→
+   444→   444→  const handleAddZone = async () => {
+   445→   445→    if (!selectedProjectId || !newZoneName.trim()) return
+   446→   446→    try {
+   447→   447→      const res = await fetch(`/api/projects/${selectedProjectId}/zones`, {
+   448→   448→        method: 'POST',
+   449→   449→        headers: { 'Content-Type': 'application/json' },
+   450→   450→        body: JSON.stringify({ name: newZoneName, color: newZoneColor }),
+   451→   451→      })
+   452→   452→      if (res.ok) {
+   453→   453→        setNewZoneName('')
+   454→   454→        setNewZoneColor(PRESET_COLORS[(projectZones.length) % PRESET_COLORS.length])
+   455→   455→        await loadProjectDetail(selectedProjectId)
+   456→   456→        await loadProjects()
+   457→   457→      } else {
+   458→   458→        const data = await res.json()
+   459→   459→        alert(data.error || 'Error al agregar zona')
+   460→   460→      }
+   461→   461→    } catch (error) {
+   462→   462→      console.error('Error adding zone:', error)
+   463→   463→      alert('Error de conexión al agregar zona')
+   464→   464→    }
+   465→   465→  }
+   466→   466→
+   467→   467→  const handleDeleteZone = async (zoneId: string, zoneName: string) => {
+   468→   468→    if (!selectedProjectId) return
+   469→   469→    if (!confirm(`¿Estás seguro de eliminar la zona "${zoneName}"? Los miembros asignados a esta zona perderán la asignación.`)) return
+   470→   470→    try {
+   471→   471→      const res = await fetch(`/api/projects/${selectedProjectId}/zones`, {
+   472→   472→        method: 'DELETE',
+   473→   473→        headers: { 'Content-Type': 'application/json' },
+   474→   474→        body: JSON.stringify({ zoneId }),
+   475→   475→      })
+   476→   476→      if (res.ok) {
+   477→   477→        await loadProjectDetail(selectedProjectId)
+   478→   478→        await loadProjects()
+   479→   479→      } else {
+   480→   480→        const data = await res.json()
+   481→   481→        alert(data.error || 'Error al eliminar zona')
+   482→   482→      }
+   483→   483→    } catch (error) {
+   484→   484→      console.error('Error deleting zone:', error)
+   485→   485→    }
+   486→   486→  }
+   487→   487→
+   488→   488→  const handleZoneBoardConfig = async (zoneId: string, boardConfigId: string) => {
+   489→   489→    if (!selectedProjectId) return
+   490→   490→    try {
+   491→   491→      const res = await fetch(`/api/projects/${selectedProjectId}/zones`, {
+   492→   492→        method: 'PATCH',
+   493→   493→        headers: { 'Content-Type': 'application/json' },
+   494→   494→        body: JSON.stringify({ zoneId, boardConfigId }),
+   495→   495→      })
+   496→   496→      if (res.ok) {
+   497→   497→        // Update local state
+   498→   498→        setProjectZones(prev => prev.map(z => {
+   499→   499→          if (z.id === zoneId) {
+   500→   500→            const config = boardConfigs.find(c => c.id === boardConfigId)
+   501→   501→            return { ...z, boardConfigId: boardConfigId || null, boardConfig: config ? { id: config.id, name: config.name } : null }
+   502→   502→          }
+   503→   503→          return z
+   504→   504→        }))
+   505→   505→      }
+   506→   506→    } catch (error) {
+   507→   507→      console.error('Error updating zone board config:', error)
+   508→   508→    }
+   509→   509→  }
+   510→   510→
+   511→   511→  const handleAddMember = async () => {
+   512→   512→    if (!selectedProjectId) return
+   513→   513→    try {
+   514→   514→      if (addMemberMode === 'existing') {
+   515→   515→        // Add existing user to project
+   516→   516→        const selectedUser = users.find(u => u.id === selectedExistingUserId)
+   517→   517→        if (!selectedUser) return
+   518→   518→
+   519→   519→        const body: any = {
+   520→   520→          email: selectedUser.email,
+   521→   521→          name: selectedUser.name,
+   522→   522→          role: newMemberRole,
+   523→   523→          zoneIds: newMemberZones.length > 0 ? newMemberZones : undefined,
+   524→   524→        }
+   525→   525→        const res = await fetch(`/api/projects/${selectedProjectId}/members`, {
+   526→   526→          method: 'POST',
+   527→   527→          headers: { 'Content-Type': 'application/json' },
+   528→   528→          body: JSON.stringify(body),
+   529→   529→        })
+   530→   530→        if (res.ok) {
+   531→   531→          setSelectedExistingUserId('')
+   532→   532→          setNewMemberRole('empleado')
+   533→   533→          setNewMemberZones(projectZones.map(z => z.id))
+   534→   534→          await loadProjectDetail(selectedProjectId)
+   535→   535→        }
+   536→   536→      } else {
+   537→   537→        // Create new user and add to project
+   538→   538→        if (!newMemberName.trim() || !newMemberEmail.trim()) return
+   539→   539→        const body: any = {
+   540→   540→          email: newMemberEmail,
+   541→   541→          name: newMemberName,
+   542→   542→          role: newMemberRole,
+   543→   543→          zoneIds: newMemberZones.length > 0 ? newMemberZones : undefined,
+   544→   544→        }
+   545→   545→        if (newMemberPassword && newMemberPassword.length >= 6) {
+   546→   546→          body.password = newMemberPassword
+   547→   547→        }
+   548→   548→        const res = await fetch(`/api/projects/${selectedProjectId}/members`, {
+   549→   549→          method: 'POST',
+   550→   550→          headers: { 'Content-Type': 'application/json' },
+   551→   551→          body: JSON.stringify(body),
+   552→   552→        })
+   553→   553→        if (res.ok) {
+   554→   554→          const data = await res.json()
+   555→   555→          if (data.member?.generatedPassword) {
+   556→   556→            setGeneratedPassword(data.member.generatedPassword)
+   557→   557→            setGeneratedMemberName(data.member.user?.name || newMemberName)
+   558→   558→          }
+   559→   559→          setNewMemberName('')
+   560→   560→          setNewMemberEmail('')
+   561→   561→          setNewMemberRole('empleado')
+   562→   562→          setNewMemberZones(projectZones.map(z => z.id))
+   563→   563→          setNewMemberPassword('')
+   564→   564→          await loadProjectDetail(selectedProjectId)
+   565→   565→        }
+   566→   566→      }
+   567→   567→    } catch (error) {
+   568→   568→      console.error('Error adding member:', error)
+   569→   569→    }
+   570→   570→  }
+   571→   571→
+   572→   572→  const handleRemoveMember = async (memberId: string, memberName: string) => {
+   573→   573→    if (!selectedProjectId) return
+   574→   574→    if (!confirm(`¿Estás seguro de eliminar a "${memberName}" de este proyecto?`)) return
+   575→   575→    try {
+   576→   576→      const res = await fetch(`/api/projects/${selectedProjectId}/members`, {
+   577→   577→        method: 'DELETE',
+   578→   578→        headers: { 'Content-Type': 'application/json' },
+   579→   579→        body: JSON.stringify({ memberId }),
+   580→   580→      })
+   581→   581→      if (res.ok) {
+   582→   582→        await loadProjectDetail(selectedProjectId)
+   583→   583→        await loadProjects()
+   584→   584→        await loadUsers()
+   585→   585→      } else {
+   586→   586→        const data = await res.json()
+   587→   587→        alert(data.error || 'Error al eliminar miembro')
+   588→   588→      }
+   589→   589→    } catch (error) {
+   590→   590→      console.error('Error removing member:', error)
+   591→   591→    }
+   592→   592→  }
+   593→   593→
+   594→   594→  // ─── Company actions ────────────────────────────────────────────────────
+   595→   595→  const handleCreateCompany = async () => {
+   596→   596→    if (!newCompanyName.trim()) return
+   597→   597→    try {
+   598→   598→      const res = await fetch('/api/companies', {
+   599→   599→        method: 'POST',
+   600→   600→        headers: { 'Content-Type': 'application/json' },
+   601→   601→        body: JSON.stringify({ name: newCompanyName, description: newCompanyDesc || undefined }),
+   602→   602→      })
+   603→   603→      if (res.ok) {
+   604→   604→        setShowNewCompany(false)
+   605→   605→        setNewCompanyName('')
+   606→   606→        setNewCompanyDesc('')
+   607→   607→        await loadCompanies()
+   608→   608→        await fetchCompanies()
+   609→   609→      } else {
+   610→   610→        const data = await res.json()
+   611→   611→        alert(data.error || 'Error al crear empresa')
+   612→   612→      }
+   613→   613→    } catch (error) {
+   614→   614→      console.error('Error creating company:', error)
+   615→   615→    }
+   616→   616→  }
+   617→   617→
+   618→   618→  const handleUpdateCompany = async (companyId: string) => {
+   619→   619→    try {
+   620→   620→      const res = await fetch(`/api/companies/${companyId}`, {
+   621→   621→        method: 'PUT',
+   622→   622→        headers: { 'Content-Type': 'application/json' },
+   623→   623→        body: JSON.stringify(editCompanyData),
+   624→   624→      })
+   625→   625→      if (res.ok) {
+   626→   626→        setEditingCompany(null)
+   627→   627→        await loadCompanies()
+   628→   628→        await fetchCompanies()
+   629→   629→      } else {
+   630→   630→        const data = await res.json()
+   631→   631→        alert(data.error || 'Error al actualizar empresa')
+   632→   632→      }
+   633→   633→    } catch (error) {
+   634→   634→      console.error('Error updating company:', error)
+   635→   635→    }
+   636→   636→  }
+   637→   637→
+   638→   638→  const handleDeleteCompany = async (companyId: string) => {
+   639→   639→    if (!confirm('¿Estás seguro de eliminar esta empresa?')) return
+   640→   640→    try {
+   641→   641→      const res = await fetch(`/api/companies/${companyId}`, { method: 'DELETE' })
+   642→   642→      if (res.ok) {
+   643→   643→        await loadCompanies()
+   644→   644→        await fetchCompanies()
+   645→   645→      } else {
+   646→   646→        const data = await res.json()
+   647→   647→        alert(data.error || 'Error al eliminar empresa')
+   648→   648→      }
+   649→   649→    } catch (error) {
+   650→   650→      console.error('Error deleting company:', error)
+   651→   651→    }
+   652→   652→  }
+   653→   653→
+   654→   654→  const handleAddGerente = async () => {
+   655→   655→    if (!expandedCompanyId || !addGerenteUserId) return
+   656→   656→    try {
+   657→   657→      const res = await fetch(`/api/companies/${expandedCompanyId}/members`, {
+   658→   658→        method: 'POST',
+   659→   659→        headers: { 'Content-Type': 'application/json' },
+   660→   660→        body: JSON.stringify({ userId: addGerenteUserId, role: 'gerente' }),
+   661→   661→      })
+   662→   662→      if (res.ok) {
+   663→   663→        setAddGerenteUserId('')
+   664→   664→        await loadCompanyDetail(expandedCompanyId)
+   665→   665→        await loadCompanies()
+   666→   666→      } else {
+   667→   667→        const data = await res.json()
+   668→   668→        alert(data.error || 'Error al asignar gerente')
+   669→   669→      }
+   670→   670→    } catch (error) {
+   671→   671→      console.error('Error adding gerente:', error)
+   672→   672→    }
+   673→   673→  }
+   674→   674→
+   675→   675→  const handleRemoveCompanyMember = async (userId: string, userName: string) => {
+   676→   676→    if (!expandedCompanyId) return
+   677→   677→    if (!confirm(`¿Estás seguro de eliminar a "${userName}" de esta empresa?`)) return
+   678→   678→    try {
+   679→   679→      const res = await fetch(`/api/companies/${expandedCompanyId}/members`, {
+   680→   680→        method: 'DELETE',
+   681→   681→        headers: { 'Content-Type': 'application/json' },
+   682→   682→        body: JSON.stringify({ memberUserId: userId }),
+   683→   683→      })
+   684→   684→      if (res.ok) {
+   685→   685→        await loadCompanyDetail(expandedCompanyId)
+   686→   686→        await loadCompanies()
+   687→   687→      } else {
+   688→   688→        const data = await res.json()
+   689→   689→        alert(data.error || 'Error al eliminar miembro')
+   690→   690→      }
+   691→   691→    } catch (error) {
+   692→   692→      console.error('Error removing company member:', error)
+   693→   693→    }
+   694→   694→  }
+   695→   695→
+   696→   696→  // ─── User actions ────────────────────────────────────────────────────────
+   697→   697→  const handleCreateUser = async () => {
+   698→   698→    if (!newUserName.trim() || !newUserEmail.trim() || !newUserPassword.trim()) return
+   699→   699→    try {
+   700→   700→      const res = await fetch('/api/users', {
+   701→   701→        method: 'POST',
+   702→   702→        headers: { 'Content-Type': 'application/json' },
+   703→   703→        body: JSON.stringify({
+   704→   704→          name: newUserName,
+   705→   705→          email: newUserEmail,
+   706→   706→          password: newUserPassword,
+   707→   707→          role: newUserRole,
+   708→   708→        }),
+   709→   709→      })
+   710→   710→      if (res.ok) {
+   711→   711→        setShowNewUser(false)
+   712→   712→        setNewUserName('')
+   713→   713→        setNewUserEmail('')
+   714→   714→        setNewUserPassword('')
+   715→   715→        setNewUserRole('empleado')
+   716→   716→        await loadUsers()
+   717→   717→      } else {
+   718→   718→        const data = await res.json()
+   719→   719→        alert(data.error || 'Error al crear usuario')
+   720→   720→      }
+   721→   721→    } catch (error) {
+   722→   722→      console.error('Error creating user:', error)
+   723→   723→    }
+   724→   724→  }
+   725→   725→
+   726→   726→  const handleUpdateUser = async (userId: string) => {
+   727→   727→    try {
+   728→   728→      const res = await fetch('/api/users', {
+   729→   729→        method: 'PUT',
+   730→   730→        headers: { 'Content-Type': 'application/json' },
+   731→   731→        body: JSON.stringify({ id: userId, ...editUserData }),
+   732→   732→      })
+   733→   733→      if (res.ok) {
+   734→   734→        setEditingUser(null)
+   735→   735→        await loadUsers()
+   736→   736→      } else {
+   737→   737→        const data = await res.json()
+   738→   738→        alert(data.error || 'Error al actualizar usuario')
+   739→   739→      }
+   740→   740→    } catch (error) {
+   741→   741→      console.error('Error updating user:', error)
+   742→   742→    }
+   743→   743→  }
+   744→   744→
+   745→   745→  const handleResetPassword = async (userId: string) => {
+   746→   746→    if (!newPassword || newPassword.length < 6) {
+   747→   747→      alert('La contraseña debe tener al menos 6 caracteres')
+   748→   748→      return
+   749→   749→    }
+   750→   750→    try {
+   751→   751→      const res = await fetch('/api/users', {
+   752→   752→        method: 'PUT',
+   753→   753→        headers: { 'Content-Type': 'application/json' },
+   754→   754→        body: JSON.stringify({ id: userId, password: newPassword }),
+   755→   755→      })
+   756→   756→      if (res.ok) {
+   757→   757→        setResetPasswordUserId(null)
+   758→   758→        setNewPassword('')
+   759→   759→        alert('Contraseña actualizada correctamente')
+   760→   760→      }
+   761→   761→    } catch (error) {
+   762→   762→      console.error('Error resetting password:', error)
+   763→   763→    }
+   764→   764→  }
+   765→   765→
+   766→   766→  const handleToggleActive = async (userId: string, currentActive: boolean) => {
+   767→   767→    try {
+   768→   768→      const res = await fetch('/api/users', {
+   769→   769→        method: 'PUT',
+   770→   770→        headers: { 'Content-Type': 'application/json' },
+   771→   771→        body: JSON.stringify({ id: userId, active: !currentActive }),
+   772→   772→      })
+   773→   773→      if (res.ok) {
+   774→   774→        await loadUsers()
+   775→   775→      }
+   776→   776→    } catch (error) {
+   777→   777→      console.error('Error toggling user active:', error)
+   778→   778→    }
+   779→   779→  }
+   780→   780→
+   781→   781→  const handleDeleteUser = async (userId: string) => {
+   782→   782→    if (!confirm('¿Estás seguro de eliminar este usuario?')) return
+   783→   783→    try {
+   784→   784→      const res = await fetch(`/api/users?id=${userId}`, { method: 'DELETE' })
+   785→   785→      if (res.ok) {
+   786→   786→        await loadUsers()
+   787→   787→      } else {
+   788→   788→        const data = await res.json()
+   789→   789→        alert(data.error || 'Error al eliminar usuario')
+   790→   790→      }
+   791→   791→    } catch (error) {
+   792→   792→      console.error('Error deleting user:', error)
+   793→   793→    }
+   794→   794→  }
+   795→   795→
+   796→   796→  // ─── Render ──────────────────────────────────────────────────────────────
+   797→   797→  return (
+   798→   798→    <div className={`flex flex-col h-full bg-gradient-to-b from-gray-50 to-white`}>
+   799→   799→      {/* Header - only shown in standalone mode */}
+   800→   800→      {!embedded && (
+   801→   801→        <header className="border-b bg-white/80 backdrop-blur-sm shrink-0 z-10">
+   802→   802→          <div className="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
+   803→   803→            <div className="flex items-center gap-3">
+   804→   804→              <Button variant="ghost" size="sm" onClick={() => {
+   805→   805→                if (!currentProject && allProjects.length > 0) {
+   806→   806→                  setCurrentProject(allProjects[0])
+   807→   807→                }
+   808→   808→                setCurrentView('board')
+   809→   809→              }} className="gap-1.5">
+   810→   810→                <ArrowLeft className="h-4 w-4" />
+   811→   811→                Volver al Tablero
+   812→   812→              </Button>
+   813→   813→              <div className="w-px h-6 bg-gray-200" />
+   814→   814→              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-purple-600 flex items-center justify-center text-white font-bold text-sm">
+   815→   815→                A
+   816→   816→              </div>
+   817→   817→              <h1 className="text-lg font-bold text-gray-900">Panel de Admin de Empresa</h1>
+   818→   818→            </div>
+   819→   819→          </div>
+   820→   820→        </header>
+   821→   821→      )}
+   822→   822→
+   823→   823→      {/* Tabs — Order: Empresas / Usuarios / Proyectos / Plantillas */}
+   824→   824→      <div className="border-b bg-white shrink-0">
+   825→   825→        <div className={`flex gap-1 ${embedded ? '' : 'max-w-5xl mx-auto px-4'}`}>
+   826→   826→          <button
+   827→   827→            onClick={() => { setActiveTab('companies'); setSelectedProjectId(null) }}
+   828→   828→            className={`flex items-center gap-2 px-5 py-3 text-sm font-medium border-b-2 transition-colors ${
+   829→   829→              activeTab === 'companies'
+   830→   830→                ? 'border-purple-500 text-purple-600'
+   831→   831→                : 'border-transparent text-muted-foreground hover:text-foreground'
+   832→   832→            }`}
+   833→   833→          >
+   834→   834→            <Building2 className="h-4 w-4" />
+   835→   835→            Empresas
+   836→   836→          </button>
+   837→   837→          <button
+   838→   838→            onClick={() => { setActiveTab('users'); setSelectedProjectId(null) }}
+   839→   839→            className={`flex items-center gap-2 px-5 py-3 text-sm font-medium border-b-2 transition-colors ${
+   840→   840→              activeTab === 'users'
+   841→   841→                ? 'border-purple-500 text-purple-600'
+   842→   842→                : 'border-transparent text-muted-foreground hover:text-foreground'
+   843→   843→            }`}
+   844→   844→          >
+   845→   845→            <Users className="h-4 w-4" />
+   846→   846→            Usuarios
+   847→   847→          </button>
+   848→   848→          <button
+   849→   849→            onClick={() => { setActiveTab('projects'); setSelectedProjectId(null) }}
+   850→   850→            className={`flex items-center gap-2 px-5 py-3 text-sm font-medium border-b-2 transition-colors ${
+   851→   851→              activeTab === 'projects'
+   852→   852→                ? 'border-purple-500 text-purple-600'
+   853→   853→                : 'border-transparent text-muted-foreground hover:text-foreground'
+   854→   854→            }`}
+   855→   855→          >
+   856→   856→            <Building2 className="h-4 w-4" />
+   857→   857→            Proyectos
+   858→   858→          </button>
+   859→   859→
+   860→   860→          <button
+   861→   861→            onClick={() => { setActiveTab('plantillas'); setSelectedProjectId(null) }}
+   862→   862→            className={`flex items-center gap-2 px-5 py-3 text-sm font-medium border-b-2 transition-colors ${
+   863→   863→              activeTab === 'plantillas'
+   864→   864→                ? 'border-green-500 text-green-600'
+   865→   865→                : 'border-transparent text-muted-foreground hover:text-foreground'
+   866→   866→            }`}
+   867→   867→          >
+   868→   868→            <BookOpen className="h-4 w-4" />
+   869→   869→            Plantillas
+   870→   870→          </button>
+   871→   871→
+   872→   872→          <button
+   873→   873→            onClick={() => { setActiveTab('tablero5s'); setSelectedProjectId(null) }}
+   874→   874→            className={`flex items-center gap-2 px-5 py-3 text-sm font-medium border-b-2 transition-colors ${
+   875→   875→              activeTab === 'tablero5s'
+   876→   876→                ? 'border-indigo-500 text-indigo-600'
+   877→   877→                : 'border-transparent text-muted-foreground hover:text-foreground'
+   878→   878→            }`}
+   879→   879→          >
+   880→   880→            <LayoutGrid className="h-4 w-4" />
+   881→   881→            Configuración de Tableros
+   882→   882→          </button>
+   883→   883→
+   884→   884→          <button
+   885→   885→            onClick={() => { setActiveTab('mejora'); setSelectedProjectId(null) }}
+   886→   886→            className={`flex items-center gap-2 px-5 py-3 text-sm font-medium border-b-2 transition-colors ${
+   887→   887→              activeTab === 'mejora'
+   888→   888→                ? 'border-amber-500 text-amber-600'
+   889→   889→                : 'border-transparent text-muted-foreground hover:text-foreground'
+   890→   890→            }`}
+   891→   891→          >
+   892→   892→            <Sparkles className="h-4 w-4" />
+   893→   893→            Mejora Continua
+   894→   894→          </button>
+   895→   895→        </div>
+   896→   896→      </div>
+   897→   897→
+   898→   898→      {/* Content */}
+   899→   899→      <main className={`flex-1 min-h-0 overflow-auto w-full px-4 py-6 ${activeTab === 'tablero5s' || activeTab === 'mejora' ? 'max-w-7xl mx-auto' : embedded ? '' : 'max-w-5xl mx-auto'}`}>
+   900→   900→        <AnimatePresence mode="wait">
+   901→   901→          {/* ═══ PROJECTS TAB ═══ */}
+   902→   902→          {activeTab === 'projects' && (
+   903→   903→            <motion.div key="projects" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="space-y-4">
+   904→   904→              {/* New project button */}
+   905→   905→              <div className="flex justify-between items-center">
+   906→   906→                <p className="text-sm text-muted-foreground">
+   907→   907→                  Gestiona los proyectos de implementación 5S
+   908→   908→                </p>
+   909→   909→                <Button
+   910→   910→                  onClick={() => setShowNewProject(true)}
+   911→   911→                  className="bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white"
+   912→   912→                  size="sm"
+   913→   913→                >
+   914→   914→                  <Plus className="h-4 w-4 mr-1" /> Nuevo Proyecto
+   915→   915→                </Button>
+   916→   916→              </div>
+   917→   917→
+   918→   918→              {/* New project form */}
+   919→   919→              {showNewProject && (
+   920→   920→                <Card className="border-purple-200 bg-purple-50/30">
+   921→   921→                  <CardHeader className="pb-3">
+   922→   922→                    <CardTitle className="text-sm flex items-center gap-2">
+   923→   923→                      <Plus className="h-4 w-4 text-purple-500" />
+   924→   924→                      Crear Nuevo Proyecto
+   925→   925→                    </CardTitle>
+   926→   926→                  </CardHeader>
+   927→   927→                  <CardContent className="space-y-3">
+   928→   928→                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+   929→   929→                      <div className="space-y-1">
+   930→   930→                        <Label className="text-xs">Nombre del Proyecto *</Label>
+   931→   931→                        <Input placeholder="Nombre" value={newProjectName} onChange={e => setNewProjectName(e.target.value)} />
+   932→   932→                      </div>
+   933→   933→                      <div className="space-y-1">
+   934→   934→                        <Label className="text-xs">Empresa *</Label>
+   935→   935→                        {companies.length > 0 && !isNewCompanyCustom ? (
+   936→   936→                          <div className="space-y-1">
+   937→   937→                            <Select
+   938→   938→                              value={newProjectCompany ? (companies.find(c => c.name === newProjectCompany)?.id || '') : undefined}
+   939→   939→                              onValueChange={val => {
+   940→   940→                                if (val === '__custom__') {
+   941→   941→                                  setNewProjectCompany('')
+   942→   942→                                  setIsNewCompanyCustom(true)
+   943→   943→                                } else {
+   944→   944→                                  const comp = companies.find(c => c.id === val)
+   945→   945→                                  if (comp) setNewProjectCompany(comp.name)
+   946→   946→                                }
+   947→   947→                              }}
+   948→   948→                            >
+   949→   949→                              <SelectTrigger>
+   950→   950→                                <SelectValue placeholder="Seleccionar empresa" />
+   951→   951→                              </SelectTrigger>
+   952→   952→                              <SelectContent>
+   953→   953→                                {companies.map(c => (
+   954→   954→                                  <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+   955→   955→                                ))}
+   956→   956→                                <SelectItem value="__custom__">+ Otra empresa...</SelectItem>
+   957→   957→                              </SelectContent>
+   958→   958→                            </Select>
+   959→   959→                          </div>
+   960→   960→                        ) : (
+   961→   961→                          <div className="space-y-1">
+   962→   962→                            <Input placeholder="Nombre de la nueva empresa" value={newProjectCompany} onChange={e => setNewProjectCompany(e.target.value)} />
+   963→   963→                            {companies.length > 0 && (
+   964→   964→                              <Button variant="ghost" size="sm" onClick={() => { setIsNewCompanyCustom(false); setNewProjectCompany('') }} className="h-6 text-xs text-purple-600 p-0">
+   965→   965→                                ← Seleccionar empresa existente
+   966→   966→                              </Button>
+   967→   967→                            )}
+   968→   968→                          </div>
+   969→   969→                        )}
+   970→   970→                      </div>
+   971→   971→                    </div>
+   972→   972→                    <div className="space-y-1">
+   973→   973→                      <Label className="text-xs">Descripción</Label>
+   974→   974→                      <Input placeholder="Descripción del proyecto (opcional)" value={newProjectDesc} onChange={e => setNewProjectDesc(e.target.value)} />
+   975→   975→                    </div>
+   976→   976→                    <div className="space-y-2">
+   977→   977→                      <div className="flex items-center justify-between">
+   978→   978→                        <Label className="text-xs">Zonas *</Label>
+   979→   979→                        <Button variant="ghost" size="sm" onClick={() => setNewProjectZones([...newProjectZones, { name: '', color: PRESET_COLORS[newProjectZones.length % PRESET_COLORS.length] }])} className="h-6 text-xs text-purple-600">
+   980→   980→                          <Plus className="h-3 w-3 mr-1" /> Agregar zona
+   981→   981→                        </Button>
+   982→   982→                      </div>
+   983→   983→                      {newProjectZones.map((zone, idx) => (
+   984→   984→                        <div key={idx} className="flex items-center gap-2">
+   985→   985→                          <button
+   986→   986→                            type="button"
+   987→   987→                            className="w-6 h-6 rounded-full border-2 flex-shrink-0"
+   988→   988→                            style={{ backgroundColor: zone.color, borderColor: zone.color }}
+   989→   989→                            onClick={() => {
+   990→   990→                              const next = PRESET_COLORS[(PRESET_COLORS.indexOf(zone.color) + 1) % PRESET_COLORS.length]
+   991→   991→                              const updated = [...newProjectZones]
+   992→   992→                              updated[idx] = { ...updated[idx], color: next }
+   993→   993→                              setNewProjectZones(updated)
+   994→   994→                            }}
+   995→   995→                          />
+   996→   996→                          <Input
+   997→   997→                            placeholder="Nombre de la zona"
+   998→   998→                            value={zone.name}
+   999→   999→                            onChange={e => {
+  1000→  1000→                              const updated = [...newProjectZones]
+  1001→  1001→                              updated[idx] = { ...updated[idx], name: e.target.value }
+  1002→  1002→                              setNewProjectZones(updated)
+  1003→  1003→                            }}
+  1004→  1004→                            className="flex-1"
+  1005→  1005→                          />
+  1006→  1006→                          {newProjectZones.length > 1 && (
+  1007→  1007→                            <Button variant="ghost" size="sm" onClick={() => setNewProjectZones(newProjectZones.filter((_, i) => i !== idx))} className="h-8 w-8 p-0 text-red-400 hover:text-red-600">
+  1008→  1008→                              <X className="h-4 w-4" />
+  1009→  1009→                            </Button>
+  1010→  1010→                          )}
+  1011→  1011→                        </div>
+  1012→  1012→                      ))}
+  1013→  1013→                    </div>
+  1014→  1014→                    <div className="flex gap-2 justify-end">
+  1015→  1015→                      <Button variant="outline" size="sm" onClick={() => setShowNewProject(false)}>Cancelar</Button>
+  1016→  1016→                      <Button
+  1017→  1017→                        size="sm"
+  1018→  1018→                        onClick={handleCreateProject}
+  1019→  1019→                        disabled={!newProjectName.trim() || !newProjectCompany.trim() || newProjectZones.filter(z => z.name.trim()).length === 0}
+  1020→  1020→                        className="bg-gradient-to-r from-purple-500 to-purple-600 text-white"
+  1021→  1021→                      >
+  1022→  1022→                        Crear Proyecto
+  1023→  1023→                      </Button>
+  1024→  1024→                    </div>
+  1025→  1025→                  </CardContent>
+  1026→  1026→                </Card>
+  1027→  1027→              )}
+  1028→  1028→
+  1029→  1029→              {/* Projects list */}
+  1030→  1030→              {isLoadingProjects ? (
+  1031→  1031→                <div className="flex justify-center py-12"><Loader2 className="h-8 w-8 text-purple-500 animate-spin" /></div>
+  1032→  1032→              ) : allProjects.length === 0 ? (
+  1033→  1033→                <div className="text-center py-12 text-muted-foreground">
+  1034→  1034→                  <Building2 className="h-12 w-12 mx-auto mb-3 opacity-30" />
+  1035→  1035→                  <p className="text-sm">No hay proyectos creados</p>
+  1036→  1036→                  <p className="text-xs mt-1">Crea un proyecto para comenzar la implementación 5S</p>
+  1037→  1037→                </div>
+  1038→  1038→              ) : (
+  1039→  1039→                <div className="space-y-3">
+  1040→  1040→                  {allProjects.map(project => (
+  1041→  1041→                    <Card key={project.id} className={`transition-all ${selectedProjectId === project.id ? 'border-purple-300 shadow-md' : 'hover:border-gray-300'}`}>
+  1042→  1042→                      <CardContent className="p-4">
+  1043→  1043→                        {/* Project header row */}
+  1044→  1044→                        <div className="flex items-center justify-between">
+  1045→  1045→                          <div className="flex items-center gap-3 cursor-pointer flex-1" onClick={() => handleSelectProject(project.id)}>
+  1046→  1046→                            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-purple-100 to-purple-50 flex items-center justify-center">
+  1047→  1047→                              <Building2 className="h-5 w-5 text-purple-500" />
+  1048→  1048→                            </div>
+  1049→  1049→                            <div className="flex-1">
+  1050→  1050→                              {editingProject === project.id ? (
+  1051→  1051→                                <div className="space-y-2" onClick={e => e.stopPropagation()}>
+  1052→  1052→                                  <div className="grid grid-cols-2 gap-2">
+  1053→  1053→                                    <Input value={editProjectData.name} onChange={e => setEditProjectData(d => ({ ...d, name: e.target.value }))} className="text-sm" />
+  1054→  1054→                                    <Input value={editProjectData.company} onChange={e => setEditProjectData(d => ({ ...d, company: e.target.value }))} className="text-sm" />
+  1055→  1055→                                  </div>
+  1056→  1056→                                  <Input value={editProjectData.description} onChange={e => setEditProjectData(d => ({ ...d, description: e.target.value }))} className="text-sm" placeholder="Descripción" />
+  1057→  1057→                                  <div className="flex gap-2">
+  1058→  1058→                                    <Button size="sm" onClick={() => handleUpdateProject(project.id)} className="bg-purple-600 text-white h-7"><Check className="h-3 w-3 mr-1" />Guardar</Button>
+  1059→  1059→                                    <Button size="sm" variant="outline" onClick={() => setEditingProject(null)} className="h-7">Cancelar</Button>
+  1060→  1060→                                  </div>
+  1061→  1061→                                </div>
+  1062→  1062→                              ) : (
+  1063→  1063→                                <>
+  1064→  1064→                                  <h3 className="font-semibold text-sm">{project.name}</h3>
+  1065→  1065→                                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+  1066→  1066→                                    <span>{project.company}</span>
+  1067→  1067→                                    <span>·</span>
+  1068→  1068→                                    <span>{project.zones.length} zonas</span>
+  1069→  1069→                                    <span>·</span>
+  1070→  1070→                                    <span>{project.memberCount} miembros</span>
+  1071→  1071→                                    {!project.active && <Badge className="bg-red-100 text-red-700 border border-red-200 ml-1">Inactivo</Badge>}
+  1072→  1072→                                  </div>
+  1073→  1073→                                </>
+  1074→  1074→                              )}
+  1075→  1075→                            </div>
+  1076→  1076→                          </div>
+  1077→  1077→                          {editingProject !== project.id && (
+  1078→  1078→                            <div className="flex items-center gap-1">
+  1079→  1079→                              <Button
+  1080→  1080→                                variant="ghost" size="sm" className="h-8 w-8 p-0 text-blue-500 hover:text-blue-700"
+  1081→  1081→                                onClick={() => {
+  1082→  1082→                                  setEditingProject(project.id)
+  1083→  1083→                                  setEditProjectData({ name: project.name, description: project.description || '', company: project.company })
+  1084→  1084→                                }}
+  1085→  1085→                                title="Editar proyecto"
+  1086→  1086→                              >
+  1087→  1087→                                <Edit3 className="h-4 w-4" />
+  1088→  1088→                              </Button>
+  1089→  1089→                              <Button
+  1090→  1090→                                variant="ghost" size="sm" className="h-8 w-8 p-0 text-red-400 hover:text-red-600"
+  1091→  1091→                                onClick={() => handleDeleteProject(project.id)}
+  1092→  1092→                                title="Eliminar proyecto"
+  1093→  1093→                              >
+  1094→  1094→                                <Trash2 className="h-4 w-4" />
+  1095→  1095→                              </Button>
+  1096→  1096→                            </div>
+  1097→  1097→                          )}
+  1098→  1098→                        </div>
+  1099→  1099→
+  1100→  1100→                        {/* Expanded project detail */}
+  1101→  1101→                        <AnimatePresence>
+  1102→  1102→                          {selectedProjectId === project.id && (
+  1103→  1103→                            <motion.div
+  1104→  1104→                              initial={{ height: 0, opacity: 0 }}
+  1105→  1105→                              animate={{ height: 'auto', opacity: 1 }}
+  1106→  1106→                              exit={{ height: 0, opacity: 0 }}
+  1107→  1107→                              transition={{ duration: 0.2 }}
+  1108→  1108→                              className="overflow-hidden"
+  1109→  1109→                            >
+  1110→  1110→                              <div className="mt-4 pt-4 border-t space-y-4">
+  1111→  1111→                                {isLoadingDetail ? (
+  1112→  1112→                                  <div className="flex justify-center py-4"><Loader2 className="h-5 w-5 text-purple-500 animate-spin" /></div>
+  1113→  1113→                                ) : (
+  1114→  1114→                                  <>
+  1115→  1115→                                    {/* Zones */}
+  1116→  1116→                                    <div>
+  1117→  1117→                                      <h4 className="text-xs font-semibold text-muted-foreground uppercase mb-2 flex items-center gap-1">
+  1118→  1118→                                        <MapPin className="h-3 w-3" /> Zonas
+  1119→  1119→                                      </h4>
+  1120→  1120→                                      <div className="flex flex-wrap gap-2 mb-2">
+  1121→  1121→                                        {projectZones.map(zone => (
+  1122→  1122→                                          <div key={zone.id} className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border bg-white text-xs">
+  1123→  1123→                                            <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: zone.color }} />
+  1124→  1124→                                            <span className="font-medium">{zone.name}</span>
+  1125→  1125→                                            {/* Board config selector */}
+  1126→  1126→                                            <select
+  1127→  1127→                                              value={zone.boardConfigId || ''}
+  1128→  1128→                                              onChange={e => handleZoneBoardConfig(zone.id, e.target.value)}
+  1129→  1129→                                              className="h-6 text-[10px] border rounded px-1 bg-gray-50 ml-1"
+  1130→  1130→                                            >
+  1131→  1131→                                              <option value="">— Sin tablero —</option>
+  1132→  1132→                                              {boardConfigs.map(bc => (
+  1133→  1133→                                                <option key={bc.id} value={bc.id}>
+  1134→  1134→                                                  {bc.name}{bc.isDefault ? ' ★' : ''}
+  1135→  1135→                                                </option>
+  1136→  1136→                                              ))}
+  1137→  1137→                                            </select>
+  1138→  1138→                                            {zone.boardConfig && (
+  1139→  1139→                                              <Badge className="text-[9px] px-1 py-0 bg-indigo-100 text-indigo-700 border-0">
+  1140→  1140→                                                {zone.boardConfig.name}
+  1141→  1141→                                              </Badge>
+  1142→  1142→                                            )}
+  1143→  1143→                                            <button onClick={() => handleDeleteZone(zone.id, zone.name)} className="text-red-400 hover:text-red-600 ml-1" title="Eliminar zona"><Trash2 className="h-3 w-3" /></button>
+  1144→  1144→                                          </div>
+  1145→  1145→                                        ))}
+  1146→  1146→                                      </div>
+  1147→  1147→                                      <div className="flex items-center gap-2">
+  1148→  1148→                                        <div className="flex gap-1">
+  1149→  1149→                                          {PRESET_COLORS.map(c => (
+  1150→  1150→                                            <button key={c} type="button" className={`w-5 h-5 rounded-full border-2 ${newZoneColor === c ? 'border-gray-800' : 'border-transparent'}`} style={{ backgroundColor: c }} onClick={() => setNewZoneColor(c)} />
+  1151→  1151→                                          ))}
+  1152→  1152→                                        </div>
+  1153→  1153→                                        <Input placeholder="Nueva zona" value={newZoneName} onChange={e => setNewZoneName(e.target.value)} className="h-8 text-xs max-w-[200px]" />
+  1154→  1154→                                        <Button size="sm" onClick={handleAddZone} disabled={!newZoneName.trim()} className="h-8 text-xs bg-purple-600 text-white">
+  1155→  1155→                                          <Plus className="h-3 w-3 mr-1" /> Agregar
+  1156→  1156→                                        </Button>
+  1157→  1157→                                      </div>
+  1158→  1158→                                    </div>
+  1159→  1159→
+  1160→  1160→                                    {/* Members */}
+  1161→  1161→                                    <div>
+  1162→  1162→                                      <h4 className="text-xs font-semibold text-muted-foreground uppercase mb-2 flex items-center gap-1">
+  1163→  1163→                                        <Users className="h-3 w-3" /> Miembros del Proyecto
+  1164→  1164→                                      </h4>
+  1165→  1165→
+  1166→  1166→                                      {/* Add member form */}
+  1167→  1167→                                      <Card className="mb-3 border-gray-200">
+  1168→  1168→                                        <CardContent className="p-3">
+  1169→  1169→                                          {/* Mode toggle */}
+  1170→  1170→                                          <div className="flex gap-2 mb-3">
+  1171→  1171→                                            <button
+  1172→  1172→                                              type="button"
+  1173→  1173→                                              onClick={() => setAddMemberMode('existing')}
+  1174→  1174→                                              className={`flex-1 text-xs px-3 py-1.5 rounded-md font-medium transition-colors ${
+  1175→  1175→                                                addMemberMode === 'existing'
+  1176→  1176→                                                  ? 'bg-purple-100 text-purple-700 border border-purple-200'
+  1177→  1177→                                                  : 'bg-gray-50 text-gray-500 border border-gray-200 hover:bg-gray-100'
+  1178→  1178→                                              }`}
+  1179→  1179→                                            >
+  1180→  1180→                                              <UserPlus className="h-3 w-3 inline mr-1" />
+  1181→  1181→                                              Usuario Existente
+  1182→  1182→                                            </button>
+  1183→  1183→                                            <button
+  1184→  1184→                                              type="button"
+  1185→  1185→                                              onClick={() => setAddMemberMode('new')}
+  1186→  1186→                                              className={`flex-1 text-xs px-3 py-1.5 rounded-md font-medium transition-colors ${
+  1187→  1187→                                                addMemberMode === 'new'
+  1188→  1188→                                                  ? 'bg-purple-100 text-purple-700 border border-purple-200'
+  1189→  1189→                                                  : 'bg-gray-50 text-gray-500 border border-gray-200 hover:bg-gray-100'
+  1190→  1190→                                              }`}
+  1191→  1191→                                            >
+  1192→  1192→                                              <Plus className="h-3 w-3 inline mr-1" />
+  1193→  1193→                                              Nuevo Usuario
+  1194→  1194→                                            </button>
+  1195→  1195→                                          </div>
+  1196→  1196→
+  1197→  1197→                                          {addMemberMode === 'existing' ? (
+  1198→  1198→                                            /* Existing user selection */
+  1199→  1199→                                            <div className="space-y-2">
+  1200→  1200→                                              <Select value={selectedExistingUserId} onValueChange={setSelectedExistingUserId}>
+  1201→  1201→                                                <SelectTrigger className="h-8 text-xs">
+  1202→  1202→                                                  <SelectValue placeholder="Seleccionar usuario existente..." />
+  1203→  1203→                                                </SelectTrigger>
+  1204→  1204→                                                <SelectContent>
+  1205→  1205→                                                  {users
+  1206→  1206→                                                    .filter(u => !projectMembers.some(m => m.user.id === u.id))
+  1207→  1207→                                                    .map(u => (
+  1208→  1208→                                                      <SelectItem key={u.id} value={u.id}>
+  1209→  1209→                                                        <div className="flex items-center gap-2">
+  1210→  1210→                                                          <span>{u.name}</span>
+  1211→  1211→                                                          <span className="text-muted-foreground">({u.email})</span>
+  1212→  1212→                                                          <Badge className={`${ROLE_COLORS[u.role] || ''} border text-[9px] py-0`}>
+  1213→  1213→                                                            {ROLE_LABELS[u.role] || u.role}
+  1214→  1214→                                                          </Badge>
+  1215→  1215→                                                          {u.projects.length === 0 && (
+  1216→  1216→                                                            <Badge className="bg-amber-100 text-amber-700 border border-amber-200 text-[9px] py-0">
+  1217→  1217→                                                              Sin proyecto
+  1218→  1218→                                                            </Badge>
+  1219→  1219→                                                          )}
+  1220→  1220→                                                        </div>
+  1221→  1221→                                                      </SelectItem>
+  1222→  1222→                                                    ))}
+  1223→  1223→                                                </SelectContent>
+  1224→  1224→                                              </Select>
+  1225→  1225→                                              <div className="grid grid-cols-2 gap-2">
+  1226→  1226→                                                <Select value={newMemberRole} onValueChange={setNewMemberRole}>
+  1227→  1227→                                                  <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+  1228→  1228→                                                  <SelectContent>
+  1229→  1229→                                                    <SelectItem value="admin">Administrador</SelectItem>
+  1230→  1230→                                                    <SelectItem value="gerente">Gerente</SelectItem>
+  1231→  1231→                                                    <SelectItem value="responsable">Responsable</SelectItem>
+  1232→  1232→                                                    <SelectItem value="empleado">Empleado</SelectItem>
+  1233→  1233→                                                    <SelectItem value="auditor">Auditor</SelectItem>
+  1234→  1234→                                                  </SelectContent>
+  1235→  1235→                                                </Select>
+  1236→  1236→                                                <div className="space-y-1">
+  1237→  1237→                                                  <p className="text-[10px] text-muted-foreground font-medium">Zonas (todas por defecto)</p>
+  1238→  1238→                                                  <div className="space-y-0.5 max-h-32 overflow-y-auto">
+  1239→  1239→                                                    {projectZones.map(z => (
+  1240→  1240→                                                      <label key={z.id} className="flex items-center gap-1.5 text-xs cursor-pointer hover:bg-gray-50 rounded px-1 py-0.5">
+  1241→  1241→                                                        <Checkbox
+  1242→  1242→                                                          checked={newMemberZones.includes(z.id)}
+  1243→  1243→                                                          onCheckedChange={(checked) => {
+  1244→  1244→                                                            if (checked) {
+  1245→  1245→                                                              setNewMemberZones([...newMemberZones, z.id])
+  1246→  1246→                                                            } else {
+  1247→  1247→                                                              setNewMemberZones(newMemberZones.filter(id => id !== z.id))
+  1248→  1248→                                                            }
+  1249→  1249→                                                          }}
+  1250→  1250→                                                          className="h-3.5 w-3.5"
+  1251→  1251→                                                        />
+  1252→  1252→                                                        <div className="w-2 h-2 rounded-full" style={{ backgroundColor: z.color }} />
+  1253→  1253→                                                        <span>{z.name}</span>
+  1254→  1254→                                                      </label>
+  1255→  1255→                                                    ))}
+  1256→  1256→                                                  </div>
+  1257→  1257→                                                </div>
+  1258→  1258→                                              </div>
+  1259→  1259→                                              <Button size="sm" onClick={handleAddMember} disabled={!selectedExistingUserId} className="w-full h-8 text-xs bg-purple-600 text-white">
+  1260→  1260→                                                <UserPlus className="h-3 w-3 mr-1" /> Asignar al Proyecto
+  1261→  1261→                                              </Button>
+  1262→  1262→                                            </div>
+  1263→  1263→                                          ) : (
+  1264→  1264→                                            /* New user form */
+  1265→  1265→                                            <>
+  1266→  1266→                                              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+  1267→  1267→                                                <Input placeholder="Nombre" value={newMemberName} onChange={e => setNewMemberName(e.target.value)} className="h-8 text-xs" />
+  1268→  1268→                                                <Input placeholder="Email" type="email" value={newMemberEmail} onChange={e => setNewMemberEmail(e.target.value)} className="h-8 text-xs" />
+  1269→  1269→                                                <Input placeholder="Contraseña (mín. 6 chars)" type="password" value={newMemberPassword} onChange={e => setNewMemberPassword(e.target.value)} className="h-8 text-xs" />
+  1270→  1270→                                              </div>
+  1271→  1271→                                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-2">
+  1272→  1272→                                                <Select value={newMemberRole} onValueChange={setNewMemberRole}>
+  1273→  1273→                                                  <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+  1274→  1274→                                                  <SelectContent>
+  1275→  1275→                                                    <SelectItem value="admin">Administrador</SelectItem>
+  1276→  1276→                                                    <SelectItem value="gerente">Gerente</SelectItem>
+  1277→  1277→                                                    <SelectItem value="responsable">Responsable</SelectItem>
+  1278→  1278→                                                    <SelectItem value="empleado">Empleado</SelectItem>
+  1279→  1279→                                                    <SelectItem value="auditor">Auditor</SelectItem>
+  1280→  1280→                                                  </SelectContent>
+  1281→  1281→                                                </Select>
+  1282→  1282→                                                <div className="space-y-1">
+  1283→  1283→                                                  <p className="text-[10px] text-muted-foreground font-medium">Zonas (todas por defecto)</p>
+  1284→  1284→                                                  <div className="space-y-0.5 max-h-32 overflow-y-auto">
+  1285→  1285→                                                    {projectZones.map(z => (
+  1286→  1286→                                                      <label key={z.id} className="flex items-center gap-1.5 text-xs cursor-pointer hover:bg-gray-50 rounded px-1 py-0.5">
+  1287→  1287→                                                        <Checkbox
+  1288→  1288→                                                          checked={newMemberZones.includes(z.id)}
+  1289→  1289→                                                          onCheckedChange={(checked) => {
+  1290→  1290→                                                            if (checked) {
+  1291→  1291→                                                              setNewMemberZones([...newMemberZones, z.id])
+  1292→  1292→                                                            } else {
+  1293→  1293→                                                              setNewMemberZones(newMemberZones.filter(id => id !== z.id))
+  1294→  1294→                                                            }
+  1295→  1295→                                                          }}
+  1296→  1296→                                                          className="h-3.5 w-3.5"
+  1297→  1297→                                                        />
+  1298→  1298→                                                        <div className="w-2 h-2 rounded-full" style={{ backgroundColor: z.color }} />
+  1299→  1299→                                                        <span>{z.name}</span>
+  1300→  1300→                                                      </label>
+  1301→  1301→                                                    ))}
+  1302→  1302→                                                  </div>
+  1303→  1303→                                                </div>
+  1304→  1304→                                              </div>
+  1305→  1305→                                              <Button size="sm" onClick={handleAddMember} disabled={!newMemberName.trim() || !newMemberEmail.trim()} className="w-full h-8 text-xs bg-purple-600 text-white mt-2">
+  1306→  1306→                                                <Plus className="h-3 w-3 mr-1" /> Crear y Añadir
+  1307→  1307→                                              </Button>
+  1308→  1308→                                            </>
+  1309→  1309→                                          )}
+  1310→  1310→                                        </CardContent>
+  1311→  1311→                                      </Card>
+  1312→  1312→
+  1313→  1313→                                      {/* Generated password notification */}
+  1314→  1314→                                      {generatedPassword && (
+  1315→  1315→                                        <div className="mb-3 p-3 bg-green-50 border border-green-200 rounded-lg flex items-start gap-3">
+  1316→  1316→                                          <ShieldCheck className="h-5 w-5 text-green-600 shrink-0 mt-0.5" />
+  1317→  1317→                                          <div className="flex-1 min-w-0">
+  1318→  1318→                                            <p className="text-xs font-semibold text-green-800">Contraseña generada para {generatedMemberName}</p>
+  1319→  1319→                                            <div className="flex items-center gap-2 mt-1">
+  1320→  1320→                                              <code className="text-sm font-mono bg-green-100 px-2 py-0.5 rounded text-green-900 select-all">{generatedPassword}</code>
+  1321→  1321→                                              <Button size="sm" variant="outline" className="h-6 text-[10px] gap-1" onClick={() => { navigator.clipboard.writeText(generatedPassword) }}>
+  1322→  1322→                                                <Save className="h-3 w-3" /> Copiar
+  1323→  1323→                                              </Button>
+  1324→  1324→                                            </div>
+  1325→  1325→                                            <p className="text-[10px] text-green-700 mt-1">Guarda esta contraseña. No se volverá a mostrar.</p>
+  1326→  1326→                                          </div>
+  1327→  1327→                                          <button onClick={() => { setGeneratedPassword(null); setGeneratedMemberName(null) }} className="text-green-400 hover:text-green-600">
+  1328→  1328→                                            <X className="h-4 w-4" />
+  1329→  1329→                                          </button>
+  1330→  1330→                                        </div>
+  1331→  1331→                                      )}
+  1332→  1332→
+  1333→  1333→                                      {/* Members table — complete, editable, with passwords */}
+  1334→  1334→                                      {projectMembers.length === 0 ? (
+  1335→  1335→                                        <p className="text-xs text-muted-foreground text-center py-4">No hay miembros en este proyecto</p>
+  1336→  1336→                                      ) : (
+  1337→  1337→                                        <div className="space-y-2">
+  1338→  1338→                                          {/* Excel download button */}
+  1339→  1339→                                          <div className="flex justify-end">
+  1340→  1340→                                            <Button size="sm" variant="outline" className="h-7 text-[10px] gap-1 text-green-600 border-green-200 hover:bg-green-50" onClick={() => {
+  1341→  1341→                                              // Build CSV for Excel download
+  1342→  1342→                                              const headers = ['Nombre', 'Email', 'Contraseña', 'Rol', 'Zonas', 'Estado']
+  1343→  1343→                                              const rows = projectMembers.map(m => [
+  1344→  1344→                                                m.user.name,
+  1345→  1345→                                                m.user.email,
+  1346→  1346→                                                m.user.plainPassword || '••••••',
+  1347→  1347→                                                ROLE_LABELS[m.role] || m.role,
+  1348→  1348→                                                m.zones.map(z => z.name).join('; '),
+  1349→  1349→                                                m.user.active ? 'Activo' : 'Inactivo',
+  1350→  1350→                                              ])
+  1351→  1351→                                              const csvContent = [headers, ...rows].map(r => r.map(c => `"${c}"`).join(',')).join('\n')
+  1352→  1352→                                              const BOM = '\uFEFF'
+  1353→  1353→                                              const blob = new Blob([BOM + csvContent], { type: 'text/csv;charset=utf-8;' })
+  1354→  1354→                                              const link = document.createElement('a')
+  1355→  1355→                                              link.href = URL.createObjectURL(blob)
+  1356→  1356→                                              link.download = `recursos_proyecto_${selectedProjectId}.csv`
+  1357→  1357→                                              link.click()
+  1358→  1358→                                            }}>
+  1359→  1359→                                              <Save className="h-3 w-3" /> Descargar Excel (CSV)
+  1360→  1360→                                            </Button>
+  1361→  1361→                                          </div>
+  1362→  1362→                                          <div className="rounded-lg border overflow-x-auto">
+  1363→  1363→                                            <Table>
+  1364→  1364→                                              <TableHeader>
+  1365→  1365→                                                <TableRow>
+  1366→  1366→                                                  <TableHead className="text-xs">Nombre</TableHead>
+  1367→  1367→                                                  <TableHead className="text-xs">Email</TableHead>
+  1368→  1368→                                                  <TableHead className="text-xs">Contraseña</TableHead>
+  1369→  1369→                                                  <TableHead className="text-xs">Rol</TableHead>
+  1370→  1370→                                                  <TableHead className="text-xs">Zonas</TableHead>
+  1371→  1371→                                                  <TableHead className="text-xs text-center">Acciones</TableHead>
+  1372→  1372→                                                </TableRow>
+  1373→  1373→                                              </TableHeader>
+  1374→  1374→                                              <TableBody>
+  1375→  1375→                                                {projectMembers.map(member => (
+  1376→  1376→                                                  <TableRow key={member.id}>
+  1377→  1377→                                                    <TableCell className="text-xs font-medium">
+  1378→  1378→                                                      <Input
+  1379→  1379→                                                        className="h-7 text-xs border-transparent hover:border-gray-300 focus:border-purple-400 px-1 py-0 min-w-[80px]"
+  1380→  1380→                                                        value={member.user.name}
+  1381→  1381→                                                        onChange={async (e) => {
+  1382→  1382→                                                          const newName = e.target.value
+  1383→  1383→                                                          setProjectMembers(prev => prev.map(m => m.id === member.id ? { ...m, user: { ...m.user, name: newName } } : m))
+  1384→  1384→                                                          await fetch('/api/users', {
+  1385→  1385→                                                            method: 'PUT',
+  1386→  1386→                                                            headers: { 'Content-Type': 'application/json' },
+  1387→  1387→                                                            body: JSON.stringify({ id: member.user.id, name: newName }),
+  1388→  1388→                                                          })
+  1389→  1389→                                                        }}
+  1390→  1390→                                                      />
+  1391→  1391→                                                    </TableCell>
+  1392→  1392→                                                    <TableCell className="text-xs">
+  1393→  1393→                                                      <Input
+  1394→  1394→                                                        className="h-7 text-xs border-transparent hover:border-gray-300 focus:border-purple-400 px-1 py-0 min-w-[120px]"
+  1395→  1395→                                                        value={member.user.email}
+  1396→  1396→                                                        onChange={async (e) => {
+  1397→  1397→                                                          const newEmail = e.target.value
+  1398→  1398→                                                          setProjectMembers(prev => prev.map(m => m.id === member.id ? { ...m, user: { ...m.user, email: newEmail } } : m))
+  1399→  1399→                                                        }}
+  1400→  1400→                                                        onBlur={async (e) => {
+  1401→  1401→                                                          const newEmail = e.target.value.trim().toLowerCase()
+  1402→  1402→                                                          if (newEmail && newEmail !== member.user.email) {
+  1403→  1403→                                                            await fetch('/api/users', {
+  1404→  1404→                                                              method: 'PUT',
+  1405→  1405→                                                              headers: { 'Content-Type': 'application/json' },
+  1406→  1406→                                                              body: JSON.stringify({ id: member.user.id, email: newEmail }),
+  1407→  1407→                                                            })
+  1408→  1408→                                                          }
+  1409→  1409→                                                        }}
+  1410→  1410→                                                      />
+  1411→  1411→                                                    </TableCell>
+  1412→  1412→                                                    <TableCell className="text-xs">
+  1413→  1413→                                                      <div className="flex items-center gap-1">
+  1414→  1414→                                                        <Input
+  1415→  1415→                                                          className="h-7 text-xs border-transparent hover:border-gray-300 focus:border-purple-400 px-1 py-0 min-w-[90px] font-mono"
+  1416→  1416→                                                          value={member.user.plainPassword || '••••••'}
+  1417→  1417→                                                          onChange={async (e) => {
+  1418→  1418→                                                            const newPwd = e.target.value
+  1419→  1419→                                                            setProjectMembers(prev => prev.map(m => m.id === member.id ? { ...m, user: { ...m.user, plainPassword: newPwd } } : m))
+  1420→  1420→                                                          }}
+  1421→  1421→                                                          onBlur={async (e) => {
+  1422→  1422→                                                            const newPwd = e.target.value
+  1423→  1423→                                                            if (newPwd && newPwd.length >= 6 && newPwd !== '••••••') {
+  1424→  1424→                                                              await fetch('/api/users', {
+  1425→  1425→                                                                method: 'PUT',
+  1426→  1426→                                                                headers: { 'Content-Type': 'application/json' },
+  1427→  1427→                                                                body: JSON.stringify({ id: member.user.id, password: newPwd }),
+  1428→  1428→                                                              })
+  1429→  1429→                                                            }
+  1430→  1430→                                                          }}
+  1431→  1431→                                                        />
+  1432→  1432→                                                        <button
+  1433→  1433→                                                          className="text-gray-400 hover:text-purple-600 shrink-0"
+  1434→  1434→                                                          title="Restablecer contraseña"
+  1435→  1435→                                                          onClick={async () => {
+  1436→  1436→                                                            const newPwd = prompt(`Nueva contraseña para ${member.user.name}:`, '123456')
+  1437→  1437→                                                            if (!newPwd || newPwd.length < 6) {
+  1438→  1438→                                                              if (newPwd !== null) alert('La contraseña debe tener al menos 6 caracteres')
+  1439→  1439→                                                              return
+  1440→  1440→                                                            }
+  1441→  1441→                                                            await fetch('/api/users', {
+  1442→  1442→                                                              method: 'PUT',
+  1443→  1443→                                                              headers: { 'Content-Type': 'application/json' },
+  1444→  1444→                                                              body: JSON.stringify({ id: member.user.id, password: newPwd }),
+  1445→  1445→                                                            })
+  1446→  1446→                                                            setProjectMembers(prev => prev.map(m => m.id === member.id ? { ...m, user: { ...m.user, plainPassword: newPwd } } : m))
+  1447→  1447→                                                            alert(`Contraseña actualizada a: ${newPwd}`)
+  1448→  1448→                                                          }}
+  1449→  1449→                                                        >
+  1450→  1450→                                                          <Key className="h-3.5 w-3.5" />
+  1451→  1451→                                                        </button>
+  1452→  1452→                                                      </div>
+  1453→  1453→                                                    </TableCell>
+  1454→  1454→                                                    <TableCell>
+  1455→  1455→                                                      <Select value={member.role} onValueChange={async (newRole) => {
+  1456→  1456→                                                        setProjectMembers(prev => prev.map(m => m.id === member.id ? { ...m, role: newRole } : m))
+  1457→  1457→                                                        // Update member role via API
+  1458→  1458→                                                        try {
+  1459→  1459→                                                          await fetch(`/api/projects/${selectedProjectId}/members`, {
+  1460→  1460→                                                            method: 'PATCH',
+  1461→  1461→                                                            headers: { 'Content-Type': 'application/json' },
+  1462→  1462→                                                            body: JSON.stringify({ memberId: member.id, role: newRole }),
+  1463→  1463→                                                          })
+  1464→  1464→                                                        } catch (err) {
+  1465→  1465→                                                          console.error('Error updating role:', err)
+  1466→  1466→                                                        }
+  1467→  1467→                                                      }}>
+  1468→  1468→                                                        <SelectTrigger className="h-7 text-[10px] w-[110px]">
+  1469→  1469→                                                          <SelectValue />
+  1470→  1470→                                                        </SelectTrigger>
+  1471→  1471→                                                        <SelectContent>
+  1472→  1472→                                                          <SelectItem value="admin">Administrador</SelectItem>
+  1473→  1473→                                                          <SelectItem value="gerente">Gerente</SelectItem>
+  1474→  1474→                                                          <SelectItem value="responsable">Responsable</SelectItem>
+  1475→  1475→                                                          <SelectItem value="empleado">Empleado</SelectItem>
+  1476→  1476→                                                          <SelectItem value="auditor">Auditor</SelectItem>
+  1477→  1477→                                                        </SelectContent>
+  1478→  1478→                                                      </Select>
+  1479→  1479→                                                    </TableCell>
+  1480→  1480→                                                    <TableCell className="text-xs">
+  1481→  1481→                                                      {member.zones.length > 0 ? (
+  1482→  1482→                                                        <div className="flex flex-wrap gap-1">
+  1483→  1483→                                                          {member.zones.map(z => (
+  1484→  1484→                                                            <span key={z.id} className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-gray-50 border text-[10px]">
+  1485→  1485→                                                              <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: z.color }} />
+  1486→  1486→                                                              {z.name}
+  1487→  1487→                                                            </span>
+  1488→  1488→                                                          ))}
+  1489→  1489→                                                        </div>
+  1490→  1490→                                                      ) : <span className="text-muted-foreground">-</span>}
+  1491→  1491→                                                    </TableCell>
+  1492→  1492→                                                    <TableCell className="text-center">
+  1493→  1493→                                                      <div className="flex items-center justify-center gap-1">
+  1494→  1494→                                                        <Button variant="outline" size="sm" className="h-7 text-[10px] text-blue-500 border-blue-200 hover:bg-blue-50 hover:text-blue-700 hover:border-blue-300 gap-1" onClick={async () => {
+  1495→  1495→                                                          const pwd = member.user.plainPassword || prompt(`Contraseña para enviar a ${member.user.name}:`, '123456')
+  1496→  1496→                                                          if (!pwd) return
+  1497→  1497→                                                          const finalPwd = pwd.length >= 6 ? pwd : '123456'
+  1498→  1498→                                                          setSendingCredentials(member.id)
+  1499→  1499→                                                          try {
+  1500→  1500→                                                            const res = await fetch(`/api/projects/${selectedProjectId}/send-credentials`, {
+  1501→  1501→                                                              method: 'POST',
+  1502→  1502→                                                              headers: { 'Content-Type': 'application/json' },
+  1503→  1503→                                                              body: JSON.stringify({ memberId: member.id, password: finalPwd }),
+  1504→  1504→                                                            })
+  1505→  1505→                                                            const data = await res.json()
+  1506→  1506→                                                            if (data.success) {
+  1507→  1507→                                                              if (data.testingMode) {
+  1508→  1508→                                                                alert(`Email enviado en modo de prueba a: ${data.redirectedTo}\n(El email real iría a: ${member.user.email})`)
+  1509→  1509→                                                              } else {
+  1510→  1510→                                                                alert(`Email de bienvenida enviado a: ${member.user.email}`)
+  1511→  1511→                                                              }
+  1512→  1512→                                                            } else {
+  1513→  1513→                                                              alert(`Error al enviar email: ${data.error}`)
+  1514→  1514→                                                            }
+  1515→  1515→                                                          } catch (err) {
+  1516→  1516→                                                            alert('Error de conexión al enviar credenciales')
+  1517→  1517→                                                          } finally {
+  1518→  1518→                                                            setSendingCredentials(null)
+  1519→  1519→                                                          }
+  1520→  1520→                                                        }} title="Enviar credenciales por email" disabled={sendingCredentials === member.id}>
+  1521→  1521→                                                          {sendingCredentials === member.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <Mail className="h-3 w-3" />}
+  1522→  1522→                                                          Enviar
+  1523→  1523→                                                        </Button>
+  1524→  1524→                                                        <Button variant="outline" size="sm" className="h-7 text-[10px] text-red-500 border-red-200 hover:bg-red-50 hover:text-red-700 hover:border-red-300 gap-1" onClick={() => handleRemoveMember(member.id, member.user.name)} title="Eliminar miembro del proyecto">
+  1525→  1525→                                                          <Trash2 className="h-3 w-3" />
+  1526→  1526→                                                        </Button>
+  1527→  1527→                                                      </div>
+  1528→  1528→                                                    </TableCell>
+  1529→  1529→                                                  </TableRow>
+  1530→  1530→                                                ))}
+  1531→  1531→                                              </TableBody>
+  1532→  1532→                                            </Table>
+  1533→  1533→                                          </div>
+  1534→  1534→                                        </div>
+  1535→  1535→                                      )}
+  1536→  1536→                                    </div>
+  1537→  1537→                                  </>
+  1538→  1538→                                )}
+  1539→  1539→                              </div>
+  1540→  1540→                            </motion.div>
+  1541→  1541→                          )}
+  1542→  1542→                        </AnimatePresence>
+  1543→  1543→                      </CardContent>
+  1544→  1544→                    </Card>
+  1545→  1545→                  ))}
+  1546→  1546→                </div>
+  1547→  1547→              )}
+  1548→  1548→
+  1549→  1549→              {/* ═══ USERS TAB ═══ */}
+  1550→  1550→            </motion.div>
+  1551→  1551→          )}
+  1552→  1552→
+  1553→  1553→          {activeTab === 'users' && (
+  1554→  1554→            <motion.div key="users" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="space-y-4">
+  1555→  1555→              {/* New user button */}
+  1556→  1556→              <div className="flex justify-between items-center">
+  1557→  1557→                <p className="text-sm text-muted-foreground">
+  1558→  1558→                  Gestiona los usuarios del sistema y sus accesos
+  1559→  1559→                </p>
+  1560→  1560→                <Button
+  1561→  1561→                  onClick={() => setShowNewUser(true)}
+  1562→  1562→                  className="bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white"
+  1563→  1563→                  size="sm"
+  1564→  1564→                >
+  1565→  1565→                  <UserPlus className="h-4 w-4 mr-1" /> Nuevo Usuario
+  1566→  1566→                </Button>
+  1567→  1567→              </div>
+  1568→  1568→
+  1569→  1569→              {/* New user form */}
+  1570→  1570→              {showNewUser && (
+  1571→  1571→                <Card className="border-purple-200 bg-purple-50/30">
+  1572→  1572→                  <CardHeader className="pb-3">
+  1573→  1573→                    <CardTitle className="text-sm flex items-center gap-2">
+  1574→  1574→                      <UserPlus className="h-4 w-4 text-purple-500" />
+  1575→  1575→                      Crear Nuevo Usuario
+  1576→  1576→                    </CardTitle>
+  1577→  1577→                  </CardHeader>
+  1578→  1578→                  <CardContent className="space-y-3">
+  1579→  1579→                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+  1580→  1580→                      <div className="space-y-1">
+  1581→  1581→                        <Label className="text-xs">Nombre completo *</Label>
+  1582→  1582→                        <div className="relative">
+  1583→  1583→                          <User className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+  1584→  1584→                          <Input placeholder="Juan Pérez" value={newUserName} onChange={e => setNewUserName(e.target.value)} className="pl-9 h-9" />
+  1585→  1585→                        </div>
+  1586→  1586→                      </div>
+  1587→  1587→                      <div className="space-y-1">
+  1588→  1588→                        <Label className="text-xs">Email *</Label>
+  1589→  1589→                        <div className="relative">
+  1590→  1590→                          <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+  1591→  1591→                          <Input placeholder="email@ejemplo.com" type="email" value={newUserEmail} onChange={e => setNewUserEmail(e.target.value)} className="pl-9 h-9" />
+  1592→  1592→                        </div>
+  1593→  1593→                      </div>
+  1594→  1594→                      <div className="space-y-1">
+  1595→  1595→                        <Label className="text-xs">Contraseña *</Label>
+  1596→  1596→                        <div className="relative">
+  1597→  1597→                          <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+  1598→  1598→                          <Input placeholder="Mínimo 6 caracteres" type="password" value={newUserPassword} onChange={e => setNewUserPassword(e.target.value)} className="pl-9 h-9" />
+  1599→  1599→                        </div>
+  1600→  1600→                      </div>
+  1601→  1601→                      <div className="space-y-1">
+  1602→  1602→                        <Label className="text-xs">Rol</Label>
+  1603→  1603→                        <Select value={newUserRole} onValueChange={setNewUserRole}>
+  1604→  1604→                          <SelectTrigger className="h-9">
+  1605→  1605→                            <Shield className="h-3.5 w-3.5 mr-2 text-muted-foreground" />
+  1606→  1606→                            <SelectValue />
+  1607→  1607→                          </SelectTrigger>
+  1608→  1608→                          <SelectContent>
+  1609→  1609→                            <SelectItem value="admin">Administrador</SelectItem>
+  1610→  1610→                            <SelectItem value="gerente">Gerente</SelectItem>
+  1611→  1611→                            <SelectItem value="responsable">Responsable</SelectItem>
+  1612→  1612→                            <SelectItem value="empleado">Empleado</SelectItem>
+  1613→  1613→                            <SelectItem value="auditor">Auditor</SelectItem>
+  1614→  1614→                          </SelectContent>
+  1615→  1615→                        </Select>
+  1616→  1616→                      </div>
+  1617→  1617→                    </div>
+  1618→  1618→                    <div className="flex gap-2 justify-end">
+  1619→  1619→                      <Button variant="outline" size="sm" onClick={() => setShowNewUser(false)}>Cancelar</Button>
+  1620→  1620→                      <Button size="sm" onClick={handleCreateUser} disabled={!newUserName.trim() || !newUserEmail.trim() || !newUserPassword.trim() || newUserPassword.length < 6} className="bg-purple-600 text-white">
+  1621→  1621→                        Crear Usuario
+  1622→  1622→                      </Button>
+  1623→  1623→                    </div>
+  1624→  1624→                  </CardContent>
+  1625→  1625→                </Card>
+  1626→  1626→              )}
+  1627→  1627→
+  1628→  1628→              {/* Users table */}
+  1629→  1629→              {isLoadingUsers ? (
+  1630→  1630→                <div className="flex justify-center py-12"><Loader2 className="h-8 w-8 text-purple-500 animate-spin" /></div>
+  1631→  1631→              ) : users.length === 0 ? (
+  1632→  1632→                <div className="text-center py-12 text-muted-foreground">
+  1633→  1633→                  <Users className="h-12 w-12 mx-auto mb-3 opacity-30" />
+  1634→  1634→                  <p className="text-sm">No hay usuarios en el sistema</p>
+  1635→  1635→                </div>
+  1636→  1636→              ) : (
+  1637→  1637→                <div className="rounded-lg border overflow-hidden">
+  1638→  1638→                  <Table>
+  1639→  1639→                    <TableHeader>
+  1640→  1640→                      <TableRow>
+  1641→  1641→                        <TableHead className="text-xs">Nombre</TableHead>
+  1642→  1642→                        <TableHead className="text-xs">Email</TableHead>
+  1643→  1643→                        <TableHead className="text-xs">Rol</TableHead>
+  1644→  1644→                        <TableHead className="text-xs">Estado</TableHead>
+  1645→  1645→                        <TableHead className="text-xs">Proyectos</TableHead>
+  1646→  1646→                        <TableHead className="text-xs">Acciones</TableHead>
+  1647→  1647→                      </TableRow>
+  1648→  1648→                    </TableHeader>
+  1649→  1649→                    <TableBody>
+  1650→  1650→                      {users.map(user => (
+  1651→  1651→                        <TableRow key={user.id} className={!user.active ? 'opacity-50' : ''}>
+  1652→  1652→                          <TableCell className="text-xs font-medium">
+  1653→  1653→                            {editingUser === user.id ? (
+  1654→  1654→                              <Input value={editUserData.name} onChange={e => setEditUserData(d => ({ ...d, name: e.target.value }))} className="h-7 text-xs" />
+  1655→  1655→                            ) : (
+  1656→  1656→                              user.name
+  1657→  1657→                            )}
+  1658→  1658→                          </TableCell>
+  1659→  1659→                          <TableCell className="text-xs text-muted-foreground">
+  1660→  1660→                            {editingUser === user.id ? (
+  1661→  1661→                              <Input value={editUserData.email} onChange={e => setEditUserData(d => ({ ...d, email: e.target.value }))} className="h-7 text-xs" />
+  1662→  1662→                            ) : (
+  1663→  1663→                              user.email
+  1664→  1664→                            )}
+  1665→  1665→                          </TableCell>
+  1666→  1666→                          <TableCell>
+  1667→  1667→                            {editingUser === user.id ? (
+  1668→  1668→                              <Select value={editUserData.role} onValueChange={v => setEditUserData(d => ({ ...d, role: v }))}>
+  1669→  1669→                                <SelectTrigger className="h-7 text-xs"><SelectValue /></SelectTrigger>
+  1670→  1670→                                <SelectContent>
+  1671→  1671→                                  <SelectItem value="admin">Administrador</SelectItem>
+  1672→  1672→                                  <SelectItem value="gerente">Gerente</SelectItem>
+  1673→  1673→                                  <SelectItem value="responsable">Responsable</SelectItem>
+  1674→  1674→                                  <SelectItem value="empleado">Empleado</SelectItem>
+  1675→  1675→                                  <SelectItem value="auditor">Auditor</SelectItem>
+  1676→  1676→                                </SelectContent>
+  1677→  1677→                              </Select>
+  1678→  1678→                            ) : (
+  1679→  1679→                              <Badge className={`${ROLE_COLORS[user.role] || ''} border text-[10px]`}>
+  1680→  1680→                                {ROLE_LABELS[user.role] || user.role}
+  1681→  1681→                              </Badge>
+  1682→  1682→                            )}
+  1683→  1683→                          </TableCell>
+  1684→  1684→                          <TableCell>
+  1685→  1685→                            {editingUser === user.id ? (
+  1686→  1686→                              <Select value={editUserData.active ? 'true' : 'false'} onValueChange={v => setEditUserData(d => ({ ...d, active: v === 'true' }))}>
+  1687→  1687→                                <SelectTrigger className="h-7 text-xs"><SelectValue /></SelectTrigger>
+  1688→  1688→                                <SelectContent>
+  1689→  1689→                                  <SelectItem value="true">Activo</SelectItem>
+  1690→  1690→                                  <SelectItem value="false">Inactivo</SelectItem>
+  1691→  1691→                                </SelectContent>
+  1692→  1692→                              </Select>
+  1693→  1693→                            ) : (
+  1694→  1694→                              <Badge className={user.active ? 'bg-green-100 text-green-700 border-green-200' : 'bg-red-100 text-red-700 border-red-200'} variant="outline">
+  1695→  1695→                                {user.active ? 'Activo' : 'Inactivo'}
+  1696→  1696→                              </Badge>
+  1697→  1697→                            )}
+  1698→  1698→                          </TableCell>
+  1699→  1699→                          <TableCell className="text-xs">
+  1700→  1700→                            {user.projects.length === 0 ? (
+  1701→  1701→                              <span className="text-muted-foreground">Ninguno</span>
+  1702→  1702→                            ) : (
+  1703→  1703→                              <div className="space-y-0.5">
+  1704→  1704→                                {user.projects.map((p, i) => (
+  1705→  1705→                                  <div key={i} className="flex items-center gap-1 flex-wrap">
+  1706→  1706→                                    <span>{p.projectName}</span>
+  1707→  1707→                                    <Badge className={`${ROLE_COLORS[p.role] || ''} border text-[9px] px-1 py-0`}>
+  1708→  1708→                                      {ROLE_LABELS[p.role]}
+  1709→  1709→                                    </Badge>
+  1710→  1710→                                    {p.zones.length > 0 && (
+  1711→  1711→                                      <span className="text-[9px] text-muted-foreground">
+  1712→  1712→                                        ({p.zones.map(z => z.name).join(', ')})
+  1713→  1713→                                      </span>
+  1714→  1714→                                    )}
+  1715→  1715→                                  </div>
+  1716→  1716→                                ))}
+  1717→  1717→                              </div>
+  1718→  1718→                            )}
+  1719→  1719→                          </TableCell>
+  1720→  1720→                          <TableCell>
+  1721→  1721→                            <div className="flex items-center gap-1">
+  1722→  1722→                              {editingUser === user.id ? (
+  1723→  1723→                                <>
+  1724→  1724→                                  <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-green-500" onClick={() => handleUpdateUser(user.id)}><Check className="h-3.5 w-3.5" /></Button>
+  1725→  1725→                                  <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => setEditingUser(null)}><X className="h-3.5 w-3.5" /></Button>
+  1726→  1726→                                </>
+  1727→  1727→                              ) : (
+  1728→  1728→                                <>
+  1729→  1729→                                  <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-blue-500" onClick={() => { setEditingUser(user.id); setEditUserData({ name: user.name, email: user.email, role: user.role, active: user.active }) }} title="Editar">
+  1730→  1730→                                    <Edit3 className="h-3.5 w-3.5" />
+  1731→  1731→                                  </Button>
+  1732→  1732→                                  <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-amber-500" onClick={() => { setResetPasswordUserId(user.id); setNewPassword('') }} title="Cambiar contraseña">
+  1733→  1733→                                    <Key className="h-3.5 w-3.5" />
+  1734→  1734→                                  </Button>
+  1735→  1735→                                  <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => handleToggleActive(user.id, user.active)} title={user.active ? 'Desactivar' : 'Activar'}>
+  1736→  1736→                                    {user.active ? <EyeOff className="h-3.5 w-3.5 text-muted-foreground" /> : <Eye className="h-3.5 w-3.5 text-green-500" />}
+  1737→  1737→                                  </Button>
+  1738→  1738→                                  <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-red-400 hover:text-red-600" onClick={() => handleDeleteUser(user.id)} title="Eliminar">
+  1739→  1739→                                    <Trash2 className="h-3.5 w-3.5" />
+  1740→  1740→                                  </Button>
+  1741→  1741→                                </>
+  1742→  1742→                              )}
+  1743→  1743→                            </div>
+  1744→  1744→                          </TableCell>
+  1745→  1745→                        </TableRow>
+  1746→  1746→                      ))}
+  1747→  1747→                    </TableBody>
+  1748→  1748→                  </Table>
+  1749→  1749→                </div>
+  1750→  1750→              )}
+  1751→  1751→            </motion.div>
+  1752→  1752→          )}
+  1753→  1753→
+  1754→  1754→          {/* ═══ COMPANIES TAB ═══ */}
+  1755→  1755→          {activeTab === 'companies' && (
+  1756→  1756→            <motion.div key="companies" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="space-y-4">
+  1757→  1757→              <div className="flex justify-between items-center">
+  1758→  1758→                <p className="text-sm text-muted-foreground">
+  1759→  1759→                  Gestiona las empresas y asigna gerentes
+  1760→  1760→                </p>
+  1761→  1761→                <Button
+  1762→  1762→                  onClick={() => setShowNewCompany(true)}
+  1763→  1763→                  className="bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white"
+  1764→  1764→                  size="sm"
+  1765→  1765→                >
+  1766→  1766→                  <Plus className="h-4 w-4 mr-1" /> Nueva Empresa
+  1767→  1767→                </Button>
+  1768→  1768→              </div>
+  1769→  1769→
+  1770→  1770→              {/* New company form */}
+  1771→  1771→              {showNewCompany && (
+  1772→  1772→                <Card className="border-purple-200 bg-purple-50/30">
+  1773→  1773→                  <CardHeader className="pb-3">
+  1774→  1774→                    <CardTitle className="text-sm flex items-center gap-2">
+  1775→  1775→                      <Plus className="h-4 w-4 text-purple-500" />
+  1776→  1776→                      Crear Nueva Empresa
+  1777→  1777→                    </CardTitle>
+  1778→  1778→                  </CardHeader>
+  1779→  1779→                  <CardContent className="space-y-3">
+  1780→  1780→                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+  1781→  1781→                      <div className="space-y-1">
+  1782→  1782→                        <Label className="text-xs">Nombre de la Empresa *</Label>
+  1783→  1783→                        <Input placeholder="Nombre" value={newCompanyName} onChange={e => setNewCompanyName(e.target.value)} />
+  1784→  1784→                      </div>
+  1785→  1785→                      <div className="space-y-1">
+  1786→  1786→                        <Label className="text-xs">Descripción</Label>
+  1787→  1787→                        <Input placeholder="Descripción (opcional)" value={newCompanyDesc} onChange={e => setNewCompanyDesc(e.target.value)} />
+  1788→  1788→                      </div>
+  1789→  1789→                    </div>
+  1790→  1790→                    <div className="flex gap-2 justify-end">
+  1791→  1791→                      <Button variant="outline" size="sm" onClick={() => setShowNewCompany(false)}>Cancelar</Button>
+  1792→  1792→                      <Button size="sm" onClick={handleCreateCompany} disabled={!newCompanyName.trim()} className="bg-gradient-to-r from-purple-500 to-purple-600 text-white">
+  1793→  1793→                        Crear Empresa
+  1794→  1794→                      </Button>
+  1795→  1795→                    </div>
+  1796→  1796→                  </CardContent>
+  1797→  1797→                </Card>
+  1798→  1798→              )}
+  1799→  1799→
+  1800→  1800→              {/* Companies list */}
+  1801→  1801→              {isLoadingCompanies ? (
+  1802→  1802→                <div className="flex justify-center py-12"><Loader2 className="h-8 w-8 text-purple-500 animate-spin" /></div>
+  1803→  1803→              ) : companies.length === 0 ? (
+  1804→  1804→                <div className="text-center py-12 text-muted-foreground">
+  1805→  1805→                  <Building2 className="h-12 w-12 mx-auto mb-3 opacity-30" />
+  1806→  1806→                  <p className="text-sm">No hay empresas creadas</p>
+  1807→  1807→                  <p className="text-xs mt-1">Crea una empresa para organizar los proyectos por organización</p>
+  1808→  1808→                </div>
+  1809→  1809→              ) : (
+  1810→  1810→                <div className="space-y-3">
+  1811→  1811→                  {companies.map(company => (
+  1812→  1812→                    <Card key={company.id} className={`transition-all ${expandedCompanyId === company.id ? 'border-purple-300 shadow-md' : 'hover:border-gray-300'}`}>
+  1813→  1813→                      <CardContent className="p-4">
+  1814→  1814→                        <div className="flex items-center justify-between">
+  1815→  1815→                          <div className="flex items-center gap-3 cursor-pointer flex-1" onClick={() => setExpandedCompanyId(expandedCompanyId === company.id ? null : company.id)}>
+  1816→  1816→                            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-teal-100 to-teal-50 flex items-center justify-center">
+  1817→  1817→                              <Building2 className="h-5 w-5 text-teal-600" />
+  1818→  1818→                            </div>
+  1819→  1819→                            <div className="flex-1">
+  1820→  1820→                              {editingCompany === company.id ? (
+  1821→  1821→                                <div className="space-y-2" onClick={e => e.stopPropagation()}>
+  1822→  1822→                                  <div className="grid grid-cols-2 gap-2">
+  1823→  1823→                                    <Input value={editCompanyData.name} onChange={e => setEditCompanyData(d => ({ ...d, name: e.target.value }))} className="text-sm" />
+  1824→  1824→                                    <Input value={editCompanyData.description} onChange={e => setEditCompanyData(d => ({ ...d, description: e.target.value }))} className="text-sm" placeholder="Descripción" />
+  1825→  1825→                                  </div>
+  1826→  1826→                                  <div className="flex gap-2">
+  1827→  1827→                                    <Button size="sm" onClick={() => handleUpdateCompany(company.id)} className="bg-purple-600 text-white h-7"><Check className="h-3 w-3 mr-1" />Guardar</Button>
+  1828→  1828→                                    <Button size="sm" variant="outline" onClick={() => setEditingCompany(null)} className="h-7">Cancelar</Button>
+  1829→  1829→                                  </div>
+  1830→  1830→                                </div>
+  1831→  1831→                              ) : (
+  1832→  1832→                                <>
+  1833→  1833→                                  <h3 className="font-semibold text-sm">{company.name}</h3>
+  1834→  1834→                                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+  1835→  1835→                                    <span>{company.projectCount} proyectos</span>
+  1836→  1836→                                    <span>·</span>
+  1837→  1837→                                    <span>{company.memberCount} gerentes</span>
+  1838→  1838→                                    {!company.active && <Badge className="bg-red-100 text-red-700 border border-red-200 ml-1">Inactiva</Badge>}
+  1839→  1839→                                  </div>
+  1840→  1840→                                </>
+  1841→  1841→                              )}
+  1842→  1842→                            </div>
+  1843→  1843→                          </div>
+  1844→  1844→                          {editingCompany !== company.id && (
+  1845→  1845→                            <div className="flex items-center gap-1">
+  1846→  1846→                              <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-blue-500 hover:text-blue-700" onClick={() => { setEditingCompany(company.id); setEditCompanyData({ name: company.name, description: company.description || '' }) }} title="Editar empresa"><Edit3 className="h-4 w-4" /></Button>
+  1847→  1847→                              <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-red-400 hover:text-red-600" onClick={() => handleDeleteCompany(company.id)} title="Eliminar empresa"><Trash2 className="h-4 w-4" /></Button>
+  1848→  1848→                            </div>
+  1849→  1849→                          )}
+  1850→  1850→                        </div>
+  1851→  1851→
+  1852→  1852→                        {/* Expanded company detail: gerentes */}
+  1853→  1853→                        <AnimatePresence>
+  1854→  1854→                          {expandedCompanyId === company.id && (
+  1855→  1855→                            <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.2 }} className="overflow-hidden">
+  1856→  1856→                              <div className="mt-4 pt-4 border-t space-y-4">
+  1857→  1857→                                {isLoadingCompanyDetail ? (
+  1858→  1858→                                  <div className="flex justify-center py-4"><Loader2 className="h-5 w-5 text-purple-500 animate-spin" /></div>
+  1859→  1859→                                ) : (
+  1860→  1860→                                  <>
+  1861→  1861→                                    <div>
+  1862→  1862→                                      <h4 className="text-xs font-semibold text-muted-foreground uppercase mb-2 flex items-center gap-1">
+  1863→  1863→                                        <Shield className="h-3 w-3" /> Gerentes asignados
+  1864→  1864→                                      </h4>
+  1865→  1865→                                      {companyMembers.length > 0 ? (
+  1866→  1866→                                        <div className="space-y-1.5 mb-3">
+  1867→  1867→                                          {companyMembers.map((m) => (
+  1868→  1868→                                            <div key={m.id} className="flex items-center justify-between p-2 rounded-lg border bg-white text-xs">
+  1869→  1869→                                              <div className="flex items-center gap-2">
+  1870→  1870→                                                <div className="w-7 h-7 rounded-full bg-teal-100 flex items-center justify-center text-teal-700 font-bold text-xs">{m.user.name.charAt(0)}</div>
+  1871→  1871→                                                <div>
+  1872→  1872→                                                  <p className="font-medium">{m.user.name}</p>
+  1873→  1873→                                                  <p className="text-muted-foreground">{m.user.email}</p>
+  1874→  1874→                                                </div>
+  1875→  1875→                                                <Badge className={`${ROLE_COLORS[m.role] || ROLE_COLORS.gerente} border text-[9px] py-0`}>
+  1876→  1876→                                                  {ROLE_LABELS[m.role] || m.role}
+  1877→  1877→                                                </Badge>
+  1878→  1878→                                              </div>
+  1879→  1879→                                              <Button variant="ghost" size="sm" className="h-6 w-6 p-0 text-red-400 hover:text-red-600" onClick={() => handleRemoveCompanyMember(m.userId, m.user.name)}>
+  1880→  1880→                                                <X className="h-3 w-3" />
+  1881→  1881→                                              </Button>
+  1882→  1882→                                            </div>
+  1883→  1883→                                          ))}
+  1884→  1884→                                        </div>
+  1885→  1885→                                      ) : (
+  1886→  1886→                                        <p className="text-xs text-muted-foreground mb-3">No hay gerentes asignados a esta empresa</p>
+  1887→  1887→                                      )}
+  1888→  1888→
+  1889→  1889→                                      {/* Add gerente */}
+  1890→  1890→                                      <div className="flex items-center gap-2">
+  1891→  1891→                                        <Select value={addGerenteUserId || undefined} onValueChange={setAddGerenteUserId}>
+  1892→  1892→                                          <SelectTrigger className="h-8 text-xs flex-1">
+  1893→  1893→                                            <SelectValue placeholder="Seleccionar usuario para asignar..." />
+  1894→  1894→                                          </SelectTrigger>
+  1895→  1895→                                          <SelectContent>
+  1896→  1896→                                            {users
+  1897→  1897→                                              .filter(u => u.active && !companyMembers.some(m => m.userId === u.id))
+  1898→  1898→                                              .map(u => (
+  1899→  1899→                                                <SelectItem key={u.id} value={u.id}>
+  1900→  1900→                                                  <div className="flex items-center gap-2">
+  1901→  1901→                                                    <span>{u.name}</span>
+  1902→  1902→                                                    <span className="text-muted-foreground">({u.email})</span>
+  1903→  1903→                                                    <Badge className={`${ROLE_COLORS[u.role] || ''} border text-[9px] py-0`}>
+  1904→  1904→                                                      {ROLE_LABELS[u.role] || u.role}
+  1905→  1905→                                                    </Badge>
+  1906→  1906→                                                  </div>
+  1907→  1907→                                                </SelectItem>
+  1908→  1908→                                              ))}
+  1909→  1909→                                          </SelectContent>
+  1910→  1910→                                        </Select>
+  1911→  1911→                                        <Button size="sm" onClick={handleAddGerente} disabled={!addGerenteUserId} className="h-8 text-xs bg-purple-600 text-white">
+  1912→  1912→                                          <UserPlus className="h-3 w-3 mr-1" /> Asignar
+  1913→  1913→                                        </Button>
+  1914→  1914→                                      </div>
+  1915→  1915→                                    </div>
+  1916→  1916→                                  </>
+  1917→  1917→                                )}
+  1918→  1918→                              </div>
+  1919→  1919→                            </motion.div>
+  1920→  1920→                          )}
+  1921→  1921→                        </AnimatePresence>
+  1922→  1922→                      </CardContent>
+  1923→  1923→                    </Card>
+  1924→  1924→                  ))}
+  1925→  1925→                </div>
+  1926→  1926→              )}
+  1927→  1927→            </motion.div>
+  1928→  1928→          )}
+  1929→  1929→
+  1930→  1930→          {/* ═══ 5S Y PASOS TAB ═══ */}
+  1931→  1931→          {/* 5S y Pasos tab removed - scores now shown on the board above steps 4/5 dots */}
+  1932→  1932→          {false && (
+  1933→  1933→            <motion.div key="5s-steps" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="space-y-4">
+  1934→  1934→              <div className="flex justify-between items-center">
+  1935→  1935→                <div>
+  1936→  1936→                  <p className="text-sm text-muted-foreground">
+  1937→  1937→                    Gestiona las puntuaciones de Autoevaluación (Paso 4) y Auditoría (Paso 5) de cada S
+  1938→  1938→                  </p>
+  1939→  1939→                </div>
+  1940→  1940→              </div>
+  1941→  1941→
+  1942→  1942→              {/* Project & Zone selectors */}
+  1943→  1943→              <div className="flex gap-3 items-end">
+  1944→  1944→                <div className="space-y-1 flex-1">
+  1945→  1945→                  <Label className="text-xs">Proyecto</Label>
+  1946→  1946→                  <Select
+  1947→  1947→                    value={selected5SProjectId || ''}
+  1948→  1948→                    onValueChange={val => {
+  1949→  1949→                      setSelected5SProjectId(val || null)
+  1950→  1950→                      setSelected5SZoneId(null)
+  1951→  1951→                    }}
+  1952→  1952→                  >
+  1953→  1953→                    <SelectTrigger>
+  1954→  1954→                      <SelectValue placeholder="Seleccionar proyecto" />
+  1955→  1955→                    </SelectTrigger>
+  1956→  1956→                    <SelectContent>
+  1957→  1957→                      {allProjects.map(p => (
+  1958→  1958→                        <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+  1959→  1959→                      ))}
+  1960→  1960→                    </SelectContent>
+  1961→  1961→                  </Select>
+  1962→  1962→                </div>
+  1963→  1963→                <div className="space-y-1 flex-1">
+  1964→  1964→                  <Label className="text-xs">Zona (opcional)</Label>
+  1965→  1965→                  <Select
+  1966→  1966→                    value={selected5SZoneId || '__all__'}
+  1967→  1967→                    onValueChange={val => setSelected5SZoneId(val === '__all__' ? null : val)}
+  1968→  1968→                  >
+  1969→  1969→                    <SelectTrigger>
+  1970→  1970→                      <SelectValue placeholder="Todas las zonas" />
+  1971→  1971→                    </SelectTrigger>
+  1972→  1972→                    <SelectContent>
+  1973→  1973→                      <SelectItem value="__all__">Todas las zonas</SelectItem>
+  1974→  1974→                      {allProjects.find(p => p.id === selected5SProjectId)?.zones.map(z => (
+  1975→  1975→                        <SelectItem key={z.id} value={z.id}>{z.name}</SelectItem>
+  1976→  1976→                      ))}
+  1977→  1977→                    </SelectContent>
+  1978→  1978→                  </Select>
+  1979→  1979→                </div>
+  1980→  1980→              </div>
+  1981→  1981→
+  1982→  1982→              {!selected5SProjectId ? (
+  1983→  1983→                <div className="text-center py-12 text-muted-foreground">
+  1984→  1984→                  <CheckSquare className="h-12 w-12 mx-auto mb-3 opacity-30" />
+  1985→  1985→                  <p className="text-sm">Selecciona un proyecto para ver las puntuaciones</p>
+  1986→  1986→                </div>
+  1987→  1987→              ) : isLoading5S ? (
+  1988→  1988→                <div className="flex justify-center py-12"><Loader2 className="h-8 w-8 text-purple-500 animate-spin" /></div>
+  1989→  1989→              ) : (
+  1990→  1990→                <div className="space-y-4">
+  1991→  1991→                  {/* S Steps table */}
+  1992→  1992→                  {['S1 Seiri', 'S2 Seiton', 'S3 Seiso', 'S4 Seiketsu', 'S5 Shitsuke'].map((sLabel, sIdx) => {
+  1993→  1993→                    const sStep = sIdx + 1
+  1994→  1994→                    const sColors = ['#8B5CF6', '#EAB308', '#3B82F6', '#F43F5E', '#F97316']
+  1995→  1995→                    const color = sColors[sIdx]
+  1996→  1996→
+  1997→  1997→                    // Filter progress for this S and selected zone
+  1998→  1998→                    const sProgress = progress5S.filter(p =>
+  1999→  1999→                      p.sStep === sStep &&
+  2000→  2000→                      (!selected5SZoneId || p.zoneId === selected5SZoneId)
+
+[showing lines 1-2000 of 2002; use offset=2001 with limit to continue reading]

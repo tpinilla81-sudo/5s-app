@@ -20,6 +20,19 @@ model User {
   role          String   @default("empleado") // "gestor", "admin", "gerente", "responsable", "empleado", "auditor"
   avatar        String?
   active        Boolean  @default(true)
+
+  // Contact & location details
+  phone         String?  // Teléfono
+  address       String?  // Dirección
+  city          String?  // Ciudad
+  province      String?  // Provincia
+  postalCode    String?  // Código Postal
+  country       String?  // País
+  notes         String?  // Notas del administrador/gestor
+  department    String?  // Departamento
+  position      String?  // Puesto/Cargo
+  employeeId    String?  // ID interno de empleado
+
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 

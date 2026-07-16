@@ -1,0 +1,402 @@
+  1201→                                                <SelectTrigger className="h-8 text-xs">
+  1202→                                                  <SelectValue placeholder="Seleccionar usuario existente..." />
+  1203→                                                </SelectTrigger>
+  1204→                                                <SelectContent>
+  1205→                                                  {users
+  1206→                                                    .filter(u => !projectMembers.some(m => m.user.id === u.id))
+  1207→                                                    .map(u => (
+  1208→                                                      <SelectItem key={u.id} value={u.id}>
+  1209→                                                        <div className="flex items-center gap-2">
+  1210→                                                          <span>{u.name}</span>
+  1211→                                                          <span className="text-muted-foreground">({u.email})</span>
+  1212→                                                          <Badge className={`${ROLE_COLORS[u.role] || ''} border text-[9px] py-0`}>
+  1213→                                                            {ROLE_LABELS[u.role] || u.role}
+  1214→                                                          </Badge>
+  1215→                                                          {u.projects.length === 0 && (
+  1216→                                                            <Badge className="bg-amber-100 text-amber-700 border border-amber-200 text-[9px] py-0">
+  1217→                                                              Sin proyecto
+  1218→                                                            </Badge>
+  1219→                                                          )}
+  1220→                                                        </div>
+  1221→                                                      </SelectItem>
+  1222→                                                    ))}
+  1223→                                                </SelectContent>
+  1224→                                              </Select>
+  1225→                                              <div className="grid grid-cols-2 gap-2">
+  1226→                                                <Select value={newMemberRole} onValueChange={setNewMemberRole}>
+  1227→                                                  <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+  1228→                                                  <SelectContent>
+  1229→                                                    <SelectItem value="admin">Administrador</SelectItem>
+  1230→                                                    <SelectItem value="gerente">Gerente</SelectItem>
+  1231→                                                    <SelectItem value="responsable">Responsable</SelectItem>
+  1232→                                                    <SelectItem value="empleado">Empleado</SelectItem>
+  1233→                                                    <SelectItem value="auditor">Auditor</SelectItem>
+  1234→                                                  </SelectContent>
+  1235→                                                </Select>
+  1236→                                                <div className="space-y-1">
+  1237→                                                  <p className="text-[10px] text-muted-foreground font-medium">Zonas (todas por defecto)</p>
+  1238→                                                  <div className="space-y-0.5 max-h-32 overflow-y-auto">
+  1239→                                                    {projectZones.map(z => (
+  1240→                                                      <label key={z.id} className="flex items-center gap-1.5 text-xs cursor-pointer hover:bg-gray-50 rounded px-1 py-0.5">
+  1241→                                                        <Checkbox
+  1242→                                                          checked={newMemberZones.includes(z.id)}
+  1243→                                                          onCheckedChange={(checked) => {
+  1244→                                                            if (checked) {
+  1245→                                                              setNewMemberZones([...newMemberZones, z.id])
+  1246→                                                            } else {
+  1247→                                                              setNewMemberZones(newMemberZones.filter(id => id !== z.id))
+  1248→                                                            }
+  1249→                                                          }}
+  1250→                                                          className="h-3.5 w-3.5"
+  1251→                                                        />
+  1252→                                                        <div className="w-2 h-2 rounded-full" style={{ backgroundColor: z.color }} />
+  1253→                                                        <span>{z.name}</span>
+  1254→                                                      </label>
+  1255→                                                    ))}
+  1256→                                                  </div>
+  1257→                                                </div>
+  1258→                                              </div>
+  1259→                                              <Button size="sm" onClick={handleAddMember} disabled={!selectedExistingUserId} className="w-full h-8 text-xs bg-purple-600 text-white">
+  1260→                                                <UserPlus className="h-3 w-3 mr-1" /> Asignar al Proyecto
+  1261→                                              </Button>
+  1262→                                            </div>
+  1263→                                          ) : (
+  1264→                                            /* New user form */
+  1265→                                            <>
+  1266→                                              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+  1267→                                                <Input placeholder="Nombre" value={newMemberName} onChange={e => setNewMemberName(e.target.value)} className="h-8 text-xs" />
+  1268→                                                <Input placeholder="Email" type="email" value={newMemberEmail} onChange={e => setNewMemberEmail(e.target.value)} className="h-8 text-xs" />
+  1269→                                                <Input placeholder="Contraseña (mín. 6 chars)" type="password" value={newMemberPassword} onChange={e => setNewMemberPassword(e.target.value)} className="h-8 text-xs" />
+  1270→                                              </div>
+  1271→                                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-2">
+  1272→                                                <Select value={newMemberRole} onValueChange={setNewMemberRole}>
+  1273→                                                  <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+  1274→                                                  <SelectContent>
+  1275→                                                    <SelectItem value="admin">Administrador</SelectItem>
+  1276→                                                    <SelectItem value="gerente">Gerente</SelectItem>
+  1277→                                                    <SelectItem value="responsable">Responsable</SelectItem>
+  1278→                                                    <SelectItem value="empleado">Empleado</SelectItem>
+  1279→                                                    <SelectItem value="auditor">Auditor</SelectItem>
+  1280→                                                  </SelectContent>
+  1281→                                                </Select>
+  1282→                                                <div className="space-y-1">
+  1283→                                                  <p className="text-[10px] text-muted-foreground font-medium">Zonas (todas por defecto)</p>
+  1284→                                                  <div className="space-y-0.5 max-h-32 overflow-y-auto">
+  1285→                                                    {projectZones.map(z => (
+  1286→                                                      <label key={z.id} className="flex items-center gap-1.5 text-xs cursor-pointer hover:bg-gray-50 rounded px-1 py-0.5">
+  1287→                                                        <Checkbox
+  1288→                                                          checked={newMemberZones.includes(z.id)}
+  1289→                                                          onCheckedChange={(checked) => {
+  1290→                                                            if (checked) {
+  1291→                                                              setNewMemberZones([...newMemberZones, z.id])
+  1292→                                                            } else {
+  1293→                                                              setNewMemberZones(newMemberZones.filter(id => id !== z.id))
+  1294→                                                            }
+  1295→                                                          }}
+  1296→                                                          className="h-3.5 w-3.5"
+  1297→                                                        />
+  1298→                                                        <div className="w-2 h-2 rounded-full" style={{ backgroundColor: z.color }} />
+  1299→                                                        <span>{z.name}</span>
+  1300→                                                      </label>
+  1301→                                                    ))}
+  1302→                                                  </div>
+  1303→                                                </div>
+  1304→                                              </div>
+  1305→                                              <Button size="sm" onClick={handleAddMember} disabled={!newMemberName.trim() || !newMemberEmail.trim()} className="w-full h-8 text-xs bg-purple-600 text-white mt-2">
+  1306→                                                <Plus className="h-3 w-3 mr-1" /> Crear y Añadir
+  1307→                                              </Button>
+  1308→                                            </>
+  1309→                                          )}
+  1310→                                        </CardContent>
+  1311→                                      </Card>
+  1312→
+  1313→                                      {/* Generated password notification */}
+  1314→                                      {generatedPassword && (
+  1315→                                        <div className="mb-3 p-3 bg-green-50 border border-green-200 rounded-lg flex items-start gap-3">
+  1316→                                          <ShieldCheck className="h-5 w-5 text-green-600 shrink-0 mt-0.5" />
+  1317→                                          <div className="flex-1 min-w-0">
+  1318→                                            <p className="text-xs font-semibold text-green-800">Contraseña generada para {generatedMemberName}</p>
+  1319→                                            <div className="flex items-center gap-2 mt-1">
+  1320→                                              <code className="text-sm font-mono bg-green-100 px-2 py-0.5 rounded text-green-900 select-all">{generatedPassword}</code>
+  1321→                                              <Button size="sm" variant="outline" className="h-6 text-[10px] gap-1" onClick={() => { navigator.clipboard.writeText(generatedPassword) }}>
+  1322→                                                <Save className="h-3 w-3" /> Copiar
+  1323→                                              </Button>
+  1324→                                            </div>
+  1325→                                            <p className="text-[10px] text-green-700 mt-1">Guarda esta contraseña. No se volverá a mostrar.</p>
+  1326→                                          </div>
+  1327→                                          <button onClick={() => { setGeneratedPassword(null); setGeneratedMemberName(null) }} className="text-green-400 hover:text-green-600">
+  1328→                                            <X className="h-4 w-4" />
+  1329→                                          </button>
+  1330→                                        </div>
+  1331→                                      )}
+  1332→
+  1333→                                      {/* Members table — complete, editable, with passwords */}
+  1334→                                      {projectMembers.length === 0 ? (
+  1335→                                        <p className="text-xs text-muted-foreground text-center py-4">No hay miembros en este proyecto</p>
+  1336→                                      ) : (
+  1337→                                        <div className="space-y-2">
+  1338→                                          {/* Excel download button */}
+  1339→                                          <div className="flex justify-end">
+  1340→                                            <Button size="sm" variant="outline" className="h-7 text-[10px] gap-1 text-green-600 border-green-200 hover:bg-green-50" onClick={() => {
+  1341→                                              // Build CSV for Excel download
+  1342→                                              const headers = ['Nombre', 'Email', 'Contraseña', 'Rol', 'Zonas', 'Estado']
+  1343→                                              const rows = projectMembers.map(m => [
+  1344→                                                m.user.name,
+  1345→                                                m.user.email,
+  1346→                                                m.user.plainPassword || '••••••',
+  1347→                                                ROLE_LABELS[m.role] || m.role,
+  1348→                                                m.zones.map(z => z.name).join('; '),
+  1349→                                                m.user.active ? 'Activo' : 'Inactivo',
+  1350→                                              ])
+  1351→                                              const csvContent = [headers, ...rows].map(r => r.map(c => `"${c}"`).join(',')).join('\n')
+  1352→                                              const BOM = '\uFEFF'
+  1353→                                              const blob = new Blob([BOM + csvContent], { type: 'text/csv;charset=utf-8;' })
+  1354→                                              const link = document.createElement('a')
+  1355→                                              link.href = URL.createObjectURL(blob)
+  1356→                                              link.download = `recursos_proyecto_${selectedProjectId}.csv`
+  1357→                                              link.click()
+  1358→                                            }}>
+  1359→                                              <Save className="h-3 w-3" /> Descargar Excel (CSV)
+  1360→                                            </Button>
+  1361→                                          </div>
+  1362→                                          <div className="rounded-lg border overflow-x-auto">
+  1363→                                            <Table>
+  1364→                                              <TableHeader>
+  1365→                                                <TableRow>
+  1366→                                                  <TableHead className="text-xs">Nombre</TableHead>
+  1367→                                                  <TableHead className="text-xs">Email</TableHead>
+  1368→                                                  <TableHead className="text-xs">Contraseña</TableHead>
+  1369→                                                  <TableHead className="text-xs">Rol</TableHead>
+  1370→                                                  <TableHead className="text-xs">Zonas</TableHead>
+  1371→                                                  <TableHead className="text-xs text-center">Acciones</TableHead>
+  1372→                                                </TableRow>
+  1373→                                              </TableHeader>
+  1374→                                              <TableBody>
+  1375→                                                {projectMembers.map(member => (
+  1376→                                                  <TableRow key={member.id}>
+  1377→                                                    <TableCell className="text-xs font-medium">
+  1378→                                                      <Input
+  1379→                                                        className="h-7 text-xs border-transparent hover:border-gray-300 focus:border-purple-400 px-1 py-0 min-w-[80px]"
+  1380→                                                        value={member.user.name}
+  1381→                                                        onChange={async (e) => {
+  1382→                                                          const newName = e.target.value
+  1383→                                                          setProjectMembers(prev => prev.map(m => m.id === member.id ? { ...m, user: { ...m.user, name: newName } } : m))
+  1384→                                                          await fetch('/api/users', {
+  1385→                                                            method: 'PUT',
+  1386→                                                            headers: { 'Content-Type': 'application/json' },
+  1387→                                                            body: JSON.stringify({ id: member.user.id, name: newName }),
+  1388→                                                          })
+  1389→                                                        }}
+  1390→                                                      />
+  1391→                                                    </TableCell>
+  1392→                                                    <TableCell className="text-xs">
+  1393→                                                      <Input
+  1394→                                                        className="h-7 text-xs border-transparent hover:border-gray-300 focus:border-purple-400 px-1 py-0 min-w-[120px]"
+  1395→                                                        value={member.user.email}
+  1396→                                                        onChange={async (e) => {
+  1397→                                                          const newEmail = e.target.value
+  1398→                                                          setProjectMembers(prev => prev.map(m => m.id === member.id ? { ...m, user: { ...m.user, email: newEmail } } : m))
+  1399→                                                        }}
+  1400→                                                        onBlur={async (e) => {
+  1401→                                                          const newEmail = e.target.value.trim().toLowerCase()
+  1402→                                                          if (newEmail && newEmail !== member.user.email) {
+  1403→                                                            await fetch('/api/users', {
+  1404→                                                              method: 'PUT',
+  1405→                                                              headers: { 'Content-Type': 'application/json' },
+  1406→                                                              body: JSON.stringify({ id: member.user.id, email: newEmail }),
+  1407→                                                            })
+  1408→                                                          }
+  1409→                                                        }}
+  1410→                                                      />
+  1411→                                                    </TableCell>
+  1412→                                                    <TableCell className="text-xs">
+  1413→                                                      <div className="flex items-center gap-1">
+  1414→                                                        <Input
+  1415→                                                          className="h-7 text-xs border-transparent hover:border-gray-300 focus:border-purple-400 px-1 py-0 min-w-[90px] font-mono"
+  1416→                                                          value={member.user.plainPassword || '••••••'}
+  1417→                                                          onChange={async (e) => {
+  1418→                                                            const newPwd = e.target.value
+  1419→                                                            setProjectMembers(prev => prev.map(m => m.id === member.id ? { ...m, user: { ...m.user, plainPassword: newPwd } } : m))
+  1420→                                                          }}
+  1421→                                                          onBlur={async (e) => {
+  1422→                                                            const newPwd = e.target.value
+  1423→                                                            if (newPwd && newPwd.length >= 6 && newPwd !== '••••••') {
+  1424→                                                              await fetch('/api/users', {
+  1425→                                                                method: 'PUT',
+  1426→                                                                headers: { 'Content-Type': 'application/json' },
+  1427→                                                                body: JSON.stringify({ id: member.user.id, password: newPwd }),
+  1428→                                                              })
+  1429→                                                            }
+  1430→                                                          }}
+  1431→                                                        />
+  1432→                                                        <button
+  1433→                                                          className="text-gray-400 hover:text-purple-600 shrink-0"
+  1434→                                                          title="Restablecer contraseña"
+  1435→                                                          onClick={async () => {
+  1436→                                                            const newPwd = prompt(`Nueva contraseña para ${member.user.name}:`, '123456')
+  1437→                                                            if (!newPwd || newPwd.length < 6) {
+  1438→                                                              if (newPwd !== null) alert('La contraseña debe tener al menos 6 caracteres')
+  1439→                                                              return
+  1440→                                                            }
+  1441→                                                            await fetch('/api/users', {
+  1442→                                                              method: 'PUT',
+  1443→                                                              headers: { 'Content-Type': 'application/json' },
+  1444→                                                              body: JSON.stringify({ id: member.user.id, password: newPwd }),
+  1445→                                                            })
+  1446→                                                            setProjectMembers(prev => prev.map(m => m.id === member.id ? { ...m, user: { ...m.user, plainPassword: newPwd } } : m))
+  1447→                                                            alert(`Contraseña actualizada a: ${newPwd}`)
+  1448→                                                          }}
+  1449→                                                        >
+  1450→                                                          <Key className="h-3.5 w-3.5" />
+  1451→                                                        </button>
+  1452→                                                      </div>
+  1453→                                                    </TableCell>
+  1454→                                                    <TableCell>
+  1455→                                                      <Select value={member.role} onValueChange={async (newRole) => {
+  1456→                                                        setProjectMembers(prev => prev.map(m => m.id === member.id ? { ...m, role: newRole } : m))
+  1457→                                                        // Update member role via API
+  1458→                                                        try {
+  1459→                                                          await fetch(`/api/projects/${selectedProjectId}/members`, {
+  1460→                                                            method: 'PATCH',
+  1461→                                                            headers: { 'Content-Type': 'application/json' },
+  1462→                                                            body: JSON.stringify({ memberId: member.id, role: newRole }),
+  1463→                                                          })
+  1464→                                                        } catch (err) {
+  1465→                                                          console.error('Error updating role:', err)
+  1466→                                                        }
+  1467→                                                      }}>
+  1468→                                                        <SelectTrigger className="h-7 text-[10px] w-[110px]">
+  1469→                                                          <SelectValue />
+  1470→                                                        </SelectTrigger>
+  1471→                                                        <SelectContent>
+  1472→                                                          <SelectItem value="admin">Administrador</SelectItem>
+  1473→                                                          <SelectItem value="gerente">Gerente</SelectItem>
+  1474→                                                          <SelectItem value="responsable">Responsable</SelectItem>
+  1475→                                                          <SelectItem value="empleado">Empleado</SelectItem>
+  1476→                                                          <SelectItem value="auditor">Auditor</SelectItem>
+  1477→                                                        </SelectContent>
+  1478→                                                      </Select>
+  1479→                                                    </TableCell>
+  1480→                                                    <TableCell className="text-xs">
+  1481→                                                      {member.zones.length > 0 ? (
+  1482→                                                        <div className="flex flex-wrap gap-1">
+  1483→                                                          {member.zones.map(z => (
+  1484→                                                            <span key={z.id} className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-gray-50 border text-[10px]">
+  1485→                                                              <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: z.color }} />
+  1486→                                                              {z.name}
+  1487→                                                            </span>
+  1488→                                                          ))}
+  1489→                                                        </div>
+  1490→                                                      ) : <span className="text-muted-foreground">-</span>}
+  1491→                                                    </TableCell>
+  1492→                                                    <TableCell className="text-center">
+  1493→                                                      <div className="flex items-center justify-center gap-1">
+  1494→                                                        <Button variant="outline" size="sm" className="h-7 text-[10px] text-blue-500 border-blue-200 hover:bg-blue-50 hover:text-blue-700 hover:border-blue-300 gap-1" onClick={async () => {
+  1495→                                                          const pwd = member.user.plainPassword || prompt(`Contraseña para enviar a ${member.user.name}:`, '123456')
+  1496→                                                          if (!pwd) return
+  1497→                                                          const finalPwd = pwd.length >= 6 ? pwd : '123456'
+  1498→                                                          setSendingCredentials(member.id)
+  1499→                                                          try {
+  1500→                                                            const res = await fetch(`/api/projects/${selectedProjectId}/send-credentials`, {
+  1501→                                                              method: 'POST',
+  1502→                                                              headers: { 'Content-Type': 'application/json' },
+  1503→                                                              body: JSON.stringify({ memberId: member.id, password: finalPwd }),
+  1504→                                                            })
+  1505→                                                            const data = await res.json()
+  1506→                                                            if (data.success) {
+  1507→                                                              if (data.testingMode) {
+  1508→                                                                alert(`Email enviado en modo de prueba a: ${data.redirectedTo}\n(El email real iría a: ${member.user.email})`)
+  1509→                                                              } else {
+  1510→                                                                alert(`Email de bienvenida enviado a: ${member.user.email}`)
+  1511→                                                              }
+  1512→                                                            } else {
+  1513→                                                              alert(`Error al enviar email: ${data.error}`)
+  1514→                                                            }
+  1515→                                                          } catch (err) {
+  1516→                                                            alert('Error de conexión al enviar credenciales')
+  1517→                                                          } finally {
+  1518→                                                            setSendingCredentials(null)
+  1519→                                                          }
+  1520→                                                        }} title="Enviar credenciales por email" disabled={sendingCredentials === member.id}>
+  1521→                                                          {sendingCredentials === member.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <Mail className="h-3 w-3" />}
+  1522→                                                          Enviar
+  1523→                                                        </Button>
+  1524→                                                        <Button variant="outline" size="sm" className="h-7 text-[10px] text-red-500 border-red-200 hover:bg-red-50 hover:text-red-700 hover:border-red-300 gap-1" onClick={() => handleRemoveMember(member.id, member.user.name)} title="Eliminar miembro del proyecto">
+  1525→                                                          <Trash2 className="h-3 w-3" />
+  1526→                                                        </Button>
+  1527→                                                      </div>
+  1528→                                                    </TableCell>
+  1529→                                                  </TableRow>
+  1530→                                                ))}
+  1531→                                              </TableBody>
+  1532→                                            </Table>
+  1533→                                          </div>
+  1534→                                        </div>
+  1535→                                      )}
+  1536→                                    </div>
+  1537→                                  </>
+  1538→                                )}
+  1539→                              </div>
+  1540→                            </motion.div>
+  1541→                          )}
+  1542→                        </AnimatePresence>
+  1543→                      </CardContent>
+  1544→                    </Card>
+  1545→                  ))}
+  1546→                </div>
+  1547→              )}
+  1548→
+  1549→              {/* ═══ USERS TAB ═══ */}
+  1550→            </motion.div>
+  1551→          )}
+  1552→
+  1553→          {activeTab === 'users' && (
+  1554→            <motion.div key="users" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="space-y-4">
+  1555→              {/* New user button */}
+  1556→              <div className="flex justify-between items-center">
+  1557→                <p className="text-sm text-muted-foreground">
+  1558→                  Gestiona los usuarios del sistema y sus accesos
+  1559→                </p>
+  1560→                <Button
+  1561→                  onClick={() => setShowNewUser(true)}
+  1562→                  className="bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white"
+  1563→                  size="sm"
+  1564→                >
+  1565→                  <UserPlus className="h-4 w-4 mr-1" /> Nuevo Usuario
+  1566→                </Button>
+  1567→              </div>
+  1568→
+  1569→              {/* New user form */}
+  1570→              {showNewUser && (
+  1571→                <Card className="border-purple-200 bg-purple-50/30">
+  1572→                  <CardHeader className="pb-3">
+  1573→                    <CardTitle className="text-sm flex items-center gap-2">
+  1574→                      <UserPlus className="h-4 w-4 text-purple-500" />
+  1575→                      Crear Nuevo Usuario
+  1576→                    </CardTitle>
+  1577→                  </CardHeader>
+  1578→                  <CardContent className="space-y-3">
+  1579→                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+  1580→                      <div className="space-y-1">
+  1581→                        <Label className="text-xs">Nombre completo *</Label>
+  1582→                        <div className="relative">
+  1583→                          <User className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+  1584→                          <Input placeholder="Juan Pérez" value={newUserName} onChange={e => setNewUserName(e.target.value)} className="pl-9 h-9" />
+  1585→                        </div>
+  1586→                      </div>
+  1587→                      <div className="space-y-1">
+  1588→                        <Label className="text-xs">Email *</Label>
+  1589→                        <div className="relative">
+  1590→                          <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+  1591→                          <Input placeholder="email@ejemplo.com" type="email" value={newUserEmail} onChange={e => setNewUserEmail(e.target.value)} className="pl-9 h-9" />
+  1592→                        </div>
+  1593→                      </div>
+  1594→                      <div className="space-y-1">
+  1595→                        <Label className="text-xs">Contraseña *</Label>
+  1596→                        <div className="relative">
+  1597→                          <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+  1598→                          <Input placeholder="Mínimo 6 caracteres" type="password" value={newUserPassword} onChange={e => setNewUserPassword(e.target.value)} className="pl-9 h-9" />
+  1599→                        </div>
+  1600→                      </div>
+
+[showing lines 1201-1600 of 2325; use offset=1601 with limit to continue reading]
