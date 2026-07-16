@@ -12,7 +12,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ success: false, error: 'No autenticado' }, { status: 401 })
     }
 
-    if (user.role !== 'gestor' && user.role !== 'admin') {
+    if (user.role !== 'gestor' && user.role !== 'admin' && user.role !== 'gerente') {
       return NextResponse.json({ success: false, error: 'No autorizado' }, { status: 403 })
     }
 

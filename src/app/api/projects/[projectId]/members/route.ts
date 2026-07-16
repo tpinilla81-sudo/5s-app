@@ -75,11 +75,12 @@ export async function POST(
   try {
     const { projectId } = await params
     const body = await request.json()
-    const { email, name, role, zoneIds, password } = body
+    const { email, name, role, zoneIds, password, userId } = body
 
-    if (!email || !name) {
+    // Either userId (existing user) OR email+name (new user) must be provided
+    if (!userId && (!email || !name)) {
       return NextResponse.json(
-        { error: 'Email y nombre son requeridos' },
+        { error: 'Proporciona userId (usuario existente) o email y nombre (nuevo usuario)' },
         { status: 400 }
       )
     }
@@ -100,25 +101,36 @@ export async function POST(
     }
 
     // Find or create user
-    let user = await db.user.findUnique({
-      where: { email: email.toLowerCase().trim() },
-    })
+    let user = null
     let isNewUser = false
     let rawPassword = password && password.length >= 6 ? password : '123456'
 
-    if (!user) {
-      // Create user with provided password or default
-      const hashedPassword = hashPasswordSync(rawPassword)
-      user = await db.user.create({
-        data: {
-          email: email.toLowerCase().trim(),
-          name: name.trim(),
-          password: hashedPassword,
-          plainPassword: rawPassword,
-          role: memberRole,
-        },
+    if (userId) {
+      // Use existing user by ID
+      user = await db.user.findUnique({ where: { id: userId } })
+      if (!user) {
+        return NextResponse.json({ error: 'Usuario no encontrado' }, { status: 404 })
+      }
+    } else {
+      // Find or create by email
+      user = await db.user.findUnique({
+        where: { email: email.toLowerCase().trim() },
       })
-      isNewUser = true
+
+      if (!user) {
+        // Create user with provided password or default
+        const hashedPassword = hashPasswordSync(rawPassword)
+        user = await db.user.create({
+          data: {
+            email: email.toLowerCase().trim(),
+            name: name.trim(),
+            password: hashedPassword,
+            plainPassword: rawPassword,
+            role: memberRole,
+          },
+        })
+        isNewUser = true
+      }
     }
 
     // Check if already a member

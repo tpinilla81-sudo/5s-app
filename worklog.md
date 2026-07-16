@@ -76,3 +76,24 @@ Stage Summary:
 - Excel export: downloads .xlsx file with all resource data including passwords
 - Prisma schema auto-migrates on Vercel build (prisma db push)
 - App URL: https://5s-app-one.vercel.app
+
+---
+Task ID: 4
+Agent: Main Agent
+Task: Create test company, find bugs, fix them
+
+Work Log:
+- Created test company "Demo Test 5S" with 12 users (admin, gerente, 3 responsables, 6 empleados, 1 auditor)
+- Created project with 3 zones (Almacén, Producción, Oficinas) and assigned members
+- Found and fixed 5 bugs:
+  1. Members API required email+name even with userId → Fixed: now accepts userId
+  2. Zones PATCH only supported boardConfigId → Fixed: now supports responsableId, name, description, color
+  3. Companies POST found inactive companies with same name → Fixed: only checks active
+  4. Gerente couldn't export Excel (403) → Fixed: added gerente to allowed roles
+  5. Zones GET didn't include responsable info → Fixed: added to query
+
+Stage Summary:
+- Test company: Demo Test 5S with full hierarchy working
+- All 5 roles login and access project/zones correctly
+- Admin and Gerente can export Excel
+- Credentials: admin@demo.com/admin123, gerente@demo.com/gerente123, resp.almacen@demo.com/resp123, emp1@demo.com/emp123, auditor@demo.com/audit123

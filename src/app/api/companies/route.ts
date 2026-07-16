@@ -80,10 +80,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: 'El nombre de la empresa es requerido' }, { status: 400 })
     }
 
-    // Check for duplicate name
-    const existing = await db.company.findUnique({ where: { name: name.trim() } })
+    // Check for duplicate name (only among active companies)
+    const existing = await db.company.findFirst({ where: { name: name.trim(), active: true } })
     if (existing) {
-      return NextResponse.json({ success: false, error: 'Ya existe una empresa con ese nombre' }, { status: 400 })
+      return NextResponse.json({ success: false, error: 'Ya existe una empresa activa con ese nombre' }, { status: 400 })
     }
 
     const company = await db.company.create({

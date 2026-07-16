@@ -16,6 +16,7 @@ export async function GET(
           select: { memberZones: true },
         },
         boardConfig: { select: { id: true, name: true } },
+        responsable: { select: { id: true, name: true, email: true } },
       },
       orderBy: { createdAt: 'asc' },
     })
@@ -28,6 +29,8 @@ export async function GET(
       projectId: zone.projectId,
       boardConfigId: zone.boardConfigId,
       boardConfig: zone.boardConfig,
+      responsableId: zone.responsableId,
+      responsable: zone.responsable,
       memberCount: zone._count.memberZones,
     }))
 
@@ -118,7 +121,7 @@ export async function POST(
   }
 }
 
-// PATCH /api/projects/[projectId]/zones - Update a zone's board config
+// PATCH /api/projects/[projectId]/zones - Update a zone (board config, responsable, etc.)
 export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ projectId: string }> }
@@ -126,7 +129,7 @@ export async function PATCH(
   try {
     const { projectId } = await params
     const body = await request.json()
-    const { zoneId, boardConfigId } = body
+    const { zoneId, boardConfigId, responsableId, name, description, color } = body
 
     if (!zoneId) {
       return NextResponse.json(
@@ -135,11 +138,19 @@ export async function PATCH(
       )
     }
 
+    const updateData: any = {}
+    if (boardConfigId !== undefined) updateData.boardConfigId = boardConfigId || null
+    if (responsableId !== undefined) updateData.responsableId = responsableId || null
+    if (name !== undefined) updateData.name = name.trim()
+    if (description !== undefined) updateData.description = description?.trim() || null
+    if (color !== undefined) updateData.color = color
+
     const zone = await db.zone.update({
       where: { id: zoneId },
-      data: { boardConfigId: boardConfigId || null },
+      data: updateData,
       include: {
         boardConfig: { select: { id: true, name: true } },
+        responsable: { select: { id: true, name: true, email: true } },
       },
     })
 
