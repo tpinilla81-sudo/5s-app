@@ -34,6 +34,7 @@ interface EmailOptions {
 const DEFAULT_FROM = '5S App <onboarding@resend.dev>'
 
 // The owner email for Resend's testing mode (free tier can only send to this address)
+// This MUST match the email registered on the Resend account
 const RESEND_OWNER_EMAIL = 'tpinilla81@gmail.com'
 
 /**
