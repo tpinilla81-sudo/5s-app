@@ -239,3 +239,35 @@ Stage Summary:
 - Fallback a AUDIT_CHECKLISTS cuando no hay plantilla configurada
 - S2 checklist tiene 6 secciones con 28 items (constantes) como fallback robusto
 - Producción: https://5s-app-one.vercel.app
+
+---
+Task ID: 4
+Agent: Main Agent
+Task: Test and fix S3, S4, S5 bugs + update user manual
+
+Work Log:
+- Analyzed full codebase for S3/S4/S5 bugs using code review agent
+- Identified 19 bugs across CRITICAL/HIGH/MEDIUM/LOW severity
+- Fixed C1: Wired CleaningPlanPanel into S3 InventarioModal (was orphaned component)
+- Fixed C2: Wired BibliotecaEstandaresView into S4 InventarioModal (was orphaned component)
+- Fixed C3: Added sStep validation in exam API to prevent mismatched exam templates
+- Fixed C4: Replaced estimatedValue → price in gerente stats API and inventory API (field didn't exist in Prisma schema)
+- Fixed H1: S5 step 3 now opens inventario (discipline practices) instead of actionplan
+- Fixed H3: Added S-specific prerequisites for S3 step 3 (cleaning plan) and S4 step 3 (standards)
+- Fixed H4: Added employeeProgress counting in gerente stats API (was only counting zone-level Progress)
+- Fixed H5: Added auto-notification trigger after step completion in progress/step API
+- Fixed M4: Already handled in current code (zoneId included in audit submissions)
+- Fixed M5: Employee progress dots now shown for Step 4 (autoevaluación) in addition to Step 1
+- Fixed NaN bug: RadarChart5S was referencing target.min/target.max which don't exist in AuditTarget model; now derives min from notaMinima and max=100
+- Fixed gerente stats Prisma query: Zone has memberZones not members; updated all references
+- Generated updated user manual (Manual_Usuario_5S.pdf) — 26 pages, covers all 5S phases with S3/S4/S5 specific features
+- Deployed to production: https://5s-app-one.vercel.app
+
+Stage Summary:
+- 10+ bugs fixed across S3/S4/S5 and cross-cutting features
+- S3 now has functional Plan de Limpieza e Inspección
+- S4 now has functional Biblioteca de Estándares
+- Gerente dashboard shows correct values (no NaN, correct dinero parado)
+- Auto-notifications sent to auditors when steps 1-4 completed
+- Employee progress visible for both step 1 and step 4
+- Updated user manual (26 pages, Spanish, PDF)

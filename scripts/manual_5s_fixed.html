@@ -1,0 +1,1412 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=720">
+<title>Manual de Usuario — Aplicación 5S Digital</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700;900&family=Noto+Serif+SC:wght@400;700;900&display=swap" rel="stylesheet">
+<style>
+@page {
+    size: 720px 1020px;
+    margin: 0;
+}
+:root {
+    --c-bg: #0a1628;
+    --c-content-bg: #f4f6f9;
+    --c-text: #2c3e50;
+    --c-accent: #1a73e8;
+    --c-accent2: #ff6b35;
+    --c-accent3: #00b894;
+    --c-dark: #0a1628;
+    --c-light: #ffffff;
+    --c-muted: #7f8c8d;
+    --c-border: #dce1e8;
+    --c-s1: #e74c3c;
+    --c-s2: #f39c12;
+    --c-s3: #3498db;
+    --c-s4: #2ecc71;
+    --c-s5: #9b59b6;
+}
+html, body {
+    margin: 0;
+    padding: 0;
+    width: 720px;
+    background: var(--c-dark);
+    color: var(--c-text);
+    font-family: 'Noto Sans SC', sans-serif;
+    font-size: 13px;
+    line-height: 1.6;
+}
+@media screen {
+    html {
+        height: auto;
+        display: flex;
+        justify-content: center;
+        background: #222;
+    }
+    body {
+        transform-origin: top center;
+        margin: 20px auto;
+    }
+}
+
+/* COVER */
+.cover {
+    width: 720px;
+    height: 1020px;
+    box-sizing: border-box;
+    break-after: page;
+    overflow: hidden;
+    background: linear-gradient(160deg, #0a1628 0%, #1a2744 40%, #0d1f3c 70%, #0a1628 100%);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    position: relative;
+    padding: 60px;
+}
+.cover-circle-1 {
+    position: absolute;
+    top: 0px;
+    right: 0px;
+    width: 260px;
+    height: 260px;
+    border-radius: 50%;
+    border: 2px solid rgba(26, 115, 232, 0.15);
+}
+.cover-circle-2 {
+    position: absolute;
+    bottom: 140px;
+    left: 0px;
+    width: 180px;
+    height: 180px;
+    border-radius: 50%;
+    border: 2px solid rgba(255, 107, 53, 0.12);
+}
+.cover-line-1 {
+    position: absolute;
+    top: 180px;
+    left: 40px;
+    width: 120px;
+    height: 3px;
+    background: linear-gradient(90deg, var(--c-accent), transparent);
+}
+.cover-line-2 {
+    position: absolute;
+    bottom: 180px;
+    right: 40px;
+    width: 120px;
+    height: 3px;
+    background: linear-gradient(90deg, transparent, var(--c-accent2));
+}
+.cover-badge {
+    display: inline-block;
+    background: rgba(26, 115, 232, 0.15);
+    border: 1px solid rgba(26, 115, 232, 0.3);
+    color: #64b5f6;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    padding: 10px 28px;
+    border-radius: 4px;
+    margin-bottom: 40px;
+}
+.cover-title {
+    color: #ffffff;
+    font-size: 36px;
+    font-weight: 900;
+    text-align: center;
+    line-height: 1.3;
+    margin-bottom: 24px;
+    max-width: 580px;
+}
+.cover-subtitle {
+    color: #90a4ae;
+    font-size: 14px;
+    font-weight: 400;
+    text-align: center;
+    line-height: 1.6;
+    max-width: 500px;
+    margin-bottom: 50px;
+}
+.cover-5s-icons {
+    display: flex;
+    gap: 16px;
+    margin-bottom: 50px;
+}
+.cover-s-icon {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 900;
+    font-size: 16px;
+    color: #fff;
+}
+.cover-s1 { background: var(--c-s1); }
+.cover-s2 { background: var(--c-s2); }
+.cover-s3 { background: var(--c-s3); }
+.cover-s4 { background: var(--c-s4); }
+.cover-s5 { background: var(--c-s5); }
+.cover-footer {
+    position: absolute;
+    bottom: 40px;
+    left: 60px;
+    right: 60px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    color: #607d8b;
+    font-size: 11px;
+}
+
+/* MAIN CONTENT */
+.main-content {
+    background: var(--c-content-bg);
+    padding: 50px 60px 40px 60px;
+    min-height: auto;
+}
+.chapter-header {
+    break-after: avoid;
+    break-inside: avoid;
+    margin-top: 28px;
+}
+.section-tag {
+    display: inline-block;
+    background: var(--c-accent);
+    color: #fff;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    padding: 4px 14px;
+    border-radius: 3px;
+    margin-bottom: 8px;
+}
+.section-title {
+    color: var(--c-dark);
+    font-size: 24px;
+    font-weight: 900;
+    line-height: 1.25;
+    margin-bottom: 6px;
+}
+.divider {
+    width: 60px;
+    height: 3px;
+    background: var(--c-accent);
+    border-radius: 2px;
+    margin-bottom: 18px;
+}
+.body-text {
+    color: var(--c-text);
+    font-size: 13px;
+    line-height: 1.7;
+    margin-bottom: 12px;
+    text-align: justify;
+}
+.body-text strong {
+    color: var(--c-dark);
+    font-weight: 700;
+}
+
+/* CARDS */
+.card {
+    break-inside: avoid;
+    background: var(--c-light);
+    border: 1px solid var(--c-border);
+    border-radius: 8px;
+    padding: 16px 18px;
+    margin-bottom: 14px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+}
+.card-title {
+    font-weight: 700;
+    font-size: 14px;
+    color: var(--c-dark);
+    margin-bottom: 6px;
+}
+.card-text {
+    font-size: 12.5px;
+    line-height: 1.6;
+    color: #4a5568;
+}
+.card-accent {
+    border-left: 4px solid var(--c-accent);
+}
+.card-accent2 {
+    border-left: 4px solid var(--c-accent2);
+}
+.card-accent3 {
+    border-left: 4px solid var(--c-accent3);
+}
+
+/* STEP CARDS */
+.step-card {
+    break-inside: avoid;
+    background: var(--c-light);
+    border: 1px solid var(--c-border);
+    border-radius: 8px;
+    padding: 14px 18px;
+    margin-bottom: 12px;
+    display: flex;
+    gap: 14px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+}
+.step-number {
+    flex-shrink: 0;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 900;
+    font-size: 14px;
+    color: #fff;
+    background: var(--c-accent);
+}
+.step-body {
+    flex: 1;
+}
+.step-title {
+    font-weight: 700;
+    font-size: 13px;
+    color: var(--c-dark);
+    margin-bottom: 4px;
+}
+.step-desc {
+    font-size: 12px;
+    line-height: 1.55;
+    color: #4a5568;
+}
+
+/* S-SPECIFIC COLORS */
+.s1-tag { background: var(--c-s1); }
+.s2-tag { background: var(--c-s2); }
+.s3-tag { background: var(--c-s3); }
+.s4-tag { background: var(--c-s4); }
+.s5-tag { background: var(--c-s5); }
+.s1-border { border-left: 4px solid var(--c-s1); }
+.s2-border { border-left: 4px solid var(--c-s2); }
+.s3-border { border-left: 4px solid var(--c-s3); }
+.s4-border { border-left: 4px solid var(--c-s4); }
+.s5-border { border-left: 4px solid var(--c-s5); }
+.s1-step { background: var(--c-s1); }
+.s2-step { background: var(--c-s2); }
+.s3-step { background: var(--c-s3); }
+.s4-step { background: var(--c-s4); }
+.s5-step { background: var(--c-s5); }
+
+/* SUBSECTION */
+.subsection-title {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--c-dark);
+    margin-top: 18px;
+    margin-bottom: 8px;
+    padding-left: 10px;
+    border-left: 3px solid var(--c-accent);
+}
+
+/* TOC */
+.toc-item {
+    break-inside: avoid;
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    padding: 6px 0;
+    border-bottom: 1px dotted #cfd8dc;
+    font-size: 13px;
+}
+.toc-item-main {
+    font-weight: 700;
+    color: var(--c-dark);
+}
+.toc-item-sub {
+    padding-left: 20px;
+    color: #546e7a;
+    font-weight: 400;
+}
+
+/* TABLE */
+.mini-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 11.5px;
+    margin-bottom: 12px;
+}
+.mini-table th {
+    background: var(--c-dark);
+    color: #fff;
+    padding: 8px 10px;
+    text-align: left;
+    font-weight: 600;
+    font-size: 11px;
+}
+.mini-table td {
+    padding: 7px 10px;
+    border-bottom: 1px solid var(--c-border);
+    color: #4a5568;
+}
+.mini-table tr:nth-child(even) td {
+    background: #f8f9fb;
+}
+
+/* CALLOUT */
+.callout {
+    break-inside: avoid;
+    background: #e8f4fd;
+    border-left: 4px solid var(--c-accent);
+    border-radius: 4px;
+    padding: 12px 16px;
+    margin-bottom: 14px;
+    font-size: 12.5px;
+    line-height: 1.55;
+    color: #1a3a5c;
+}
+.callout-warning {
+    background: #fff8e1;
+    border-left-color: var(--c-accent2);
+    color: #5d4037;
+}
+.callout-success {
+    background: #e8f5e9;
+    border-left-color: var(--c-accent3);
+    color: #1b5e20;
+}
+
+/* FLOW */
+.flow-row {
+    break-inside: avoid;
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    margin-bottom: 12px;
+}
+.flow-item {
+    flex: 1;
+    background: var(--c-light);
+    border: 1px solid var(--c-border);
+    border-radius: 6px;
+    padding: 10px 12px;
+    text-align: center;
+    font-size: 11px;
+    font-weight: 600;
+}
+.flow-arrow {
+    font-size: 16px;
+    color: var(--c-accent);
+    flex-shrink: 0;
+}
+
+/* S HEADER BAR */
+.s-header-bar {
+    break-inside: avoid;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 14px 18px;
+    border-radius: 8px;
+    margin-bottom: 14px;
+    color: #fff;
+}
+.s-header-bar h3 {
+    margin: 0;
+    font-size: 20px;
+    font-weight: 900;
+}
+.s-header-bar .s-jp {
+    font-size: 13px;
+    font-weight: 400;
+    opacity: 0.85;
+}
+.s1-bar { background: linear-gradient(135deg, var(--c-s1), #c0392b); }
+.s2-bar { background: linear-gradient(135deg, var(--c-s2), #e67e22); }
+.s3-bar { background: linear-gradient(135deg, var(--c-s3), #2980b9); }
+.s4-bar { background: linear-gradient(135deg, var(--c-s4), #27ae60); }
+.s5-bar { background: linear-gradient(135deg, var(--c-s5), #8e44ad); }
+
+/* FAQ */
+.faq-item {
+    break-inside: avoid;
+    margin-bottom: 14px;
+}
+.faq-q {
+    font-weight: 700;
+    color: var(--c-dark);
+    font-size: 13px;
+    margin-bottom: 4px;
+}
+.faq-a {
+    font-size: 12.5px;
+    line-height: 1.6;
+    color: #4a5568;
+    padding-left: 14px;
+    border-left: 3px solid var(--c-accent3);
+}
+
+/* ENDING */
+.ending {
+    width: 720px;
+    height: 1020px;
+    box-sizing: border-box;
+    break-before: page;
+    overflow: hidden;
+    background: linear-gradient(160deg, #0a1628 0%, #1a2744 50%, #0a1628 100%);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    padding: 60px;
+    position: relative;
+}
+.ending-circle {
+    position: absolute;
+    top: 100px;
+    right: 60px;
+    width: 180px;
+    height: 180px;
+    border-radius: 50%;
+    border: 2px solid rgba(26, 115, 232, 0.12);
+}
+.ending-text {
+    color: #ffffff;
+    font-size: 28px;
+    font-weight: 900;
+    text-align: center;
+    line-height: 1.3;
+    margin-bottom: 20px;
+}
+.ending-sub {
+    color: #78909c;
+    font-size: 14px;
+    text-align: center;
+    line-height: 1.6;
+    max-width: 460px;
+}
+
+ul.compact {
+    margin: 6px 0 12px 0;
+    padding-left: 20px;
+}
+ul.compact li {
+    font-size: 12.5px;
+    line-height: 1.55;
+    color: #4a5568;
+    margin-bottom: 3px;
+}
+</style>
+</head>
+<body>
+
+<!-- ═══════════════ PORTADA ═══════════════ -->
+<div class="cover">
+    <div class="cover-circle-1"></div>
+    <div class="cover-circle-2"></div>
+    <div class="cover-line-1"></div>
+    <div class="cover-line-2"></div>
+    <div class="cover-badge">Metodología 5S</div>
+    <div class="cover-5s-icons">
+        <div class="cover-s-icon cover-s1">S1</div>
+        <div class="cover-s-icon cover-s2">S2</div>
+        <div class="cover-s-icon cover-s3">S3</div>
+        <div class="cover-s-icon cover-s4">S4</div>
+        <div class="cover-s-icon cover-s5">S5</div>
+    </div>
+    <div class="cover-title">Manual de Usuario<br>Aplicación 5S Digital</div>
+    <div class="cover-subtitle">Guía completa para la implementación y seguimiento de la metodología 5S en su organización</div>
+    <div class="cover-footer">
+        <span>Versión 2.0</span>
+        <span>Julio 2026</span>
+    </div>
+</div>
+
+<!-- ═══════════════ CONTENIDO PRINCIPAL ═══════════════ -->
+<div class="main-content">
+
+<!-- ═══════════════ ÍNDICE ═══════════════ -->
+<div class="chapter-header">
+    <div class="section-tag">Contenido</div>
+    <div class="section-title">Índice</div>
+    <div class="divider"></div>
+</div>
+
+<div class="toc-item toc-item-main"><span>1. Introducción</span></div>
+<div class="toc-item toc-item-sub"><span>1.1 Qué es la metodología 5S</span></div>
+<div class="toc-item toc-item-sub"><span>1.2 Beneficios de la implementación 5S</span></div>
+<div class="toc-item toc-item-sub"><span>1.3 Cómo funciona la aplicación</span></div>
+
+<div class="toc-item toc-item-main"><span>2. Acceso y Roles</span></div>
+<div class="toc-item toc-item-sub"><span>2.1 Roles del sistema</span></div>
+<div class="toc-item toc-item-sub"><span>2.2 Permisos por rol</span></div>
+<div class="toc-item toc-item-sub"><span>2.3 Cómo iniciar sesión</span></div>
+<div class="toc-item toc-item-sub"><span>2.4 Navegación general</span></div>
+
+<div class="toc-item toc-item-main"><span>3. Tablero 5S (Board)</span></div>
+<div class="toc-item toc-item-sub"><span>3.1 Vista del tablero pentagonal</span></div>
+<div class="toc-item toc-item-sub"><span>3.2 Indicadores de progreso por zona</span></div>
+<div class="toc-item toc-item-sub"><span>3.3 Quesitos e insignias de completitud</span></div>
+<div class="toc-item toc-item-sub"><span>3.4 Selección de zona y acceso rápido</span></div>
+
+<div class="toc-item toc-item-main"><span>4. Las 5S — Recorrido Completo</span></div>
+<div class="toc-item toc-item-sub"><span>4.1 S1 — Clasificar (Seiri)</span></div>
+<div class="toc-item toc-item-sub"><span>4.2 S2 — Ordenar (Seiton)</span></div>
+<div class="toc-item toc-item-sub"><span>4.3 S3 — Limpiar (Seiso)</span></div>
+<div class="toc-item toc-item-sub"><span>4.4 S4 — Estandarizar (Seiketsu)</span></div>
+<div class="toc-item toc-item-sub"><span>4.5 S5 — Mantener (Shitsuke)</span></div>
+
+<div class="toc-item toc-item-main"><span>5. Sistema de Gating</span></div>
+<div class="toc-item toc-item-main"><span>6. Plantillas y Tablero</span></div>
+<div class="toc-item toc-item-main"><span>7. Plan de Acción</span></div>
+<div class="toc-item toc-item-main"><span>8. Gerencia y Seguimiento</span></div>
+<div class="toc-item toc-item-main"><span>9. Mejora Continua (PDCA)</span></div>
+<div class="toc-item toc-item-main"><span>10. Preguntas Frecuentes</span></div>
+
+
+<!-- ═══════════════ CAPÍTULO 1: INTRODUCCIÓN ═══════════════ -->
+<div class="chapter-header">
+    <div class="section-tag">Capítulo 1</div>
+    <div class="section-title">Introducción</div>
+    <div class="divider"></div>
+</div>
+
+<div class="subsection-title">1.1 Qué es la metodología 5S</div>
+
+<div class="body-text">
+La metodología 5S es un sistema de organización del lugar de trabajo desarrollado en Japón como parte del Sistema de Producción Toyota (TPS). Su nombre proviene de cinco palabras japonesas que comienzan con la letra «S»: <strong>Seiri</strong> (Clasificar), <strong>Seiton</strong> (Ordenar), <strong>Seiso</strong> (Limpiar), <strong>Seiketsu</strong> (Estandarizar) y <strong>Shitsuke</strong> (Mantener). Cada una de estas etapas representa un principio fundamental para crear y sostener un entorno de trabajo eficiente, seguro y productivo.
+</div>
+<div class="body-text">
+El objetivo central de las 5S es eliminar lo innecesario, organizar lo necesario, mantener la limpieza del área de trabajo, establecer normas visuales y procedimientos estándar, y fomentar la disciplina para sostener las mejoras en el tiempo. No se trata de una simple actividad de limpieza u orden, sino de una filosofía de mejora continua que involucra a todos los miembros de la organización, desde la gerencia hasta los operarios de línea. Cuando se implementa correctamente, las 5S transforman la cultura organizacional y sientan las bases para metodologías más avanzadas como Lean Manufacturing, Six Sigma o TPM (Mantenimiento Productivo Total).
+</div>
+
+<div class="subsection-title">1.2 Beneficios de la implementación 5S</div>
+
+<div class="body-text">
+La implementación sistemática de la metodología 5S proporciona beneficios tangibles e intangibles que impactan directamente en la competitividad de la organización. Entre los beneficios más relevantes se encuentran los siguientes:
+</div>
+
+<div class="card card-accent">
+    <div class="card-title">Beneficios operativos</div>
+    <div class="card-text">
+        <ul class="compact">
+            <li><strong>Reducción de tiempos de búsqueda:</strong> Al tener cada objeto en su lugar asignado y claramente identificado, el tiempo promedio para localizar herramientas, documentos o materiales se reduce hasta en un 80%.</li>
+            <li><strong>Disminución de accidentes:</strong> Un entorno ordenado y limpio reduce significativamente los riesgos laborales, eliminando obstáculos, derrames y objetos fuera de lugar.</li>
+            <li><strong>Aumento de la productividad:</strong> La eliminación de desperdicios (muda) permite que los procesos fluyan sin interrupciones innecesarias.</li>
+            <li><strong>Reducción de inventario innecesario:</strong> La etapa de Clasificar identifica y elimina materiales obsoletos, liberando espacio y capital inmovilizado.</li>
+        </ul>
+    </div>
+</div>
+
+<div class="card card-accent3">
+    <div class="card-title">Beneficios culturales y organizacionales</div>
+    <div class="card-text">
+        <ul class="compact">
+            <li><strong>Mayor compromiso del personal:</strong> Los empleados que participan activamente en la organización de su espacio de trabajo desarrollan un sentido de pertenencia y responsabilidad.</li>
+            <li><strong>Mejora continua integrada:</strong> Las 5S establecen la disciplina necesaria para que la mejora continua no sea un evento aislado sino una práctica diaria.</li>
+            <li><strong>Comunicación visual efectiva:</strong> Los estándares visuales permiten que cualquier persona entienda el estado del proceso de un solo vistazo.</li>
+        </ul>
+    </div>
+</div>
+
+<div class="subsection-title">1.3 Cómo funciona la aplicación</div>
+
+<div class="body-text">
+La Aplicación 5S Digital es una plataforma integral que digitaliza y automatiza todo el proceso de implementación de la metodología 5S. La aplicación guía a los usuarios paso a paso a través de cada una de las cinco S, asegurando que se cumplan todos los requisitos antes de avanzar a la siguiente etapa mediante un sistema de <strong>gating</strong> (control de acceso progresivo). Esto garantiza que la implementación sea rigurosa, trazable y consistente en todas las zonas de la organización.
+</div>
+<div class="body-text">
+Cada una de las cinco S sigue una estructura de cinco pasos: <strong>Formación y Examen</strong>, <strong>Fotografías</strong>, <strong>Inventario</strong>, <strong>Autoevaluación</strong> y <strong>Auditoría Externa</strong>. La formación asegura que cada miembro comprenda los conceptos antes de ejecutar; las fotografías documentan el estado antes y después; el inventario captura datos específicos de cada S; la autoevaluación permite la reflexión interna; y la auditoría externa valida objetivamente los resultados. El sistema notifica automáticamente a los auditores cuando es necesario, genera planes de acción a partir de las disfunciones detectadas y ofrece un tablero visual con indicadores en tiempo real.
+</div>
+
+
+<!-- ═══════════════ CAPÍTULO 2: ACCESO Y ROLES ═══════════════ -->
+<div class="chapter-header">
+    <div class="section-tag">Capítulo 2</div>
+    <div class="section-title">Acceso y Roles</div>
+    <div class="divider"></div>
+</div>
+
+<div class="subsection-title">2.1 Roles del sistema</div>
+
+<div class="body-text">
+La aplicación define seis roles diferenciados, cada uno con responsabilidades y permisos específicos que aseguran la correcta gestión y ejecución de la metodología 5S en todos los niveles de la organización. Esta segmentación permite delegar funciones de manera clara y controlar el acceso a las distintas funcionalidades del sistema.
+</div>
+
+<div class="card s1-border">
+    <div class="card-title">Gestor</div>
+    <div class="card-text">El Gestor es el administrador global de la plataforma. Tiene acceso completo a la configuración del sistema, la gestión de plantillas, la creación de tableros y la asignación de zonas. Es el único rol que puede crear, modificar y eliminar plantillas de formación, exámenes, inventarios, autoevaluaciones y auditorías. También gestiona la configuración del tablero (BoardConfiguration) y asigna qué plantilla corresponde a cada posición S×Paso.</div>
+</div>
+<div class="card s2-border">
+    <div class="card-title">Administrador</div>
+    <div class="card-text">El Administrador supervisa la operación diaria de la aplicación en una o varias zonas. Puede gestionar usuarios, asignar roles, revisar el estado de avance de las 5S y resolver incidencias. Tiene permisos para ver todos los datos de las zonas bajo su responsabilidad y puede reasignar auditores o responsables cuando sea necesario.</div>
+</div>
+<div class="card s3-border">
+    <div class="card-title">Gerente</div>
+    <div class="card-text">El Gerente accede al Panel de Gerencia, donde visualiza indicadores agregados de progreso por zona y por proyecto. Puede consultar resultados de auditorías, el dinero parado en inventario de innecesarios, las tendencias de autoevaluación y el estado del plan de acción. No puede modificar datos operativos, pero sí generar informes y solicitar auditorías especiales.</div>
+</div>
+<div class="card s4-border">
+    <div class="card-title">Responsable</div>
+    <div class="card-text">El Responsable de zona es quien lidera la implementación 5S en un área específica. Coordina al equipo de trabajo, asegura que se cumplan los plazos, completa los inventarios y gestiona el plan de acción derivado de las disfunciones. Es el encargado de subir las fotografías, completar los inventarios y realizar las autoevaluaciones de su zona.</div>
+</div>
+<div class="card s5-border">
+    <div class="card-title">Auditor</div>
+    <div class="card-text">El Auditor es un rol independiente que valida objetivamente los resultados de cada S. Recibe notificaciones automáticas cuando un equipo completa los pasos 1 a 4 y está listo para auditoría. Realiza la evaluación externa, registra las no conformidades (NOK) y verifica las acciones correctivas. Un auditor nunca puede auditar su propia zona para garantizar la imparcialidad.</div>
+</div>
+<div class="card card-accent">
+    <div class="card-title">Empleado</div>
+    <div class="card-text">El Empleado es el usuario base del sistema. Participa en la formación, realiza los exámenes de conocimiento, ejecuta las actividades de clasificación, orden, limpieza y estandarización bajo la dirección del Responsable. Puede acceder a la información de su zona, completar sus exámenes individuales y consultar los estándares implantados.</div>
+</div>
+
+<div class="subsection-title">2.2 Permisos por rol</div>
+
+<div class="body-text">
+La siguiente tabla resume los permisos principales asignados a cada rol dentro del sistema. Cada permiso ha sido diseñado para mantener la integridad del proceso 5S y evitar modificaciones no autorizadas.
+</div>
+
+<table class="mini-table">
+    <thead>
+        <tr><th>Funcionalidad</th><th>Gestor</th><th>Admin</th><th>Gerente</th><th>Responsable</th><th>Auditor</th><th>Empleado</th></tr>
+    </thead>
+    <tbody>
+        <tr><td>Gestionar plantillas</td><td>Sí</td><td>No</td><td>No</td><td>No</td><td>No</td><td>No</td></tr>
+        <tr><td>Configurar tablero</td><td>Sí</td><td>No</td><td>No</td><td>No</td><td>No</td><td>No</td></tr>
+        <tr><td>Gestionar usuarios</td><td>Sí</td><td>Sí</td><td>No</td><td>No</td><td>No</td><td>No</td></tr>
+        <tr><td>Ver panel gerencia</td><td>Sí</td><td>Sí</td><td>Sí</td><td>No</td><td>No</td><td>No</td></tr>
+        <tr><td>Completar inventarios</td><td>Sí</td><td>Sí</td><td>No</td><td>Sí</td><td>No</td><td>No</td></tr>
+        <tr><td>Realizar auditoría</td><td>Sí</td><td>Sí</td><td>No</td><td>No</td><td>Sí</td><td>No</td></tr>
+        <tr><td>Realizar formación/examen</td><td>Sí</td><td>Sí</td><td>No</td><td>Sí</td><td>Sí</td><td>Sí</td></tr>
+        <tr><td>Subir fotografías</td><td>Sí</td><td>Sí</td><td>No</td><td>Sí</td><td>No</td><td>No</td></tr>
+        <tr><td>Gestionar plan de acción</td><td>Sí</td><td>Sí</td><td>Ver</td><td>Sí</td><td>Ver</td><td>No</td></tr>
+    </tbody>
+</table>
+
+<div class="subsection-title">2.3 Cómo iniciar sesión</div>
+
+<div class="body-text">
+Para acceder a la aplicación, el usuario debe dirigirse a la URL proporcionada por el administrador del sistema y utilizar sus credenciales corporativas. El proceso de inicio de sesión es el siguiente:
+</div>
+
+<div class="step-card">
+    <div class="step-number">1</div>
+    <div class="step-body">
+        <div class="step-title">Abrir el navegador</div>
+        <div class="step-desc">Acceda a la URL de la aplicación (por ejemplo, https://5s.suempresa.com) desde cualquier navegador moderno: Chrome, Firefox, Edge o Safari. La interfaz es responsive y se adapta a dispositivos de escritorio, tablets y teléfonos móviles.</div>
+    </div>
+</div>
+<div class="step-card">
+    <div class="step-number">2</div>
+    <div class="step-body">
+        <div class="step-title">Ingresar credenciales</div>
+        <div class="step-desc">Introduzca su correo electrónico corporativo y su contraseña. Si es su primer acceso, utilice la contraseña temporal proporcionada por el administrador. El sistema le solicitará cambiarla inmediatamente por razones de seguridad.</div>
+    </div>
+</div>
+<div class="step-card">
+    <div class="step-number">3</div>
+    <div class="step-body">
+        <div class="step-title">Seleccionar zona (si aplica)</div>
+        <div class="step-desc">Si tiene asignación a más de una zona, el sistema le presentará un selector de zona al iniciar sesión. Seleccione la zona en la que desea trabajar. Podrá cambiar de zona en cualquier momento desde el menú de navegación.</div>
+    </div>
+</div>
+
+<div class="subsection-title">2.4 Navegación general</div>
+
+<div class="body-text">
+La aplicación cuenta con una barra de navegación lateral (en escritorio) o inferior (en móvil) que permite acceder a todas las secciones principales: <strong>Tablero 5S</strong>, <strong>Plan de Acción</strong>, <strong>PDCA</strong>, <strong>Gerencia</strong> (si el rol lo permite) y <strong>Configuración</strong>. La navegación está diseñada para ser intuitiva y contextual: las opciones disponibles se adaptan según el rol del usuario y el estado de implementación de la zona seleccionada. Las notificaciones pendientes se muestran con un indicador en el icono de campana, permitiendo un acceso rápido a las tareas que requieren atención inmediata.
+</div>
+
+
+<!-- ═══════════════ CAPÍTULO 3: TABLERO 5S ═══════════════ -->
+<div class="chapter-header">
+    <div class="section-tag">Capítulo 3</div>
+    <div class="section-title">Tablero 5S (Board)</div>
+    <div class="divider"></div>
+</div>
+
+<div class="subsection-title">3.1 Vista del tablero pentagonal</div>
+
+<div class="body-text">
+El Tablero 5S es la pantalla principal de la aplicación y constituye el centro neurálgico desde donde se gestiona toda la implementación. Su diseño se basa en una representación <strong>pentagonal</strong> donde cada vértice del pentágono corresponde a una de las cinco S: Clasificar, Ordenar, Limpiar, Estandarizar y Mantener. Esta disposición visual permite comprender de un vistazo el estado global de la implementación y la relación entre las diferentes etapas.
+</div>
+<div class="body-text">
+Cada sección del pentágono muestra un código de colores que indica su estado: gris para las S que aún no han sido desbloqueadas, el color correspondiente a la S cuando está en progreso, y un tono más intenso con una insignia de completitud (quesito) cuando la S ha sido completada en su totalidad. Al hacer clic en cualquiera de las S, se despliega el detalle de sus cinco pasos (Formación, Fotografías, Inventario, Autoevaluación, Auditoría) con indicadores individuales de progreso.
+</div>
+
+<div class="subsection-title">3.2 Indicadores de progreso por zona</div>
+
+<div class="body-text">
+Cada zona de la organización tiene su propio tablero con indicadores de progreso independientes. El sistema calcula automáticamente el porcentaje de avance de cada S en función de los pasos completados y las calificaciones obtenidas. Los indicadores incluyen: el <strong>porcentaje de avance global</strong> de la zona (promedio ponderado de las cinco S), el <strong>porcentaje individual de cada S</strong>, el <strong>estado de cada paso</strong> (pendiente, en progreso, completado, reprobado) y las <strong>calificaciones</strong> obtenidas en exámenes, autoevaluaciones y auditorías.
+</div>
+<div class="body-text">
+El tablero también muestra alertas visuales cuando un paso ha sido reprobado (calificación por debajo del mínimo requerido) y notificaciones cuando una auditoría está pendiente de ser realizada. Los indicadores se actualizan en tiempo real a medida que los usuarios completan actividades, lo que permite una visión actualizada del estado de implementación en cualquier momento.
+</div>
+
+<div class="subsection-title">3.3 Quesitos e insignias de completitud</div>
+
+<div class="body-text">
+Los <strong>quesitos</strong> son insignias visuales que aparecen en el tablero pentagonal cuando una S completa satisfactoriamente sus cinco pasos. Cada quesito representa un logro y funciona como un mecanismo de motivación y reconocimiento. Para obtener el quesito de una S, es necesario haber aprobado la formación con nota mínima del 80%, haber subido las fotografías requeridas, haber completado el inventario correspondiente, haber aprobado la autoevaluación con nota mínima del 70% y haber superado la auditoría externa con nota mínima del 75%.
+</div>
+<div class="body-text">
+Cuando las cinco S obtienen su quesito, el tablero muestra una insignia especial de <strong>excelencia 5S</strong> que certifica la implementación completa de la metodología en esa zona. Esta insignia puede ser consultada por gerencia y sirve como referencia para benchmarking entre diferentes áreas de la organización.
+</div>
+
+<div class="subsection-title">3.4 Selección de zona y acceso rápido</div>
+
+<div class="body-text">
+En la parte superior del tablero se encuentra el <strong>selector de zona</strong>, que permite cambiar rápidamente entre las diferentes áreas de trabajo asignadas al usuario. Al seleccionar una zona, todo el contenido del tablero se actualiza para reflejar los datos correspondientes a esa área específica. Debajo del pentágono, se encuentran cinco <strong>botones de acceso rápido</strong> que permiten navegar directamente a las secciones más utilizadas:
+</div>
+
+<div class="card s1-border">
+    <div class="card-title">Inventario</div>
+    <div class="card-text">Acceso directo al inventario correspondiente a la S activa en la zona seleccionada. Dependiendo de la etapa actual, mostrará el inventario de innecesarios (S1), necesarios (S2), puntos de suciedad (S3), estándares (S4) o prácticas de disciplina (S5). Desde aquí se pueden añadir, editar y eliminar ítems del inventario.</div>
+</div>
+<div class="card s2-border">
+    <div class="card-title">Activos</div>
+    <div class="card-text">Acceso al panel de activos de la zona, donde se gestionan los elementos físicos y equipamientos del área. El panel de activos está especialmente vinculado a S2 (Ordenar), ya que permite asignar ubicaciones, frecuencias de uso y métodos de identificación a cada activo.</div>
+</div>
+<div class="card s3-border">
+    <div class="card-title">Fotografías</div>
+    <div class="card-text">Galería fotográfica de la zona que documenta el estado antes, durante y después de la implementación de cada S. Las fotografías son obligatorias en el paso 2 de cada S y constituyen evidencia visual del progreso. Se pueden subir múltiples imágenes y organizarlas por etapa.</div>
+</div>
+<div class="card s4-border">
+    <div class="card-title">Estándares</div>
+    <div class="card-text">Acceso a la biblioteca de estándares de la zona, donde se gestionan los estándares visuales, procedimientos, checklists, señalizaciones, diagramas y registros implantados. Esta sección está vinculada principalmente a S4 (Estandarizar) pero sirve como referencia para todas las etapas.</div>
+</div>
+<div class="card s5-border">
+    <div class="card-title">Plan de Acción</div>
+    <div class="card-text">Acceso directo al plan de acción de la zona, donde se registran y dan seguimiento a las acciones correctivas y preventivas derivadas de las disfunciones detectadas en autoevaluaciones y auditorías. El plan de acción es un elemento transversal que alimenta la mejora continua.</div>
+</div>
+
+
+<!-- ═══════════════ CAPÍTULO 4: LAS 5S — RECORRIDO COMPLETO ═══════════════ -->
+<div class="chapter-header">
+    <div class="section-tag">Capítulo 4</div>
+    <div class="section-title">Las 5S — Recorrido Completo</div>
+    <div class="divider"></div>
+</div>
+
+<div class="body-text">
+Este capítulo describe en detalle cada una de las cinco S de la metodología, incluyendo los pasos que componen cada etapa, los requisitos de aprobación, las funcionalidades específicas de la aplicación y las mejores prácticas para una implementación exitosa. Cada S sigue una estructura idéntica de cinco pasos que aseguran la formación previa, la documentación visual, la captura de datos, la autoevaluación y la validación externa.
+</div>
+
+
+<!-- ═══ S1 — CLASIFICAR ═══ -->
+<div class="s-header-bar s1-bar">
+    <div style="width:44px;height:44px;border-radius:50%;background:rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;font-weight:900;font-size:18px;flex-shrink:0;">S1</div>
+    <div>
+        <h3>Clasificar</h3>
+        <div class="s-jp">Seiri — Separar lo necesario de lo innecesario</div>
+    </div>
+</div>
+
+<div class="body-text">
+La primera S, <strong>Clasificar (Seiri)</strong>, tiene como objetivo fundamental separar los elementos necesarios de los innecesarios en el área de trabajo y eliminar estos últimos. Este principio parte de la premisa de que todo lo que no contribuye al proceso productivo, que no se ha utilizado en un período determinado o que está duplicado de forma innecesaria debe ser retirado del puesto de trabajo. La clasificación rigurosa libera espacio, reduce el inventario ocioso, disminuye los tiempos de búsqueda y elimina fuentes potenciales de confusión y error.
+</div>
+
+<div class="step-card">
+    <div class="step-number s1-step">1</div>
+    <div class="step-body">
+        <div class="step-title">Formación y Examen</div>
+        <div class="step-desc">Antes de ejecutar cualquier acción de clasificación, cada miembro del equipo debe completar el módulo de formación específico de S1. La formación cubre los principios de Seiri, los criterios para identificar lo innecesario, el sistema de etiquetas rojas, la gestión de la jaula de excedentes y la importancia de la cuarentena. Al finalizar la formación, se realiza un <strong>examen individual</strong> que debe aprobarse con una <strong>nota mínima del 80%</strong>. Si el usuario no alcanza esta calificación, debe repetir la formación y el examen hasta aprobar. Este requisito asegura que todos los participantes dominen los conceptos antes de intervenir en el área de trabajo.</div>
+    </div>
+</div>
+<div class="step-card">
+    <div class="step-number s1-step">2</div>
+    <div class="step-body">
+        <div class="step-title">Fotografías</div>
+        <div class="step-desc">Se deben capturar y subir fotografías de la zona en su estado actual, antes de iniciar las actividades de clasificación. Estas fotografías constituyen la línea base visual contra la cual se medirá el progreso. Se recomienda fotografiar cada estación de trabajo, cada armario, cada estantería y cada área de almacenamiento. La aplicación permite subir múltiples imágenes y etiquetarlas por ubicación dentro de la zona. Las fotografías «antes» son esenciales para demostrar la transformación lograda.</div>
+    </div>
+</div>
+<div class="step-card">
+    <div class="step-number s1-step">3</div>
+    <div class="step-body">
+        <div class="step-title">Inventario de Innecesarios</div>
+        <div class="step-desc">Este es el núcleo operativo de S1. Se debe registrar en la aplicación cada ítem identificado como innecesario, clasificándolo por categoría (herramienta, material, documento, equipamiento, mobiliario, otro). Para cada ítem se debe indicar la <strong>decisión tomada</strong>: enviar a la <strong>Jaula de Excedentes</strong>, <strong>Tirar</strong> (eliminación directa) o <strong>Eliminar</strong> (destrucción o chatarrización). Los ítems enviados a la Jaula entran en un período de <strong>cuarentena</strong> configurable (por defecto 30 días), durante el cual ninguna otra zona puede reclamarlos. Si transcurre la cuarentena sin que el ítem sea reclamado, se procede a su eliminación definitiva.</div>
+    </div>
+</div>
+<div class="step-card">
+    <div class="step-number s1-step">4</div>
+    <div class="step-body">
+        <div class="step-title">Autoevaluación</div>
+        <div class="step-desc">Una vez completado el inventario de innecesarios, el equipo responsable realiza una autoevaluación interna mediante un checklist que evalúa si la clasificación fue exhaustiva, si todos los ítems innecesarios fueron identificados y tratados, si la jaula de excedentes está correctamente gestionada y si el área de trabajo está libre de elementos innecesarios. La <strong>nota mínima para aprobar es del 70%</strong>. Las respuestas marcadas como «No OK» (NOK) generan automáticamente entradas en el Plan de Acción.</div>
+    </div>
+</div>
+<div class="step-card">
+    <div class="step-number s1-step">5</div>
+    <div class="step-body">
+        <div class="step-title">Auditoría Externa</div>
+        <div class="step-desc">Un auditor externo a la zona realiza la validación objetiva de los resultados de S1. El auditor verifica que la clasificación fue completa, que los ítems innecesarios fueron correctamente gestionados, que la jaula de excedentes funciona adecuadamente y que no quedan elementos fuera de lugar. La <strong>nota mínima para aprobar la auditoría es del 75%</strong>. Si la auditoría no se aprueba, se generan acciones correctivas en el plan de acción y se debe repetir la auditoría tras implementar las correcciones.</div>
+    </div>
+</div>
+
+<div class="subsection-title">La Jaula de Excedentes y las Etiquetas Rojas</div>
+
+<div class="body-text">
+La <strong>Jaula de Excedentes</strong> es un espacio físico designado dentro de la instalación donde se depositan temporalmente los ítems identificados como innecesarios durante la clasificación. Su propósito es proporcionar un período de cuarentena durante el cual cualquier persona de la organización puede verificar si un ítem catalogado como innecesario realmente lo es. Cada ítem en la jaula debe llevar una <strong>etiqueta roja</strong> que incluya: la descripción del ítem, la zona de origen, la fecha de ingreso, la decisión tomada (jaula/tirar/eliminar), la categoría y el responsable que lo clasificó.
+</div>
+<div class="body-text">
+La aplicación gestiona digitalmente la jaula de excedentes, mostrando un listado de todos los ítems en cuarentena con sus datos, el conteo regresivo de días restantes y la posibilidad de reclamar un ítem desde otra zona. Cuando el período de cuarentena expira, el sistema notifica al responsable para que proceda con la eliminación definitiva del ítem. Este mecanismo evita eliminaciones prematuras y fomenta la reutilización entre áreas.
+</div>
+
+
+<!-- ═══ S2 — ORDENAR ═══ -->
+<div class="s-header-bar s2-bar">
+    <div style="width:44px;height:44px;border-radius:50%;background:rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;font-weight:900;font-size:18px;flex-shrink:0;">S2</div>
+    <div>
+        <h3>Ordenar</h3>
+        <div class="s-jp">Seiton — Un lugar para cada cosa y cada cosa en su lugar</div>
+    </div>
+</div>
+
+<div class="body-text">
+La segunda S, <strong>Ordenar (Seiton)</strong>, se enfoca en establecer una ubicación definida para cada elemento necesario identificado en S1, de manera que pueda ser encontrado, utilizado y devuelto con el mínimo esfuerzo y tiempo. El principio fundamental es: «un lugar para cada cosa y cada cosa en su lugar». Ordenar no significa simplemente acomodar; implica analizar la frecuencia de uso, la secuencia del proceso y la ergonomía del puesto de trabajo para determinar la ubicación óptima de cada elemento.
+</div>
+
+<div class="step-card">
+    <div class="step-number s2-step">1</div>
+    <div class="step-body">
+        <div class="step-title">Formación y Examen</div>
+        <div class="step-desc">El módulo de formación de S2 cubre los principios de Seiton, las técnicas de análisis de frecuencia de uso, los métodos de identificación visual (códigos de colores, etiquetas, sombras), los conceptos de layout y la relación entre el orden y la eficiencia del proceso. El examen individual requiere una <strong>nota mínima del 80%</strong> para continuar. Se incluyen casos prácticos sobre cómo determinar la ubicación óptima de herramientas y materiales según su frecuencia de uso y cercanía al punto de operación.</div>
+    </div>
+</div>
+<div class="step-card">
+    <div class="step-number s2-step">2</div>
+    <div class="step-body">
+        <div class="step-title">Fotografías</div>
+        <div class="step-desc">Se capturan fotografías del área de trabajo antes de reorganizar, mostrando el estado actual de disposición de herramientas, materiales, documentos y equipamientos. Estas imágenes sirven como referencia visual del punto de partida y permiten comparar con el resultado final después de la reorganización. La aplicación requiere un mínimo de fotografías por zona para considerar este paso como completado.</div>
+    </div>
+</div>
+<div class="step-card">
+    <div class="step-number s2-step">3</div>
+    <div class="step-body">
+        <div class="step-title">Inventario de Necesarios</div>
+        <div class="step-desc">Se registra cada ítem necesario que permanece en la zona tras la clasificación de S1. Para cada ítem se deben indicar: la <strong>frecuencia de uso</strong> (constante, frecuente, ocasional, raro), la <strong>ubicación asignada</strong> (coordenadas o posición en el layout), el <strong>método de identificación</strong> (etiqueta, sombra, código de colores, código de barras), y la <strong>cercanía al punto de uso</strong> (junto al puesto, en el área, en el almacén). Esta información permite optimizar el layout y asegurar que los elementos más utilizados estén más accesibles.</div>
+    </div>
+</div>
+<div class="step-card">
+    <div class="step-number s2-step">4</div>
+    <div class="step-body">
+        <div class="step-title">Autoevaluación</div>
+        <div class="step-desc">El equipo verifica internamente que cada ítem necesario tiene una ubicación asignada y marcada, que los elementos de uso constante están al alcance de la mano, que el código de colores es consistente y que se ha elaborado un layout actualizado del área. La <strong>nota mínima de aprobación es del 70%</strong>. Las disfunciones detectadas generan entradas en el plan de acción con las acciones correctivas correspondientes.</div>
+    </div>
+</div>
+<div class="step-card">
+    <div class="step-number s2-step">5</div>
+    <div class="step-body">
+        <div class="step-title">Auditoría Externa</div>
+        <div class="step-desc">El auditor externo evalúa la efectividad del orden implementado: verifica que las ubicaciones son lógicas, que los métodos de identificación son claros, que el layout está actualizado y que el personal conoce la ubicación de los elementos que utiliza. La <strong>nota mínima es del 75%</strong>. El auditor puede solicitar ajustes en la ubicación de elementos o en los métodos de identificación como resultado de la auditoría.</div>
+    </div>
+</div>
+
+<div class="subsection-title">Layout y Código de Colores</div>
+
+<div class="body-text">
+El <strong>layout</strong> es la representación gráfica de la distribución física del área de trabajo, mostrando la ubicación exacta de cada elemento. La aplicación incluye un editor de layout que permite al Responsable diseñar y actualizar la distribución de la zona, arrastrando y soltando elementos, definiendo zonas de almacenamiento, pasillos y estaciones de trabajo. El layout debe estar alineado con el <strong>código de colores</strong> establecido por la organización para señalizar diferentes tipos de elementos y áreas.
+</div>
+<div class="body-text">
+El código de colores es una herramienta visual fundamental de S2. Generalmente se utiliza: verde para materiales y productos en proceso, azul para herramientas y utensilios, amarillo para áreas de precaución o movimiento, rojo para elementos de seguridad y emergencia, y blanco para áreas generales. La aplicación permite configurar el código de colores en la biblioteca de estándares y aplicarlo consistentemente en el layout y en las etiquetas de identificación.
+</div>
+
+<div class="subsection-title">Panel de Activos</div>
+
+<div class="body-text">
+El <strong>Panel de Activos</strong> es una funcionalidad integrada en S2 que permite gestionar todos los elementos físicos del área de trabajo. Desde este panel se pueden registrar nuevos activos, actualizar su ubicación, asignar responsables y vincularlos con los inventarios de necesarios. El panel muestra una vista consolidada de todos los activos de la zona con filtros por tipo, estado, ubicación y responsable, facilitando la trazabilidad y el control patrimonial.
+</div>
+
+
+<!-- ═══ S3 — LIMPIAR ═══ -->
+<div class="s-header-bar s3-bar">
+    <div style="width:44px;height:44px;border-radius:50%;background:rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;font-weight:900;font-size:18px;flex-shrink:0;">S3</div>
+    <div>
+        <h3>Limpiar</h3>
+        <div class="s-jp">Seiso — Limpiar es inspeccionar</div>
+    </div>
+</div>
+
+<div class="body-text">
+La tercera S, <strong>Limpiar (Seiso)</strong>, va más allá de la simple limpieza: su principio rector es «limpiar es inspeccionar». Al limpiar, el operador debe observar y detectar anomalías, fuentes de suciedad, desgaste prematuro, fugas, holguras y cualquier condición anormal que pueda derivar en una avería o defecto de calidad. La limpieza se convierte así en una poderosa herramienta de mantenimiento preventivo y control de calidad.
+</div>
+
+<div class="step-card">
+    <div class="step-number s3-step">1</div>
+    <div class="step-body">
+        <div class="step-title">Formación y Examen</div>
+        <div class="step-desc">La formación de S3 aborda los principios de Seiso, la relación entre limpieza e inspección, la identificación de fuentes de suciedad, los tipos de contaminación (polvo, grasa, manchas, residuos, humedad, oxidación), los métodos de limpieza apropiados para cada tipo de superficie y contaminante, y la importancia de eliminar las fuentes de suciedad en lugar de limitarse a limpiar repetidamente. El examen requiere una <strong>nota mínima del 80%</strong>.</div>
+    </div>
+</div>
+<div class="step-card">
+    <div class="step-number s3-step">2</div>
+    <div class="step-body">
+        <div class="step-title">Fotografías</div>
+        <div class="step-desc">Se documentan fotográficamente todos los puntos de suciedad identificados en la zona antes de iniciar las actividades de limpieza. Cada fotografía debe estar asociada a un punto de suciedad específico, permitiendo la comparación antes/después. Las fotografías deben capturar tanto la suciedad visible como las fuentes que la generan (fugas, desgastes, falta de protecciones, etc.).</div>
+    </div>
+</div>
+<div class="step-card">
+    <div class="step-number s3-step">3</div>
+    <div class="step-body">
+        <div class="step-title">Inventario de Puntos de Suciedad y Plan de Limpieza</div>
+        <div class="step-desc">Se registra cada punto de suciedad detectado, indicando: el <strong>tipo</strong> (polvo, grasa, mancha, residuos, humedad, oxidación), el <strong>nivel</strong> (leve, moderado, severo), la <strong>fuente</strong> que genera la suciedad, el <strong>método de limpieza</strong> recomendado y la <strong>frecuencia de limpieza</strong> necesaria. A partir de este inventario, la aplicación genera automáticamente el <strong>Plan de Limpieza e Inspección</strong>, que asigna a cada punto de limpieza: la frecuencia (diaria, semanal, mensual), el producto de limpieza requerido, la herramienta o utensilio necesario y el responsable asignado.</div>
+    </div>
+</div>
+<div class="step-card">
+    <div class="step-number s3-step">4</div>
+    <div class="step-body">
+        <div class="step-title">Autoevaluación</div>
+        <div class="step-desc">El equipo evalúa si la limpieza fue exhaustiva, si las fuentes de suciedad fueron eliminadas o mitigadas, si el plan de limpieza está completo y asignado, y si los puntos de inspección están identificados. La <strong>nota mínima es del 70%</strong>. Las no conformidades generan acciones correctivas automáticas en el plan de acción, incluyendo la revisión de fuentes de suciedad no eliminadas y la reasignación de responsabilidades de limpieza.</div>
+    </div>
+</div>
+<div class="step-card">
+    <div class="step-number s3-step">5</div>
+    <div class="step-body">
+        <div class="step-title">Auditoría Externa</div>
+        <div class="step-desc">El auditor verifica la efectividad de la limpieza realizada, comprueba que las fuentes de suciedad han sido tratadas, que el plan de limpieza está operativo y que los puntos de inspección están correctamente señalizados. La <strong>nota mínima es del 75%</strong>. El auditor puede identificar puntos de suciedad que el equipo no detectó y añadirlos al inventario y al plan de limpieza como parte de las acciones correctivas.</div>
+    </div>
+</div>
+
+<div class="subsection-title">Plan de Limpieza e Inspección</div>
+
+<div class="body-text">
+El <strong>Plan de Limpieza e Inspección</strong> es un documento operativo generado automáticamente por la aplicación a partir del inventario de puntos de suciedad. Su propósito es asegurar que la limpieza y la inspección se realicen de forma sistemática, con la frecuencia, los productos, las herramientas y los responsables claramente definidos. El plan se organiza como una matriz donde cada punto de limpieza tiene asignado: el responsable de su ejecución, el turno o momento del día en que se realiza, el producto y herramienta necesarios, el tiempo estimado, y un checklist de verificación.
+</div>
+<div class="body-text">
+El plan de limpieza se convierte en una herramienta de gestión diaria que el Responsable de zona debe supervisar y que los auditores verifican durante las auditorías de S3 y de las S posteriores. Su cumplimiento es un indicador clave de la disciplina organizacional y un prerrequisito para avanzar hacia la estandarización en S4.
+</div>
+
+
+<!-- ═══ S4 — ESTANDARIZAR ═══ -->
+<div class="s-header-bar s4-bar">
+    <div style="width:44px;height:44px;border-radius:50%;background:rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;font-weight:900;font-size:18px;flex-shrink:0;">S4</div>
+    <div>
+        <h3>Estandarizar</h3>
+        <div class="s-jp">Seiketsu — Crear reglas para mantener el estado alcanzado</div>
+    </div>
+</div>
+
+<div class="body-text">
+La cuarta S, <strong>Estandarizar (Seiketsu)</strong>, tiene como misión crear las normas, procedimientos y estándares visuales que aseguren la permanencia de los logros obtenidos en las tres S anteriores. Sin estandarización, la tendencia natural de cualquier sistema es degradarse con el tiempo; los estándares son el mecanismo que frena esa degradación y convierte las mejoras en la forma habitual de trabajar. Un estándar es la mejor manera conocida de realizar una actividad, documentada y compartida con todos los involucrados.
+</div>
+
+<div class="step-card">
+    <div class="step-number s4-step">1</div>
+    <div class="step-body">
+        <div class="step-title">Formación y Examen</div>
+        <div class="step-desc">La formación de S4 cubre los principios de Seiketsu, los tipos de estándares (visual, procedimiento, checklist, señalización, diagrama, registro), la relación entre estandarización y mejora continua, las técnicas de comunicación visual, y la importancia de la revisión periódica de estándares. Se enfatiza que un estándar no es una camisa de fuerza sino la base desde la cual se puede mejorar. El examen requiere una <strong>nota mínima del 80%</strong>.</div>
+    </div>
+</div>
+<div class="step-card">
+    <div class="step-number s4-step">2</div>
+    <div class="step-body">
+        <div class="step-title">Fotografías</div>
+        <div class="step-desc">Se documentan fotográficamente las condiciones del área de trabajo antes de implantar los estándares. Estas fotografías muestran el estado alcanzado tras S1, S2 y S3, y sirven como referencia para verificar que los estándares implantados mantienen o mejoran ese nivel. También se fotografían los elementos de comunicación visual instalados (señales, etiquetas, marcaciones en suelo, panel informativo).</div>
+    </div>
+</div>
+<div class="step-card">
+    <div class="step-number s4-step">3</div>
+    <div class="step-body">
+        <div class="step-title">Inventario de Estándares Implantados y Biblioteca de Estándares</div>
+        <div class="step-desc">Se registra cada estándar implantado en la zona, indicando: el <strong>tipo</strong> (visual, procedimiento, checklist, señalización, diagrama, registro), el <strong>estado</strong> (borrador, activo, en revisión, obsoleto), la <strong>documentación asociada</strong> (archivos, imágenes, enlaces), el <strong>porcentaje de cumplimiento</strong>, y la <strong>fecha de próxima revisión</strong>. Integrada en este paso se encuentra la <strong>Biblioteca de Estándares</strong>, una funcionalidad de gestión completa (CRUD: crear, leer, actualizar, eliminar) que permite administrar todos los estándares de la zona. La biblioteca incluye un editor de layout y la gestión del código de colores para asegurar la coherencia visual en toda la organización.</div>
+    </div>
+</div>
+<div class="step-card">
+    <div class="step-number s4-step">4</div>
+    <div class="step-body">
+        <div class="step-title">Autoevaluación</div>
+        <div class="step-desc">El equipo verifica que todos los estándares necesarios han sido creados e implantados, que la comunicación visual es clara y coherente, que los procedimientos están documentados y accesibles, y que el personal conoce y sigue los estándares establecidos. La <strong>nota mínima es del 70%</strong>. Las no conformidades generan acciones correctivas, como la revisión de estándares poco claros o la capacitación adicional del personal.</div>
+    </div>
+</div>
+<div class="step-card">
+    <div class="step-number s4-step">5</div>
+    <div class="step-body">
+        <div class="step-title">Auditoría Externa</div>
+        <div class="step-desc">El auditor evalúa la calidad y efectividad de los estándares implantados: verifica que son comprensibles, que están siendo cumplidos, que la comunicación visual es consistente y que los estándares se revisan periódicamente. La <strong>nota mínima es del 75%</strong>. El auditor puede identificar la necesidad de crear estándares adicionales o de mejorar los existentes.</div>
+    </div>
+</div>
+
+<div class="subsection-title">Biblioteca de Estándares</div>
+
+<div class="body-text">
+La <strong>Biblioteca de Estándares</strong> es el repositorio centralizado donde se gestionan todos los estándares de la zona y de la organización. Ofrece funcionalidades completas de CRUD (crear, leer, actualizar, eliminar), permitiendo al Gestor y al Responsable administrar el ciclo de vida completo de cada estándar. La biblioteca incluye un <strong>editor de layout</strong> integrado para diseñar la distribución visual de las áreas y un sistema de <strong>código de colores</strong> que asegura la consistencia visual entre diferentes zonas.
+</div>
+<div class="body-text">
+Cada estándar en la biblioteca puede asociarse a documentos adjuntos, fotografías de referencia, instrucciones paso a paso y criterios de verificación. El sistema realiza un seguimiento automático de las fechas de revisión, notificando al Responsable cuando un estándar está próximo a vencer o requiere actualización. La biblioteca también permite comparar estándares entre diferentes zonas para identificar mejores prácticas y promover su adopción generalizada.
+</div>
+
+
+<!-- ═══ S5 — MANTENER ═══ -->
+<div class="s-header-bar s5-bar">
+    <div style="width:44px;height:44px;border-radius:50%;background:rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;font-weight:900;font-size:18px;flex-shrink:0;">S5</div>
+    <div>
+        <h3>Mantener</h3>
+        <div class="s-jp">Shitsuke — Disciplina y compromiso con la mejora continua</div>
+    </div>
+</div>
+
+<div class="body-text">
+La quinta S, <strong>Mantener (Shitsuke)</strong>, representa la disciplina y el compromiso sostenido con las normas y estándares establecidos en las cuatro S anteriores. Es considerada la más difícil de las cinco porque requiere un cambio profundo en la cultura y los hábitos de la organización. Mantener no significa simplemente conservar el estado actual, sino cultivar la disciplina necesaria para que las mejoras se sostengan en el tiempo y se conviertan en la forma natural de trabajar. Sin Shitsuke, todo el esfuerzo invertido en las S anteriores se pierde gradualmente.
+</div>
+
+<div class="step-card">
+    <div class="step-number s5-step">1</div>
+    <div class="step-body">
+        <div class="step-title">Formación y Examen</div>
+        <div class="step-desc">La formación de S5 aborda los principios de Shitsuke, la importancia de la disciplina organizacional, las técnicas para construir hábitos positivos, el papel del liderazgo en el mantenimiento de las 5S, la relación entre Mantener y la Mejora Continua (PDCA), y los mecanismos de seguimiento y reconocimiento. El examen requiere una <strong>nota mínima del 80%</strong> e incluye escenarios sobre cómo responder ante retrocesos en la implementación.</div>
+    </div>
+</div>
+<div class="step-card">
+    <div class="step-number s5-step">2</div>
+    <div class="step-body">
+        <div class="step-title">Fotografías</div>
+        <div class="step-desc">Se documentan fotografías que evidencien el nivel de cumplimiento de las 5S en la zona: el estado de orden y limpieza, la presencia y correcta aplicación de los estándares visuales, la actualización de los tableros informativos y la ausencia de elementos innecesarios. Estas fotografías son comparadas con las de las S anteriores para demostrar la sostenibilidad de las mejoras.</div>
+    </div>
+</div>
+<div class="step-card">
+    <div class="step-number s5-step">3</div>
+    <div class="step-body">
+        <div class="step-title">Inventario de Prácticas de Disciplina</div>
+        <div class="step-desc">Se registra cada práctica o hábito de disciplina identificado en la zona, clasificándolo según su estado de cumplimiento: <strong>Cumplido</strong> (la práctica se realiza de forma consistente), <strong>Parcial</strong> (se realiza de forma intermitente o incompleta), o <strong>Incumplido</strong> (la práctica no se está realizando). Para cada práctica se indica: la descripción del hábito o práctica, el <strong>responsable</strong> de su ejecución, la <strong>frecuencia</strong> esperada (diaria, semanal, mensual), y las observaciones pertinentes. Las prácticas en estado parcial o incumplido generan automáticamente entradas en el plan de acción.</div>
+    </div>
+</div>
+<div class="step-card">
+    <div class="step-number s5-step">4</div>
+    <div class="step-body">
+        <div class="step-title">Autoevaluación</div>
+        <div class="step-desc">El equipo evalúa el grado de disciplina alcanzado, la consistencia en el cumplimiento de los estándares, la efectividad de los mecanismos de seguimiento y la cultura de mejora continua en la zona. La <strong>nota mínima es del 70%</strong>. Esta autoevaluación es especialmente rigurosa porque S5 es la etapa que asegura la sostenibilidad de toda la implementación.</div>
+    </div>
+</div>
+<div class="step-card">
+    <div class="step-number s5-step">5</div>
+    <div class="step-body">
+        <div class="step-title">Auditoría Externa</div>
+        <div class="step-desc">El auditor realiza una evaluación integral del nivel de disciplina de la zona, verificando la sostenibilidad de los logros de las cuatro S anteriores, la consistencia en el cumplimiento de los estándares, la existencia de mecanismos de reconocimiento y corrección, y la integración con el ciclo PDCA de mejora continua. La <strong>nota mínima es del 75%</strong>. Al aprobar la auditoría de S5, la zona obtiene la insignia de excelencia 5S completa.</div>
+    </div>
+</div>
+
+<div class="subsection-title">Integración con PDCA (Mejora Continua)</div>
+
+<div class="body-text">
+S5 se conecta directamente con el ciclo <strong>PDCA</strong> (Plan-Do-Check-Act) de mejora continua. Las prácticas de disciplina identificadas como parciales o incumplidas alimentan el ciclo PDCA, generando objetivos de mejora que se planifican (Plan), se ejecutan (Do), se verifican (Check) y se estandarizan o corrigen (Act). Esta integración asegura que la metodología 5S no sea un proyecto con fecha de finalización, sino un proceso vivo que evoluciona y mejora constantemente. El sistema permite vincular cada práctica de disciplina con un objetivo PDCA específico, creando un rastro de auditoría completo desde la detección de la oportunidad de mejora hasta su resolución y estandarización.
+</div>
+
+
+<!-- ═══════════════ CAPÍTULO 5: SISTEMA DE GATING ═══════════════ -->
+<div class="chapter-header">
+    <div class="section-tag">Capítulo 5</div>
+    <div class="section-title">Sistema de Gating</div>
+    <div class="divider"></div>
+</div>
+
+<div class="body-text">
+El <strong>sistema de gating</strong> (control de acceso progresivo) es un mecanismo fundamental de la aplicación que asegura la calidad y rigor de la implementación 5S. Su principio es sencillo pero poderoso: no se puede avanzar a un paso o etapa superior sin haber completado satisfactoriamente los prerrequisitos. Este sistema evita que se salten etapas, que se realicen auditorías sin la preparación adecuada o que se avance sin haber internalizado los conceptos de cada S.
+</div>
+
+<div class="subsection-title">Progresión consecutiva: desbloqueo paso a paso</div>
+
+<div class="body-text">
+El sistema de gating opera en dos dimensiones complementarias que aseguran tanto la progresión entre las diferentes S como la progresión dentro de cada S. Estas dos dimensiones son los <strong>requisitos inter-S</strong> y los <strong>requisitos intra-S</strong>.
+</div>
+
+<div class="card card-accent">
+    <div class="card-title">Requisitos Inter-S</div>
+    <div class="card-text">Para comenzar a trabajar en una S, es necesario haber completado los cinco pasos de la S anterior. Por ejemplo, no se puede iniciar S2 (Ordenar) hasta que S1 (Clasificar) haya completado sus cinco pasos incluyendo la auditoría externa aprobada. Esta restricción asegura que cada S se construye sobre los cimientos sólidos de la anterior, respetando la lógica secuencial de la metodología: primero se clasifica (eliminando lo innecesario), luego se ordena (organizando lo necesario), después se limpia (inspeccionando el área), luego se estandariza (creando normas), y finalmente se mantiene (cultivando disciplina).</div>
+</div>
+
+<div class="card card-accent2">
+    <div class="card-title">Requisitos Intra-S</div>
+    <div class="card-text">Dentro de cada S, no se puede acceder a un paso sin haber completado el paso anterior. El paso 1 (Formación y Examen) debe estar aprobado antes de acceder al paso 2 (Fotografías), y así sucesivamente. Este gateo intra-S asegura que la formación preceda a la ejecución, que la documentación visual preceda al inventario, y que la autoevaluación interna preceda a la validación externa.</div>
+</div>
+
+<div class="subsection-title">Paso 5 (Auditoría): requisitos especiales</div>
+
+<div class="body-text">
+El paso 5 de cada S (Auditoría Externa) tiene un requisito adicional: solo se desbloquea cuando los pasos 1 a 4 han sido completados satisfactoriamente. Esto es especialmente relevante porque la auditoría es la validación formal de los resultados y no puede realizarse si el equipo no ha completado la formación, documentado el estado, registrado los datos y realizado una autoevaluación interna. Cuando los pasos 1-4 están completados, el sistema <strong>notifica automáticamente al auditor</strong> asignado, indicando que la zona está lista para auditoría. El auditor puede entonces programar la visita y completar la evaluación externa.
+</div>
+
+<div class="callout">
+    <strong>Nota importante:</strong> Si un examen, autoevaluación o auditoría es reprobado (calificación inferior al mínimo requerido), el paso correspondiente se marca como reprobado y el usuario debe repetirlo. No se puede avanzar al siguiente paso hasta aprobar el actual. Las acciones correctivas derivadas de las no conformidades deben registrarse en el plan de acción antes de repetir la auditoría.
+</div>
+
+<div class="subsection-title">Resumen de calificaciones mínimas</div>
+
+<table class="mini-table">
+    <thead>
+        <tr><th>Actividad</th><th>Nota mínima</th><th>Consecuencia de reprobar</th></tr>
+    </thead>
+    <tbody>
+        <tr><td>Examen de formación (paso 1)</td><td>80%</td><td>Repetir formación y examen</td></tr>
+        <tr><td>Autoevaluación (paso 4)</td><td>70%</td><td>Corregir disfunciones y repetir</td></tr>
+        <tr><td>Auditoría externa (paso 5)</td><td>75%</td><td>Implementar acciones correctivas y repetir</td></tr>
+    </tbody>
+</table>
+
+
+<!-- ═══════════════ CAPÍTULO 6: PLANTILLAS Y TABLERO ═══════════════ -->
+<div class="chapter-header">
+    <div class="section-tag">Capítulo 6</div>
+    <div class="section-title">Plantillas y Tablero</div>
+    <div class="divider"></div>
+</div>
+
+<div class="subsection-title">6.1 Gestión de plantillas desde el rol Gestor</div>
+
+<div class="body-text">
+Las <strong>plantillas</strong> son los modelos predefinidos que determinan la estructura, el contenido y los criterios de evaluación de cada paso dentro de cada S. El Gestor es el único rol con permisos para crear, modificar y eliminar plantillas, lo que garantiza la consistencia y calidad de las evaluaciones en toda la organización. Las plantillas permiten estandarizar los criterios de evaluación, de modo que todas las zonas sean evaluadas bajo los mismos parámetros, facilitando la comparación y el benchmarking.
+</div>
+
+<div class="subsection-title">6.2 Tipos de plantillas</div>
+
+<div class="body-text">
+El sistema soporta los siguientes tipos de plantillas, cada una diseñada para un propósito específico dentro del flujo de implementación 5S:
+</div>
+
+<div class="card card-accent">
+    <div class="card-title">Plantillas de Formación</div>
+    <div class="card-text">Definen el contenido del módulo de formación para cada S. Incluyen las diapositivas o páginas de contenido, los videos o recursos multimedia embebidos, y la estructura del examen asociado. El Gestor puede personalizar completamente el contenido formativo para adaptarlo a las necesidades específicas de la organización, incluyendo ejemplos y casos prácticos del propio entorno.</div>
+</div>
+<div class="card card-accent">
+    <div class="card-title">Plantillas de Examen</div>
+    <div class="card-text">Contienen las preguntas del examen de conocimiento, las opciones de respuesta, las respuestas correctas y la calificación de cada pregunta. Soportan diferentes formatos de pregunta: opción múltiple, verdadero/falso, respuesta corta y ordenamiento. El Gestor define la nota mínima de aprobación y el número de intentos permitidos.</div>
+</div>
+<div class="card card-accent">
+    <div class="card-title">Plantillas de Inventario</div>
+    <div class="card-text">Estructuran los campos y categorías del inventario correspondiente a cada S. Por ejemplo, la plantilla de inventario de S1 define las categorías de innecesarios y las decisiones posibles (jaula, tirar, eliminar); la de S3 define los tipos de suciedad y los niveles de severidad. El Gestor puede añadir campos personalizados según las necesidades de la organización.</div>
+</div>
+<div class="card card-accent2">
+    <div class="card-title">Plantillas de Autoevaluación y Auditoría</div>
+    <div class="card-text">Definen los criterios, preguntas y escala de valoración para las autoevaluaciones internas y las auditorías externas. Cada criterio puede marcarse como OK (conforme) o NOK (no conforme), y las respuestas NOK generan automáticamente entradas en el plan de acción. El Gestor configura los pesos relativos de cada criterio para el cálculo de la calificación final.</div>
+</div>
+<div class="card card-accent3">
+    <div class="card-title">Plantillas de Estándar, Layout, Plan de Limpieza y PDCA</div>
+    <div class="card-text">Complementan el ecosistema de plantillas con modelos específicos para la gestión de estándares (S4), el diseño de layouts (S2), la elaboración de planes de limpieza (S3) y la estructuración de ciclos PDCA (S5). Cada plantilla proporciona un marco estructurado que asegura la completitud y consistencia de la información registrada en cada área.</div>
+</div>
+
+<div class="subsection-title">6.3 Configuración del tablero (BoardConfiguration)</div>
+
+<div class="body-text">
+La <strong>BoardConfiguration</strong> es la configuración maestra que determina qué plantillas se asignan a cada posición del tablero 5S. El tablero es una matriz de 5 filas (las S) por 5 columnas (los pasos), resultando en 25 posiciones. Para cada posición, el Gestor asigna la plantilla correspondiente: por ejemplo, la posición S1-Paso1 recibe la plantilla de formación de S1, la posición S1-Paso3 recibe la plantilla de inventario de innecesarios, y así sucesivamente.
+</div>
+<div class="body-text">
+Esta configuración permite una personalización granular: diferentes zonas pueden tener diferentes configuraciones de tablero si la organización requiere adaptaciones específicas. Por ejemplo, una zona de producción puede tener plantillas diferentes a una zona de oficinas, reflejando las distintas realidades operativas de cada área. El Gestor puede crear múltiples configuraciones de tablero y asignarlas a las zonas correspondientes.
+</div>
+
+<div class="subsection-title">6.4 Asignación de tablero a zona</div>
+
+<div class="body-text">
+Una vez creada la configuración del tablero con todas las plantillas asignadas, el Gestor la vincula a una o varias zonas. Cuando un usuario selecciona una zona en la aplicación, el sistema carga automáticamente la configuración de tablero correspondiente, mostrando las plantillas correctas para cada paso de cada S. Esta vinculación garantiza que cada zona trabaje con las plantillas apropiadas y que los datos capturados sean consistentes con la estructura definida por el Gestor.
+</div>
+
+
+<!-- ═══════════════ CAPÍTULO 7: PLAN DE ACCIÓN ═══════════════ -->
+<div class="chapter-header">
+    <div class="section-tag">Capítulo 7</div>
+    <div class="section-title">Plan de Acción</div>
+    <div class="divider"></div>
+</div>
+
+<div class="subsection-title">7.1 Generación automática desde disfunciones</div>
+
+<div class="body-text">
+El <strong>Plan de Acción</strong> es la herramienta central para la gestión de las no conformidades y disfunciones detectadas durante la implementación de las 5S. Su principal característica es la <strong>generación automática de entradas</strong> a partir de las respuestas marcadas como NOK (No OK) en las autoevaluaciones y auditorías. Cada vez que un criterio de evaluación se marca como no conforme, el sistema crea automáticamente una entrada en el plan de acción, vinculándola con el criterio específico, la S correspondiente y la zona donde se detectó la disfunción.
+</div>
+<div class="body-text">
+Esta automatización asegura que ninguna no conformidad quede sin tratamiento y que el plan de acción sea un reflejo exacto y actualizado de las áreas de mejora identificadas. El Responsable de zona puede complementar las entradas automáticas con acciones adicionales identificadas durante la operación diaria, pero el núcleo del plan se alimenta directamente de los resultados de las evaluaciones.
+</div>
+
+<div class="subsection-title">7.2 Formato estándar 5S</div>
+
+<div class="body-text">
+Cada entrada del plan de acción sigue el <strong>formato estándar 5S</strong>, que incluye los siguientes campos obligatorios:
+</div>
+
+<table class="mini-table">
+    <thead>
+        <tr><th>Campo</th><th>Descripción</th></tr>
+    </thead>
+    <tbody>
+        <tr><td>Número de entrada</td><td>Correlativo único que identifica la acción dentro del plan</td></tr>
+        <tr><td>Comunicado por</td><td>Persona que detectó y reportó la disfunción</td></tr>
+        <tr><td>Sección demandante</td><td>Área o departamento que solicita la acción correctiva</td></tr>
+        <tr><td>Persona demandada</td><td>Responsable de ejecutar la acción correctiva</td></tr>
+        <tr><td>Acción correctiva</td><td>Descripción detallada de la acción a implementar para eliminar la causa de la no conformidad</td></tr>
+        <tr><td>Acciones preventivas</td><td>Medidas para evitar la recurrencia de la disfunción</td></tr>
+    </tbody>
+</table>
+
+<div class="subsection-title">7.3 Seguimiento de acciones</div>
+
+<div class="body-text">
+Cada acción del plan de acción cuenta con un sistema de seguimiento que incluye: el <strong>estado</strong> (pendiente, en progreso, completada, verificada, cerrada), el <strong>porcentaje de avance</strong> (de 0% a 100%), y la <strong>verificación</strong> por parte del Responsable o del Auditor. El estado «verificada» indica que la acción ha sido implementada y comprobada; el estado «cerrada» indica que la acción ha sido verificada y la no conformidad ha sido eliminada satisfactoriamente.
+</div>
+<div class="body-text">
+El sistema calcula automáticamente el porcentaje de cumplimiento del plan de acción, que se muestra en el tablero y en el panel de gerencia. Un plan de acción con un alto porcentaje de acciones cerradas indica una gestión eficaz de las no conformidades; un plan con muchas acciones pendientes o en progreso puede indicar la necesidad de asignar más recursos o reevaluar las prioridades.
+</div>
+
+<div class="subsection-title">7.4 Vista por zona y global</div>
+
+<div class="body-text">
+El plan de acción puede consultarse a dos niveles: <strong>vista por zona</strong>, que muestra únicamente las acciones correspondientes a la zona seleccionada, y <strong>vista global</strong>, que consolida todas las acciones de todas las zonas. La vista global está disponible para los roles Gestor, Administrador y Gerente, y permite identificar patrones de no conformidad que se repiten entre zonas, facilitando la implementación de soluciones sistémicas. Ambas vistas disponen de filtros por estado, S, fecha de detección y responsable, permitiendo un análisis detallado y orientado a la acción.
+</div>
+
+
+<!-- ═══════════════ CAPÍTULO 8: GERENCIA Y SEGUIMIENTO ═══════════════ -->
+<div class="chapter-header">
+    <div class="section-tag">Capítulo 8</div>
+    <div class="section-title">Gerencia y Seguimiento</div>
+    <div class="divider"></div>
+</div>
+
+<div class="subsection-title">8.1 Panel de Gerencia</div>
+
+<div class="body-text">
+El <strong>Panel de Gerencia</strong> es la herramienta de alto nivel diseñada para que los Gerentes y directivos puedan supervisar el estado de la implementación 5S en toda la organización. El panel presenta indicadores clave de rendimiento (KPIs) organizados por zona y por proyecto, permitiendo una visión consolidada del progreso, las fortalezas y las áreas de mejora. Los indicadores se actualizan en tiempo real a medida que los equipos completan actividades en las distintas zonas.
+</div>
+<div class="body-text">
+El panel incluye gráficos de tendencia que muestran la evolución del progreso 5S a lo largo del tiempo, permitiendo identificar si la implementación avanza al ritmo esperado o si requiere intervenciones adicionales. También ofrece la posibilidad de comparar el rendimiento entre zonas, fomentando la competencia sana y la identificación de mejores prácticas que puedan replicarse en otras áreas.
+</div>
+
+<div class="subsection-title">8.2 Resultado de auditorías con radar</div>
+
+<div class="body-text">
+Una de las visualizaciones más potentes del Panel de Gerencia es el <strong>gráfico radar</strong> de resultados de auditorías. Este gráfico representa en un diagrama pentagonal los resultados de la última auditoría de cada S, permitiendo identificar de un vistazo las fortalezas y debilidades de cada zona. Un radar equilibrado indica una implementación uniforme; un radar con vértices hundidos indica S que requieren atención prioritaria.
+</div>
+<div class="body-text">
+El gráfico radar también permite comparar los resultados de auditorías sucesivas, mostrando la evolución temporal del rendimiento de cada S. Esta comparación es fundamental para evaluar la efectividad de las acciones correctivas y el compromiso del equipo con la mejora continua.
+</div>
+
+<div class="subsection-title">8.3 Progreso 5S global y por S</div>
+
+<div class="body-text">
+El panel muestra el <strong>progreso global 5S</strong> como un porcentaje agregado que refleja el avance promedio de las cinco S en cada zona y en la organización en su conjunto. También presenta el <strong>progreso individual de cada S</strong>, permitiendo identificar en qué etapa se encuentra la mayor parte de la organización y dónde se concentran los cuellos de botella. Esta información es valiosa para la planificación de recursos y la priorización de esfuerzos de apoyo y capacitación.
+</div>
+
+<div class="subsection-title">8.4 Dinero parado en inventario</div>
+
+<div class="body-text">
+Un indicador financiero relevante es el <strong>dinero parado en inventario</strong>, que cuantifica el valor económico de los ítems clasificados como innecesarios en S1 que aún no han sido eliminados o reasignados. Este indicador traduce el impacto de la implementación 5S a términos financieros, mostrando a la gerencia el capital inmovilizado que puede liberarse mediante una gestión eficiente de la jaula de excedentes. La aplicación calcula este valor automáticamente a partir de los datos del inventario de innecesarios, utilizando el valor registrado para cada ítem.
+</div>
+
+<div class="subsection-title">8.5 Auditorías y autoevaluaciones</div>
+
+<div class="body-text">
+El panel de gerencia consolida los resultados de todas las auditorías externas y autoevaluaciones realizadas en la organización, presentando estadísticas de aprobación, promedios de calificación, tendencias temporales y distribución de no conformidades por S y por zona. Esta información permite a la gerencia tomar decisiones informadas sobre la asignación de recursos de auditoría, la necesidad de capacitación adicional y la priorización de intervenciones correctivas.
+</div>
+
+
+<!-- ═══════════════ CAPÍTULO 9: MEJORA CONTINUA (PDCA) ═══════════════ -->
+<div class="chapter-header">
+    <div class="section-tag">Capítulo 9</div>
+    <div class="section-title">Mejora Continua (PDCA)</div>
+    <div class="divider"></div>
+</div>
+
+<div class="subsection-title">9.1 Ciclo de Deming</div>
+
+<div class="body-text">
+El <strong>ciclo PDCA</strong> (Plan-Do-Check-Act), también conocido como Ciclo de Deming, es la metodología de mejora continua integrada en la aplicación 5S Digital. El PDCA proporciona un marco sistemático para identificar oportunidades de mejora, implementar soluciones, verificar su efectividad y estandarizar los resultados exitosos. Su integración con la metodología 5S, especialmente a través de S5 (Mantener), asegura que la implementación no sea un evento estático sino un proceso dinámico que evoluciona y mejora constantemente.
+</div>
+
+<div class="card card-accent3">
+    <div class="card-title">Plan (Planificar)</div>
+    <div class="card-text">Se identifican las oportunidades de mejora a partir de las no conformidades del plan de acción, las prácticas de disciplina incumplidas o parciales de S5, y los resultados de auditorías. Se definen los objetivos de mejora, se analizan las causas raíz de los problemas, se diseñan las soluciones y se elabora un plan de implementación con responsables, plazos y recursos necesarios.</div>
+</div>
+<div class="card card-accent3">
+    <div class="card-title">Do (Hacer)</div>
+    <div class="card-text">Se ejecutan las acciones planificadas, implementando las soluciones diseñadas en la fase Plan. Se documentan las acciones realizadas, los obstáculos encontrados y las adaptaciones necesarias. Durante esta fase, se recopilan datos para la verificación posterior.</div>
+</div>
+<div class="card card-accent3">
+    <div class="card-title">Check (Verificar)</div>
+    <div class="card-text">Se comparan los resultados obtenidos con los objetivos planteados en la fase Plan. Se analizan los datos recopilados durante la ejecución, se evalúa si las acciones implementadas lograron el efecto deseado y se identifican desviaciones. Esta verificación puede realizarse mediante auditorías internas, indicadores de rendimiento o la observación directa del área.</div>
+</div>
+<div class="card card-accent3">
+    <div class="card-title">Act (Actuar)</div>
+    <div class="card-text">Si los resultados son satisfactorios, se estandarizan las soluciones implementadas, actualizando los estándares correspondientes en la biblioteca de S4. Si los resultados no son satisfactorios, se analizan las causas del fracaso y se inicia un nuevo ciclo PDCA con las lecciones aprendidas. La fase Act es la que cierra el ciclo y alimenta el siguiente, creando una espiral de mejora continua.</div>
+</div>
+
+<div class="subsection-title">9.2 Tablero PDCA visual</div>
+
+<div class="body-text">
+La aplicación incluye un <strong>tablero PDCA visual</strong> que muestra de forma gráfica el estado de todos los ciclos de mejora activos en la organización. El tablero organiza las iniciativas de mejora en las cuatro fases del ciclo, permitiendo visualizar de un vistazo cuántas iniciativas están en fase de planificación, cuántas en ejecución, cuántas en verificación y cuántas han sido estandarizadas. Cada iniciativa se representa como una tarjeta que incluye el objetivo, el responsable, la fecha de inicio, el estado actual y el enlace con las no conformidades que la originaron.
+</div>
+<div class="body-text">
+El tablero PDCA visual facilita la gestión del flujo de mejoras, permite identificar cuellos de botella (por ejemplo, muchas iniciativas en Check pero pocas en Act) y promueve la transición rápida entre fases. Los Gerentes pueden utilizar este tablero para supervisar la velocidad de mejora de la organización y para asegurar que las lecciones aprendidas se capturan y comparten efectivamente.
+</div>
+
+<div class="subsection-title">9.3 Objetivos de mejora</div>
+
+<div class="body-text">
+Cada ciclo PDCA se inicia con la definición de <strong>objetivos de mejora</strong> claros, medibles y con plazos definidos. Los objetivos pueden originarse en diferentes fuentes: las no conformidades detectadas en auditorías, las prácticas de disciplina incumplidas de S5, los resultados insatisfactorios en autoevaluaciones, o las oportunidades identificadas por los equipos de trabajo. La aplicación permite vincular cada objetivo con su fuente de origen, el responsable de su consecución, los indicadores de seguimiento y las acciones específicas del plan de implementación. Cuando un objetivo se alcanza y se estandariza, se cierra el ciclo PDCA y se documenta la lección aprendida para referencia futura.
+</div>
+
+
+<!-- ═══════════════ CAPÍTULO 10: PREGUNTAS FRECUENTES ═══════════════ -->
+<div class="chapter-header">
+    <div class="section-tag">Capítulo 10</div>
+    <div class="section-title">Preguntas Frecuentes</div>
+    <div class="divider"></div>
+</div>
+
+<div class="faq-item">
+    <div class="faq-q">¿Qué sucede si un empleado reprueba el examen de formación?</div>
+    <div class="faq-a">Si un empleado no alcanza la nota mínima del 80% en el examen de formación, debe repetir el módulo de formación completo y volver a presentar el examen. No hay límite de intentos, pero cada intento queda registrado en el sistema. El paso no se considera completado hasta que se aprueba el examen, lo que significa que el sistema de gating bloqueará el avance a los pasos siguientes hasta que la formación sea superada satisfactoriamente.</div>
+</div>
+
+<div class="faq-item">
+    <div class="faq-q">¿Puede un auditor auditar su propia zona?</div>
+    <div class="faq-a">No. El sistema impide que un auditor evalúe la zona en la que trabaja habitualmente, garantizando así la imparcialidad y objetividad de la auditoría. Si una zona no tiene un auditor externo disponible, el Administrador debe asignar uno de otra zona o contratar un auditor externo. Esta separación es fundamental para la credibilidad del proceso de implementación 5S.</div>
+</div>
+
+<div class="faq-item">
+    <div class="faq-q">¿Cuánto tiempo dura el período de cuarentena en la Jaula de Excedentes?</div>
+    <div class="faq-a">El período de cuarentena predeterminado es de 30 días, pero el Gestor puede configurar un período diferente según las necesidades de la organización. Durante la cuarentena, cualquier otra zona puede reclamar el ítem a través de la aplicación. Si transcurre el período sin que el ítem sea reclamado, el sistema notifica al Responsable para que proceda con la eliminación definitiva del ítem.</div>
+</div>
+
+<div class="faq-item">
+    <div class="faq-q">¿Se pueden realizar varias S simultáneamente?</div>
+    <div class="faq-a">No, el sistema de gating requiere que las S se implementen de forma secuencial. No es posible iniciar S2 hasta que S1 esté completamente aprobada, y así sucesivamente. Esta restricción es intencional y responde a la lógica de la metodología: cada S se construye sobre los resultados de la anterior, por lo que avanzar sin completar la etapa previa comprometería la calidad de la implementación.</div>
+</div>
+
+<div class="faq-item">
+    <div class="faq-q">¿Qué pasa si la auditoría externa es reprobada?</div>
+    <div class="faq-a">Si la auditoría externa obtiene una calificación inferior al 75%, se generan automáticamente entradas en el plan de acción con las no conformidades detectadas por el auditor. El equipo debe implementar las acciones correctivas correspondientes y, una vez completadas, solicitar una nueva auditoría. No es necesario repetir los pasos 1 a 4, pero el paso de auditoría permanece bloqueado hasta que se implementen las correcciones y se apruebe la auditoría de reevaluación.</div>
+</div>
+
+<div class="faq-item">
+    <div class="faq-q">¿Cómo se calcula el dinero parado en inventario?</div>
+    <div class="faq-a">El sistema suma automáticamente el valor económico declarado de todos los ítems clasificados como innecesarios en S1 que aún no han sido eliminados ni reasignados. Este cálculo se actualiza en tiempo real y se muestra en el Panel de Gerencia. Para que el indicador sea preciso, es importante que el Responsable registre el valor estimado de cada ítem al momento de ingresar al inventario de innecesarios.</div>
+</div>
+
+<div class="faq-item">
+    <div class="faq-q">¿Quién puede crear y modificar plantillas?</div>
+    <div class="faq-a">Exclusivamente el rol Gestor tiene permisos para crear, modificar y eliminar plantillas. Los demás roles pueden utilizar las plantillas asignadas a su zona según la configuración del tablero, pero no pueden alterar su estructura ni su contenido. Esta restricción garantiza la consistencia de las evaluaciones en toda la organización.</div>
+</div>
+
+<div class="faq-item">
+    <div class="faq-q">¿Cómo se relaciona el Plan de Acción con el ciclo PDCA?</div>
+    <div class="faq-a">Las no conformidades detectadas en autoevaluaciones y auditorías generan automáticamente entradas en el Plan de Acción. Estas entradas alimentan la fase Plan del ciclo PDCA, donde se analizan las causas raíz y se diseñan soluciones. Una vez implementadas (Do) y verificadas (Check), las soluciones exitosas se estandarizan en la biblioteca de estándares de S4 (Act). De esta forma, el Plan de Acción es el puente entre la detección de problemas y la mejora continua estructurada.</div>
+</div>
+
+<div class="faq-item">
+    <div class="faq-q">¿Se puede acceder a la aplicación desde dispositivos móviles?</div>
+    <div class="faq-a">Sí, la aplicación está diseñada con una interfaz responsive que se adapta a dispositivos de escritorio, tablets y teléfonos móviles. Se puede acceder desde cualquier navegador moderno (Chrome, Firefox, Edge, Safari). Para las actividades de captura fotográfica, se recomienda utilizar un dispositivo con cámara para tomar las fotografías directamente desde la aplicación.</div>
+</div>
+
+<div class="faq-item">
+    <div class="faq-q">¿Qué ocurre cuando una zona completa las cinco S?</div>
+    <div class="faq-a">Cuando una zona aprueba la auditoría externa de S5, obtiene la insignia de excelencia 5S completa y todos los quesitos del tablero pentagonal se muestran como completados. Sin embargo, la implementación 5S no termina ahí: la zona debe continuar con el ciclo PDCA de mejora continua, realizando auditorías periódicas de seguimiento, revisando y actualizando estándares, y manteniendo la disciplina de las prácticas identificadas en S5. La aplicación sigue monitorizando la zona y registrando los resultados de las auditorías de mantenimiento.</div>
+</div>
+
+</div>
+
+<!-- ═══════════════ CONTRAPORTADA ═══════════════ -->
+<div class="ending">
+    <div class="ending-circle"></div>
+    <div class="ending-text">5S Digital<br>Mejora Continua</div>
+    <div class="ending-sub">
+        Aplicación 5S Digital — Versión 2.0<br>
+        Manual de Usuario — Julio 2026<br><br>
+        La disciplina es el puente entre las metas y los logros.
+    </div>
+</div>
+
+</body>
+</html>
