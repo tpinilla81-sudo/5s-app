@@ -353,7 +353,7 @@
    353→  },
    354→};
    355→
-   356→export const MIN_PHOTOS = 3;
+   356→export const MIN_PHOTOS = 10;
    357→export const INVENTORY_CLASSIFY_THRESHOLD = 80;
    358→export const ACTION_PLAN_MIN_ITEMS = 3;
    359→export const SELF_EVAL_THRESHOLD = 70;

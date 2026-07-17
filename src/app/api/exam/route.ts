@@ -15,9 +15,34 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: 'projectId is required. No project selected.' }, { status: 400 })
     }
 
-    const template = await db.template.findFirst({
-      where: { type: 'examen', sStep, active: true },
-    })
+    // Try to find the exam template: first from board config (if zone has one), then global
+    let template = null
+
+    // Check if the zone has a board configuration with exam templates
+    if (zoneId) {
+      const zone = await db.zone.findUnique({ where: { id: zoneId }, select: { boardConfigId: true } })
+      if (zone?.boardConfigId) {
+        const boardSlot = await db.boardSlot.findFirst({
+          where: { boardConfigId: zone.boardConfigId, sStep, miniStep: 1 },
+          include: {
+            templates: {
+              include: { template: true },
+              where: { template: { type: 'examen', active: true } },
+            },
+          },
+        })
+        if (boardSlot && boardSlot.templates.length > 0) {
+          template = boardSlot.templates[0].template
+        }
+      }
+    }
+
+    // Fallback to global template
+    if (!template) {
+      template = await db.template.findFirst({
+        where: { type: 'examen', sStep, active: true },
+      })
+    }
 
     if (!template) {
       return NextResponse.json({ success: false, error: 'No exam template found for this S' }, { status: 404 })

@@ -287,12 +287,12 @@ export async function DELETE(request: NextRequest) {
       })
     }
 
-    // Also delete related EmployeeProgress records for step 1 (individual step)
-    if (miniStepNum === 1 && zoneId) {
+    // Also delete related EmployeeProgress records for individual steps (1 and 4)
+    if ((miniStepNum === 1 || miniStepNum === 4) && zoneId) {
       await db.employeeProgress.deleteMany({
         where: {
           sStep: sStepNum,
-          miniStep: 1,
+          miniStep: miniStepNum,
           projectId,
           zoneId,
         },

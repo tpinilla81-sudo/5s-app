@@ -182,6 +182,32 @@ export default function AutoevaluacionModal({ open, onClose, sStep, miniStep }: 
         setFinalScore(scoring.scorePercent);
         await fetchProgress();
 
+        // ─── Create EmployeeProgress record for individual step 4 (autoevaluación) ───
+        // Step 4 is individual for S1/S2/S3/S5 (done by employees) and for S4 (done by responsable)
+        // We need to track individual completion so the gating system unlocks step 5
+        if (passed && currentUser?.id && currentProject?.id && currentZone?.id) {
+          try {
+            await fetch('/api/employee-progress', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                sStep,
+                miniStep: 4,
+                completed: true,
+                score: scoring.scorePercent,
+                projectId: currentProject.id,
+                zoneId: currentZone.id,
+                userId: currentUser.id,
+              }),
+            });
+            // Also refresh employee progress so step 5 unlocks immediately
+            const { fetchEmployeeProgress } = use5SStore.getState();
+            await fetchEmployeeProgress(currentProject.id, currentZone.id);
+          } catch (empErr) {
+            console.error('Error creating employee progress for autoeval:', empErr);
+          }
+        }
+
         // ─── Upload photos to library with traceability ───
         if (autoevalPhotos.length > 0) {
           setIsUploadingPhotos(true);

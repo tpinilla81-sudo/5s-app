@@ -1,26 +1,63 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+import { AUDIT_CHECKLISTS } from '@/lib/5s-constants'
 import type { AuditSection } from '@/lib/5s-constants'
 
 /**
  * Convert template content (from API) to AuditSection[] format.
- * Template content is: { sections: [{ id, title, items: [{ id, description, hasOther }] }] }
+ * Template content can be in several formats:
+ *   - Standard: { sections: [{ id, title, items: [{ id, description, hasOther }] }] }
+ *   - Legacy autoeval: { items: [{ description, maxScore }] }
+ *   - Legacy audit: { criteria: [{ criterion, weight }] }
+ * All formats are normalized to AuditSection[].
  */
 export function templateToAuditSections(content: unknown): AuditSection[] {
   if (!content || typeof content !== 'object') return []
-  const parsed = content as { sections?: any[] }
-  if (!parsed.sections || !Array.isArray(parsed.sections)) return []
+  const parsed = content as Record<string, any>
 
-  return parsed.sections.map((section: any, sIdx: number) => ({
-    id: section.id || `sec-${sIdx}`,
-    title: section.title || `Sección ${sIdx + 1}`,
-    items: (section.items || []).map((item: any, iIdx: number) => ({
-      id: item.id || `item-${sIdx}-${iIdx}`,
-      description: item.description || '',
-      hasOther: item.hasOther || false,
-    })),
-  }))
+  // ── Standard format: { sections: [...] } ──
+  if (parsed.sections && Array.isArray(parsed.sections)) {
+    return parsed.sections.map((section: any, sIdx: number) => ({
+      id: section.id || `sec-${sIdx}`,
+      title: section.title || `Sección ${sIdx + 1}`,
+      items: (section.items || []).map((item: any, iIdx: number) => ({
+        id: item.id || `item-${sIdx}-${iIdx}`,
+        description: item.description || '',
+        hasOther: item.hasOther || false,
+      })),
+    }))
+  }
+
+  // ── Legacy autoeval format: { items: [{ description, maxScore }] } ──
+  // Convert to a single section with all items
+  if (parsed.items && Array.isArray(parsed.items)) {
+    return [{
+      id: 'sec-autoeval',
+      title: 'Puntos de Verificación',
+      items: parsed.items.map((item: any, iIdx: number) => ({
+        id: item.id || `item-autoeval-${iIdx}`,
+        description: item.description || item.criterion || '',
+        hasOther: item.hasOther || false,
+      })),
+    }]
+  }
+
+  // ── Legacy audit format: { criteria: [{ criterion, weight }] } ──
+  // Convert to a single section with all criteria as items
+  if (parsed.criteria && Array.isArray(parsed.criteria)) {
+    return [{
+      id: 'sec-audit',
+      title: 'Criterios de Auditoría',
+      items: parsed.criteria.map((c: any, iIdx: number) => ({
+        id: c.id || `item-audit-${iIdx}`,
+        description: c.criterion || c.description || '',
+        hasOther: c.hasOther || false,
+      })),
+    }]
+  }
+
+  return []
 }
 
 /**
@@ -73,6 +110,14 @@ export async function fetchChecklistTemplate(
   } catch (e) {
     console.error(`Error fetching ${type} template for S${sStep}:`, e)
   }
+
+  // ── Final fallback: use AUDIT_CHECKLISTS from constants ──
+  // These are the built-in checklists that ship with the app
+  const builtIn = AUDIT_CHECKLISTS[sStep as keyof typeof AUDIT_CHECKLISTS]
+  if (builtIn && builtIn.length > 0) {
+    return { sections: builtIn, notaMinima: null }
+  }
+
   return null
 }
 

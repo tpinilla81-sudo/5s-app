@@ -66,10 +66,13 @@ export interface Project {
   memberCount?: number
 }
 
-// Mini-step types: ZONE steps (2,3,4,5) are collaborative per zone; INDIVIDUAL step (1) is per employee
-// Step 4 (Autoevaluación) is done by EMPLOYEES for S1/S2/S3/S5, and by RESPONSABLE for S4
-const ZONE_MINI_STEPS = [2, 3, 4, 5]
-const INDIVIDUAL_MINI_STEPS = [1]
+// Mini-step types: ZONE steps (2,3,5) are collaborative per zone; INDIVIDUAL steps (1,4) are per employee
+// Step 1 (Formación+Examen) is individual — each employee must pass the exam
+// Step 4 (Autoevaluación) is individual — each employee/responsable does their own self-assessment
+//   For S1/S2/S3/S5: done by empleados; for S4: done by responsable
+// Step 5 (Auditoría) is zone-level — done by auditor for the zone as a whole
+const ZONE_MINI_STEPS = [2, 3, 5]
+const INDIVIDUAL_MINI_STEPS = [1, 4]
 
 // User's assigned zones (filtered by MemberZone for empleados)
 export interface UserZoneAssignment {
