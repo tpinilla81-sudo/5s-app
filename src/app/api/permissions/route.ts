@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
+import { getAuthUser } from '@/lib/auth-helpers'
 
 // ═══════════════════════════════════════════════════════════════════
 // TWO-TIER PERMISSION SYSTEM
@@ -90,10 +91,18 @@ const DEFAULT_PERMISSIONS: Record<string, string[]> = {
     ...PLATFORM_PERMISSIONS, // All platform permissions
   ],
 
-  // ADMIN DE EMPRESA: full project access, NO platform access
+  // ADMIN DE EMPRESA: manages company/projects/users, does NOT execute 5S steps
+  // Can VIEW everything (a0) but cannot EXECUTE any 5S step (a1)
+  // Only gestor can change admin permissions
   admin: [
-    ...PROJECT_GENERAL_PERMISSIONS, // All project general permissions
-    ...PER_S_PERMISSIONS,            // All per-S permissions
+    // Project management (full control over company structure)
+    'view_board', 'view_progress', 'view_project', 'edit_project', 'manage_zones',
+    'view_team', 'add_members', 'remove_members', 'change_roles',
+    'manage_training', 'delete_photos', 'delete_inventory', 'approve_audit',
+    'delete_project', 'reset_data', 'manage_templates', 'skip_steps',
+    'notify_audit', 'accept_audit_meeting',
+    // S-steps: VIEW only (a0), cannot execute (a1)
+    ...PER_S_PERMISSIONS.filter(id => id.endsWith('_a0')),
   ],
 
   gerente: [
@@ -220,6 +229,12 @@ export async function GET() {
 // PUT /api/permissions
 export async function PUT(request: NextRequest) {
   try {
+    // Only gestor or admin can modify permissions
+    const user = await getAuthUser(request)
+    if (!user || (user.role !== 'gestor' && user.role !== 'admin')) {
+      return NextResponse.json({ error: 'No autorizado' }, { status: 403 })
+    }
+
     const body = await request.json()
     const { permissions } = body as { permissions: Record<string, Record<string, boolean>> }
 
@@ -234,6 +249,9 @@ export async function PUT(request: NextRequest) {
 
       for (const [permission, allowed] of Object.entries(perms)) {
         if (!ALL_PERMISSIONS.includes(permission)) continue
+
+        // Admin cannot modify their own role's permissions — only gestor can
+        if (user.role === 'admin' && role === 'admin') continue
 
         updatePromises.push(
           db.rolePermissionConfig.upsert({
@@ -268,8 +286,13 @@ export async function PUT(request: NextRequest) {
 }
 
 // POST /api/permissions - Reset to defaults
-export async function POST() {
+export async function POST(request: NextRequest) {
   try {
+    // Only gestor can reset permissions
+    const user = await getAuthUser(request)
+    if (!user || user.role !== 'gestor') {
+      return NextResponse.json({ error: 'Solo el gestor puede restaurar permisos' }, { status: 403 })
+    }
     await db.rolePermissionConfig.deleteMany({})
 
     const createPromises: Promise<unknown>[] = []

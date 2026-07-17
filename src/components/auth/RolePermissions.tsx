@@ -117,16 +117,24 @@ const PROJECT_PERMS = [
 // All permission IDs
 const ALL_PERM_IDS = [...PLATFORM_PERMS.map(p => p.id), ...PERM_ID_MAP.map(p => p.id), ...PROJECT_PERMS.map(p => p.id)]
 
-// Locked permissions per role (always ON)
+// Locked permissions per role (always ON, cannot be toggled off)
+// For admin: ALL permissions are locked when the current user is NOT gestor
+// (only gestor can change admin permissions)
 const LOCKED_PERMISSIONS: Record<string, string[]> = {
   gestor: PLATFORM_PERMS.map(p => p.id), // Gestor platform permissions are always locked ON
-  admin: ['view_board', 'view_project', 'view_team'],
+  admin: ['view_board', 'view_project', 'view_team'], // Core view perms always locked ON
 }
 
 // Default permissions per role
 const DEFAULT_PERMISSIONS: Record<string, string[]> = {
   gestor: PLATFORM_PERMS.map(p => p.id), // Gestor: only platform permissions (manages platform, not projects)
-  admin: [...PERM_ID_MAP.map(p => p.id), ...PROJECT_PERMS.map(p => p.id)], // Admin: full project access, no platform
+  // ADMIN DE EMPRESA: manages company/projects/users, does NOT execute 5S steps
+  // Can VIEW everything (a0) but cannot EXECUTE any 5S step (a1)
+  // Only gestor can change admin permissions
+  admin: [
+    ...PROJECT_PERMS.map(p => p.id), // All project general permissions
+    ...PERM_ID_MAP.filter(p => p.actionIdx === 0).map(p => p.id), // All "view" actions (a0) only
+  ],
   gerente: [
     'view_board', 'view_progress', 'view_project', 'view_team',
     'accept_audit_meeting',
@@ -230,6 +238,8 @@ export default function RolePermissions({ open, onClose }: RolePermissionsProps)
 
   const isLocked = (roleId: string, permId: string) => {
     const locked = LOCKED_PERMISSIONS[roleId] || []
+    // Admin cannot modify their own role's permissions at all
+    if (isAdmin && roleId === 'admin') return true
     return locked.includes(permId)
   }
 
@@ -238,8 +248,10 @@ export default function RolePermissions({ open, onClose }: RolePermissionsProps)
     return source[roleId]?.[permId] ?? false
   }
 
+  const canEdit = isGestor || isAdmin
+
   const togglePermission = (roleId: string, permId: string) => {
-    if (!isAdmin || viewMode !== 'edit') return
+    if (!canEdit || viewMode !== 'edit') return
     if (isLocked(roleId, permId)) return
     const newPerms = JSON.parse(JSON.stringify(editedPermissions))
     if (!newPerms[roleId]) newPerms[roleId] = {}
@@ -249,7 +261,7 @@ export default function RolePermissions({ open, onClose }: RolePermissionsProps)
   }
 
   const toggleAllInGroup = (roleId: string, permIds: string[], value: boolean) => {
-    if (!isAdmin || viewMode !== 'edit') return
+    if (!canEdit || viewMode !== 'edit') return
     const newPerms = JSON.parse(JSON.stringify(editedPermissions))
     if (!newPerms[roleId]) newPerms[roleId] = {}
     for (const pid of permIds) {
@@ -260,7 +272,7 @@ export default function RolePermissions({ open, onClose }: RolePermissionsProps)
   }
 
   const toggleAllForRole = (roleId: string, value: boolean) => {
-    if (!isAdmin || viewMode !== 'edit') return
+    if (!canEdit || viewMode !== 'edit') return
     const newPerms = JSON.parse(JSON.stringify(editedPermissions))
     if (!newPerms[roleId]) newPerms[roleId] = {}
     for (const pid of ALL_PERM_IDS) {
@@ -271,7 +283,7 @@ export default function RolePermissions({ open, onClose }: RolePermissionsProps)
   }
 
   const toggleAllForStep = (sId: number, value: boolean) => {
-    if (!isAdmin || viewMode !== 'edit') return
+    if (!canEdit || viewMode !== 'edit') return
     const stepPermIds = PERM_ID_MAP.filter(p => p.id.startsWith(`s${sId}_`)).map(p => p.id)
     const newPerms = JSON.parse(JSON.stringify(editedPermissions))
     for (const roleId of ROLES.map(r => r.id)) {
@@ -608,7 +620,8 @@ export default function RolePermissions({ open, onClose }: RolePermissionsProps)
               <div>
                 <h1 className="text-xl font-bold text-gray-900">Matriz de Permisos por 5S</h1>
                 <p className="text-sm text-muted-foreground">
-                  {isAdmin ? 'Permisos individuales por cada S y paso. Activa o desactiva según rol.' : 'Consulta los permisos asignados a cada rol.'}
+                  {canEdit ? 'Permisos individuales por cada S y paso. Activa o desactiva según rol.' : 'Consulta los permisos asignados a cada rol.'}
+                  {isAdmin && ' · Tus permisos solo los puede cambiar el Gestor.'}
                 </p>
               </div>
             </div>
@@ -620,7 +633,7 @@ export default function RolePermissions({ open, onClose }: RolePermissionsProps)
                 className={viewMode === 'view' ? 'bg-gradient-to-r from-green-500 to-emerald-600 text-white' : ''}>
                 <Eye className="h-4 w-4 mr-1.5" /> Consultar
               </Button>
-              {isAdmin && (
+              {canEdit && (
                 <Button variant={viewMode === 'edit' ? 'default' : 'outline'} size="sm"
                   onClick={() => { setViewMode('edit'); setEditedPermissions(permissions) }}
                   className={viewMode === 'edit' ? 'bg-gradient-to-r from-green-500 to-emerald-600 text-white' : ''}>
@@ -628,12 +641,14 @@ export default function RolePermissions({ open, onClose }: RolePermissionsProps)
                 </Button>
               )}
             </div>
-            {isAdmin && viewMode === 'edit' && (
+            {canEdit && viewMode === 'edit' && (
               <div className="flex gap-2 border-l pl-3">
-                <Button variant="outline" size="sm" onClick={handleReset} disabled={isSaving}
-                  className="text-orange-600 hover:text-orange-700 hover:bg-orange-50">
-                  <RotateCcw className="h-4 w-4 mr-1.5" /> Defaults
-                </Button>
+                {isGestor && (
+                  <Button variant="outline" size="sm" onClick={handleReset} disabled={isSaving}
+                    className="text-orange-600 hover:text-orange-700 hover:bg-orange-50">
+                    <RotateCcw className="h-4 w-4 mr-1.5" /> Defaults
+                  </Button>
+                )}
                 <Button size="sm" onClick={handleSave} disabled={!hasChanges || isSaving}
                   className="bg-gradient-to-r from-green-500 to-emerald-600 text-white">
                   {isSaving ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <Save className="h-4 w-4 mr-1.5" />}
