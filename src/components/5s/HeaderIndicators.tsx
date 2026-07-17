@@ -215,13 +215,13 @@ export default function HeaderIndicators({ stats }: HeaderIndicatorsProps) {
                   <div className={`p-1 rounded-lg ${isEmpty ? 'bg-white/50' : 'bg-white/70'} shadow-sm`}>
                     <IconComp className={`h-3.5 w-3.5 ${ind.iconColor}`} />
                   </div>
-                  <span className={`text-2xl font-extrabold ${ind.valueColor} leading-none tracking-tight`}>
+                  <span className={`text-lg sm:text-2xl font-extrabold ${ind.valueColor} leading-none tracking-tight`}>
                     {ind.displayValue}
                   </span>
                 </div>
 
                 {/* Label */}
-                <span className={`text-[9px] font-semibold ${ind.iconColor} whitespace-nowrap mt-1 uppercase tracking-wide`}>
+                <span className={`text-[9px] sm:text-[10px] font-semibold ${ind.iconColor} whitespace-nowrap mt-1 uppercase tracking-wide`}>
                   {ind.label}
                 </span>
 

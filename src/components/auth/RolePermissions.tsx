@@ -740,7 +740,7 @@ export default function RolePermissions({ open, onClose }: RolePermissionsProps)
                 </div>
 
                 {/* Role summary bar — only project roles */}
-                <div className="grid grid-cols-5 gap-3">
+                <div className="grid grid-cols-3 sm:grid-cols-5 gap-3">
                   {ROLES.filter(r => r.id !== 'gestor').map(role => {
                     const RoleIcon = role.icon
                     const total = countPermsForRole(role.id)
@@ -792,7 +792,7 @@ export default function RolePermissions({ open, onClose }: RolePermissionsProps)
                 {/* Totals footer — project roles only */}
                 <div className="rounded-xl bg-gray-50 border p-5">
                   <h3 className="text-sm font-bold text-gray-600 mb-3">Resumen de Permisos de Proyecto</h3>
-                  <div className="grid grid-cols-5 gap-4">
+                  <div className="grid grid-cols-2 sm:grid-cols-5 gap-4">
                     {ROLES.filter(r => r.id !== 'gestor').map(role => {
                       const total = countPermsForRole(role.id)
                       const projectPermCount = [...PERM_ID_MAP.map(p => p.id), ...PROJECT_PERMS.map(p => p.id)].length

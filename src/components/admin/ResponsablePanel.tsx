@@ -363,7 +363,7 @@ export default function ResponsablePanel() {
                                 <span className="text-xs font-semibold" style={{ color: S_COLORS[s.id] }}>{sPercent}%</span>
                               </div>
                             </div>
-                            <div className="grid grid-cols-5 gap-2">
+                            <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
                               {[1, 2, 3, 4, 5].map(miniStep => {
                                 const step = sSteps.find(st => st.miniStep === miniStep)
                                 const status = step?.status || 'locked'

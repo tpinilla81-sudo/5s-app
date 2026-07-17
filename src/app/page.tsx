@@ -379,7 +379,7 @@ export default function HomePage() {
             <div className="flex items-center gap-2">
               {/* Avisos */}
               <Button variant={unreadNotifs > 0 ? 'default' : 'outline'} size="sm"
-                className={`relative gap-1 text-[10px] h-7 ${unreadNotifs > 0 ? 'bg-orange-500 hover:bg-orange-600 text-white border-orange-500' : 'border-orange-300 text-orange-600 hover:bg-orange-50'}`}
+                className={`relative gap-1 text-[10px] h-8 ${unreadNotifs > 0 ? 'bg-orange-500 hover:bg-orange-600 text-white border-orange-500' : 'border-orange-300 text-orange-600 hover:bg-orange-50'}`}
                 onClick={async () => {
                   if (currentUser?.id) {
                     try {
@@ -409,7 +409,7 @@ export default function HomePage() {
                   document.body.removeChild(link);
                   window.URL.revokeObjectURL(url);
                 } catch { window.open('/Manual_Usuario_5S.pdf', '_blank'); }
-              }} className="text-purple-600 hover:text-purple-700 h-7 px-2">
+              }} className="text-purple-600 hover:text-purple-700 h-8 px-2">
                 <FileText className="h-3.5 w-3.5" />
                 <span className="text-[10px]">Manual</span>
               </Button>
@@ -417,7 +417,7 @@ export default function HomePage() {
               {currentUser && (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="outline" size="sm" className="gap-1 h-7 px-2">
+                    <Button variant="outline" size="sm" className="gap-1 h-8 px-2">
                       <div className="w-5 h-5 rounded-full bg-red-100 flex items-center justify-center text-red-700 text-[9px] font-bold">
                         {currentUser.name.charAt(0).toUpperCase()}
                       </div>
@@ -443,11 +443,11 @@ export default function HomePage() {
             </div>
           ) : (
           /* ── NON-GESTOR HEADER: full controls ── */
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-1 sm:gap-1.5 overflow-x-auto">
             {/* 🔔 Notification bell */}
             {canSeeNotifications && (
               <Button variant={unreadNotifs > 0 ? 'default' : 'outline'} size="sm"
-                className={`relative gap-1 text-[10px] h-7 ${unreadNotifs > 0 ? 'bg-orange-500 hover:bg-orange-600 text-white border-orange-500' : 'border-orange-300 text-orange-600 hover:bg-orange-50'}`}
+                className={`relative gap-1 text-[10px] h-8 ${unreadNotifs > 0 ? 'bg-orange-500 hover:bg-orange-600 text-white border-orange-500' : 'border-orange-300 text-orange-600 hover:bg-orange-50'}`}
                 onClick={async () => {
                   if (currentUser?.id && currentProject?.id) {
                     try {
@@ -468,7 +468,7 @@ export default function HomePage() {
             {/* 📦 Inventario (Jaula de Excedentes) */}
             {canSeeNotifications && (
               <Button variant="outline" size="sm"
-                className="gap-1 text-[10px] h-7 border-red-300 text-red-600 hover:bg-red-50"
+                className="gap-1 text-[10px] h-8 border-red-300 text-red-600 hover:bg-red-50"
                 onClick={() => setShowJaulaModal(true)}
                 title="Inventario de Innecesarios">
                 <Package className="h-3 w-3" />
@@ -478,7 +478,7 @@ export default function HomePage() {
             {/* ✅ Activos (Necesarios) */}
             {canSeeNotifications && (
               <Button variant="outline" size="sm"
-                className="gap-1 text-[10px] h-7 border-green-300 text-green-600 hover:bg-green-50"
+                className="gap-1 text-[10px] h-8 border-green-300 text-green-600 hover:bg-green-50"
                 onClick={() => setShowActivosModal(true)}
                 title="Activos (Necesarios)">
                 <BoxSelect className="h-3 w-3" />
@@ -488,7 +488,7 @@ export default function HomePage() {
             {/* 📸 Biblioteca de Fotos */}
             {canSeeNotifications && (
               <Button variant="outline" size="sm"
-                className="gap-1 text-[10px] h-7 border-purple-300 text-purple-600 hover:bg-purple-50"
+                className="gap-1 text-[10px] h-8 border-purple-300 text-purple-600 hover:bg-purple-50"
                 onClick={() => openModal('photoLibrary', 2)}
                 title="Biblioteca de Fotos">
                 <Camera className="h-3 w-3" />
@@ -498,7 +498,7 @@ export default function HomePage() {
             {/* 📚 Biblioteca de Estándares */}
             {canSeeNotifications && (
               <Button variant="outline" size="sm"
-                className="gap-1 text-[10px] h-7 border-indigo-300 text-indigo-600 hover:bg-indigo-50"
+                className="gap-1 text-[10px] h-8 border-indigo-300 text-indigo-600 hover:bg-indigo-50"
                 onClick={() => openModal('standards', 3)}
                 title="Biblioteca de Estándares">
                 <BookOpen className="h-3 w-3" />
@@ -508,7 +508,7 @@ export default function HomePage() {
             {/* 📋 Plan de Acción General */}
             {canSeeNotifications && (
               <Button variant="outline" size="sm"
-                className="gap-1 text-[10px] h-7 border-orange-300 text-orange-600 hover:bg-orange-50"
+                className="gap-1 text-[10px] h-8 border-orange-300 text-orange-600 hover:bg-orange-50"
                 onClick={() => setActiveTab('actionplan')}
                 title="Plan de Acción General">
                 <ListChecks className="h-3 w-3" />
@@ -519,17 +519,17 @@ export default function HomePage() {
             {(isAdmin || canSkipSteps) && (
               <Button variant={adminFreeNavigation ? 'default' : 'outline'} size="sm"
                 onClick={() => setAdminFreeNavigation(!adminFreeNavigation)}
-                className={`gap-1 text-[10px] h-7 ${adminFreeNavigation ? 'bg-amber-500 hover:bg-amber-600 text-white border-amber-500' : 'text-amber-600 border-amber-300 hover:bg-amber-50'}`}
+                className={`gap-1 text-[10px] h-8 ${adminFreeNavigation ? 'bg-amber-500 hover:bg-amber-600 text-white border-amber-500' : 'text-amber-600 border-amber-300 hover:bg-amber-50'}`}
                 title={adminFreeNavigation ? 'Navegación libre activada' : 'Navegación secuencial'}>
                 {adminFreeNavigation ? <Unlock className="h-3 w-3" /> : <Lock className="h-3 w-3" />}
               </Button>
             )}
             {canManageTeam && (
-              <Button variant="ghost" size="sm" onClick={() => setShowTeamManagement(true)} className="text-green-600 hover:text-green-700 h-7 px-1.5">
+              <Button variant="ghost" size="sm" onClick={() => setShowTeamManagement(true)} className="text-green-600 hover:text-green-700 h-8 px-1.5">
                 <Settings className="h-3.5 w-3.5" />
               </Button>
             )}
-            <Button variant="ghost" size="sm" onClick={() => setShowRolePermissions(true)} className="text-green-600 hover:text-green-700 h-7 px-1.5">
+            <Button variant="ghost" size="sm" onClick={() => setShowRolePermissions(true)} className="text-green-600 hover:text-green-700 h-8 px-1.5">
               <Shield className="h-3.5 w-3.5" />
             </Button>
             <Button variant="ghost" size="sm" onClick={async () => {
@@ -544,17 +544,17 @@ export default function HomePage() {
                 document.body.removeChild(link);
                 window.URL.revokeObjectURL(url);
               } catch { window.open('/Manual_Usuario_5S.pdf', '_blank'); }
-            }} className="text-purple-600 hover:text-purple-700 h-7 px-1.5">
+            }} className="text-purple-600 hover:text-purple-700 h-8 px-1.5">
               <FileText className="h-3.5 w-3.5" />
             </Button>
-            <Button variant="ghost" size="sm" onClick={handleReseed} disabled={isSeeding} className="text-muted-foreground h-7 px-1.5">
+            <Button variant="ghost" size="sm" onClick={handleReseed} disabled={isSeeding} className="text-muted-foreground h-8 px-1.5">
               <RefreshCw className={`h-3.5 w-3.5 ${isSeeding ? 'animate-spin' : ''}`} />
             </Button>
             {/* User menu */}
             {currentUser && (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="sm" className="gap-1 h-7 px-2">
+                  <Button variant="outline" size="sm" className="gap-1 h-8 px-2">
                     <div className="w-5 h-5 rounded-full bg-green-100 flex items-center justify-center text-green-700 text-[9px] font-bold">
                       {currentUser.name.charAt(0).toUpperCase()}
                     </div>
@@ -582,12 +582,12 @@ export default function HomePage() {
         </div>
 
         {/* Tab Navigation Bar */}
-        <div className="border-t bg-white flex items-center gap-0 px-4">
+        <div className="border-t bg-white flex items-center gap-0 px-2 sm:px-4 overflow-x-auto">
           {availableTabs.map(tab => (
             <button
               key={tab.key}
               onClick={() => setActiveTab(tab.key)}
-              className={`flex items-center gap-1.5 px-4 py-2 text-xs font-medium border-b-2 transition-all ${
+              className={`flex items-center gap-1 sm:gap-1.5 px-2 sm:px-4 py-2 text-xs font-medium border-b-2 transition-all whitespace-nowrap ${
                 activeTab === tab.key
                   ? 'border-green-500 text-green-700 bg-green-50/50'
                   : 'border-transparent text-muted-foreground hover:text-foreground hover:border-gray-300'
@@ -602,7 +602,7 @@ export default function HomePage() {
 
       {/* Notification dropdown */}
       {showNotifs && (canSeeNotifications || isGestor) && (
-        <div className="fixed top-12 right-16 z-50 w-80 bg-white border rounded-lg shadow-xl max-h-96 overflow-y-auto">
+        <div className="fixed top-12 right-2 sm:right-16 left-2 sm:left-auto z-50 sm:w-80 w-[calc(100vw-16px)] bg-white border rounded-lg shadow-xl max-h-96 overflow-y-auto">
           <div className="p-3 border-b flex items-center justify-between">
             <span className="text-sm font-semibold">Notificaciones</span>
             {notifs.length > 0 && (
@@ -776,7 +776,7 @@ export default function HomePage() {
                   {/* BOTTOM: S-Step Cards — Compact horizontal row (only when zone selected) */}
                   {currentZone && (
                   <div className="shrink-0 border-t bg-white/80 backdrop-blur-sm px-2 py-2 z-10">
-                    <div className="grid grid-cols-5 gap-2 max-w-5xl mx-auto">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2 max-w-5xl mx-auto">
                       {S_STEPS.map(s => {
                         const earned = isQuesitoEarned(s.id);
                         const zoneId = currentZone?.id;

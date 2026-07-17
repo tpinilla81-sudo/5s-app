@@ -869,7 +869,7 @@ export default function GestorPanel() {
                   {stats.companies.map(company => (
                     <Card key={company.id} className="bg-slate-900/60 border-violet-700/20">
                       <CardContent className="p-4">
-                        <div className="flex items-center justify-between gap-4">
+                        <div className="flex items-center justify-between gap-2 sm:gap-4 flex-wrap">
                           {/* Company info */}
                           <div className="flex items-center gap-3 flex-1 min-w-0">
                             <div className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 ${company.active ? 'bg-violet-800/40' : 'bg-red-900/30'}`}>
@@ -884,7 +884,7 @@ export default function GestorPanel() {
                           </div>
 
                           {/* Admin info */}
-                          <div className="flex items-center gap-3">
+                          <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
                             {company.adminUser ? (
                               <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-purple-900/20 border border-purple-700/30">
                                 <div className="w-7 h-7 rounded-full bg-purple-700/50 flex items-center justify-center text-xs font-bold text-purple-200">

@@ -358,7 +358,7 @@ export default function PlanDeAccionView() {
                       </div>
                     ) : (
                       <div className="overflow-auto border rounded-lg">
-                        <table className="w-full text-xs border-collapse min-w-[1200px]">
+                        <table className="w-full text-xs border-collapse min-w-[800px] md:min-w-[1200px]">
                           <thead className="sticky top-0 z-10">
                             <tr>
                               <th colSpan={9} className={`${HEADER_COLORS.demandante} px-2 py-1.5 text-center text-xs font-bold border border-amber-500`}>

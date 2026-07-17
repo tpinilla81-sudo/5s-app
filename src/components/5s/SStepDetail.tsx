@@ -197,15 +197,15 @@ export default function SStepDetail({ sStep, onBack, onOpenModal }: SStepDetailP
           <ArrowLeft className="h-5 w-5" />
         </Button>
         <div className="flex-1">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <div
-              className="w-4 h-4 rounded-full"
+              className="w-4 h-4 rounded-full shrink-0"
               style={{ backgroundColor: sStepData.color }}
             />
-            <h2 className="text-xl font-bold" style={{ color: sStepData.color }}>
+            <h2 className="text-lg sm:text-xl font-bold" style={{ color: sStepData.color }}>
               {sStepData.name}
             </h2>
-            <span className="text-sm text-muted-foreground">
+            <span className="text-xs sm:text-sm text-muted-foreground">
               ({sStepData.japaneseName} - {sStepData.spanishName})
             </span>
           </div>
@@ -381,7 +381,7 @@ export default function SStepDetail({ sStep, onBack, onOpenModal }: SStepDetailP
                         <div className="space-y-1.5">
                           {displayActions.map(action => (
                             <div key={action.id} className="bg-white/80 border rounded p-2 space-y-1">
-                              <div className="grid grid-cols-2 gap-1.5">
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
                                 <div>
                                   <span className="text-muted-foreground font-medium">Concepto:</span>
                                   <p className="font-medium">{action.hallazgo || action.itemDescription || '—'}</p>
@@ -445,7 +445,7 @@ export default function SStepDetail({ sStep, onBack, onOpenModal }: SStepDetailP
                   <div className="space-y-1.5">
                     {relatedActions.map(action => (
                       <div key={action.id} className="bg-white/80 border rounded p-2 space-y-1">
-                        <div className="grid grid-cols-2 gap-1.5">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
                           <div>
                             <span className="text-muted-foreground font-medium">Concepto:</span>
                             <p className="font-medium">{action.hallazgo || action.itemDescription || '—'}</p>

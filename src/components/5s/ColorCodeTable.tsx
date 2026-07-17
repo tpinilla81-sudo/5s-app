@@ -199,7 +199,7 @@ export default function ColorCodeTable({ open, onClose }: ColorCodeTableProps) {
           <div className="flex-1 overflow-auto px-4 py-3">
             {/* Table header */}
             <div className="bg-green-700 text-white rounded-t-lg grid gap-0 text-[10px] font-bold"
-              style={{ gridTemplateColumns: '40px 1fr 120px 80px 60px 1fr 100px' }}>
+              style={{ gridTemplateColumns: '30px 1fr 80px 60px 50px 1fr 80px' }}>
               <div className="px-2 py-2 text-center border-r border-green-600">#</div>
               <div className="px-2 py-2 border-r border-green-600">DESCRIPCIÓN</div>
               <div className="px-2 py-2 border-r border-green-600">COLOR Y DETALLES</div>
@@ -221,7 +221,7 @@ export default function ColorCodeTable({ open, onClose }: ColorCodeTableProps) {
                 className={`grid gap-0 text-[10px] border-b border-gray-200 hover:bg-blue-50/50 transition-colors cursor-pointer ${
                   idx % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'
                 }`}
-                style={{ gridTemplateColumns: '40px 1fr 120px 80px 60px 1fr 100px' }}
+                style={{ gridTemplateColumns: '30px 1fr 80px 60px 50px 1fr 80px' }}
                 onClick={() => setZoomedEntry(entry)}
               >
                 <div className="px-2 py-2 text-center font-bold text-gray-500 border-r border-gray-100">{entry.id}</div>

@@ -227,7 +227,7 @@ export default function GerenteDashboard({ onNavigateActions, onNavigateInventor
             </CardTitle>
           </CardHeader>
           <CardContent className="pb-3">
-            <div className="grid grid-cols-5 gap-2 text-center">
+            <div className="grid grid-cols-3 sm:grid-cols-5 gap-2 text-center">
               <div>
                 <p className="text-lg font-bold text-red-600">{stats.actionsByStatus.abierta}</p>
                 <p className="text-xs text-muted-foreground">Abiertas</p>
@@ -299,7 +299,7 @@ export default function GerenteDashboard({ onNavigateActions, onNavigateInventor
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-5 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
             {S_STEPS.map((s, i) => {
               const sData = stats.perS[s.id]
               if (!sData) return null
