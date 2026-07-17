@@ -149,19 +149,51 @@ export default function InventarioModal({ open, onClose, sStep, miniStep }: Inve
                 ...(content.desplegables_jerarquicos ? { desplegables_jerarquicos: content.desplegables_jerarquicos } : {}),
               });
               setHasTemplate(true);
-            } else {
+              // Pre-load items from legacy {items: [...]} format if present
+              if (content.items && Array.isArray(content.items) && content.items.length > 0) {
+                setItems(content.items.map((item: any) => ({
+                  name: item.name || '',
+                  location: item.location || '',
+                  category: item.category || '',
+                  quantity: item.quantity || 1,
+                  quantityNeeded: item.quantityNeeded || 0,
+                  quantityUnneeded: item.quantityUnneeded || 0,
+                  price: item.price ?? null,
+                  action: item.action || '',
+                  extra: item.extra || {},
+                })));
+              }
+            } else if (content.items && Array.isArray(content.items)) {
+              // Legacy format: {items: [...]} — use default config but load items
               setCustomConfig(null);
-              setHasTemplate(false);
+              setHasTemplate(true);
+              if (content.items.length > 0) {
+                setItems(content.items.map((item: any) => ({
+                  name: item.name || '',
+                  location: item.location || '',
+                  category: item.category || '',
+                  quantity: item.quantity || 1,
+                  quantityNeeded: item.quantityNeeded || 0,
+                  quantityUnneeded: item.quantityUnneeded || 0,
+                  price: item.price ?? null,
+                  action: item.action || '',
+                  extra: item.extra || {},
+                })));
+              }
+            } else {
+              // Unknown format — use default config as fallback
+              setCustomConfig(null);
+              setHasTemplate(true);
             }
           } else {
-            // No inventario template assigned in this board slot
+            // No inventario template assigned in this board slot — use default config
             setCustomConfig(null);
-            setHasTemplate(false);
+            setHasTemplate(true);
           }
         } else {
-          // No slot configured for this step
+          // No slot configured for this step — use default config
           setCustomConfig(null);
-          setHasTemplate(false);
+          setHasTemplate(true);
         }
       } else {
         // Fallback: load global template
@@ -179,19 +211,53 @@ export default function InventarioModal({ open, onClose, sStep, miniStep }: Inve
               ...(content.desplegables_jerarquicos ? { desplegables_jerarquicos: content.desplegables_jerarquicos } : {}),
             });
             setHasTemplate(true);
-          } else {
+            // Pre-load items from legacy {items: [...]} format if present
+            if (content.items && Array.isArray(content.items) && content.items.length > 0) {
+              setItems(content.items.map((item: any) => ({
+                name: item.name || '',
+                location: item.location || '',
+                category: item.category || '',
+                quantity: item.quantity || 1,
+                quantityNeeded: item.quantityNeeded || 0,
+                quantityUnneeded: item.quantityUnneeded || 0,
+                price: item.price ?? null,
+                action: item.action || '',
+                extra: item.extra || {},
+              })));
+            }
+          } else if (content.items && Array.isArray(content.items)) {
+            // Legacy format: {items: [...]} — use default config but load items
             setCustomConfig(null);
-            setHasTemplate(false);
+            setHasTemplate(true);
+            if (content.items.length > 0) {
+              setItems(content.items.map((item: any) => ({
+                name: item.name || '',
+                location: item.location || '',
+                category: item.category || '',
+                quantity: item.quantity || 1,
+                quantityNeeded: item.quantityNeeded || 0,
+                quantityUnneeded: item.quantityUnneeded || 0,
+                price: item.price ?? null,
+                action: item.action || '',
+                extra: item.extra || {},
+              })));
+            }
+          } else {
+            // Unknown format — use default config as fallback
+            setCustomConfig(null);
+            setHasTemplate(true);
           }
         } else {
+          // No global template — use default config (INVENTORY_CONFIGS has entries for all 5 S steps)
           setCustomConfig(null);
-          setHasTemplate(false);
+          setHasTemplate(true);
         }
       }
     } catch (e) {
       console.error('Error loading custom inventory config:', e);
+      // On error, use default config so the modal still works
       setCustomConfig(null);
-      setHasTemplate(false);
+      setHasTemplate(true);
     }
   };
 

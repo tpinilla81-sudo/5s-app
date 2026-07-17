@@ -122,7 +122,7 @@ export default function AuditoriaModal({ open, onClose, sStep, miniStep }: Audit
       setFechaAuditoria(now.toISOString().slice(0, 10));
       setHoraAuditoria(now.toTimeString().slice(0, 5));
     }
-  }, [open, sStep]);
+  }, [open, sStep, sections]);
 
   const totalItems = sections.reduce((sum, s) => sum + s.items.length, 0) || 26;
 

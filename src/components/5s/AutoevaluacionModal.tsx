@@ -95,7 +95,7 @@ export default function AutoevaluacionModal({ open, onClose, sStep, miniStep }: 
       setFinalScore(0);
       setAutoevalPhotos([]);
     }
-  }, [open, sStep]);
+  }, [open, sStep, sections]);
 
   const totalItems = sections.reduce((sum, s) => sum + s.items.length, 0) || 26;
 
