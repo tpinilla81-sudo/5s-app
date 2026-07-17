@@ -26,7 +26,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { ClipboardList, Plus, CheckCircle, Download, Upload, FileSpreadsheet, BookOpen, ArrowRight, AlertTriangle, FileUp, Maximize2, Minimize2, File, PenTool, Image as ImageIcon, Eye, Loader2, MapPin, Tag } from 'lucide-react';
+import { ClipboardList, Plus, CheckCircle, Download, Upload, FileSpreadsheet, BookOpen, ArrowRight, AlertTriangle, FileUp, Maximize2, Minimize2, File, PenTool, Image as ImageIcon, Eye, Loader2, MapPin, Tag, Camera, Link2, Unlink, X, ZoomIn } from 'lucide-react';
 import { toast } from 'sonner';
 import { use5SStore } from '@/lib/store';
 import { S_STEPS, INVENTORY_CONFIGS, INVENTORY_CLASSIFY_THRESHOLD } from '@/lib/5s-constants';
@@ -36,6 +36,11 @@ import ColorCodeTable from '@/components/5s/ColorCodeTable';
 import TagPrinter from '@/components/5s/TagPrinter';
 import CleaningPlanPanel from '@/components/5s/CleaningPlanPanel';
 import BibliotecaEstandaresView from '@/components/5s/BibliotecaEstandaresView';
+import {
+  compressImage,
+  generatePhotoFilename,
+  base64toFile,
+} from '@/lib/image-utils';
 
 interface InventoryItemData {
   id?: string;
@@ -55,6 +60,20 @@ interface InventoryItemData {
   jaulaDestino?: string | null;
   zonaOrigen?: string | null;
   zonaDestino?: string | null;
+  photos?: PhotoData[];
+}
+
+interface PhotoData {
+  id: string;
+  title: string;
+  description?: string | null;
+  photoUrl: string;
+  photoType: string; // "antes", "despues", "referencia", "hallazgo", "mejora"
+  category: string;
+  inventoryItemId?: string | null;
+  miniStep: number;
+  sStep: number;
+  createdAt: string;
 }
 
 interface InventarioModalProps {
@@ -87,6 +106,17 @@ export default function InventarioModal({ open, onClose, sStep, miniStep }: Inve
   const [showColorCodeTable, setShowColorCodeTable] = useState(false);
   const [savedLayouts, setSavedLayouts] = useState<{ id: string; title: string; photoUrl: string | null; createdAt: string }[]>([]);
   const [layoutUploaded, setLayoutUploaded] = useState(false);
+
+  // Photo attachment state
+  const [itemPhotos, setItemPhotos] = useState<Record<string, PhotoData[]>>({});
+  const [step2Photos, setStep2Photos] = useState<PhotoData[]>([]);
+  const [showPhotoGallery, setShowPhotoGallery] = useState(false);
+  const [galleryTargetItemId, setGalleryTargetItemId] = useState<string | null>(null);
+  const [uploadingPhotoForItem, setUploadingPhotoForItem] = useState<string | null>(null);
+  const [uploadPhotoType, setUploadPhotoType] = useState<string>('antes');
+  const [showPhotoLightbox, setShowPhotoLightbox] = useState<PhotoData | null>(null);
+  const [pendingNewPhoto, setPendingNewPhoto] = useState<File | null>(null);
+  const [pendingNewPhotoType, setPendingNewPhotoType] = useState<string>('antes');
 
   // S1: default category is 'innecesario' since this template is for unnecessary items
   const defaultCategory = sStep === 1 ? 'innecesario' : undefined;
@@ -123,6 +153,8 @@ export default function InventarioModal({ open, onClose, sStep, miniStep }: Inve
       loadCustomInventoryConfig();
       // Reset zonaOrigen to current zone when opening
       setNewItem(prev => ({ ...prev, zonaOrigen: currentZone?.name || null }));
+      // Load Step 2 photos for this zone/project
+      loadStep2Photos();
     }
   }, [open, sStep]);
 
@@ -359,30 +391,52 @@ export default function InventarioModal({ open, onClose, sStep, miniStep }: Inve
       const res = await fetch(`/api/inventory?sStep=${sStep}${projectIdParam}${zoneIdParam}`);
       const json = await res.json();
       if (json.success) {
-        setItems(json.data.map((item: any) => ({
-          id: item.id,
-          name: item.name,
-          location: item.location || '',
-          category: item.category || '',
-          quantity: item.quantity || 1,
-          // S1: Set quantities based on category (innecesario or necesario)
-          quantityNeeded: sStep === 1
-            ? (item.category === 'necesario' ? (item.quantityNeeded || item.quantity || 1) : 0)
-            : (item.quantityNeeded || 0),
-          quantityUnneeded: sStep === 1
-            ? (item.category === 'innecesario' ? (item.quantityUnneeded || item.quantity || 1) : 0)
-            : (item.quantityUnneeded || 0),
-          price: item.price ?? null,
-          action: item.action || '',
-          extra: typeof item.extra === 'string' ? JSON.parse(item.extra) : (item.extra || {}),
-          jaulaStatus: item.jaulaStatus || '',
-          jaulaFechaEntrada: item.jaulaFechaEntrada || null,
-          jaulaOrigen: item.jaulaOrigen || null,
-          jaulaFechaSalida: item.jaulaFechaSalida || null,
-          jaulaDestino: item.jaulaDestino || null,
-          zonaOrigen: item.zonaOrigen || null,
-          zonaDestino: item.zonaDestino || null,
-        })));
+        const photosMap: Record<string, PhotoData[]> = {};
+        const mappedItems = json.data.map((item: any) => {
+          // Map photos from the relation
+          const itemPhotosList: PhotoData[] = (item.photos || []).map((p: any) => ({
+            id: p.id,
+            title: p.title,
+            description: p.description,
+            photoUrl: p.photoUrl,
+            photoType: p.photoType,
+            category: p.category,
+            inventoryItemId: p.inventoryItemId,
+            miniStep: p.miniStep,
+            sStep: p.sStep,
+            createdAt: p.createdAt,
+          }));
+          if (item.id && itemPhotosList.length > 0) {
+            photosMap[item.id] = itemPhotosList;
+          }
+          return {
+            id: item.id,
+            name: item.name,
+            location: item.location || '',
+            category: item.category || '',
+            quantity: item.quantity || 1,
+            // S1: Set quantities based on category (innecesario or necesario)
+            quantityNeeded: sStep === 1
+              ? (item.category === 'necesario' ? (item.quantityNeeded || item.quantity || 1) : 0)
+              : (item.quantityNeeded || 0),
+            quantityUnneeded: sStep === 1
+              ? (item.category === 'innecesario' ? (item.quantityUnneeded || item.quantity || 1) : 0)
+              : (item.quantityUnneeded || 0),
+            price: item.price ?? null,
+            action: item.action || '',
+            extra: typeof item.extra === 'string' ? JSON.parse(item.extra) : (item.extra || {}),
+            jaulaStatus: item.jaulaStatus || '',
+            jaulaFechaEntrada: item.jaulaFechaEntrada || null,
+            jaulaOrigen: item.jaulaOrigen || null,
+            jaulaFechaSalida: item.jaulaFechaSalida || null,
+            jaulaDestino: item.jaulaDestino || null,
+            zonaOrigen: item.zonaOrigen || null,
+            zonaDestino: item.zonaDestino || null,
+            photos: itemPhotosList,
+          };
+        });
+        setItems(mappedItems);
+        setItemPhotos(photosMap);
       } else {
         console.error('Error loading inventory:', json.error);
       }
@@ -391,6 +445,223 @@ export default function InventarioModal({ open, onClose, sStep, miniStep }: Inve
     } finally {
       setIsLoading(false);
     }
+  };
+
+  // ─── Photo functions ───
+
+  const loadStep2Photos = async () => {
+    if (!currentProject?.id) return;
+    try {
+      const params = new URLSearchParams({
+        projectId: currentProject.id,
+        sStep: String(sStep),
+        miniStep: '2',
+      });
+      if (currentZone?.id) params.set('zoneId', currentZone.id);
+      const res = await fetch(`/api/photo-library?${params}`);
+      const json = await res.json();
+      if (json.success) {
+        setStep2Photos(json.data.map((p: any) => ({
+          id: p.id,
+          title: p.title,
+          description: p.description,
+          photoUrl: p.photoUrl,
+          photoType: p.photoType,
+          category: p.category,
+          inventoryItemId: p.inventoryItemId,
+          miniStep: p.miniStep,
+          sStep: p.sStep,
+          createdAt: p.createdAt,
+        })));
+      }
+    } catch (e) {
+      console.error('Error loading Step 2 photos:', e);
+    }
+  };
+
+  const handleAttachPhoto = async (itemId: string, file: File, photoType: string) => {
+    if (!currentProject?.id) {
+      toast.error('No hay proyecto seleccionado');
+      return;
+    }
+    setUploadingPhotoForItem(itemId);
+    try {
+      // Read and compress the image
+      const reader = new FileReader();
+      const base64Promise = new Promise<string>((resolve) => {
+        reader.onloadend = () => resolve(reader.result as string);
+        reader.readAsDataURL(file);
+      });
+      const rawBase64 = await base64Promise;
+      const compressed = await compressImage(rawBase64);
+
+      // Upload to server
+      const filename = generatePhotoFilename(currentProject.id, sStep, miniStep, Date.now());
+      const uploadFile = base64toFile(compressed, filename);
+      const formData = new FormData();
+      formData.append('file', uploadFile);
+      formData.append('filename', filename);
+      formData.append('projectId', currentProject.id);
+
+      const uploadRes = await fetch('/api/upload', { method: 'POST', body: formData });
+      const uploadJson = await uploadRes.json();
+
+      if (!uploadJson.success || !uploadJson.url) {
+        toast.error(`Error al subir foto: ${uploadJson.error || 'Error desconocido'}`);
+        return;
+      }
+
+      // Save to PhotoLibrary with inventoryItemId
+      const sName = sStepData?.japaneseName || `S${sStep}`;
+      const zoneName = currentZone?.name || 'Zona';
+      const typeLabel = photoType === 'antes' ? 'ANTES' : photoType === 'despues' ? 'DESPUÉS' : 'Referencia';
+      const date = new Date().toLocaleDateString('es-ES');
+      const item = items.find(i => i.id === itemId);
+      const itemLabel = item?.name || 'Elemento';
+
+      const photoRes = await fetch('/api/photo-library', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sStep,
+          miniStep,
+          title: `S${sStep} ${sName} - ${zoneName} - ${itemLabel} - ${typeLabel} (${date})`,
+          description: `Foto adjunta al elemento de inventario: ${itemLabel}`,
+          photoUrl: uploadJson.url,
+          photoType,
+          category: `inventario_s${sStep}`,
+          tags: JSON.stringify([`S${sStep}`, sName, zoneName, `inventario`, photoType, itemLabel]),
+          projectId: currentProject.id,
+          zoneId: currentZone?.id || null,
+          uploadedBy: currentUser?.id || null,
+          inventoryItemId: itemId,
+        }),
+      });
+
+      const photoJson = await photoRes.json();
+      if (photoJson.success) {
+        const newPhoto: PhotoData = {
+          id: photoJson.data.id,
+          title: photoJson.data.title,
+          description: photoJson.data.description,
+          photoUrl: photoJson.data.photoUrl,
+          photoType: photoJson.data.photoType,
+          category: photoJson.data.category,
+          inventoryItemId: itemId,
+          miniStep: photoJson.data.miniStep,
+          sStep: photoJson.data.sStep,
+          createdAt: photoJson.data.createdAt,
+        };
+        // Update local state
+        setItemPhotos(prev => ({
+          ...prev,
+          [itemId]: [...(prev[itemId] || []), newPhoto],
+        }));
+        setItems(prev => prev.map(it => it.id === itemId
+          ? { ...it, photos: [...(it.photos || []), newPhoto] }
+          : it
+        ));
+        toast.success('Foto adjuntada correctamente');
+      } else {
+        toast.error(`Error al guardar foto: ${photoJson.error || 'Error desconocido'}`);
+      }
+    } catch (e) {
+      console.error('Error attaching photo:', e);
+      toast.error('Error al adjuntar la foto');
+    } finally {
+      setUploadingPhotoForItem(null);
+    }
+  };
+
+  const handleLinkStep2Photo = async (photoId: string, itemId: string) => {
+    try {
+      const res = await fetch('/api/photo-library', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: photoId, inventoryItemId: itemId }),
+      });
+      const json = await res.json();
+      if (json.success) {
+        // Update local state: move the photo to the item's photos
+        const photo = step2Photos.find(p => p.id === photoId);
+        if (photo) {
+          const linkedPhoto: PhotoData = { ...photo, inventoryItemId: itemId };
+          setItemPhotos(prev => ({
+            ...prev,
+            [itemId]: [...(prev[itemId] || []), linkedPhoto],
+          }));
+          setItems(prev => prev.map(it => it.id === itemId
+            ? { ...it, photos: [...(it.photos || []), linkedPhoto] }
+            : it
+          ));
+          // Remove from step2Photos since it's now linked
+          setStep2Photos(prev => prev.filter(p => p.id !== photoId));
+        }
+        toast.success('Foto vinculada al elemento');
+        setShowPhotoGallery(false);
+      } else {
+        toast.error(`Error al vincular foto: ${json.error || 'Error desconocido'}`);
+      }
+    } catch (e) {
+      console.error('Error linking photo:', e);
+      toast.error('Error al vincular la foto');
+    }
+  };
+
+  const handleUnlinkPhoto = async (photoId: string, itemId: string) => {
+    try {
+      const res = await fetch('/api/photo-library', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: photoId, inventoryItemId: null }),
+      });
+      const json = await res.json();
+      if (json.success) {
+        // Remove from item's photos locally
+        setItemPhotos(prev => ({
+          ...prev,
+          [itemId]: (prev[itemId] || []).filter(p => p.id !== photoId),
+        }));
+        setItems(prev => prev.map(it => it.id === itemId
+          ? { ...it, photos: (it.photos || []).filter(p => p.id !== photoId) }
+          : it
+        ));
+        toast.success('Foto desvinculada del elemento');
+      } else {
+        toast.error(`Error al desvincular foto: ${json.error || 'Error desconocido'}`);
+      }
+    } catch (e) {
+      console.error('Error unlinking photo:', e);
+      toast.error('Error al desvincular la foto');
+    }
+  };
+
+  const handleDeletePhoto = async (photoId: string, itemId: string) => {
+    try {
+      const res = await fetch(`/api/photo-library?id=${photoId}`, { method: 'DELETE' });
+      const json = await res.json();
+      if (json.success) {
+        setItemPhotos(prev => ({
+          ...prev,
+          [itemId]: (prev[itemId] || []).filter(p => p.id !== photoId),
+        }));
+        setItems(prev => prev.map(it => it.id === itemId
+          ? { ...it, photos: (it.photos || []).filter(p => p.id !== photoId) }
+          : it
+        ));
+        toast.success('Foto eliminada');
+      } else {
+        toast.error(`Error al eliminar foto: ${json.error || 'Error desconocido'}`);
+      }
+    } catch (e) {
+      console.error('Error deleting photo:', e);
+      toast.error('Error al eliminar la foto');
+    }
+  };
+
+  const openPhotoGallery = (itemId: string) => {
+    setGalleryTargetItemId(itemId);
+    setShowPhotoGallery(true);
   };
 
   const handleAddItem = async () => {
@@ -453,6 +724,12 @@ export default function InventarioModal({ open, onClose, sStep, miniStep }: Inve
       const json = await res.json();
       if (json.success) {
         toast.success('Elemento agregado correctamente');
+        // If there's a pending photo, attach it to the newly created item
+        const newItemId = json.data?.id;
+        if (pendingNewPhoto && newItemId) {
+          await handleAttachPhoto(newItemId, pendingNewPhoto, pendingNewPhotoType);
+          setPendingNewPhoto(null);
+        }
         await loadInventory();
         setNewItem({ name: '', location: '', category: defaultCategory as string | undefined, quantity: 1, quantityNeeded: 0, quantityUnneeded: 0, price: null, action: '', zonaOrigen: currentZone?.name || null, jaulaFechaEntrada: new Date().toISOString(), extra: {} });
       } else {
@@ -1059,6 +1336,51 @@ export default function InventarioModal({ open, onClose, sStep, miniStep }: Inve
               </p>
             </div>
 
+            {/* ═══ FOTOS DEL PASO 2 (Fotos) ═══ */}
+            {step2Photos.length > 0 && (
+              <Card className="border-2 border-purple-200 bg-purple-50/30">
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-2 mb-3">
+                    <ImageIcon className="h-5 w-5 text-purple-600" />
+                    <h4 className="font-semibold text-purple-800">Fotos del Paso 2 ({sStepData?.japaneseName})</h4>
+                    <Badge className="bg-purple-100 text-purple-800">{step2Photos.length} fotos</Badge>
+                  </div>
+                  <p className="text-xs text-muted-foreground mb-3">
+                    Estas fotos se tomaron en el paso de Fotos. Puedes vincularlas a elementos del inventario para mayor trazabilidad.
+                  </p>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 max-h-48 overflow-y-auto">
+                    {step2Photos.map(photo => (
+                      <div key={photo.id} className="relative group border rounded-lg overflow-hidden bg-white">
+                        <img
+                          src={photo.photoUrl}
+                          alt={photo.title}
+                          className="w-full h-24 object-cover cursor-pointer hover:opacity-80 transition-opacity"
+                          onClick={() => setShowPhotoLightbox(photo)}
+                        />
+                        <div className="px-1.5 py-1 flex items-center justify-between">
+                          <Badge className={`text-[9px] px-1 py-0 ${photo.photoType === 'antes' ? 'bg-amber-100 text-amber-800' : 'bg-green-100 text-green-800'}`}>
+                            {photo.photoType === 'antes' ? 'Antes' : 'Después'}
+                          </Badge>
+                          <button
+                            className="text-[9px] text-purple-600 hover:text-purple-800 font-medium flex items-center gap-0.5"
+                            onClick={() => {
+                              // If there are items, open a quick selector
+                              if (items.length > 0 && items[0]?.id) {
+                                toast.info('Haz clic en el botón 📷 de un elemento del inventario para vincular esta foto');
+                              }
+                            }}
+                            title="Vincular a un elemento"
+                          >
+                            <Link2 className="h-2.5 w-2.5" /> Vincular
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
             {/* ═══ LAYOUT DE LA ZONA — S2 (Marcado de Suelo), S3 (Limpieza), S4 (Estándares) ═══ */}
             {(sStep === 2 || sStep === 3 || sStep === 4) && (
               <Card className="border-2 border-blue-200 bg-blue-50/30">
@@ -1349,7 +1671,7 @@ export default function InventarioModal({ open, onClose, sStep, miniStep }: Inve
                         <label className="text-xs font-medium">Categoría *</label>
                         <Select
                           value={newItem.category || undefined}
-                          onValueChange={val => setNewItem(prev => ({ ...prev, category: val, extra: { ...(prev.extra || {}), subcategoria: undefined } }))}
+                          onValueChange={val => setNewItem(prev => ({ ...prev, category: val, extra: { ...(prev.extra || {}), subcategoria: '' as string } }))}
                         >
                           <SelectTrigger>
                             <SelectValue placeholder="Categoría" />
@@ -1613,8 +1935,47 @@ export default function InventarioModal({ open, onClose, sStep, miniStep }: Inve
                   )
                   )}
 
-                  {/* Add button */}
-                  <div className="flex justify-end">
+                  {/* Add button + Photo attach */}
+                  <div className="flex justify-end items-center gap-2">
+                    {pendingNewPhoto && (
+                      <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                        <div className="w-6 h-6 rounded bg-muted flex items-center justify-center">
+                          <ImageIcon className="h-3 w-3" />
+                        </div>
+                        <span className="max-w-[120px] truncate">{pendingNewPhoto.name}</span>
+                        <button className="text-destructive hover:text-red-700" onClick={() => setPendingNewPhoto(null)}>
+                          <X className="h-3 w-3" />
+                        </button>
+                      </div>
+                    )}
+                    {!isReadOnly && (
+                      <div className="flex items-center gap-1">
+                        <Select value={pendingNewPhotoType} onValueChange={setPendingNewPhotoType}>
+                          <SelectTrigger className="h-7 w-20 text-[10px]">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="antes">Antes</SelectItem>
+                            <SelectItem value="despues">Después</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <label className="inline-flex items-center justify-center h-7 px-2 rounded-md border border-input bg-background text-xs cursor-pointer hover:bg-accent transition-colors gap-1">
+                          <Camera className="h-3 w-3" />
+                          Adjuntar Foto
+                          <input
+                            type="file"
+                            accept="image/*"
+                            capture="environment"
+                            className="hidden"
+                            onChange={e => {
+                              const file = e.target.files?.[0];
+                              if (file) setPendingNewPhoto(file);
+                              e.target.value = '';
+                            }}
+                          />
+                        </label>
+                      </div>
+                    )}
                     <Button
                       onClick={handleAddItem}
                       disabled={!newItem.name || !newItem.category}
@@ -1627,6 +1988,120 @@ export default function InventarioModal({ open, onClose, sStep, miniStep }: Inve
                 </div>
               </CardContent>
             </Card>
+
+            {/* ═══ S3: Puntos de Suciedad — Before/After Photos ═══ */}
+            {sStep === 3 && items.some(i => (itemPhotos[i.id!] || i.photos || []).length > 0) && (
+              <Card className="border-2 border-orange-200 bg-orange-50/30">
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-2 mb-3">
+                    <Camera className="h-5 w-5 text-orange-600" />
+                    <h4 className="font-semibold text-orange-800">Puntos de Suciedad — Fotos Antes/Después</h4>
+                  </div>
+                  <p className="text-xs text-muted-foreground mb-3">
+                    Las fotos vinculadas a cada punto de suciedad ayudan a documentar el estado antes y después de la limpieza.
+                  </p>
+                  <div className="space-y-3 max-h-64 overflow-y-auto">
+                    {items.filter(i => (itemPhotos[i.id!] || i.photos || []).length > 0).map(item => {
+                      const itemPhotoList = itemPhotos[item.id!] || item.photos || [];
+                      const antesPhotos = itemPhotoList.filter(p => p.photoType === 'antes');
+                      const despuesPhotos = itemPhotoList.filter(p => p.photoType === 'despues');
+                      return (
+                        <div key={item.id} className="flex items-start gap-3 p-2 rounded-lg border bg-white">
+                          <div className="min-w-0 flex-1">
+                            <div className="text-sm font-medium truncate">{item.name}</div>
+                            <div className="text-[10px] text-muted-foreground">{item.location || '—'} · {item.category}</div>
+                          </div>
+                          <div className="flex gap-2 flex-shrink-0">
+                            {/* ANTES */}
+                            <div className="text-center">
+                              <span className="text-[9px] font-medium text-amber-700 block mb-1">ANTES</span>
+                              {antesPhotos.length > 0 ? (
+                                <div className="flex gap-1">
+                                  {antesPhotos.map(p => (
+                                    <img key={p.id} src={p.photoUrl} alt="Antes" className="w-16 h-12 object-cover rounded border cursor-pointer hover:opacity-80" onClick={() => setShowPhotoLightbox(p)} />
+                                  ))}
+                                </div>
+                              ) : (
+                                <div className="w-16 h-12 bg-amber-50 border border-dashed border-amber-300 rounded flex items-center justify-center">
+                                  <Camera className="h-3 w-3 text-amber-300" />
+                                </div>
+                              )}
+                            </div>
+                            {/* DESPUÉS */}
+                            <div className="text-center">
+                              <span className="text-[9px] font-medium text-green-700 block mb-1">DESPUÉS</span>
+                              {despuesPhotos.length > 0 ? (
+                                <div className="flex gap-1">
+                                  {despuesPhotos.map(p => (
+                                    <img key={p.id} src={p.photoUrl} alt="Después" className="w-16 h-12 object-cover rounded border cursor-pointer hover:opacity-80" onClick={() => setShowPhotoLightbox(p)} />
+                                  ))}
+                                </div>
+                              ) : (
+                                <div className="w-16 h-12 bg-green-50 border border-dashed border-green-300 rounded flex items-center justify-center">
+                                  <Camera className="h-3 w-3 text-green-300" />
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                          {/* Quick attach after photo */}
+                          {!isReadOnly && item.id && (
+                            <label className="inline-flex items-center justify-center px-2 py-1 rounded border border-dashed border-green-300 cursor-pointer hover:bg-green-50 text-[9px] text-green-600 gap-1 flex-shrink-0" title="Adjuntar foto DESPUÉS">
+                              <Camera className="h-3 w-3" /> Después
+                              <input
+                                type="file"
+                                accept="image/*"
+                                capture="environment"
+                                className="hidden"
+                                onChange={e => {
+                                  const file = e.target.files?.[0];
+                                  if (file) handleAttachPhoto(item.id!, file, 'despues');
+                                  e.target.value = '';
+                                }}
+                              />
+                            </label>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* ═══ S1: Jaula Items with Photos ═══ */}
+            {sStep === 1 && items.some(i => i.category === 'innecesario' && (itemPhotos[i.id!] || i.photos || []).length > 0) && (
+              <Card className="border-2 border-red-200 bg-red-50/30">
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-2 mb-3">
+                    <Camera className="h-5 w-5 text-red-600" />
+                    <h4 className="font-semibold text-red-800">Elementos en Jaula — Trazabilidad Fotográfica</h4>
+                  </div>
+                  <p className="text-xs text-muted-foreground mb-3">
+                    Las fotos de elementos innecesarios en la Jaula permiten la trazabilidad del material clasificado.
+                  </p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-48 overflow-y-auto">
+                    {items.filter(i => i.category === 'innecesario' && (itemPhotos[i.id!] || i.photos || []).length > 0).map(item => {
+                      const itemPhotoList = itemPhotos[item.id!] || item.photos || [];
+                      return (
+                        <div key={item.id} className="flex items-center gap-2 p-2 rounded-lg border bg-white">
+                          <div className="flex -space-x-1">
+                            {itemPhotoList.slice(0, 3).map(p => (
+                              <img key={p.id} src={p.photoUrl} alt={p.title} className="w-10 h-10 object-cover rounded border-2 border-white cursor-pointer hover:opacity-80" onClick={() => setShowPhotoLightbox(p)} />
+                            ))}
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <div className="text-xs font-medium truncate">{item.name}</div>
+                            <div className="text-[9px] text-muted-foreground">
+                              {item.extra?.decision || 'Jaula'} · {itemPhotoList.length} foto{itemPhotoList.length !== 1 ? 's' : ''}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
 
             {/* ═══ S3: Plan de Limpieza e Inspección ═══ */}
             {sStep === 3 && (
@@ -1665,7 +2140,7 @@ export default function InventarioModal({ open, onClose, sStep, miniStep }: Inve
                 <p className="text-xs mt-1">Importe una plantilla o agregue elementos manualmente</p>
               </div>
             ) : (
-              <div className="max-h-64 overflow-y-auto rounded-lg border">
+              <div className="max-h-80 overflow-y-auto rounded-lg border">
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -1688,6 +2163,7 @@ export default function InventarioModal({ open, onClose, sStep, miniStep }: Inve
                       )}
                       <TableHead>Z. Origen</TableHead>
                       <TableHead>Z. Destino</TableHead>
+                      <TableHead className="text-center">Fotos</TableHead>
                       <TableHead className="w-10"></TableHead>
                     </TableRow>
                   </TableHeader>
@@ -1984,6 +2460,71 @@ export default function InventarioModal({ open, onClose, sStep, miniStep }: Inve
                             <span className="text-muted-foreground">{item.zonaDestino || '—'}</span>
                           )}
                         </TableCell>
+                        {/* Fotos */}
+                        <TableCell className="p-1">
+                          <div className="flex items-center gap-1 flex-wrap">
+                            {/* Inline thumbnail previews */}
+                            {(itemPhotos[item.id!] || item.photos || []).map(photo => (
+                              <div key={photo.id} className="relative group">
+                                <img
+                                  src={photo.photoUrl}
+                                  alt={photo.title}
+                                  className="w-8 h-8 object-cover rounded border cursor-pointer hover:opacity-80 transition-opacity"
+                                  onClick={() => setShowPhotoLightbox(photo)}
+                                  title={`${photo.photoType === 'antes' ? 'Antes' : photo.photoType === 'despues' ? 'Después' : photo.photoType} — ${photo.title}`}
+                                />
+                                <Badge className={`absolute -top-1 -left-1 text-[7px] px-0.5 py-0 min-w-0 ${photo.photoType === 'antes' ? 'bg-amber-100 text-amber-800' : photo.photoType === 'despues' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>
+                                  {photo.photoType === 'antes' ? 'A' : photo.photoType === 'despues' ? 'D' : 'R'}
+                                </Badge>
+                                {/* Unlink button on hover */}
+                                {!isReadOnly && (
+                                  <button
+                                    className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full w-3.5 h-3.5 flex items-center justify-center text-[8px] opacity-0 group-hover:opacity-100 transition-opacity"
+                                    onClick={(e) => { e.stopPropagation(); handleDeletePhoto(photo.id, item.id!); }}
+                                    title="Eliminar foto"
+                                  >
+                                    ×
+                                  </button>
+                                )}
+                              </div>
+                            ))}
+                            {/* Camera / attach photo button */}
+                            {!isReadOnly && item.id && (
+                              <div className="flex items-center gap-0.5">
+                                <label
+                                  className="inline-flex items-center justify-center w-7 h-7 rounded border border-dashed border-gray-300 cursor-pointer hover:bg-gray-50 hover:border-gray-400 transition-colors"
+                                  title="Adjuntar foto ANTES"
+                                >
+                                  {uploadingPhotoForItem === item.id ? (
+                                    <Loader2 className="h-3 w-3 animate-spin text-gray-400" />
+                                  ) : (
+                                    <Camera className="h-3 w-3 text-gray-400" />
+                                  )}
+                                  <input
+                                    type="file"
+                                    accept="image/*"
+                                    capture="environment"
+                                    className="hidden"
+                                    onChange={e => {
+                                      const file = e.target.files?.[0];
+                                      if (file) handleAttachPhoto(item.id!, file, 'antes');
+                                      e.target.value = '';
+                                    }}
+                                  />
+                                </label>
+                                {step2Photos.length > 0 && (
+                                  <button
+                                    className="inline-flex items-center justify-center w-7 h-7 rounded border border-dashed border-purple-300 cursor-pointer hover:bg-purple-50 hover:border-purple-400 transition-colors"
+                                    onClick={() => openPhotoGallery(item.id!)}
+                                    title="Vincular foto del Paso 2"
+                                  >
+                                    <Link2 className="h-3 w-3 text-purple-400" />
+                                  </button>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        </TableCell>
                         {/* Delete */}
                         <TableCell>
                           <Button
@@ -2035,6 +2576,89 @@ export default function InventarioModal({ open, onClose, sStep, miniStep }: Inve
           onClose={() => setShowColorCodeTable(false)}
         />
       )}
+
+      {/* Photo Gallery Modal — Link Step 2 photos to inventory items */}
+      <Dialog open={showPhotoGallery} onOpenChange={() => setShowPhotoGallery(false)}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Link2 className="h-5 w-5 text-purple-600" />
+              Vincular Foto del Paso 2
+            </DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            Selecciona una foto del Paso 2 para vincularla a este elemento del inventario.
+            La foto mantendrá su tipo (Antes/Después) y será trazable.
+          </p>
+          {galleryTargetItemId && (
+            <div className="mb-2 text-xs text-muted-foreground">
+              Elemento destino: <strong>{items.find(i => i.id === galleryTargetItemId)?.name || '—'}</strong>
+            </div>
+          )}
+          {step2Photos.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              <ImageIcon className="h-8 w-8 mx-auto mb-2 opacity-50" />
+              <p className="text-sm">No hay fotos del Paso 2 disponibles para vincular</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              {step2Photos.map(photo => (
+                <div key={photo.id} className="border rounded-lg overflow-hidden bg-white group">
+                  <img
+                    src={photo.photoUrl}
+                    alt={photo.title}
+                    className="w-full h-32 object-cover"
+                  />
+                  <div className="p-2">
+                    <div className="flex items-center gap-1 mb-1">
+                      <Badge className={`text-[9px] px-1 py-0 ${photo.photoType === 'antes' ? 'bg-amber-100 text-amber-800' : 'bg-green-100 text-green-800'}`}>
+                        {photo.photoType === 'antes' ? 'Antes' : 'Después'}
+                      </Badge>
+                      <span className="text-[9px] text-muted-foreground truncate">{photo.title}</span>
+                    </div>
+                    <Button
+                      size="sm"
+                      className="w-full text-xs bg-purple-600 hover:bg-purple-700 text-white h-7"
+                      onClick={() => galleryTargetItemId && handleLinkStep2Photo(photo.id, galleryTargetItemId)}
+                    >
+                      <Link2 className="h-3 w-3 mr-1" /> Vincular
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Photo Lightbox — Full-size photo preview */}
+      <Dialog open={!!showPhotoLightbox} onOpenChange={() => setShowPhotoLightbox(null)}>
+        <DialogContent className="max-w-4xl max-h-[90vh] p-2">
+          {showPhotoLightbox && (
+            <div className="space-y-2">
+              <div className="relative">
+                <img
+                  src={showPhotoLightbox.photoUrl}
+                  alt={showPhotoLightbox.title}
+                  className="w-full max-h-[70vh] object-contain rounded-lg"
+                />
+                <Badge className={`absolute top-2 left-2 ${showPhotoLightbox.photoType === 'antes' ? 'bg-amber-100 text-amber-800' : showPhotoLightbox.photoType === 'despues' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>
+                  {showPhotoLightbox.photoType === 'antes' ? 'Antes' : showPhotoLightbox.photoType === 'despues' ? 'Después' : showPhotoLightbox.photoType}
+                </Badge>
+              </div>
+              <div className="px-2 pb-2">
+                <h4 className="text-sm font-medium">{showPhotoLightbox.title}</h4>
+                {showPhotoLightbox.description && (
+                  <p className="text-xs text-muted-foreground">{showPhotoLightbox.description}</p>
+                )}
+                <p className="text-[10px] text-muted-foreground mt-1">
+                  {new Date(showPhotoLightbox.createdAt).toLocaleString('es-ES')}
+                </p>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

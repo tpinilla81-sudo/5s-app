@@ -1,0 +1,2002 @@
+     1→     1→'use client';
+     2→     2→
+     3→     3→import { useState, useEffect } from 'react';
+     4→     4→import {
+     5→     5→  Dialog,
+     6→     6→  DialogContent,
+     7→     7→  DialogHeader,
+     8→     8→  DialogTitle,
+     9→     9→} from '@/components/ui/dialog';
+    10→    10→import { Button } from '@/components/ui/button';
+    11→    11→import { Card, CardContent } from '@/components/ui/card';
+    12→    12→import { Badge } from '@/components/ui/badge';
+    13→    13→import { Input } from '@/components/ui/input';
+    14→    14→import {
+    15→    15→  Select,
+    16→    16→  SelectContent,
+    17→    17→  SelectItem,
+    18→    18→  SelectTrigger,
+    19→    19→  SelectValue,
+    20→    20→} from '@/components/ui/select';
+    21→    21→import {
+    22→    22→  Table,
+    23→    23→  TableBody,
+    24→    24→  TableCell,
+    25→    25→  TableHead,
+    26→    26→  TableHeader,
+    27→    27→  TableRow,
+    28→    28→} from '@/components/ui/table';
+    29→    29→import { ClipboardList, Plus, CheckCircle, Download, Upload, FileSpreadsheet, BookOpen, ArrowRight, AlertTriangle, FileUp, Maximize2, Minimize2, File, PenTool, Image as ImageIcon, Eye, Loader2, MapPin, Tag } from 'lucide-react';
+    30→    30→import { toast } from 'sonner';
+    31→    31→import { use5SStore } from '@/lib/store';
+    32→    32→import { S_STEPS, INVENTORY_CONFIGS, INVENTORY_CLASSIFY_THRESHOLD } from '@/lib/5s-constants';
+    33→    33→import type { InventoryConfig } from '@/lib/5s-constants';
+    34→    34→import LayoutEditor from '@/components/5s/LayoutEditor';
+    35→    35→import ColorCodeTable from '@/components/5s/ColorCodeTable';
+    36→    36→import TagPrinter from '@/components/5s/TagPrinter';
+    37→    37→import CleaningPlanPanel from '@/components/5s/CleaningPlanPanel';
+    38→    38→import BibliotecaEstandaresView from '@/components/5s/BibliotecaEstandaresView';
+    39→    39→
+    40→    40→interface InventoryItemData {
+    41→    41→  id?: string;
+    42→    42→  name: string;
+    43→    43→  location: string;
+    44→    44→  category: string;
+    45→    45→  quantity: number;
+    46→    46→  quantityNeeded: number;
+    47→    47→  quantityUnneeded: number;
+    48→    48→  price: number | null;
+    49→    49→  action: string;
+    50→    50→  extra?: Record<string, string | number>;
+    51→    51→  jaulaStatus?: string;
+    52→    52→  jaulaFechaEntrada?: string | null;
+    53→    53→  jaulaOrigen?: string | null;
+    54→    54→  jaulaFechaSalida?: string | null;
+    55→    55→  jaulaDestino?: string | null;
+    56→    56→  zonaOrigen?: string | null;
+    57→    57→  zonaDestino?: string | null;
+    58→    58→}
+    59→    59→
+    60→    60→interface InventarioModalProps {
+    61→    61→  open: boolean;
+    62→    62→  onClose: () => void;
+    63→    63→  sStep: number;
+    64→    64→  miniStep: number;
+    65→    65→}
+    66→    66→
+    67→    67→export default function InventarioModal({ open, onClose, sStep, miniStep }: InventarioModalProps) {
+    68→    68→  const { fetchProgress, currentUser, adminFreeNavigation, currentProject, currentZone, canPerform, canView, hasPermission } = use5SStore();
+    69→    69→  const sStepData = S_STEPS.find(s => s.id === sStep);
+    70→    70→  const defaultConfig: InventoryConfig = INVENTORY_CONFIGS[sStep] || INVENTORY_CONFIGS[1];
+    71→    71→  const [customConfig, setCustomConfig] = useState<InventoryConfig | null>(null);
+    72→    72→  const [hasTemplate, setHasTemplate] = useState<boolean | null>(null); // null = loading, false = no template, true = has template
+    73→    73→  const config: InventoryConfig = customConfig || defaultConfig;
+    74→    74→  const canSkipSteps = hasPermission('skip_steps');
+    75→    75→  const canPerformStep = canPerform(sStep, miniStep);
+    76→    76→  const canViewStep = canView(sStep, miniStep);
+    77→    77→  // Permission-driven: read-only if no execute perm OR if candado closed for skip_steps users
+    78→    78→  const isReadOnly = !canPerformStep || (canSkipSteps && !adminFreeNavigation);
+    79→    79→
+    80→    80→  const [items, setItems] = useState<InventoryItemData[]>([]);
+    81→    81→  const [isLoading, setIsLoading] = useState(true);
+    82→    82→  const [isCompleted, setIsCompleted] = useState(false);
+    83→    83→  const [csvPreview, setCsvPreview] = useState<InventoryItemData[] | null>(null);
+    84→    84→  const [isImporting, setIsImporting] = useState(false);
+    85→    85→  const [isFullscreen, setIsFullscreen] = useState(true);
+    86→    86→  const [showLayoutEditor, setShowLayoutEditor] = useState(false);
+    87→    87→  const [showColorCodeTable, setShowColorCodeTable] = useState(false);
+    88→    88→  const [savedLayouts, setSavedLayouts] = useState<{ id: string; title: string; photoUrl: string | null; createdAt: string }[]>([]);
+    89→    89→  const [layoutUploaded, setLayoutUploaded] = useState(false);
+    90→    90→
+    91→    91→  // S1: default category is 'innecesario' since this template is for unnecessary items
+    92→    92→  const defaultCategory = sStep === 1 ? 'innecesario' : undefined;
+    93→    93→
+    94→    94→  const [newItem, setNewItem] = useState<Partial<InventoryItemData> & { extra?: Record<string, string | number> }>({
+    95→    95→    name: '',
+    96→    96→    location: '',
+    97→    97→    category: defaultCategory as string | undefined,
+    98→    98→    quantity: 1,
+    99→    99→    quantityNeeded: 0,
+   100→   100→    quantityUnneeded: 0,
+   101→   101→    price: null,
+   102→   102→    action: '',
+   103→   103→    zonaOrigen: currentZone?.name || null,
+   104→   104→    jaulaFechaEntrada: new Date().toISOString(),
+   105→   105→    extra: {},
+   106→   106→  });
+   107→   107→
+   108→   108→  // Update zonaOrigen and default category when zone/step changes
+   109→   109→  useEffect(() => {
+   110→   110→    setNewItem(prev => ({
+   111→   111→      ...prev,
+   112→   112→      zonaOrigen: currentZone?.name || prev.zonaOrigen,
+   113→   113→      category: sStep === 1 ? 'innecesario' : prev.category,
+   114→   114→    }));
+   115→   115→  }, [currentZone?.name, sStep]);
+   116→   116→
+   117→   117→  useEffect(() => {
+   118→   118→    if (open) {
+   119→   119→      loadInventory();
+   120→   120→      // Load layouts for any S step that has layout support (S2 primarily, also S3/S4 for estandares)
+   121→   121→      if (sStep === 2 || sStep === 3 || sStep === 4) loadLayouts();
+   122→   122→      // Load custom inventory template if available
+   123→   123→      loadCustomInventoryConfig();
+   124→   124→      // Reset zonaOrigen to current zone when opening
+   125→   125→      setNewItem(prev => ({ ...prev, zonaOrigen: currentZone?.name || null }));
+   126→   126→    }
+   127→   127→  }, [open, sStep]);
+   128→   128→
+   129→   129→  const loadCustomInventoryConfig = async () => {
+   130→   130→    try {
+   131→   131→      // If the zone has a board config, fetch inventory template from that config
+   132→   132→      if (currentZone?.boardConfigId) {
+   133→   133→        const slotsRes = await fetch(`/api/board-slots?boardConfigId=${currentZone.boardConfigId}&sStep=${sStep}&miniStep=3`);
+   134→   134→        const slotsJson = await slotsRes.json();
+   135→   135→        if (slotsJson.success && slotsJson.data.length > 0) {
+   136→   136→          const slot = slotsJson.data[0];
+   137→   137→          const inventarioTemplates = (slot.templates || []).filter(
+   138→   138→            (t: any) => t.template?.type === 'inventario'
+   139→   139→          );
+   140→   140→          if (inventarioTemplates.length > 0) {
+   141→   141→            const content = JSON.parse(inventarioTemplates[0].template.content);
+   142→   142→            if (content.categories && content.extraFields) {
+   143→   143→              setCustomConfig({
+   144→   144→                title: content.title || defaultConfig.title,
+   145→   145→                subtitle: content.subtitle || defaultConfig.subtitle,
+   146→   146→                templateName: content.templateName || defaultConfig.templateName,
+   147→   147→                categories: content.categories,
+   148→   148→                extraFields: content.extraFields,
+   149→   149→                ...(content.desplegables_jerarquicos ? { desplegables_jerarquicos: content.desplegables_jerarquicos } : {}),
+   150→   150→              });
+   151→   151→              setHasTemplate(true);
+   152→   152→              // Pre-load items from legacy {items: [...]} format if present
+   153→   153→              if (content.items && Array.isArray(content.items) && content.items.length > 0) {
+   154→   154→                setItems(content.items.map((item: any) => ({
+   155→   155→                  name: item.name || '',
+   156→   156→                  location: item.location || '',
+   157→   157→                  category: item.category || '',
+   158→   158→                  quantity: item.quantity || 1,
+   159→   159→                  quantityNeeded: item.quantityNeeded || 0,
+   160→   160→                  quantityUnneeded: item.quantityUnneeded || 0,
+   161→   161→                  price: item.price ?? null,
+   162→   162→                  action: item.action || '',
+   163→   163→                  extra: item.extra || {},
+   164→   164→                })));
+   165→   165→              }
+   166→   166→            } else if (content.items && Array.isArray(content.items)) {
+   167→   167→              // Legacy format: {items: [...]} — use default config but load items
+   168→   168→              setCustomConfig(null);
+   169→   169→              setHasTemplate(true);
+   170→   170→              if (content.items.length > 0) {
+   171→   171→                setItems(content.items.map((item: any) => ({
+   172→   172→                  name: item.name || '',
+   173→   173→                  location: item.location || '',
+   174→   174→                  category: item.category || '',
+   175→   175→                  quantity: item.quantity || 1,
+   176→   176→                  quantityNeeded: item.quantityNeeded || 0,
+   177→   177→                  quantityUnneeded: item.quantityUnneeded || 0,
+   178→   178→                  price: item.price ?? null,
+   179→   179→                  action: item.action || '',
+   180→   180→                  extra: item.extra || {},
+   181→   181→                })));
+   182→   182→              }
+   183→   183→            } else {
+   184→   184→              // Unknown format — use default config as fallback
+   185→   185→              setCustomConfig(null);
+   186→   186→              setHasTemplate(true);
+   187→   187→            }
+   188→   188→          } else {
+   189→   189→            // No inventario template assigned in this board slot — use default config
+   190→   190→            setCustomConfig(null);
+   191→   191→            setHasTemplate(true);
+   192→   192→          }
+   193→   193→        } else {
+   194→   194→          // No slot configured for this step — use default config
+   195→   195→          setCustomConfig(null);
+   196→   196→          setHasTemplate(true);
+   197→   197→        }
+   198→   198→      } else {
+   199→   199→        // Fallback: load global template
+   200→   200→        const res = await fetch(`/api/templates?type=inventario&sStep=${sStep}&miniStep=3`);
+   201→   201→        const json = await res.json();
+   202→   202→        if (json.success && json.data && json.data.length > 0) {
+   203→   203→          const content = JSON.parse(json.data[0].content);
+   204→   204→          if (content.categories && content.extraFields) {
+   205→   205→            setCustomConfig({
+   206→   206→              title: content.title || defaultConfig.title,
+   207→   207→              subtitle: content.subtitle || defaultConfig.subtitle,
+   208→   208→              templateName: content.templateName || defaultConfig.templateName,
+   209→   209→              categories: content.categories,
+   210→   210→              extraFields: content.extraFields,
+   211→   211→              ...(content.desplegables_jerarquicos ? { desplegables_jerarquicos: content.desplegables_jerarquicos } : {}),
+   212→   212→            });
+   213→   213→            setHasTemplate(true);
+   214→   214→            // Pre-load items from legacy {items: [...]} format if present
+   215→   215→            if (content.items && Array.isArray(content.items) && content.items.length > 0) {
+   216→   216→              setItems(content.items.map((item: any) => ({
+   217→   217→                name: item.name || '',
+   218→   218→                location: item.location || '',
+   219→   219→                category: item.category || '',
+   220→   220→                quantity: item.quantity || 1,
+   221→   221→                quantityNeeded: item.quantityNeeded || 0,
+   222→   222→                quantityUnneeded: item.quantityUnneeded || 0,
+   223→   223→                price: item.price ?? null,
+   224→   224→                action: item.action || '',
+   225→   225→                extra: item.extra || {},
+   226→   226→              })));
+   227→   227→            }
+   228→   228→          } else if (content.items && Array.isArray(content.items)) {
+   229→   229→            // Legacy format: {items: [...]} — use default config but load items
+   230→   230→            setCustomConfig(null);
+   231→   231→            setHasTemplate(true);
+   232→   232→            if (content.items.length > 0) {
+   233→   233→              setItems(content.items.map((item: any) => ({
+   234→   234→                name: item.name || '',
+   235→   235→                location: item.location || '',
+   236→   236→                category: item.category || '',
+   237→   237→                quantity: item.quantity || 1,
+   238→   238→                quantityNeeded: item.quantityNeeded || 0,
+   239→   239→                quantityUnneeded: item.quantityUnneeded || 0,
+   240→   240→                price: item.price ?? null,
+   241→   241→                action: item.action || '',
+   242→   242→                extra: item.extra || {},
+   243→   243→              })));
+   244→   244→            }
+   245→   245→          } else {
+   246→   246→            // Unknown format — use default config as fallback
+   247→   247→            setCustomConfig(null);
+   248→   248→            setHasTemplate(true);
+   249→   249→          }
+   250→   250→        } else {
+   251→   251→          // No global template — use default config (INVENTORY_CONFIGS has entries for all 5 S steps)
+   252→   252→          setCustomConfig(null);
+   253→   253→          setHasTemplate(true);
+   254→   254→        }
+   255→   255→      }
+   256→   256→    } catch (e) {
+   257→   257→      console.error('Error loading custom inventory config:', e);
+   258→   258→      // On error, use default config so the modal still works
+   259→   259→      setCustomConfig(null);
+   260→   260→      setHasTemplate(true);
+   261→   261→    }
+   262→   262→  };
+   263→   263→
+   264→   264→  const loadLayouts = async () => {
+   265→   265→    if (!currentProject) return
+   266→   266→    try {
+   267→   267→      const params = new URLSearchParams({ projectId: currentProject.id, category: 'layout', sStep: String(sStep) })
+   268→   268→      if (currentZone?.id) params.set('zoneId', currentZone.id)
+   269→   269→      const res = await fetch(`/api/standards?${params}`)
+   270→   270→      const json = await res.json()
+   271→   271→      if (json.success) {
+   272→   272→        setSavedLayouts(json.data.map((s: any) => ({
+   273→   273→          id: s.id,
+   274→   274→          title: s.title,
+   275→   275→          photoUrl: s.photoUrl,
+   276→   276→          createdAt: s.createdAt,
+   277→   277→        })))
+   278→   278→        setLayoutUploaded(json.data.length > 0)
+   279→   279→      }
+   280→   280→    } catch (e) {
+   281→   281→      console.error('Error loading layouts:', e)
+   282→   282→    }
+   283→   283→  }
+   284→   284→
+   285→   285→  const handleUploadLayoutImage = async (e: React.ChangeEvent<HTMLInputElement>) => {
+   286→   286→    const file = e.target.files?.[0]
+   287→   287→    if (!file || !currentProject) return
+   288→   288→    try {
+   289→   289→      const formData = new FormData()
+   290→   290→      formData.append('file', file)
+   291→   291→      formData.append('projectId', currentProject.id)
+   292→   292→      formData.append('filename', `${currentProject.id}_layout_${sStep}_${Date.now()}.png`)
+   293→   293→      console.log('[InventarioModal] Uploading layout image:', file.name, 'size:', (file.size / 1024).toFixed(1) + 'KB')
+   294→   294→      const res = await fetch('/api/upload', { method: 'POST', body: formData })
+   295→   295→      if (!res.ok) {
+   296→   296→        console.error('[InventarioModal] Upload HTTP error:', res.status)
+   297→   297→        toast.error(`Error al subir imagen (HTTP ${res.status})`)
+   298→   298→        e.target.value = ''
+   299→   299→        return
+   300→   300→      }
+   301→   301→      const json = await res.json()
+   302→   302→      if (json.success && json.url) {
+   303→   303→        const layoutDescriptions: Record<number, string> = {
+   304→   304→          2: 'Layout subido como imagen con marcado de suelo según estándar de colores',
+   305→   305→          3: 'Layout subido como imagen con puntos de suciedad y zonas de limpieza',
+   306→   306→          4: 'Layout subido como imagen con estándares implantados señalados',
+   307→   307→        }
+   308→   308→        // Save as a layout standard
+   309→   309→        const standardPayload = {
+   310→   310→          sStep,
+   311→   311→          title: `Layout ${currentZone?.name || 'zona'} ${sStepData?.japaneseName || ''} (subido)`,
+   312→   312→          description: layoutDescriptions[sStep] || 'Layout subido como imagen',
+   313→   313→          category: 'layout',
+   314→   314→          photoUrl: json.url,
+   315→   315→          status: 'activo',
+   316→   316→          version: 1,
+   317→   317→          projectId: currentProject.id,
+   318→   318→          zoneId: currentZone?.id || null,
+   319→   319→        }
+   320→   320→        console.log('[InventarioModal] Saving layout standard:', {
+   321→   321→          sStep, category: 'layout', hasPhotoUrl: true,
+   322→   322→          projectId: currentProject.id, zoneId: currentZone?.id,
+   323→   323→        })
+   324→   324→        const saveRes = await fetch('/api/standards', {
+   325→   325→          method: 'POST',
+   326→   326→          headers: { 'Content-Type': 'application/json' },
+   327→   327→          body: JSON.stringify(standardPayload),
+   328→   328→        })
+   329→   329→        if (!saveRes.ok) {
+   330→   330→          console.error('[InventarioModal] Standards API HTTP error:', saveRes.status)
+   331→   331→          toast.error(`Error al guardar estándar (HTTP ${saveRes.status})`)
+   332→   332→          e.target.value = ''
+   333→   333→          return
+   334→   334→        }
+   335→   335→        const saveJson = await saveRes.json()
+   336→   336→        if (saveJson.success) {
+   337→   337→          toast.success('Layout subido y guardado en Biblioteca de Estándares')
+   338→   338→          await loadLayouts()
+   339→   339→        } else {
+   340→   340→          console.error('[InventarioModal] Standards API error:', saveJson.error)
+   341→   341→          toast.error(`Error al guardar estándar: ${saveJson.error || 'Error desconocido'}`)
+   342→   342→        }
+   343→   343→      } else {
+   344→   344→        console.error('[InventarioModal] Upload failed:', json.error)
+   345→   345→        toast.error(`Error al subir imagen: ${json.error || 'Error desconocido'}`)
+   346→   346→      }
+   347→   347→    } catch (e) {
+   348→   348→      console.error('[InventarioModal] Upload error:', e)
+   349→   349→      toast.error('Error al subir la imagen del layout')
+   350→   350→    }
+   351→   351→    e.target.value = ''
+   352→   352→  }
+   353→   353→
+   354→   354→  const loadInventory = async () => {
+   355→   355→    setIsLoading(true);
+   356→   356→    try {
+   357→   357→      const projectIdParam = currentProject?.id ? `&projectId=${currentProject.id}` : '';
+   358→   358→      const zoneIdParam = currentZone?.id ? `&zoneId=${currentZone.id}` : '';
+   359→   359→      const res = await fetch(`/api/inventory?sStep=${sStep}${projectIdParam}${zoneIdParam}`);
+   360→   360→      const json = await res.json();
+   361→   361→      if (json.success) {
+   362→   362→        setItems(json.data.map((item: any) => ({
+   363→   363→          id: item.id,
+   364→   364→          name: item.name,
+   365→   365→          location: item.location || '',
+   366→   366→          category: item.category || '',
+   367→   367→          quantity: item.quantity || 1,
+   368→   368→          // S1: Set quantities based on category (innecesario or necesario)
+   369→   369→          quantityNeeded: sStep === 1
+   370→   370→            ? (item.category === 'necesario' ? (item.quantityNeeded || item.quantity || 1) : 0)
+   371→   371→            : (item.quantityNeeded || 0),
+   372→   372→          quantityUnneeded: sStep === 1
+   373→   373→            ? (item.category === 'innecesario' ? (item.quantityUnneeded || item.quantity || 1) : 0)
+   374→   374→            : (item.quantityUnneeded || 0),
+   375→   375→          price: item.price ?? null,
+   376→   376→          action: item.action || '',
+   377→   377→          extra: typeof item.extra === 'string' ? JSON.parse(item.extra) : (item.extra || {}),
+   378→   378→          jaulaStatus: item.jaulaStatus || '',
+   379→   379→          jaulaFechaEntrada: item.jaulaFechaEntrada || null,
+   380→   380→          jaulaOrigen: item.jaulaOrigen || null,
+   381→   381→          jaulaFechaSalida: item.jaulaFechaSalida || null,
+   382→   382→          jaulaDestino: item.jaulaDestino || null,
+   383→   383→          zonaOrigen: item.zonaOrigen || null,
+   384→   384→          zonaDestino: item.zonaDestino || null,
+   385→   385→        })));
+   386→   386→      } else {
+   387→   387→        console.error('Error loading inventory:', json.error);
+   388→   388→      }
+   389→   389→    } catch (error) {
+   390→   390→      console.error('Error loading inventory:', error);
+   391→   391→    } finally {
+   392→   392→      setIsLoading(false);
+   393→   393→    }
+   394→   394→  };
+   395→   395→
+   396→   396→  const handleAddItem = async () => {
+   397→   397→    if (!newItem.name || !newItem.category) {
+   398→   398→      toast.error('Completa el nombre y la categoría del elemento');
+   399→   399→      return;
+   400→   400→    }
+   401→   401→
+   402→   402→    if (!currentProject?.id) {
+   403→   403→      toast.error('No hay proyecto seleccionado. Selecciona un proyecto antes de agregar elementos.');
+   404→   404→      return;
+   405→   405→    }
+   406→   406→
+   407→   407→    // Auto-calculate quantityUnneeded/Needed based on category for S1
+   408→   408→    const qty = newItem.quantity || 1;
+   409→   409→    const isInnecesario = sStep === 1 && newItem.category === 'innecesario';
+   410→   410→    const isNecesario = sStep === 1 && newItem.category === 'necesario';
+   411→   411→    const qtyNeeded = isNecesario ? qty : (newItem.quantityNeeded || 0);
+   412→   412→    const qtyUnneeded = isInnecesario ? qty : (newItem.quantityUnneeded || 0);
+   413→   413→
+   414→   414→    // S1: auto-set decision to extra field (only for innecesario)
+   415→   415→    const extra = { ...(newItem.extra || {}) };
+   416→   416→    if (sStep === 1 && isInnecesario && !extra.decision) {
+   417→   417→      extra.decision = 'Jaula';
+   418→   418→    }
+   419→   419→    // S1: Determine zona destino based on decision
+   420→   420→    const getZonaDestino = (decision: string | undefined): string => {
+   421→   421→      if (decision === 'Tirar' || decision === 'Eliminar') return 'Residuo';
+   422→   422→      return 'Jaula'; // Default for Jaula or no decision
+   423→   423→    };
+   424→   424→    // S1: Keep all fields — user can fill in both necesario and innecesario fields
+   425→   425→    // No field deletion since all fields are now visible and editable
+   426→   426→
+   427→   427→    try {
+   428→   428→      const res = await fetch('/api/inventory', {
+   429→   429→        method: 'POST',
+   430→   430→        headers: { 'Content-Type': 'application/json' },
+   431→   431→        body: JSON.stringify({
+   432→   432→          sStep,
+   433→   433→          projectId: currentProject.id,
+   434→   434→          zoneId: currentZone?.id || null,
+   435→   435→          name: newItem.name,
+   436→   436→          location: newItem.location,
+   437→   437→          category: newItem.category || '',
+   438→   438→          quantity: qty,
+   439→   439→          quantityNeeded: qtyNeeded,
+   440→   440→          quantityUnneeded: qtyUnneeded,
+   441→   441→          price: newItem.price || null,
+   442→   442→          action: newItem.action || (isInnecesario ? (extra.decision || 'Jaula') : ''),
+   443→   443→          extra,
+   444→   444→          // Only Jaula items get jaula entry/quarantine; Eliminar/Tirar items go directly to Residuo
+   445→   445→          jaulaStatus: isInnecesario && extra.decision !== 'Eliminar' && extra.decision !== 'Tirar' ? 'en_jaula' : '',
+   446→   446→          jaulaFechaEntrada: isInnecesario && extra.decision !== 'Eliminar' && extra.decision !== 'Tirar' ? (newItem.jaulaFechaEntrada || new Date().toISOString()) : null,
+   447→   447→          jaulaOrigen: isInnecesario ? newItem.zonaOrigen || currentZone?.name || currentProject.name || '' : null,
+   448→   448→          zonaOrigen: newItem.zonaOrigen || currentZone?.name || null,
+   449→   449→          zonaDestino: isInnecesario ? getZonaDestino(extra.decision as string | undefined) : (newItem.zonaOrigen || currentZone?.name || null),
+   450→   450→        }),
+   451→   451→      });
+   452→   452→
+   453→   453→      const json = await res.json();
+   454→   454→      if (json.success) {
+   455→   455→        toast.success('Elemento agregado correctamente');
+   456→   456→        await loadInventory();
+   457→   457→        setNewItem({ name: '', location: '', category: defaultCategory as string | undefined, quantity: 1, quantityNeeded: 0, quantityUnneeded: 0, price: null, action: '', zonaOrigen: currentZone?.name || null, jaulaFechaEntrada: new Date().toISOString(), extra: {} });
+   458→   458→      } else {
+   459→   459→        toast.error(`Error al agregar: ${json.error || 'Error desconocido'}`);
+   460→   460→      }
+   461→   461→    } catch (error) {
+   462→   462→      console.error('Error adding item:', error);
+   463→   463→      toast.error('Error de conexión al agregar el elemento');
+   464→   464→    }
+   465→   465→  };
+   466→   466→
+   467→   467→  const handleImportTemplate = async () => {
+   468→   468→    if (!currentProject?.id) {
+   469→   469→      toast.error('No hay proyecto seleccionado.');
+   470→   470→      return;
+   471→   471→    }
+   472→   472→    try {
+   473→   473→      let templateItems: any[] = [];
+   474→   474→
+   475→   475→      if (currentZone?.boardConfigId) {
+   476→   476→        // Fetch from board config
+   477→   477→        const slotsRes = await fetch(`/api/board-slots?boardConfigId=${currentZone.boardConfigId}&sStep=${sStep}&miniStep=3`);
+   478→   478→        const slotsJson = await slotsRes.json();
+   479→   479→        if (slotsJson.success && slotsJson.data.length > 0) {
+   480→   480→          const slot = slotsJson.data[0];
+   481→   481→          const inventarioTemplates = (slot.templates || []).filter(
+   482→   482→            (t: any) => t.template?.type === 'inventario'
+   483→   483→          );
+   484→   484→          if (inventarioTemplates.length > 0) {
+   485→   485→            const content = JSON.parse(inventarioTemplates[0].template.content);
+   486→   486→            templateItems = content.items || [];
+   487→   487→          }
+   488→   488→        }
+   489→   489→      } else {
+   490→   490→        // Fallback: global template
+   491→   491→        const res = await fetch(`/api/templates?type=inventario&sStep=${sStep}`);
+   492→   492→        const json = await res.json();
+   493→   493→        if (json.success && json.data.length > 0) {
+   494→   494→          const content = JSON.parse(json.data[0].content);
+   495→   495→          templateItems = content.items || [];
+   496→   496→        }
+   497→   497→      }
+   498→   498→
+   499→   499→      if (templateItems.length === 0) {
+   500→   500→        toast.error('No se encontró plantilla para este paso');
+   501→   501→        return;
+   502→   502→      }
+   503→   503→
+   504→   504→      const importRes = await fetch('/api/inventory', {
+   505→   505→        method: 'POST',
+   506→   506→        headers: { 'Content-Type': 'application/json' },
+   507→   507→        body: JSON.stringify(
+   508→   508→          templateItems.map((item: any) => ({
+   509→   509→            sStep,
+   510→   510→            projectId: currentProject.id,
+   511→   511→            zoneId: currentZone?.id || null,
+   512→   512→            name: item.name,
+   513→   513→            location: item.location || '',
+   514→   514→            category: item.category,
+   515→   515→            quantity: item.quantity || 1,
+   516→   516→            quantityNeeded: item.quantityNeeded || 0,
+   517→   517→            quantityUnneeded: item.quantityUnneeded || 0,
+   518→   518→            price: item.price ?? null,
+   519→   519→            action: item.action || '',
+   520→   520→            extra: item.extra || {},
+   521→   521→          }))
+   522→   522→        ),
+   523→   523→      });
+   524→   524→
+   525→   525→      const importJson = await importRes.json();
+   526→   526→      if (importJson.success) {
+   527→   527→        toast.success('Plantilla importada correctamente');
+   528→   528→        await loadInventory();
+   529→   529→      } else {
+   530→   530→        toast.error(`Error al importar plantilla: ${importJson.error || 'Error desconocido'}`);
+   531→   531→      }
+   532→   532→    } catch (error) {
+   533→   533→      console.error('Error importing template:', error);
+   534→   534→      toast.error('Error de conexión al importar plantilla');
+   535→   535→    }
+   536→   536→  };
+   537→   537→
+   538→   538→  // Unified file import: supports both .csv and .xlsx files
+   539→   539→  const handleFileImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+   540→   540→    const file = e.target.files?.[0];
+   541→   541→    if (!file) return;
+   542→   542→
+   543→   543→    try {
+   544→   544→      const fileName = file.name.toLowerCase();
+   545→   545→      let dataRows: string[][] = [];
+   546→   546→      let headerRow: string[] = [];
+   547→   547→
+   548→   548→      if (fileName.endsWith('.xlsx') || fileName.endsWith('.xls')) {
+   549→   549→        // Parse Excel file using xlsx library
+   550→   550→        const XLSX = await import('xlsx');
+   551→   551→        const arrayBuffer = await file.arrayBuffer();
+   552→   552→        const workbook = XLSX.read(arrayBuffer, { type: 'array' });
+   553→   553→        const sheetName = workbook.SheetNames[0]; // Use first sheet
+   554→   554→        const sheet = workbook.Sheets[sheetName];
+   555→   555→        const rawData: string[][] = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
+   556→   556→        
+   557→   557→        if (rawData.length < 2) {
+   558→   558→          toast.error('El archivo está vacío o no tiene datos');
+   559→   559→          e.target.value = '';
+   560→   560→          return;
+   561→   561→        }
+   562→   562→
+   563→   563→        // Find the header row: look for a row that contains 'Nº' or 'Elemento' or 'Nombre'
+   564→   564→        let headerIdx = 0;
+   565→   565→        for (let i = 0; i < Math.min(10, rawData.length); i++) {
+   566→   566→          const rowStr = rawData[i].map(c => String(c).toLowerCase()).join('|');
+   567→   567→          if (rowStr.includes('elemento') || rowStr.includes('nombre') || rowStr.includes('nº') || rowStr.includes('punto')) {
+   568→   568→            headerIdx = i;
+   569→   569→            break;
+   570→   570→          }
+   571→   571→        }
+   572→   572→        headerRow = rawData[headerIdx].map((h: any) => String(h).trim().toLowerCase());
+   573→   573→        dataRows = rawData.slice(headerIdx + 1).filter(row => {
+   574→   574→          // Count non-empty, non-numeric-only cells
+   575→   575→          const meaningfulCells = row.filter(cell => {
+   576→   576→            const v = String(cell).trim();
+   577→   577→            return v !== '' && v !== '0';
+   578→   578→          });
+   579→   579→          // A row with data must have at least 2 meaningful cells (name + something)
+   580→   580→          // This filters out empty numbered rows and footer rows
+   581→   581→          if (meaningfulCells.length < 2) return false;
+   582→   582→          // Skip footer rows like "TOTAL ELEMENTOS", "Notas:", etc.
+   583→   583→          const firstMeaningful = meaningfulCells[0].toLowerCase();
+   584→   584→          if (firstMeaningful.includes('total') || firstMeaningful.includes('notas') || firstMeaningful.includes('clasificación')) return false;
+   585→   585→          return true;
+   586→   586→        });
+   587→   587→      } else if (fileName.endsWith('.csv')) {
+   588→   588→        // Parse CSV file
+   589→   589→        const text = await file.text();
+   590→   590→        const lines = text.split('\n').filter(l => l.trim());
+   591→   591→        if (lines.length < 2) {
+   592→   592→          toast.error('El archivo CSV está vacío o no tiene datos');
+   593→   593→          e.target.value = '';
+   594→   594→          return;
+   595→   595→        }
+   596→   596→        headerRow = lines[0].split(',').map(h => h.trim().toLowerCase().replace(/^\uFEFF/, '')); // Remove BOM
+   597→   597→        dataRows = lines.slice(1).filter(l => l.trim()).map(l => l.split(',').map(v => v.trim()));
+   598→   598→      } else {
+   599→   599→        toast.error('Formato no soportado. Usa .xlsx o .csv');
+   600→   600→        e.target.value = '';
+   601→   601→        return;
+   602→   602→      }
+   603→   603→
+   604→   604→      // Flexible column mapping: map various header names to standard fields
+   605→   605→      const findCol = (headers: string[], ...names: string[]): number => {
+   606→   606→        for (const name of names) {
+   607→   607→          const idx = headers.findIndex(h => h.includes(name));
+   608→   608→          if (idx >= 0) return idx;
+   609→   609→        }
+   610→   610→        return -1;
+   611→   611→      };
+   612→   612→
+   613→   613→      const colMap = {
+   614→   614→        name: findCol(headerRow, 'elemento', 'nombre', 'punto', 'estándar', 'práctica', 'estandar', 'practica'),
+   615→   615→        location: findCol(headerRow, 'ubicación', 'ubicacion', 'ámbito', 'ambito', 'proceso'),
+   616→   616→        zona: findCol(headerRow, 'zona', 'zona origen'),
+   617→   617→        category: findCol(headerRow, 'categoría', 'categoria', 'clasificación', 'clasificacion', 'tipo'),
+   618→   618→        quantity: findCol(headerRow, 'cantidad', 'total exist', 'total'),
+   619→   619→        quantityNeeded: findCol(headerRow, 'necesarios', 'nec.'),
+   620→   620→        quantityUnneeded: findCol(headerRow, 'innecesarios', 'innec.'),
+   621→   621→        price: findCol(headerRow, 'precio'),
+   622→   622→        action: findCol(headerRow, 'acción', 'accion', 'decisión', 'decision', 'método', 'metodo'),
+   623→   623→        estado: findCol(headerRow, 'estado'),
+   624→   624→        frecuenciaUso: findCol(headerRow, 'frecuencia'),
+   625→   625→        nivel: findCol(headerRow, 'nivel'),
+   626→   626→        fuente: findCol(headerRow, 'fuente'),
+   627→   627→        cercania: findCol(headerRow, 'cercanía', 'cercania'),
+   628→   628→        documentado: findCol(headerRow, 'documentado'),
+   629→   629→        cumplimiento: findCol(headerRow, 'cumplimiento'),
+   630→   630→        ubicacionAsignada: findCol(headerRow, 'ubicación asignada', 'asignada'),
+   631→   631→        metodoIdentificacion: findCol(headerRow, 'método identificación', 'identificación', 'identificacion'),
+   632→   632→        frecuenciaLimpieza: findCol(headerRow, 'frecuencia limpieza'),
+   633→   633→        metodoLimpieza: findCol(headerRow, 'método limpieza'),
+   634→   634→        responsable: findCol(headerRow, 'responsable'),
+   635→   635→        observaciones: findCol(headerRow, 'observacione'),
+   636→   636→      };
+   637→   637→
+   638→   638→      const parsedItems: InventoryItemData[] = [];
+   639→   639→      for (const values of dataRows) {
+   640→   640→        const strValues = values.map(v => String(v).trim());
+   641→   641→        // Skip rows that are just a number (empty data rows from template)
+   642→   642→        if (strValues.length < 2) continue;
+   643→   643→        const nonEmptyCount = strValues.filter(v => v !== '' && v !== '0').length;
+   644→   644→        if (nonEmptyCount < 1) continue;
+   645→   645→
+   646→   646→        const getVal = (idx: number, fallback?: string) => idx >= 0 && idx < strValues.length ? strValues[idx] : (fallback || '');
+   647→   647→
+   648→   648→        const item: InventoryItemData = {
+   649→   649→          name: getVal(colMap.name, strValues[1] || strValues[0] || ''),
+   650→   650→          location: getVal(colMap.location, strValues[2] || ''),
+   651→   651→          category: getVal(colMap.category) || config.categories[0]?.value || '',
+   652→   652→          quantity: parseInt(getVal(colMap.quantity, strValues[4] || '1')) || 1,
+   653→   653→          quantityNeeded: parseInt(getVal(colMap.quantityNeeded, '0')) || 0,
+   654→   654→          quantityUnneeded: parseInt(getVal(colMap.quantityUnneeded, '0')) || 0,
+   655→   655→          price: parseFloat(getVal(colMap.price, '0')) || null,
+   656→   656→          action: getVal(colMap.action, '') || getVal(colMap.observaciones, ''),
+   657→   657→          zonaOrigen: colMap.zona >= 0 ? getVal(colMap.zona) || null : null,
+   658→   658→          extra: {},
+   659→   659→        };
+   660→   660→
+   661→   661→        // S1: All items are innecesario by nature, set default decision
+   662→   662→        if (sStep === 1) {
+   663→   663→          item.quantityUnneeded = item.quantity;
+   664→   664→          item.quantityNeeded = 0;
+   665→   665→          if (colMap.estado >= 0) item.extra!['estado'] = getVal(colMap.estado);
+   666→   666→          if (colMap.frecuenciaUso >= 0) item.extra!['frecuenciaUso'] = getVal(colMap.frecuenciaUso);
+   667→   667→          // Map classification/decision columns
+   668→   668→          const decisionVal = getVal(colMap.category) || getVal(colMap.action, '');
+   669→   669→          if (decisionVal) {
+   670→   670→            const lower = decisionVal.toLowerCase();
+   671→   671→            if (lower.includes('jaula') || lower.includes('red') || lower.includes('etiqueta')) {
+   672→   672→              item.extra!['decision'] = 'Jaula';
+   673→   673→            } else if (lower.includes('tirar') || lower.includes('residuo') || lower.includes('basura')) {
+   674→   674→              item.extra!['decision'] = 'Tirar';
+   675→   675→            } else if (lower.includes('elimin')) {
+   676→   676→              item.extra!['decision'] = 'Eliminar';
+   677→   677→            } else {
+   678→   678→              item.extra!['decision'] = 'Jaula'; // Default for S1
+   679→   679→            }
+   680→   680→          }
+   681→   681→          if (!item.extra!['decision']) item.extra!['decision'] = 'Jaula';
+   682→   682→        } else if (sStep === 2) {
+   683→   683→          if (colMap.ubicacionAsignada >= 0) item.extra!['ubicacionAsignada'] = getVal(colMap.ubicacionAsignada);
+   684→   684→          if (colMap.metodoIdentificacion >= 0) item.extra!['metodoIdentificacion'] = getVal(colMap.metodoIdentificacion);
+   685→   685→          if (colMap.cercania >= 0) item.extra!['cercania'] = getVal(colMap.cercania);
+   686→   686→          if (colMap.frecuenciaUso >= 0) item.extra!['frecuenciaUso'] = getVal(colMap.frecuenciaUso);
+   687→   687→        } else if (sStep === 3) {
+   688→   688→          if (colMap.nivel >= 0) item.extra!['nivel'] = getVal(colMap.nivel);
+   689→   689→          if (colMap.fuente >= 0) item.extra!['fuente'] = getVal(colMap.fuente);
+   690→   690→          if (colMap.metodoLimpieza >= 0) item.extra!['metodoLimpieza'] = getVal(colMap.metodoLimpieza);
+   691→   691→          if (colMap.frecuenciaLimpieza >= 0) item.extra!['frecuenciaLimpieza'] = getVal(colMap.frecuenciaLimpieza);
+   692→   692→        } else if (sStep === 4) {
+   693→   693→          if (colMap.estado >= 0) item.extra!['estadoEstandar'] = getVal(colMap.estado);
+   694→   694→          if (colMap.documentado >= 0) item.extra!['documentado'] = getVal(colMap.documentado);
+   695→   695→          if (colMap.cumplimiento >= 0) item.extra!['cumplimiento'] = getVal(colMap.cumplimiento);
+   696→   696→        } else if (sStep === 5) {
+   697→   697→          if (colMap.frecuenciaUso >= 0) item.extra!['frecuencia'] = getVal(colMap.frecuenciaUso);
+   698→   698→          if (colMap.nivel >= 0) item.extra!['practica'] = getVal(colMap.nivel);
+   699→   699→        }
+   700→   700→
+   701→   701→        // Also check config.extraFields for any remaining fields
+   702→   702→        config.extraFields.forEach((field) => {
+   703→   703→          if (item.extra![field.key]) return; // Already mapped above
+   704→   704→          const val = getVal(findCol(headerRow, field.label.toLowerCase()), '');
+   705→   705→          if (val) {
+   706→   706→            item.extra![field.key] = val;
+   707→   707→          }
+   708→   708→        });
+   709→   709→
+   710→   710→        // Skip items with no name
+   711→   711→        if (!item.name) continue;
+   712→   712→        parsedItems.push(item);
+   713→   713→      }
+   714→   714→
+   715→   715→      if (parsedItems.length > 0) {
+   716→   716→        setCsvPreview(parsedItems);
+   717→   717→        toast.info(`${parsedItems.length} elementos encontrados. Revisa y confirma la importación.`);
+   718→   718→      } else {
+   719→   719→        toast.error('No se encontraron elementos válidos en el archivo. Asegúrate de rellenar las filas con datos.');
+   720→   720→      }
+   721→   721→    } catch (error) {
+   722→   722→      console.error('Error parsing file:', error);
+   723→   723→      toast.error('Error al procesar el archivo. Verifica el formato.');
+   724→   724→    }
+   725→   725→    // Reset file input
+   726→   726→    e.target.value = '';
+   727→   727→  };
+   728→   728→
+   729→   729→  const handleConfirmCsvImport = async () => {
+   730→   730→    if (!csvPreview || csvPreview.length === 0) return;
+   731→   731→    if (!currentProject?.id) {
+   732→   732→      toast.error('No hay proyecto seleccionado.');
+   733→   733→      return;
+   734→   734→    }
+   735→   735→    setIsImporting(true);
+   736→   736→    try {
+   737→   737→      const res = await fetch('/api/inventory', {
+   738→   738→        method: 'POST',
+   739→   739→        headers: { 'Content-Type': 'application/json' },
+   740→   740→        body: JSON.stringify(
+   741→   741→          csvPreview.map(item => ({
+   742→   742→            sStep,
+   743→   743→            projectId: currentProject!.id,
+   744→   744→            zoneId: currentZone?.id || null,
+   745→   745→            name: item.name,
+   746→   746→            location: item.location,
+   747→   747→            category: item.category || config.categories[0]?.value || '',
+   748→   748→            quantity: item.quantity || 1,
+   749→   749→            quantityNeeded: sStep === 1 ? (item.category === 'necesario' ? (item.quantityNeeded || item.quantity || 1) : 0) : (item.quantityNeeded || 0),
+   750→   750→            quantityUnneeded: sStep === 1 ? (item.category === 'innecesario' ? (item.quantityUnneeded || item.quantity || 1) : 0) : (item.quantityUnneeded || 0),
+   751→   751→            price: item.price || null,
+   752→   752→            action: item.action || '',
+   753→   753→            extra: item.extra || {},
+   754→   754→            // Only Jaula decision items get jaula entry/quarantine; Eliminar/Tirar go to Residuo directly
+   755→   755→            jaulaStatus: sStep === 1 && item.category === 'innecesario' && item.extra?.decision !== 'Eliminar' && item.extra?.decision !== 'Tirar' ? 'en_jaula' : '',
+   756→   756→            jaulaFechaEntrada: sStep === 1 && item.category === 'innecesario' && item.extra?.decision !== 'Eliminar' && item.extra?.decision !== 'Tirar' ? new Date().toISOString() : null,
+   757→   757→            jaulaOrigen: sStep === 1 && item.category === 'innecesario' && item.extra?.decision !== 'Eliminar' && item.extra?.decision !== 'Tirar' ? item.zonaOrigen || currentZone?.name || currentProject!.name || '' : null,
+   758→   758→            zonaOrigen: item.zonaOrigen || currentZone?.name || null,
+   759→   759→            zonaDestino: sStep === 1 && item.category === 'innecesario' ? (item.extra?.decision === 'Tirar' || item.extra?.decision === 'Eliminar' ? 'Residuo' : 'Jaula') : (item.zonaOrigen || currentZone?.name || null),
+   760→   760→          }))
+   761→   761→        ),
+   762→   762→      });
+   763→   763→
+   764→   764→      const json = await res.json();
+   765→   765→      if (json.success) {
+   766→   766→        toast.success(`${csvPreview.length} elementos importados correctamente`);
+   767→   767→        setCsvPreview(null);
+   768→   768→        await loadInventory();
+   769→   769→      } else {
+   770→   770→        toast.error(`Error al importar CSV: ${json.error || 'Error desconocido'}`);
+   771→   771→      }
+   772→   772→    } catch (error) {
+   773→   773→      console.error('Error importing CSV:', error);
+   774→   774→      toast.error('Error de conexión al importar CSV');
+   775→   775→    } finally {
+   776→   776→      setIsImporting(false);
+   777→   777→    }
+   778→   778→  };
+   779→   779→
+   780→   780→  const handleDeleteItem = async (id: string) => {
+   781→   781→    try {
+   782→   782→      const res = await fetch(`/api/inventory?id=${id}`, { method: 'DELETE' });
+   783→   783→      const json = await res.json();
+   784→   784→      if (json.success) {
+   785→   785→        setItems(prev => prev.filter(item => item.id !== id));
+   786→   786→        toast.success('Elemento eliminado');
+   787→   787→      } else {
+   788→   788→        toast.error(`Error al eliminar: ${json.error || 'Error desconocido'}`);
+   789→   789→      }
+   790→   790→    } catch (error) {
+   791→   791→      console.error('Error deleting item:', error);
+   792→   792→      toast.error('Error de conexión al eliminar');
+   793→   793→    }
+   794→   794→  };
+   795→   795→
+   796→   796→  const handleUpdateJaula = async (id: string, updates: Partial<InventoryItemData>) => {
+   797→   797→    try {
+   798→   798→      const res = await fetch(`/api/inventory?id=${id}`, {
+   799→   799→        method: 'PUT',
+   800→   800→        headers: { 'Content-Type': 'application/json' },
+   801→   801→        body: JSON.stringify(updates),
+   802→   802→      });
+   803→   803→      const json = await res.json();
+   804→   804→      if (json.success) {
+   805→   805→        await loadInventory();
+   806→   806→      } else {
+   807→   807→        toast.error(`Error al actualizar: ${json.error || 'Error desconocido'}`);
+   808→   808→      }
+   809→   809→    } catch (error) {
+   810→   810→      console.error('Error updating jaula:', error);
+   811→   811→      toast.error('Error de conexión al actualizar');
+   812→   812→    }
+   813→   813→  };
+   814→   814→
+   815→   815→  // Helper: update an extra field on an item and persist
+   816→   816→  const handleUpdateExtra = async (itemId: string, key: string, value: string | number) => {
+   817→   817→    const item = items.find(i => i.id === itemId);
+   818→   818→    if (!item) return;
+   819→   819→    const newExtra = { ...(item.extra || {}) };
+   820→   820→    if (value === '_clear_') {
+   821→   821→      delete newExtra[key];
+   822→   822→    } else {
+   823→   823→      newExtra[key] = value;
+   824→   824→    }
+   825→   825→    // Optimistic local update
+   826→   826→    setItems(prev => prev.map(it => it.id === itemId ? { ...it, extra: newExtra } : it));
+   827→   827→    try {
+   828→   828→      await fetch(`/api/inventory?id=${itemId}`, {
+   829→   829→        method: 'PUT',
+   830→   830→        headers: { 'Content-Type': 'application/json' },
+   831→   831→        body: JSON.stringify({ extra: newExtra }),
+   832→   832→      });
+   833→   833→    } catch (e) {
+   834→   834→      console.error('Error updating extra field:', e);
+   835→   835→    }
+   836→   836→  };
+   837→   837→
+   838→   838→  // Helper: update a simple field on an item and persist
+   839→   839→  const handleUpdateField = async (itemId: string, field: string, value: any) => {
+   840→   840→    const cleanValue = value === '_clear_' ? null : value;
+   841→   841→    setItems(prev => prev.map(it => it.id === itemId ? { ...it, [field]: cleanValue } : it));
+   842→   842→    try {
+   843→   843→      await fetch(`/api/inventory?id=${itemId}`, {
+   844→   844→        method: 'PUT',
+   845→   845→        headers: { 'Content-Type': 'application/json' },
+   846→   846→        body: JSON.stringify({ [field]: cleanValue }),
+   847→   847→      });
+   848→   848→    } catch (e) {
+   849→   849→      console.error('Error updating field:', e);
+   850→   850→    }
+   851→   851→  };
+   852→   852→
+   853→   853→  // Count classified items
+   854→   854→  const classifiedCount = items.filter(i => i.category && i.category !== '').length;
+   855→   855→  const classifyPercent = items.length > 0 ? Math.round((classifiedCount / items.length) * 100) : 0;
+   856→   856→  // For S2, S3, S4: layout must be uploaded AND classification threshold met
+   857→   857→  const needsLayout = sStep === 2 || sStep === 3 || sStep === 4;
+   858→   858→  // S1: No minimum percentage required — just need at least 1 item. If step 4 goes bad, it means not everything was eliminated.
+   859→   859→  // S2-S5: Must meet classification threshold (80%)
+   860→   860→  const canComplete = sStep === 1
+   861→   861→    ? items.length > 0 && classifiedCount > 0
+   862→   862→    : classifyPercent >= INVENTORY_CLASSIFY_THRESHOLD && items.length > 0 && (!needsLayout || layoutUploaded);
+   863→   863→
+   864→   864→  // S1 specific counts: split by category
+   865→   865→  const innecesarios = sStep === 1 ? items.filter(i => i.category === 'innecesario') : items.filter(i => i.category === 'innecesario');
+   866→   866→  const necesarios = sStep === 1 ? items.filter(i => i.category === 'necesario') : [];
+   867→   867→  const jaulaItems = items.filter(i => i.jaulaStatus === 'en_jaula');
+   868→   868→  const totalJaulaValue = jaulaItems.reduce((sum, i) => sum + (i.price || 0) * i.quantity, 0);
+   869→   869→
+   870→   870→  const handleComplete = async () => {
+   871→   871→    if (!canComplete) return;
+   872→   872→    // Extra guard: check layout for S2/S3/S4
+   873→   873→    if (needsLayout && !layoutUploaded) {
+   874→   874→      toast.error('Debes dibujar o subir un layout antes de completar este paso');
+   875→   875→      return;
+   876→   876→    }
+   877→   877→
+   878→   878→    try {
+   879→   879→      const res = await fetch(`/api/progress/step?sStep=${sStep}&miniStep=${miniStep}`, {
+   880→   880→        method: 'PUT',
+   881→   881→        headers: { 'Content-Type': 'application/json' },
+   882→   882→        body: JSON.stringify({
+   883→   883→          completed: true,
+   884→   884→          score: classifyPercent,
+   885→   885→          projectId: currentProject?.id,
+   886→   886→          zoneId: currentZone?.id || null,
+   887→   887→        }),
+   888→   888→      });
+   889→   889→
+   890→   890→      const json = await res.json();
+   891→   891→      if (json.success) {
+   892→   892→        setIsCompleted(true);
+   893→   893→        await fetchProgress();
+   894→   894→      }
+   895→   895→    } catch (error) {
+   896→   896→      console.error('Error completing inventory:', error);
+   897→   897→    }
+   898→   898→  };
+   899→   899→
+   900→   900→  const handleAdminSkip = async () => {
+   901→   901→    try {
+   902→   902→      const res = await fetch(`/api/progress/step?sStep=${sStep}&miniStep=${miniStep}`, {
+   903→   903→        method: 'PUT',
+   904→   904→        headers: { 'Content-Type': 'application/json' },
+   905→   905→        body: JSON.stringify({ completed: true, score: 100, notes: 'Completado por administrador (skip)', skipMissingTemplate: true, projectId: currentProject?.id, zoneId: currentZone?.id || null }),
+   906→   906→      });
+   907→   907→      const json = await res.json();
+   908→   908→      if (json.success) {
+   909→   909→        await fetchProgress();
+   910→   910→        onClose();
+   911→   911→      }
+   912→   912→    } catch (error) {
+   913→   913→      console.error('Error admin skip:', error);
+   914→   914→    }
+   915→   915→  };
+   916→   916→
+   917→   917→  const handleSkipMissingTemplate = async () => {
+   918→   918→    try {
+   919→   919→      const res = await fetch(`/api/progress/step?sStep=${sStep}&miniStep=${miniStep}`, {
+   920→   920→        method: 'PUT',
+   921→   921→        headers: { 'Content-Type': 'application/json' },
+   922→   922→        body: JSON.stringify({ completed: true, score: 100, notes: 'Paso sin plantilla - sin plantilla configurada', projectId: currentProject?.id, zoneId: currentZone?.id || null, skipMissingTemplate: true }),
+   923→   923→      });
+   924→   924→      const json = await res.json();
+   925→   925→      if (json.success) {
+   926→   926→        await fetchProgress();
+   927→   927→        onClose();
+   928→   928→      }
+   929→   929→    } catch (error) {
+   930→   930→      console.error('Error skip missing template:', error);
+   931→   931→    }
+   932→   932→  };
+   933→   933→
+   934→   934→  const handleExport = () => {
+   935→   935→    const extraHeaders = config.extraFields.map(f => f.label);
+   936→   936→    const headerRow = ['Nombre', 'Ubicación', 'Categoría', 'Total exist.', 'Necesarios', 'Innecesarios', 'Precio (€)', ...extraHeaders, 'Acción'].join(',');
+   937→   937→
+   938→   938→    const rows = items.map(item => {
+   939→   939→      const extraValues = config.extraFields.map(f => {
+   940→   940→        const val = item.extra?.[f.key] ?? '';
+   941→   941→        return String(val).replace(/,/g, ';');
+   942→   942→      });
+   943→   943→      const priceStr = item.price != null ? item.price.toFixed(2) : '';
+   944→   944→      return [item.name, item.location, item.category, item.quantity, item.quantityNeeded, item.quantityUnneeded, priceStr, ...extraValues, item.action].join(',');
+   945→   945→    });
+   946→   946→
+   947→   947→    const csvContent = [headerRow, ...rows].join('\n');
+   948→   948→    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+   949→   949→    const url = URL.createObjectURL(blob);
+   950→   950→    const link = document.createElement('a');
+   951→   951→    link.href = url;
+   952→   952→    link.download = `inventario_s${sStep}_${sStepData?.japaneseName?.toLowerCase()}.csv`;
+   953→   953→    link.click();
+   954→   954→    URL.revokeObjectURL(url);
+   955→   955→  };
+   956→   956→
+   957→   957→  const getCategoryBadge = (category: string) => {
+   958→   958→    const cat = config.categories.find(c => c.value === category);
+   959→   959→    if (!cat) return <Badge variant="secondary">{category}</Badge>;
+   960→   960→    return <Badge className={cat.color}>{cat.label}</Badge>;
+   961→   961→  };
+   962→   962→
+   963→   963→  const getExtraValue = (item: InventoryItemData, fieldKey: string) => {
+   964→   964→    return item.extra?.[fieldKey] ?? '';
+   965→   965→  };
+   966→   966→
+   967→   967→  const getJaulaStatusBadge = (status: string) => {
+   968→   968→    const map: Record<string, { label: string; color: string }> = {
+   969→   969→      '': { label: '—', color: 'bg-gray-50 text-gray-400' },
+   970→   970→      en_jaula: { label: 'En Jaula', color: 'bg-red-100 text-red-800' },
+   971→   971→      reclamado: { label: 'Reclamado', color: 'bg-amber-100 text-amber-800' },
+   972→   972→      transferido: { label: 'Transferido', color: 'bg-green-100 text-green-800' },
+   973→   973→    };
+   974→   974→    const info = map[status] || map[''];
+   975→   975→    return <Badge className={info.color}>{info.label}</Badge>;
+   976→   976→  };
+   977→   977→
+   978→   978→  return (
+   979→   979→    <>
+   980→   980→    <Dialog open={open} onOpenChange={() => onClose()}>
+   981→   981→      <DialogContent size={isFullscreen ? "fullscreen" : "xl"} className="flex flex-col overflow-hidden p-0">
+   982→   982→        <DialogHeader className="px-6 pt-6 pb-2 flex-shrink-0">
+   983→   983→          <DialogTitle className="flex items-center gap-2">
+   984→   984→            <ClipboardList className="h-5 w-5" style={{ color: sStepData?.color }} />
+   985→   985→            <span>{config.title}</span>
+   986→   986→            <Badge variant="outline" style={{ borderColor: sStepData?.color, color: sStepData?.color }}>
+   987→   987→              {sStepData?.japaneseName}
+   988→   988→            </Badge>
+   989→   989→            <button
+   990→   990→              onClick={() => setIsFullscreen(!isFullscreen)}
+   991→   991→              className="ml-auto p-1 rounded hover:bg-muted transition-colors"
+   992→   992→              title={isFullscreen ? "Reducir ventana" : "Pantalla completa"}
+   993→   993→            >
+   994→   994→              {isFullscreen ? <Minimize2 className="h-4 w-4 text-muted-foreground" /> : <Maximize2 className="h-4 w-4 text-muted-foreground" />}
+   995→   995→            </button>
+   996→   996→          </DialogTitle>
+   997→   997→        </DialogHeader>
+   998→   998→
+   999→   999→        {canSkipSteps && !isCompleted && (
+  1000→  1000→          <div className="mx-6 flex items-center gap-2 p-2 bg-amber-50 border border-amber-200 rounded-lg flex-shrink-0">
+  1001→  1001→            <span className="text-xs text-amber-700 font-medium">Modo Admin:</span>
+  1002→  1002→            <Button
+  1003→  1003→              variant="outline"
+  1004→  1004→              size="sm"
+  1005→  1005→              className="text-xs border-amber-300 text-amber-700 hover:bg-amber-100"
+  1006→  1006→              onClick={handleAdminSkip}
+  1007→  1007→            >
+  1008→  1008→              Completar paso sin inventario
+  1009→  1009→            </Button>
+  1010→  1010→          </div>
+  1011→  1011→        )}
+  1012→  1012→
+  1013→  1013→        {isReadOnly && (
+  1014→  1014→          <div className="flex items-center gap-2 p-2 mx-6 flex-shrink-0 bg-blue-50 border border-blue-200 rounded-lg">
+  1015→  1015→            <span className="text-xs text-blue-700 font-medium">Solo lectura: {canSkipSteps ? 'Activa el candado para poder realizar pasos.' : 'Puedes ver pero no modificar.'}</span>
+  1016→  1016→          </div>
+  1017→  1017→        )}
+  1018→  1018→
+  1019→  1019→        <div className="flex-1 overflow-y-auto px-6 pb-6 min-h-0">
+  1020→  1020→        {hasTemplate === null ? (
+  1021→  1021→          <div className="flex items-center justify-center py-12">
+  1022→  1022→            <Loader2 className="h-8 w-8 text-green-500 animate-spin" />
+  1023→  1023→            <span className="ml-3 text-muted-foreground">Cargando plantilla...</span>
+  1024→  1024→          </div>
+  1025→  1025→        ) : hasTemplate === false ? (
+  1026→  1026→          <div className="text-center py-16">
+  1027→  1027→            <ClipboardList className="h-16 w-16 text-gray-300 mx-auto mb-4" />
+  1028→  1028→            <h3 className="text-xl font-bold text-gray-500 mb-2">Sin plantilla configurada</h3>
+  1029→  1029→            <p className="text-muted-foreground max-w-md mx-auto">
+  1030→  1030→              El administrador no ha configurado ninguna plantilla de inventario para S{sStep} ({sStepData?.japaneseName}) en el Paso 3.
+  1031→  1031→              Puedes pasar este paso y completarlo más tarde.
+  1032→  1032→            </p>
+  1033→  1033→            {!isReadOnly && (
+  1034→  1034→              <Button variant="outline" className="mt-4" onClick={handleSkipMissingTemplate}>
+  1035→  1035→                Pasar sin plantilla
+  1036→  1036→              </Button>
+  1037→  1037→            )}
+  1038→  1038→          </div>
+  1039→  1039→        ) : isCompleted ? (
+  1040→  1040→          <div className="text-center py-8">
+  1041→  1041→            <CheckCircle className="h-16 w-16 text-green-500 mx-auto mb-3" />
+  1042→  1042→            <h3 className="text-xl font-bold mb-2">¡Inventario Completado!</h3>
+  1043→  1043→            <p className="text-muted-foreground">
+  1044→  1044→              Se han clasificado {classifiedCount} de {items.length} elementos ({classifyPercent}%).
+  1045→  1045→            </p>
+  1046→  1046→            {sStep === 1 && (
+  1047→  1047→              <div className="mt-4 flex justify-center gap-4">
+  1048→  1048→                <span className="text-sm text-red-600">Innecesarios: {innecesarios.length}</span>
+  1049→  1049→                <span className="text-sm text-green-600">Necesarios: {necesarios.length}</span>
+  1050→  1050→              </div>
+  1051→  1051→            )}
+  1052→  1052→          </div>
+  1053→  1053→        ) : (
+  1054→  1054→          <div className="space-y-4">
+  1055→  1055→            {/* S-specific subtitle */}
+  1056→  1056→            <div className="p-3 rounded-lg border-l-4" style={{ borderColor: sStepData?.color, backgroundColor: `${sStepData?.color}08` }}>
+  1057→  1057→              <p className="text-sm font-medium" style={{ color: sStepData?.color }}>
+  1058→  1058→                {config.subtitle}
+  1059→  1059→              </p>
+  1060→  1060→            </div>
+  1061→  1061→
+  1062→  1062→            {/* ═══ LAYOUT DE LA ZONA — S2 (Marcado de Suelo), S3 (Limpieza), S4 (Estándares) ═══ */}
+  1063→  1063→            {(sStep === 2 || sStep === 3 || sStep === 4) && (
+  1064→  1064→              <Card className="border-2 border-blue-200 bg-blue-50/30">
+  1065→  1065→                <CardContent className="p-4">
+  1066→  1066→                  <div className="flex items-center gap-2 mb-3">
+  1067→  1067→                    <PenTool className="h-5 w-5 text-blue-600" />
+  1068→  1068→                    <h4 className="font-semibold text-blue-800">
+  1069→  1069→                      {sStep === 2 ? 'Layout de la Zona — Marcado de Suelo' 
+  1070→  1070→                        : sStep === 3 ? 'Layout de la Zona — Puntos de Limpieza' 
+  1071→  1071→                        : 'Layout de la Zona — Estándares Implantados'}
+  1072→  1072→                    </h4>
+  1073→  1073→                    <Badge className={layoutUploaded ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800'}>
+  1074→  1074→                      {layoutUploaded ? 'Layout adjuntado' : 'Pendiente'}
+  1075→  1075→                    </Badge>
+  1076→  1076→                  </div>
+  1077→  1077→                  <p className="text-xs text-muted-foreground mb-3">
+  1078→  1078→                    {sStep === 2
+  1079→  1079→                      ? 'Dibuja o sube el layout de la zona con el marcado de suelo según el estándar de colores. Esto es obligatorio para completar el paso 3 de S2 (Seiton).'
+  1080→  1080→                      : sStep === 3
+  1081→  1081→                      ? 'Dibuja o sube el layout de la zona indicando los puntos de suciedad y las zonas de limpieza. Esto forma parte del inventario de S3 (Seiso).'
+  1082→  1082→                      : 'Dibuja o sube el layout de la zona con los estándares implantados señalados. Esto forma parte del inventario de S4 (Seiketsu).'}
+  1083→  1083→                  </p>
+  1084→  1084→
+  1085→  1085→                  {/* Action buttons */}
+  1086→  1086→                  {!isReadOnly && (
+  1087→  1087→                    <div className="flex items-center gap-2 mb-4">
+  1088→  1088→                      <Button size="sm" onClick={() => setShowLayoutEditor(true)}
+  1089→  1089→                        className="gap-1 bg-blue-600 hover:bg-blue-700 text-white text-xs h-8">
+  1090→  1090→                        <PenTool className="h-3 w-3" /> Dibujar Layout
+  1091→  1091→                      </Button>
+  1092→  1092→                      {sStep === 2 && (
+  1093→  1093→                        <Button variant="outline" size="sm" onClick={() => setShowColorCodeTable(true)}
+  1094→  1094→                          className="gap-1 text-xs h-8 border-yellow-400 text-yellow-700 hover:bg-yellow-50">
+  1095→  1095→                          <Eye className="h-3 w-3" /> Ver Estándar Colores
+  1096→  1096→                        </Button>
+  1097→  1097→                      )}
+  1098→  1098→                      <div className="relative">
+  1099→  1099→                        <Button variant="outline" size="sm"
+  1100→  1100→                          className="gap-1 text-xs h-8 border-green-400 text-green-700 hover:bg-green-50"
+  1101→  1101→                          onClick={() => document.getElementById('layout-upload-s2')?.click()}>
+  1102→  1102→                          <Upload className="h-3 w-3" /> Subir Imagen/Croquis
+  1103→  1103→                        </Button>
+  1104→  1104→                        <input id="layout-upload-s2" type="file" accept="image/*" className="hidden"
+  1105→  1105→                          onChange={handleUploadLayoutImage} />
+  1106→  1106→                      </div>
+  1107→  1107→                    </div>
+  1108→  1108→                  )}
+  1109→  1109→
+  1110→  1110→                  {/* Saved layout previews */}
+  1111→  1111→                  {savedLayouts.length > 0 ? (
+  1112→  1112→                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+  1113→  1113→                      {savedLayouts.map(layout => (
+  1114→  1114→                        <div key={layout.id} className="border rounded-lg overflow-hidden bg-white">
+  1115→  1115→                          {layout.photoUrl ? (
+  1116→  1116→                            <img src={layout.photoUrl} alt={layout.title}
+  1117→  1117→                              className="w-full h-32 object-cover cursor-pointer hover:opacity-80 transition-opacity"
+  1118→  1118→                              onClick={() => window.open(layout.photoUrl!, '_blank')} />
+  1119→  1119→                          ) : (
+  1120→  1120→                            <div className="w-full h-32 bg-gray-100 flex items-center justify-center text-gray-400 text-xs">
+  1121→  1121→                              Sin imagen
+  1122→  1122→                            </div>
+  1123→  1123→                          )}
+  1124→  1124→                          <div className="px-2 py-1.5 flex items-center justify-between">
+  1125→  1125→                            <span className="text-[10px] font-medium truncate">{layout.title}</span>
+  1126→  1126→                            <span className="text-[9px] text-muted-foreground">
+  1127→  1127→                              {new Date(layout.createdAt).toLocaleDateString('es-ES')}
+  1128→  1128→                            </span>
+  1129→  1129→                          </div>
+  1130→  1130→                        </div>
+  1131→  1131→                      ))}
+  1132→  1132→                    </div>
+  1133→  1133→                  ) : (
+  1134→  1134→                    <div className="text-center py-6 bg-white rounded-lg border border-dashed border-blue-300">
+  1135→  1135→                      <PenTool className="h-8 w-8 text-blue-300 mx-auto mb-2" />
+  1136→  1136→                      <p className="text-xs text-muted-foreground">No hay layout adjuntado</p>
+  1137→  1137→                      <p className="text-[10px] text-muted-foreground mt-0.5">Dibuja o sube el layout de la zona</p>
+  1138→  1138→                    </div>
+  1139→  1139→                  )}
+  1140→  1140→                </CardContent>
+  1141→  1141→              </Card>
+  1142→  1142→            )}
+  1143→  1143→
+  1144→  1144→            {/* Classification progress */}
+  1145→  1145→            <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
+  1146→  1146→              <div>
+  1147→  1147→                <span className="text-sm font-medium">Clasificación</span>
+  1148→  1148→                <p className="text-xs text-muted-foreground">
+  1149→  1149→                  {classifiedCount}/{items.length} clasificados
+  1150→  1150→                </p>
+  1151→  1151→              </div>
+  1152→  1152→              <Badge variant={canComplete ? 'default' : 'secondary'}>
+  1153→  1153→                {classifyPercent}%{sStep !== 1 ? ` (mín. ${INVENTORY_CLASSIFY_THRESHOLD}%)` : ''}
+  1154→  1154→              </Badge>
+  1155→  1155→            </div>
+  1156→  1156→
+  1157→  1157→            {/* Action buttons */}
+  1158→  1158→            <div className="flex gap-2 flex-wrap items-center">
+  1159→  1159→              <Button variant="outline" size="sm" onClick={handleImportTemplate}>
+  1160→  1160→                <Upload className="h-4 w-4 mr-1" /> Importar Plantilla
+  1161→  1161→              </Button>
+  1162→  1162→              <Button variant="outline" size="sm" onClick={handleExport} disabled={items.length === 0}>
+  1163→  1163→                <Download className="h-4 w-4 mr-1" /> Exportar CSV
+  1164→  1164→              </Button>
+  1165→  1165→              {/* Unified file import: accepts .xlsx and .csv */}
+  1166→  1166→              <label className="inline-flex items-center justify-center rounded-md border border-input bg-background px-3 py-1.5 text-xs font-medium ring-offset-background hover:bg-accent hover:text-accent-foreground cursor-pointer">
+  1167→  1167→                <FileUp className="h-4 w-4 mr-1" /> Importar Archivo
+  1168→  1168→                <input
+  1169→  1169→                  type="file"
+  1170→  1170→                  accept=".csv,.xlsx,.xls"
+  1171→  1171→                  className="hidden"
+  1172→  1172→                  onChange={handleFileImport}
+  1173→  1173→                />
+  1174→  1174→              </label>
+  1175→  1175→              <a
+  1176→  1176→                href={`/templates/${config.templateName}`}
+  1177→  1177→                download
+  1178→  1178→                className="inline-flex items-center justify-center rounded-md border border-input bg-background px-3 py-1.5 text-xs font-medium ring-offset-background hover:bg-accent hover:text-accent-foreground"
+  1179→  1179→              >
+  1180→  1180→                <FileSpreadsheet className="h-4 w-4 mr-1" /> Descargar Plantilla Excel
+  1181→  1181→              </a>
+  1182→  1182→              {/* S1: Print red label button — only for Jaula decision items */}
+  1183→  1183→              {sStep === 1 && items.length > 0 && (() => {
+  1184→  1184→                // Helper: compute revision date = entry date + diasCuarentena (default 40)
+  1185→  1185→                const withRevision = (i: InventoryItemData) => {
+  1186→  1186→                  let fechaRevision: string | null = null;
+  1187→  1187→                  const dias = Number(i.extra?.diasCuarentena ?? 40);
+  1188→  1188→                  if (i.jaulaFechaEntrada) {
+  1189→  1189→                    try {
+  1190→  1190→                      const d = new Date(i.jaulaFechaEntrada);
+  1191→  1191→                      d.setDate(d.getDate() + dias);
+  1192→  1192→                      fechaRevision = d.toISOString();
+  1193→  1193→                    } catch {}
+  1194→  1194→                  }
+  1195→  1195→                  return fechaRevision;
+  1196→  1196→                };
+  1197→  1197→                // Only Jaula decision items get a red tag (Eliminar/Tirar go to Residuo directly, no tag)
+  1198→  1198→                const rojaItems = items
+  1199→  1199→                  .filter(i => i.category === 'innecesario' && (!i.extra?.decision || i.extra.decision === 'Jaula'))
+  1200→  1200→                  .map(i => ({
+  1201→  1201→                    nombre: i.name,
+  1202→  1202→                    ubicacion: i.location,
+  1203→  1203→                    cantidad: i.quantityUnneeded || i.quantity,
+  1204→  1204→                    estado: String(i.extra?.estado ?? ''),
+  1205→  1205→                    frecuenciaUso: String(i.extra?.frecuenciaUso ?? ''),
+  1206→  1206→                    decision: 'Jaula' as string,
+  1207→  1207→                    categoria: String(i.category ?? 'Innecesario'),
+  1208→  1208→                    fechaEntrada: i.jaulaFechaEntrada,
+  1209→  1209→                    fechaRevision: withRevision(i),
+  1210→  1210→                    diasCuarentena: Number(i.extra?.diasCuarentena ?? 40),
+  1211→  1211→                    zonaOrigen: i.zonaOrigen || i.jaulaOrigen,
+  1212→  1212→                  }));
+  1213→  1213→                return (
+  1214→  1214→                  <div className="flex items-center gap-2 ml-2 pl-2 border-l border-red-300">
+  1215→  1215→                    <span className="text-[10px] text-muted-foreground font-medium">Etiquetas:</span>
+  1216→  1216→                    {rojaItems.length > 0 && (
+  1217→  1217→                      <TagPrinter items={rojaItems} />
+  1218→  1218→                    )}
+  1219→  1219→                  </div>
+  1220→  1220→                );
+  1221→  1221→              })()}
+  1222→  1222→            </div>
+  1223→  1223→
+  1224→  1224→            {/* TASK 7: CSV Import Preview */}
+  1225→  1225→            {csvPreview && csvPreview.length > 0 && (
+  1226→  1226→              <Card className="border-2 border-blue-200 bg-blue-50/30">
+  1227→  1227→                <CardContent className="p-4">
+  1228→  1228→                  <div className="flex items-center justify-between mb-3">
+  1229→  1229→                    <div className="flex items-center gap-2">
+  1230→  1230→                      <FileUp className="h-5 w-5 text-blue-600" />
+  1231→  1231→                      <h4 className="font-semibold text-blue-800">Vista Previa de Importación</h4>
+  1232→  1232→                      <Badge className="bg-blue-200 text-blue-900">{csvPreview.length} elementos</Badge>
+  1233→  1233→                    </div>
+  1234→  1234→                    <div className="flex items-center gap-2">
+  1235→  1235→                      <Button
+  1236→  1236→                        variant="outline"
+  1237→  1237→                        size="sm"
+  1238→  1238→                        className="text-xs"
+  1239→  1239→                        onClick={() => setCsvPreview(null)}
+  1240→  1240→                      >
+  1241→  1241→                        Cancelar
+  1242→  1242→                      </Button>
+  1243→  1243→                      <Button
+  1244→  1244→                        size="sm"
+  1245→  1245→                        className="text-xs bg-blue-600 hover:bg-blue-700"
+  1246→  1246→                        onClick={handleConfirmCsvImport}
+  1247→  1247→                        disabled={isImporting}
+  1248→  1248→                      >
+  1249→  1249→                        {isImporting ? 'Importando...' : `Confirmar Importación (${csvPreview.length})`}
+  1250→  1250→                      </Button>
+  1251→  1251→                    </div>
+  1252→  1252→                  </div>
+  1253→  1253→                  <div className="max-h-48 overflow-y-auto rounded-lg border">
+  1254→  1254→                    <Table>
+  1255→  1255→                      <TableHeader>
+  1256→  1256→                        <TableRow>
+  1257→  1257→                          <TableHead className="text-xs">Elemento</TableHead>
+  1258→  1258→                          <TableHead className="text-xs">Ubicación</TableHead>
+  1259→  1259→                          <TableHead className="text-xs">Categoría</TableHead>
+  1260→  1260→                          <TableHead className="text-xs">Cant.</TableHead>
+  1261→  1261→                          <TableHead className="text-xs">Precio</TableHead>
+  1262→  1262→                        </TableRow>
+  1263→  1263→                      </TableHeader>
+  1264→  1264→                      <TableBody>
+  1265→  1265→                        {csvPreview.map((item, idx) => (
+  1266→  1266→                          <TableRow key={idx}>
+  1267→  1267→                            <TableCell className="text-xs font-medium">{item.name}</TableCell>
+  1268→  1268→                            <TableCell className="text-xs">{item.location}</TableCell>
+  1269→  1269→                            <TableCell className="text-xs">{item.category}</TableCell>
+  1270→  1270→                            <TableCell className="text-xs text-center">{item.quantity}</TableCell>
+  1271→  1271→                            <TableCell className="text-xs text-right">{item.price ? `${item.price.toFixed(2)} €` : '—'}</TableCell>
+  1272→  1272→                          </TableRow>
+  1273→  1273→                        ))}
+  1274→  1274→                      </TableBody>
+  1275→  1275→                    </Table>
+  1276→  1276→                  </div>
+  1277→  1277→                </CardContent>
+  1278→  1278→              </Card>
+  1279→  1279→            )}
+  1280→  1280→
+  1281→  1281→            {/* Add item form */}
+  1282→  1282→            <Card>
+  1283→  1283→              <CardContent className="p-4">
+  1284→  1284→                <div className="space-y-3">
+  1285→  1285→                  {/* Row 1: Name, Zona (read-only), Category (auto innecesario for S1), Quantity, Price */}
+  1286→  1286→                  <div className="grid grid-cols-1 gap-3 items-end sm:grid-cols-5">
+  1287→  1287→                    <div className="sm:col-span-2">
+  1288→  1288→                      <label className="text-xs font-medium">Elemento *</label>
+  1289→  1289→                      <Input
+  1290→  1290→                        placeholder="Nombre del elemento"
+  1291→  1291→                        value={newItem.name}
+  1292→  1292→                        onChange={e => setNewItem(prev => ({ ...prev, name: e.target.value }))}
+  1293→  1293→                      />
+  1294→  1294→                    </div>
+  1295→  1295→                    {sStep === 1 ? (
+  1296→  1296→                      /* S1: Zona is pre-filled from current zone, read-only */
+  1297→  1297→                      <div>
+  1298→  1298→                        <label className="text-xs font-medium flex items-center gap-1">
+  1299→  1299→                          <MapPin className="h-3 w-3" />
+  1300→  1300→                          Zona
+  1301→  1301→                        </label>
+  1302→  1302→                        <Input
+  1303→  1303→                          value={currentZone?.name || newItem.zonaOrigen || 'Sin zona'}
+  1304→  1304→                          readOnly
+  1305→  1305→                          className="bg-gray-50 text-gray-600"
+  1306→  1306→                        />
+  1307→  1307→                      </div>
+  1308→  1308→                    ) : (
+  1309→  1309→                      /* Non-S1: Zona selectable */
+  1310→  1310→                      <div>
+  1311→  1311→                        <label className="text-xs font-medium flex items-center gap-1">
+  1312→  1312→                          <MapPin className="h-3 w-3" />
+  1313→  1313→                          Zona
+  1314→  1314→                        </label>
+  1315→  1315→                        {currentProject?.zones && currentProject.zones.length > 0 ? (
+  1316→  1316→                          <Select
+  1317→  1317→                            value={newItem.zonaOrigen || currentZone?.name || undefined}
+  1318→  1318→                            onValueChange={val => setNewItem(prev => ({ ...prev, zonaOrigen: val }))}
+  1319→  1319→                          >
+  1320→  1320→                            <SelectTrigger>
+  1321→  1321→                              <SelectValue placeholder="Seleccionar zona" />
+  1322→  1322→                            </SelectTrigger>
+  1323→  1323→                            <SelectContent>
+  1324→  1324→                              {currentProject.zones.map(z => (
+  1325→  1325→                                <SelectItem key={z.id} value={z.name}>{z.name}</SelectItem>
+  1326→  1326→                              ))}
+  1327→  1327→                            </SelectContent>
+  1328→  1328→                          </Select>
+  1329→  1329→                        ) : (
+  1330→  1330→                          <Input
+  1331→  1331→                            placeholder="Zona"
+  1332→  1332→                            value={newItem.zonaOrigen || currentZone?.name || ''}
+  1333→  1333→                            onChange={e => setNewItem(prev => ({ ...prev, zonaOrigen: e.target.value }))}
+  1334→  1334→                          />
+  1335→  1335→                        )}
+  1336→  1336→                      </div>
+  1337→  1337→                    )}
+  1338→  1338→                    {sStep === 1 ? (
+  1339→  1339→                      /* S1: Category is innecesario by default, shown as read-only badge */
+  1340→  1340→                      <div>
+  1341→  1341→                        <label className="text-xs font-medium">Categoría</label>
+  1342→  1342→                        <div className="h-9 flex items-center px-3 rounded-md border bg-red-50 text-red-700 text-sm font-medium">
+  1343→  1343→                          Innecesario
+  1344→  1344→                        </div>
+  1345→  1345→                      </div>
+  1346→  1346→                    ) : (
+  1347→  1347→                      /* Non-S1: Category selectable */
+  1348→  1348→                      <div>
+  1349→  1349→                        <label className="text-xs font-medium">Categoría *</label>
+  1350→  1350→                        <Select
+  1351→  1351→                          value={newItem.category || undefined}
+  1352→  1352→                          onValueChange={val => setNewItem(prev => ({ ...prev, category: val, extra: { ...(prev.extra || {}), subcategoria: undefined } }))}
+  1353→  1353→                        >
+  1354→  1354→                          <SelectTrigger>
+  1355→  1355→                            <SelectValue placeholder="Categoría" />
+  1356→  1356→                          </SelectTrigger>
+  1357→  1357→                          <SelectContent>
+  1358→  1358→                            {config.categories.filter(cat => cat.value && cat.value.trim() !== '').map(cat => (
+  1359→  1359→                              <SelectItem key={cat.value} value={cat.value}>
+  1360→  1360→                                {cat.label}
+  1361→  1361→                              </SelectItem>
+  1362→  1362→                            ))}
+  1363→  1363→                          </SelectContent>
+  1364→  1364→                        </Select>
+  1365→  1365→                      </div>
+  1366→  1366→                    )}
+  1367→  1367→                    <div>
+  1368→  1368→                      <label className="text-xs font-medium">{sStep === 1 ? 'Cantidad' : 'Total exist.'}</label>
+  1369→  1369→                      <Input
+  1370→  1370→                        type="number"
+  1371→  1371→                        min="1"
+  1372→  1372→                        value={newItem.quantity || 1}
+  1373→  1373→                        onChange={e => setNewItem(prev => ({ ...prev, quantity: parseInt(e.target.value) || 1 }))}
+  1374→  1374→                      />
+  1375→  1375→                    </div>
+  1376→  1376→                    <div>
+  1377→  1377→                      <label className="text-xs font-medium">Precio (€)</label>
+  1378→  1378→                      <Input
+  1379→  1379→                        type="number"
+  1380→  1380→                        min="0"
+  1381→  1381→                        step="0.01"
+  1382→  1382→                        placeholder="0.00"
+  1383→  1383→                        value={newItem.price ?? ''}
+  1384→  1384→                        onChange={e => setNewItem(prev => ({ ...prev, price: e.target.value ? parseFloat(e.target.value) : null }))}
+  1385→  1385→                      />
+  1386→  1386→                    </div>
+  1387→  1387→                  </div>
+  1388→  1388→
+  1389→  1389→                  {/* S1: All fields visible and editable — Innecesario + Necesario + Etiquetas */}
+  1390→  1390→                  {sStep === 1 ? (
+  1391→  1391→                    <>
+  1392→  1392→                      {/* S1: Section labels */}
+  1393→  1393→                      <div className="flex items-center gap-3 mt-1">
+  1394→  1394→                        <div className="flex items-center gap-1.5">
+  1395→  1395→                          <div className="h-2.5 w-2.5 rounded bg-red-500" />
+  1396→  1396→                          <span className="text-[10px] font-medium text-red-700">Campos de Innecesario</span>
+  1397→  1397→                        </div>
+  1398→  1398→                        <div className="flex items-center gap-1.5">
+  1399→  1399→                          <div className="h-2.5 w-2.5 rounded bg-orange-500" />
+  1400→  1400→                          <span className="text-[10px] font-medium text-orange-700">Datos de Etiqueta</span>
+  1401→  1401→                        </div>
+  1402→  1402→                      </div>
+  1403→  1403→
+  1404→  1404→                      {/* S1: Innecesario fields — always visible and editable */}
+  1405→  1405→                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 items-end p-2 rounded-lg border border-red-200 bg-red-50/30">
+  1406→  1406→                        {['estado', 'frecuenciaUso', 'decision'].map(key => {
+  1407→  1407→                          const field = config.extraFields.find(f => f.key === key);
+  1408→  1408→                          if (!field) return null;
+  1409→  1409→                          return (
+  1410→  1410→                            <div key={field.key}>
+  1411→  1411→                              <label className="text-xs font-medium text-red-700">{field.label}</label>
+  1412→  1412→                              {field.type === 'select' && field.options ? (
+  1413→  1413→                                <Select
+  1414→  1414→                                  value={newItem.extra?.[field.key] ? String(newItem.extra[field.key]) : undefined}
+  1415→  1415→                                  onValueChange={val =>
+  1416→  1416→                                    setNewItem(prev => {
+  1417→  1417→                                      const updated = { ...prev, extra: { ...(prev.extra || {}), [field.key]: val } };
+  1418→  1418→                                      // If decision is Eliminar/Tirar: clear quarantine/entry fields
+  1419→  1419→                                      if (field.key === 'decision' && (val === 'Eliminar' || val === 'Tirar')) {
+  1420→  1420→                                        updated.jaulaFechaEntrada = null;
+  1421→  1421→                                        delete updated.extra.diasCuarentena;
+  1422→  1422→                                      }
+  1423→  1423→                                      // If decision is Jaula: set default entry date and quarantine
+  1424→  1424→                                      if (field.key === 'decision' && val === 'Jaula') {
+  1425→  1425→                                        if (!updated.jaulaFechaEntrada) updated.jaulaFechaEntrada = new Date().toISOString();
+  1426→  1426→                                        if (!updated.extra.diasCuarentena) updated.extra.diasCuarentena = 40;
+  1427→  1427→                                      }
+  1428→  1428→                                      return updated;
+  1429→  1429→                                    })
+  1430→  1430→                                  }
+  1431→  1431→                                >
+  1432→  1432→                                  <SelectTrigger>
+  1433→  1433→                                    <SelectValue placeholder={field.label} />
+  1434→  1434→                                  </SelectTrigger>
+  1435→  1435→                                  <SelectContent>
+  1436→  1436→                                    {field.options.filter(opt => opt && opt.trim() !== '').map(opt => (
+  1437→  1437→                                      <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+  1438→  1438→                                    ))}
+  1439→  1439→                                  </SelectContent>
+  1440→  1440→                                </Select>
+  1441→  1441→                              ) : (
+  1442→  1442→                                <Input
+  1443→  1443→                                  placeholder={field.label}
+  1444→  1444→                                  value={String(newItem.extra?.[field.key] ?? '')}
+  1445→  1445→                                  onChange={e =>
+  1446→  1446→                                    setNewItem(prev => ({
+  1447→  1447→                                      ...prev,
+  1448→  1448→                                      extra: { ...(prev.extra || {}), [field.key]: e.target.value },
+  1449→  1449→                                    }))
+  1450→  1450→                                  }
+  1451→  1451→                                />
+  1452→  1452→                              )}
+  1453→  1453→                            </div>
+  1454→  1454→                          );
+  1455→  1455→                        })}
+  1456→  1456→                        <div className="col-span-full flex items-center gap-1">
+  1457→  1457→                          <div className="w-2 h-2 rounded-full bg-red-400" />
+  1458→  1458→                          <span className="text-[9px] text-red-600 font-medium">
+  1459→  1459→                            {newItem.extra?.decision === 'Eliminar' || newItem.extra?.decision === 'Tirar'
+  1460→  1460→                              ? `Decisión: ${newItem.extra.decision} → va a Residuo (sin etiqueta, sin cuarentena)`
+  1461→  1461→                              : 'Decisión: Jaula → etiqueta roja con cuarentena'}
+  1462→  1462→                          </span>
+  1463→  1463→                        </div>
+  1464→  1464→                      </div>
+  1465→  1465→
+  1466→  1466→                      {/* S1: Etiqueta fields — ONLY for Jaula decision (Eliminar/Tirar go to Residuo, no tag/quarantine) */}
+  1467→  1467→                      {(!newItem.extra?.decision || newItem.extra.decision === 'Jaula') && (
+  1468→  1468→                      <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 items-end p-2 rounded-lg border border-orange-200 bg-orange-50/30">
+  1469→  1469→                        <div>
+  1470→  1470→                          <label className="text-xs font-medium text-orange-700 flex items-center gap-1">
+  1471→  1471→                            <Tag className="h-3 w-3" />
+  1472→  1472→                            F. Entrada
+  1473→  1473→                          </label>
+  1474→  1474→                          <Input
+  1475→  1475→                            type="date"
+  1476→  1476→                            value={newItem.jaulaFechaEntrada ? new Date(newItem.jaulaFechaEntrada).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]}
+  1477→  1477→                            onChange={e => {
+  1478→  1478→                              const val = e.target.value ? new Date(e.target.value + 'T12:00:00').toISOString() : null;
+  1479→  1479→                              setNewItem(prev => ({ ...prev, jaulaFechaEntrada: val }));
+  1480→  1480→                            }}
+  1481→  1481→                          />
+  1482→  1482→                        </div>
+  1483→  1483→                        <div>
+  1484→  1484→                          <label className="text-xs font-medium text-orange-700 flex items-center gap-1">
+  1485→  1485→                            <Tag className="h-3 w-3" />
+  1486→  1486→                            Días cuarentena
+  1487→  1487→                          </label>
+  1488→  1488→                          <Select
+  1489→  1489→                            value={String(newItem.extra?.diasCuarentena ?? 40)}
+  1490→  1490→                            onValueChange={val =>
+  1491→  1491→                              setNewItem(prev => ({
+  1492→  1492→                                ...prev,
+  1493→  1493→                                extra: { ...(prev.extra || {}), diasCuarentena: parseInt(val) || 40 },
+  1494→  1494→                              }))
+  1495→  1495→                            }
+  1496→  1496→                          >
+  1497→  1497→                            <SelectTrigger>
+  1498→  1498→                              <SelectValue />
+  1499→  1499→                            </SelectTrigger>
+  1500→  1500→                            <SelectContent>
+  1501→  1501→                              {[7, 15, 20, 30, 40, 60, 90].map(d => (
+  1502→  1502→                                <SelectItem key={d} value={String(d)}>{d} días</SelectItem>
+  1503→  1503→                              ))}
+  1504→  1504→                            </SelectContent>
+  1505→  1505→                          </Select>
+  1506→  1506→                        </div>
+  1507→  1507→                        <div>
+  1508→  1508→                          <label className="text-xs font-medium text-orange-700 flex items-center gap-1">
+  1509→  1509→                            <Tag className="h-3 w-3" />
+  1510→  1510→                            F. Revisión
+  1511→  1511→                          </label>
+  1512→  1512→                          <Input
+  1513→  1513→                            type="date"
+  1514→  1514→                            value={(() => {
+  1515→  1515→                              const base = newItem.jaulaFechaEntrada || new Date().toISOString();
+  1516→  1516→                              const dias = Number(newItem.extra?.diasCuarentena ?? 40);
+  1517→  1517→                              try {
+  1518→  1518→                                const d = new Date(base);
+  1519→  1519→                                d.setDate(d.getDate() + dias);
+  1520→  1520→                                return d.toISOString().split('T')[0];
+  1521→  1521→                              } catch { return ''; }
+  1522→  1522→                            })()}
+  1523→  1523→                            readOnly
+  1524→  1524→                            className="bg-orange-50"
+  1525→  1525→                          />
+  1526→  1526→                        </div>
+  1527→  1527→                        <div className="flex items-end">
+  1528→  1528→                          <div className="flex items-center gap-1">
+  1529→  1529→                            <div className="w-2 h-2 rounded-full bg-orange-500" />
+  1530→  1530→                            <span className="text-[9px] text-orange-600 font-medium">Datos para etiqueta roja</span>
+  1531→  1531→                          </div>
+  1532→  1532→                        </div>
+  1533→  1533→                      </div>
+  1534→  1534→                      )}
+  1535→  1535→                    </>
+  1536→  1536→                  ) : (
+  1537→  1537→                  /* Non-S1: Original extra fields */
+  1538→  1538→                  config.extraFields.length > 0 && (
+  1539→  1539→                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 items-end">
+  1540→  1540→                      {config.extraFields.map(field => {
+  1541→  1541→                        // Dynamic subcategoria: filter options based on selected category
+  1542→  1542→                        let effectiveOptions = field.type === 'select' ? field.options : undefined;
+  1543→  1543→                        if (field.key === 'subcategoria' && config.desplegables_jerarquicos) {
+  1544→  1544→                          const selectedCat = newItem.category;
+  1545→  1545→                          if (selectedCat) {
+  1546→  1546→                            const catLabel = config.categories.find(c => c.value === selectedCat)?.label;
+  1547→  1547→                            const hierEntry = catLabel && config.desplegables_jerarquicos[catLabel]
+  1548→  1548→                              ? config.desplegables_jerarquicos[catLabel]
+  1549→  1549→                              : config.desplegables_jerarquicos[selectedCat];
+  1550→  1550→                            if (hierEntry) {
+  1551→  1551→                              effectiveOptions = hierEntry.subcategorias;
+  1552→  1552→                            } else {
+  1553→  1553→                              effectiveOptions = [];
+  1554→  1554→                            }
+  1555→  1555→                          } else {
+  1556→  1556→                            effectiveOptions = Object.values(config.desplegables_jerarquicos).flatMap(h => h.subcategorias);
+  1557→  1557→                          }
+  1558→  1558→                        }
+  1559→  1559→                        return (
+  1560→  1560→                        <div key={field.key}>
+  1561→  1561→                          <label className="text-xs font-medium">{field.label}</label>
+  1562→  1562→                          {field.type === 'select' && effectiveOptions ? (
+  1563→  1563→                            <Select
+  1564→  1564→                              value={newItem.extra?.[field.key] ? String(newItem.extra[field.key]) : undefined}
+  1565→  1565→                              onValueChange={val =>
+  1566→  1566→                                setNewItem(prev => ({
+  1567→  1567→                                  ...prev,
+  1568→  1568→                                  extra: { ...(prev.extra || {}), [field.key]: val },
+  1569→  1569→                                }))
+  1570→  1570→                              }
+  1571→  1571→                            >
+  1572→  1572→                              <SelectTrigger>
+  1573→  1573→                                <SelectValue placeholder={field.label} />
+  1574→  1574→                              </SelectTrigger>
+  1575→  1575→                              <SelectContent>
+  1576→  1576→                                {effectiveOptions.filter(opt => opt && opt.trim() !== '').map(opt => (
+  1577→  1577→                                  <SelectItem key={opt} value={opt}>
+  1578→  1578→                                    {opt}
+  1579→  1579→                                  </SelectItem>
+  1580→  1580→                                ))}
+  1581→  1581→                              </SelectContent>
+  1582→  1582→                            </Select>
+  1583→  1583→                          ) : field.type === 'number' ? (
+  1584→  1584→                            <Input
+  1585→  1585→                              type="number"
+  1586→  1586→                              min="0"
+  1587→  1587→                              max="100"
+  1588→  1588→                              placeholder={field.label}
+  1589→  1589→                              value={newItem.extra?.[field.key] ?? ''}
+  1590→  1590→                              onChange={e =>
+  1591→  1591→                                setNewItem(prev => ({
+  1592→  1592→                                  ...prev,
+  1593→  1593→                                  extra: { ...(prev.extra || {}), [field.key]: parseInt(e.target.value) || 0 },
+  1594→  1594→                                }))
+  1595→  1595→                              }
+  1596→  1596→                            />
+  1597→  1597→                          ) : (
+  1598→  1598→                            <Input
+  1599→  1599→                              placeholder={field.label}
+  1600→  1600→                              value={String(newItem.extra?.[field.key] ?? '')}
+  1601→  1601→                              onChange={e =>
+  1602→  1602→                                setNewItem(prev => ({
+  1603→  1603→                                  ...prev,
+  1604→  1604→                                  extra: { ...(prev.extra || {}), [field.key]: e.target.value },
+  1605→  1605→                                }))
+  1606→  1606→                              }
+  1607→  1607→                            />
+  1608→  1608→                          )}
+  1609→  1609→                        </div>
+  1610→  1610→                        );
+  1611→  1611→                      })}
+  1612→  1612→                    </div>
+  1613→  1613→                  )
+  1614→  1614→                  )}
+  1615→  1615→
+  1616→  1616→                  {/* Add button */}
+  1617→  1617→                  <div className="flex justify-end">
+  1618→  1618→                    <Button
+  1619→  1619→                      onClick={handleAddItem}
+  1620→  1620→                      disabled={!newItem.name || !newItem.category}
+  1621→  1621→                      size="sm"
+  1622→  1622→                      style={{ backgroundColor: sStepData?.color }}
+  1623→  1623→                    >
+  1624→  1624→                      <Plus className="h-4 w-4 mr-1" /> Agregar
+  1625→  1625→                    </Button>
+  1626→  1626→                  </div>
+  1627→  1627→                </div>
+  1628→  1628→              </CardContent>
+  1629→  1629→            </Card>
+  1630→  1630→
+  1631→  1631→            {/* ═══ S3: Plan de Limpieza e Inspección ═══ */}
+  1632→  1632→            {sStep === 3 && (
+  1633→  1633→              <div className="mt-2">
+  1634→  1634→                <CleaningPlanPanel
+  1635→  1635→                  sStep={sStep}
+  1636→  1636→                  inventoryItems={items.map(i => ({
+  1637→  1637→                    name: i.name,
+  1638→  1638→                    location: i.location,
+  1639→  1639→                    category: i.category,
+  1640→  1640→                    extra: i.extra ? JSON.stringify(i.extra) : null,
+  1641→  1641→                  }))}
+  1642→  1642→                  isReadOnly={isReadOnly}
+  1643→  1643→                />
+  1644→  1644→              </div>
+  1645→  1645→            )}
+  1646→  1646→
+  1647→  1647→            {/* ═══ S4: Biblioteca de Estándares ═══ */}
+  1648→  1648→            {sStep === 4 && (
+  1649→  1649→              <div className="mt-2">
+  1650→  1650→                <BibliotecaEstandaresView />
+  1651→  1651→              </div>
+  1652→  1652→            )}
+  1653→  1653→
+  1654→  1654→            {/* Items table */}
+  1655→  1655→            {isLoading ? (
+  1656→  1656→              <div className="space-y-2">
+  1657→  1657→                {[1, 2, 3].map(i => (
+  1658→  1658→                  <div key={i} className="h-10 bg-muted rounded animate-pulse" />
+  1659→  1659→                ))}
+  1660→  1660→              </div>
+  1661→  1661→            ) : items.length === 0 ? (
+  1662→  1662→              <div className="text-center py-8 text-muted-foreground">
+  1663→  1663→                <ClipboardList className="h-8 w-8 mx-auto mb-2 opacity-50" />
+  1664→  1664→                <p className="text-sm">No hay elementos en el inventario</p>
+  1665→  1665→                <p className="text-xs mt-1">Importe una plantilla o agregue elementos manualmente</p>
+  1666→  1666→              </div>
+  1667→  1667→            ) : (
+  1668→  1668→              <div className="max-h-64 overflow-y-auto rounded-lg border">
+  1669→  1669→                <Table>
+  1670→  1670→                  <TableHeader>
+  1671→  1671→                    <TableRow>
+  1672→  1672→                      <TableHead>Elemento</TableHead>
+  1673→  1673→                      <TableHead>Ubicación</TableHead>
+  1674→  1674→                      <TableHead>Categoría</TableHead>
+  1675→  1675→                      <TableHead className="text-center">{sStep === 1 ? 'Cantidad' : 'Total'}</TableHead>
+  1676→  1676→                      <TableHead className="text-right">Precio (€)</TableHead>
+  1677→  1677→                      {sStep === 1 ? (
+  1678→  1678→                        <>
+  1679→  1679→                          <TableHead className="text-red-700">Estado</TableHead>
+  1680→  1680→                          <TableHead className="text-red-700">Frec. uso</TableHead>
+  1681→  1681→                          <TableHead className="text-red-700">Decisión</TableHead>
+  1682→  1682→                          <TableHead className="text-orange-700">Días cuar.</TableHead>
+  1683→  1683→                        </>
+  1684→  1684→                      ) : (
+  1685→  1685→                        config.extraFields.slice(0, 2).map(f => (
+  1686→  1686→                          <TableHead key={f.key}>{f.label}</TableHead>
+  1687→  1687→                        ))
+  1688→  1688→                      )}
+  1689→  1689→                      <TableHead>Z. Origen</TableHead>
+  1690→  1690→                      <TableHead>Z. Destino</TableHead>
+  1691→  1691→                      <TableHead className="w-10"></TableHead>
+  1692→  1692→                    </TableRow>
+  1693→  1693→                  </TableHeader>
+  1694→  1694→                  <TableBody>
+  1695→  1695→                    {items.map(item => {
+  1696→  1696→                      const isInnecesario = item.category === 'innecesario';
+  1697→  1697→                      const isNecesario = item.category === 'necesario';
+  1698→  1698→                      const canEdit = !isReadOnly && item.id;
+  1699→  1699→                      // Inline editable input style
+  1700→  1700→                      const inlineInput = "h-6 text-xs border-0 p-1 focus:border focus:border-gray-300 bg-transparent hover:bg-gray-50";
+  1701→  1701→                      const inlineSelect = "h-6 text-[10px] border-0 p-0 bg-transparent hover:bg-gray-50";
+  1702→  1702→                      return (
+  1703→  1703→                      <TableRow key={item.id} className={isInnecesario ? 'bg-red-50/50' : isNecesario ? 'bg-green-50/30' : ''}>
+  1704→  1704→                        {/* Elemento */}
+  1705→  1705→                        <TableCell className="text-sm font-medium">
+  1706→  1706→                          {canEdit ? (
+  1707→  1707→                            <Input
+  1708→  1708→                              value={item.name}
+  1709→  1709→                              className={inlineInput}
+  1710→  1710→                              onChange={e => setItems(prev => prev.map(it => it.id === item.id ? { ...it, name: e.target.value } : it))}
+  1711→  1711→                              onBlur={e => handleUpdateField(item.id!, 'name', e.target.value)}
+  1712→  1712→                            />
+  1713→  1713→                          ) : (
+  1714→  1714→                            <span>{item.name}</span>
+  1715→  1715→                          )}
+  1716→  1716→                        </TableCell>
+  1717→  1717→                        {/* Ubicación */}
+  1718→  1718→                        <TableCell className="text-sm">
+  1719→  1719→                          {canEdit ? (
+  1720→  1720→                            <Input
+  1721→  1721→                              value={item.location || ''}
+  1722→  1722→                              className={inlineInput}
+  1723→  1723→                              onChange={e => setItems(prev => prev.map(it => it.id === item.id ? { ...it, location: e.target.value } : it))}
+  1724→  1724→                              onBlur={e => handleUpdateField(item.id!, 'location', e.target.value)}
+  1725→  1725→                            />
+  1726→  1726→                          ) : (
+  1727→  1727→                            <span>{item.location || '—'}</span>
+  1728→  1728→                          )}
+  1729→  1729→                        </TableCell>
+  1730→  1730→                        {/* Categoría */}
+  1731→  1731→                        <TableCell>
+  1732→  1732→                          {canEdit && sStep === 1 ? (
+  1733→  1733→                            <Select
+  1734→  1734→                              value={item.category || undefined}
+  1735→  1735→                              onValueChange={val => {
+  1736→  1736→                                const isInn = val === 'innecesario';
+  1737→  1737→                                const isNec = val === 'necesario';
+  1738→  1738→                                const qty = item.quantity || 1;
+  1739→  1739→                                const updates: any = {
+  1740→  1740→                                  category: val,
+  1741→  1741→                                  quantityNeeded: isNec ? qty : 0,
+  1742→  1742→                                  quantityUnneeded: isInn ? qty : 0,
+  1743→  1743→                                  jaulaStatus: isInn ? 'en_jaula' : '',
+  1744→  1744→                                  jaulaFechaEntrada: isInn ? (item.jaulaFechaEntrada || new Date().toISOString()) : null,
+  1745→  1745→                                };
+  1746→  1746→                                setItems(prev => prev.map(it => it.id === item.id ? { ...it, ...updates } : it));
+  1747→  1747→                                fetch(`/api/inventory?id=${item.id}`, {
+  1748→  1748→                                  method: 'PUT',
+  1749→  1749→                                  headers: { 'Content-Type': 'application/json' },
+  1750→  1750→                                  body: JSON.stringify(updates),
+  1751→  1751→                                });
+  1752→  1752→                              }}
+  1753→  1753→                            >
+  1754→  1754→                              <SelectTrigger className={inlineSelect}>
+  1755→  1755→                                <SelectValue />
+  1756→  1756→                              </SelectTrigger>
+  1757→  1757→                              <SelectContent>
+  1758→  1758→                                {config.categories.filter(c => c.value && c.value.trim() !== '').map(c => (
+  1759→  1759→                                  <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
+  1760→  1760→                                ))}
+  1761→  1761→                              </SelectContent>
+  1762→  1762→                            </Select>
+  1763→  1763→                          ) : (
+  1764→  1764→                            getCategoryBadge(item.category)
+  1765→  1765→                          )}
+  1766→  1766→                        </TableCell>
+  1767→  1767→                        {/* Cantidad */}
+  1768→  1768→                        <TableCell className="text-center text-sm">
+  1769→  1769→                          {canEdit ? (
+  1770→  1770→                            <Input
+  1771→  1771→                              type="number"
+  1772→  1772→                              min="1"
+  1773→  1773→                              value={item.quantity || 1}
+  1774→  1774→                              className={`${inlineInput} w-14 text-center`}
+  1775→  1775→                              onChange={e => {
+  1776→  1776→                                const val = parseInt(e.target.value) || 1;
+  1777→  1777→                                setItems(prev => prev.map(it => it.id === item.id ? { ...it, quantity: val } : it));
+  1778→  1778→                              }}
+  1779→  1779→                              onBlur={e => handleUpdateField(item.id!, 'quantity', parseInt(e.target.value) || 1)}
+  1780→  1780→                            />
+  1781→  1781→                          ) : (
+  1782→  1782→                            <span>{sStep === 1 ? (isInnecesario ? (item.quantityUnneeded || item.quantity) : isNecesario ? (item.quantityNeeded || item.quantity) : item.quantity) : item.quantity}</span>
+  1783→  1783→                          )}
+  1784→  1784→                        </TableCell>
+  1785→  1785→                        {/* Precio */}
+  1786→  1786→                        <TableCell className="text-right text-sm">
+  1787→  1787→                          {canEdit ? (
+  1788→  1788→                            <Input
+  1789→  1789→                              type="number"
+  1790→  1790→                              min="0"
+  1791→  1791→                              step="0.01"
+  1792→  1792→                              value={item.price ?? ''}
+  1793→  1793→                              className={`${inlineInput} w-20 text-right`}
+  1794→  1794→                              onChange={e => {
+  1795→  1795→                                const val = e.target.value ? parseFloat(e.target.value) : null;
+  1796→  1796→                                setItems(prev => prev.map(it => it.id === item.id ? { ...it, price: val } : it));
+  1797→  1797→                              }}
+  1798→  1798→                              onBlur={e => handleUpdateField(item.id!, 'price', e.target.value ? parseFloat(e.target.value) : null)}
+  1799→  1799→                            />
+  1800→  1800→                          ) : (
+  1801→  1801→                            <span>{item.price != null ? `${item.price.toFixed(2)} €` : '—'}</span>
+  1802→  1802→                          )}
+  1803→  1803→                        </TableCell>
+  1804→  1804→                        {sStep === 1 ? (
+  1805→  1805→                          <>
+  1806→  1806→                            {/* Estado (innecesario) */}
+  1807→  1807→                            <TableCell className="text-sm">
+  1808→  1808→                              {canEdit ? (
+  1809→  1809→                                <Select
+  1810→  1810→                                  value={item.extra?.estado ? String(item.extra.estado) : undefined}
+  1811→  1811→                                  onValueChange={val => handleUpdateExtra(item.id!, 'estado', val)}
+  1812→  1812→                                >
+  1813→  1813→                                  <SelectTrigger className={inlineSelect}>
+  1814→  1814→                                    <SelectValue placeholder="—" />
+  1815→  1815→                                  </SelectTrigger>
+  1816→  1816→                                  <SelectContent>
+  1817→  1817→                                    <SelectItem value="_clear_">—</SelectItem>
+  1818→  1818→                                    {['Bueno', 'Regular', 'Malo'].map(opt => (
+  1819→  1819→                                      <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+  1820→  1820→                                    ))}
+  1821→  1821→                                  </SelectContent>
+  1822→  1822→                                </Select>
+  1823→  1823→                              ) : (
+  1824→  1824→                                <span>{String(item.extra?.estado ?? '—')}</span>
+  1825→  1825→                              )}
+  1826→  1826→                            </TableCell>
+  1827→  1827→                            {/* Frecuencia uso (innecesario) */}
+  1828→  1828→                            <TableCell className="text-sm">
+  1829→  1829→                              {canEdit ? (
+  1830→  1830→                                <Select
+  1831→  1831→                                  value={item.extra?.frecuenciaUso ? String(item.extra.frecuenciaUso) : undefined}
+  1832→  1832→                                  onValueChange={val => handleUpdateExtra(item.id!, 'frecuenciaUso', val)}
+  1833→  1833→                                >
+  1834→  1834→                                  <SelectTrigger className={inlineSelect}>
+  1835→  1835→                                    <SelectValue placeholder="—" />
+  1836→  1836→                                  </SelectTrigger>
+  1837→  1837→                                  <SelectContent>
+  1838→  1838→                                    <SelectItem value="_clear_">—</SelectItem>
+  1839→  1839→                                    {['Diario', 'Semanal', 'Quincenal', 'Mensual', 'Trimestral', 'Anual', 'Nunca'].map(opt => (
+  1840→  1840→                                      <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+  1841→  1841→                                    ))}
+  1842→  1842→                                  </SelectContent>
+  1843→  1843→                                </Select>
+  1844→  1844→                              ) : (
+  1845→  1845→                                <span>{String(item.extra?.frecuenciaUso ?? '—')}</span>
+  1846→  1846→                              )}
+  1847→  1847→                            </TableCell>
+  1848→  1848→                            {/* Decisión (innecesario) */}
+  1849→  1849→                            <TableCell className="text-sm">
+  1850→  1850→                              {canEdit ? (
+  1851→  1851→                                <Select
+  1852→  1852→                                  value={item.extra?.decision ? String(item.extra.decision) : undefined}
+  1853→  1853→                                  onValueChange={val => {
+  1854→  1854→                                    handleUpdateExtra(item.id!, 'decision', val);
+  1855→  1855→                                    // Also update jaula status, zona destino, and quarantine based on decision
+  1856→  1856→                                    const isInn = item.category === 'innecesario';
+  1857→  1857→                                    if (isInn) {
+  1858→  1858→                                      handleUpdateField(item.id!, 'action', val);
+  1859→  1859→                                      // Update zona destino: Eliminar/Tirar → Residuo, Jaula → Jaula
+  1860→  1860→                                      const newDestino = (val === 'Tirar' || val === 'Eliminar') ? 'Residuo' : 'Jaula';
+  1861→  1861→                                      handleUpdateField(item.id!, 'zonaDestino', newDestino);
+  1862→  1862→                                      // Eliminar/Tirar items: clear jaula entry/quarantine; Jaula items: set entry date
+  1863→  1863→                                      if (val === 'Tirar' || val === 'Eliminar') {
+  1864→  1864→                                        handleUpdateField(item.id!, 'jaulaStatus', '');
+  1865→  1865→                                        handleUpdateField(item.id!, 'jaulaFechaEntrada', null);
+  1866→  1866→                                        handleUpdateExtra(item.id!, 'diasCuarentena', '_clear_');
+  1867→  1867→                                      } else if (val === 'Jaula') {
+  1868→  1868→                                        handleUpdateField(item.id!, 'jaulaStatus', 'en_jaula');
+  1869→  1869→                                        if (!item.jaulaFechaEntrada) {
+  1870→  1870→                                          handleUpdateField(item.id!, 'jaulaFechaEntrada', new Date().toISOString());
+  1871→  1871→                                        }
+  1872→  1872→                                        if (!item.extra?.diasCuarentena) {
+  1873→  1873→                                          handleUpdateExtra(item.id!, 'diasCuarentena', 40);
+  1874→  1874→                                        }
+  1875→  1875→                                      }
+  1876→  1876→                                    }
+  1877→  1877→                                  }}
+  1878→  1878→                                >
+  1879→  1879→                                  <SelectTrigger className={inlineSelect}>
+  1880→  1880→                                    <SelectValue placeholder="—" />
+  1881→  1881→                                  </SelectTrigger>
+  1882→  1882→                                  <SelectContent>
+  1883→  1883→                                    <SelectItem value="_clear_">—</SelectItem>
+  1884→  1884→                                    <SelectItem value="Jaula">Jaula</SelectItem>
+  1885→  1885→                                    <SelectItem value="Tirar">Tirar</SelectItem>
+  1886→  1886→                                    <SelectItem value="Eliminar">Eliminar</SelectItem>
+  1887→  1887→                                  </SelectContent>
+  1888→  1888→                                </Select>
+  1889→  1889→                              ) : (
+  1890→  1890→                                item.extra?.decision ? (
+  1891→  1891→                                  <Badge className={item.extra.decision === 'Jaula' ? 'bg-orange-100 text-orange-800' : item.extra.decision === 'Tirar' ? 'bg-yellow-100 text-yellow-800' : item.extra.decision === 'Eliminar' ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-800'}>
+  1892→  1892→                                    {String(item.extra.decision)}
+  1893→  1893→                                  </Badge>
+  1894→  1894→                                ) : (
+  1895→  1895→                                  <span className="text-muted-foreground">—</span>
+  1896→  1896→                                )
+  1897→  1897→                              )}
+  1898→  1898→                            </TableCell>
+  1899→  1899→                            {/* Días cuarentena (etiqueta) — only for Jaula decision */}
+  1900→  1900→                            <TableCell className="text-sm">
+  1901→  1901→                              {item.extra?.decision === 'Eliminar' || item.extra?.decision === 'Tirar' ? (
+  1902→  1902→                                <span className="text-muted-foreground">—</span>
+  1903→  1903→                              ) : canEdit ? (
+  1904→  1904→                                <Select
+  1905→  1905→                                  value={String(item.extra?.diasCuarentena ?? 40)}
+  1906→  1906→                                  onValueChange={val => handleUpdateExtra(item.id!, 'diasCuarentena', parseInt(val) || 40)}
+  1907→  1907→                                >
+  1908→  1908→                                  <SelectTrigger className={inlineSelect}>
+  1909→  1909→                                    <SelectValue />
+  1910→  1910→                                  </SelectTrigger>
+  1911→  1911→                                  <SelectContent>
+  1912→  1912→                                    {[7, 15, 20, 30, 40, 60, 90].map(d => (
+  1913→  1913→                                      <SelectItem key={d} value={String(d)}>{d}d</SelectItem>
+  1914→  1914→                                    ))}
+  1915→  1915→                                  </SelectContent>
+  1916→  1916→                                </Select>
+  1917→  1917→                              ) : (
+  1918→  1918→                                <span>{item.extra?.diasCuarentena ?? 40}d</span>
+  1919→  1919→                              )}
+  1920→  1920→                            </TableCell>
+  1921→  1921→                          </>
+  1922→  1922→                        ) : (
+  1923→  1923→                          config.extraFields.slice(0, 2).map(f => (
+  1924→  1924→                            <TableCell key={f.key} className="text-sm text-muted-foreground">
+  1925→  1925→                              {getExtraValue(item, f.key)}
+  1926→  1926→                            </TableCell>
+  1927→  1927→                          ))
+  1928→  1928→                        )}
+  1929→  1929→                        {/* Z. Origen */}
+  1930→  1930→                        <TableCell className="text-xs">
+  1931→  1931→                          {canEdit ? (
+  1932→  1932→                            currentProject?.zones && currentProject.zones.length > 0 ? (
+  1933→  1933→                              <Select
+  1934→  1934→                                value={item.zonaOrigen || undefined}
+  1935→  1935→                                onValueChange={val => handleUpdateField(item.id!, 'zonaOrigen', val)}
+  1936→  1936→                              >
+  1937→  1937→                                <SelectTrigger className={inlineSelect}>
+  1938→  1938→                                  <SelectValue placeholder="—" />
+  1939→  1939→                                </SelectTrigger>
+  1940→  1940→                                <SelectContent>
+  1941→  1941→                                  <SelectItem value="_clear_">—</SelectItem>
+  1942→  1942→                                  {currentProject.zones.map(z => (
+  1943→  1943→                                    <SelectItem key={z.id} value={z.name}>{z.name}</SelectItem>
+  1944→  1944→                                  ))}
+  1945→  1945→                                </SelectContent>
+  1946→  1946→                              </Select>
+  1947→  1947→                            ) : (
+  1948→  1948→                              <Input
+  1949→  1949→                                value={item.zonaOrigen || ''}
+  1950→  1950→                                className={inlineInput}
+  1951→  1951→                                placeholder="—"
+  1952→  1952→                                onBlur={e => handleUpdateField(item.id!, 'zonaOrigen', e.target.value)}
+  1953→  1953→                              />
+  1954→  1954→                            )
+  1955→  1955→                          ) : (
+  1956→  1956→                            <span className="text-muted-foreground">{item.zonaOrigen || '—'}</span>
+  1957→  1957→                          )}
+  1958→  1958→                        </TableCell>
+  1959→  1959→                        {/* Z. Destino */}
+  1960→  1960→                        <TableCell className="text-xs">
+  1961→  1961→                          {sStep === 1 && item.category === 'innecesario' ? (
+  1962→  1962→                            <span className={(item.extra?.decision === 'Tirar' || item.extra?.decision === 'Eliminar') ? 'text-yellow-700 font-medium' : 'text-red-600 font-medium'}>{(item.extra?.decision === 'Tirar' || item.extra?.decision === 'Eliminar') ? 'Residuo' : 'Jaula'}</span>
+  1963→  1963→                          ) : canEdit ? (
+  1964→  1964→                            <Select
+  1965→  1965→                              value={item.zonaDestino || undefined}
+  1966→  1966→                              onValueChange={val => {
+  1967→  1967→                                const targetZone = currentProject?.zones?.find(z => z.name === val);
+  1968→  1968→                                const updates: any = { zonaDestino: val };
+  1969→  1969→                                if (targetZone) updates.zoneId = targetZone.id;
+  1970→  1970→                                handleUpdateJaula(item.id!, updates);
+  1971→  1971→                              }}
+  1972→  1972→                            >
+  1973→  1973→                              <SelectTrigger className={inlineSelect}>
+  1974→  1974→                                <SelectValue placeholder="—"/>
+  1975→  1975→                              </SelectTrigger>
+  1976→  1976→                              <SelectContent>
+  1977→  1977→                                <SelectItem value="_clear_">—</SelectItem>
+  1978→  1978→                                {currentProject?.zones?.map(z => (
+  1979→  1979→                                  <SelectItem key={z.id} value={z.name}>{z.name}</SelectItem>
+  1980→  1980→                                )) || []}
+  1981→  1981→                              </SelectContent>
+  1982→  1982→                            </Select>
+  1983→  1983→                          ) : (
+  1984→  1984→                            <span className="text-muted-foreground">{item.zonaDestino || '—'}</span>
+  1985→  1985→                          )}
+  1986→  1986→                        </TableCell>
+  1987→  1987→                        {/* Delete */}
+  1988→  1988→                        <TableCell>
+  1989→  1989→                          <Button
+  1990→  1990→                            variant="ghost"
+  1991→  1991→                            size="sm"
+  1992→  1992→                            className="h-7 text-destructive"
+  1993→  1993→                            onClick={() => item.id && handleDeleteItem(item.id)}
+  1994→  1994→                            disabled={isReadOnly}
+  1995→  1995→                          >
+  1996→  1996→                            ×
+  1997→  1997→                          </Button>
+  1998→  1998→                        </TableCell>
+  1999→  1999→                      </TableRow>
+  2000→  2000→                    );
+
+[showing lines 1-2000 of 2002; use offset=2001 with limit to continue reading]

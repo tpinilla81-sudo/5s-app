@@ -25,12 +25,14 @@ export async function GET(request: NextRequest) {
           project: {
             select: { id: true, name: true, company: true },
           },
+          photos: true,
         },
       })
 
       const parsed = items.map(item => ({
         ...item,
         extra: item.extra ? JSON.parse(item.extra) : null,
+        photoUrls: item.photoUrls ? JSON.parse(item.photoUrls) : null,
       }))
 
       return NextResponse.json({ success: true, data: parsed })
@@ -49,13 +51,15 @@ export async function GET(request: NextRequest) {
       orderBy: { createdAt: 'desc' },
       include: {
         zone: { select: { id: true, name: true } },
+        photos: true,
       },
     })
 
-    // Parse extra JSON field for each item
+    // Parse extra JSON field and photoUrls JSON field for each item
     const parsed = items.map(item => ({
       ...item,
       extra: item.extra ? JSON.parse(item.extra) : null,
+      photoUrls: item.photoUrls ? JSON.parse(item.photoUrls) : null,
     }))
 
     return NextResponse.json({ success: true, data: parsed })
@@ -101,6 +105,29 @@ export async function POST(request: NextRequest) {
 
     for (const item of items) {
       if (!item.name) continue
+
+      // Auto-calculate jaulaStatus for S1 innecesario items
+      const isInnecesario = sStep === 1 && (item.category === 'innecesario' || item.category === 'dudoso')
+      const extraData = item.extra || {}
+      const decision = extraData.decision || 'Jaula'
+      let computedJaulaStatus = item.jaulaStatus || ''
+      let computedJaulaFechaEntrada = item.jaulaFechaEntrada || null
+      let computedJaulaOrigen = item.jaulaOrigen || null
+
+      if (isInnecesario && !computedJaulaStatus && decision !== 'Eliminar' && decision !== 'Tirar') {
+        computedJaulaStatus = 'en_jaula'
+        computedJaulaFechaEntrada = item.jaulaFechaEntrada || new Date().toISOString()
+        computedJaulaOrigen = item.jaulaOrigen || item.zonaOrigen || null
+      }
+
+      // Calculate jaulaFechaLimite when jaulaStatus is 'en_jaula'
+      let jaulaFechaLimite: Date | null = item.jaulaFechaLimite || null
+      if (computedJaulaStatus === 'en_jaula' && computedJaulaFechaEntrada) {
+        const diasCuarentena = extraData.diasCuarentena || 40
+        const fechaEntrada = new Date(computedJaulaFechaEntrada)
+        jaulaFechaLimite = new Date(fechaEntrada.getTime() + Number(diasCuarentena) * 24 * 60 * 60 * 1000)
+      }
+
       const result = await db.inventoryItem.create({
         data: {
           sStep,
@@ -113,19 +140,26 @@ export async function POST(request: NextRequest) {
           price: item.price != null ? parseFloat(String(item.price)) : null,
           action: item.action || null,
           photoUrl: item.photoUrl || null,
+          photoUrls: item.photoUrls ? JSON.stringify(item.photoUrls) : null,
           extra: item.extra ? JSON.stringify(item.extra) : null,
-          jaulaStatus: item.jaulaStatus || '',
-          jaulaFechaEntrada: item.jaulaFechaEntrada || null,
-          jaulaOrigen: item.jaulaOrigen || null,
+          jaulaStatus: computedJaulaStatus,
+          jaulaFechaEntrada: computedJaulaFechaEntrada,
+          jaulaOrigen: computedJaulaOrigen,
           jaulaFechaSalida: item.jaulaFechaSalida || null,
           jaulaDestino: item.jaulaDestino || null,
+          jaulaFechaLimite,
           zonaOrigen: item.zonaOrigen || null,
           zonaDestino: item.zonaDestino || null,
           projectId: effectiveProjectId,
           zoneId: item.zoneId || zoneId || null,
         },
+        include: { photos: true },
       })
-      created.push(result)
+      created.push({
+        ...result,
+        extra: result.extra ? JSON.parse(result.extra) : null,
+        photoUrls: result.photoUrls ? JSON.parse(result.photoUrls) : null,
+      })
     }
 
     return NextResponse.json({ success: true, data: created.length === 1 ? created[0] : created })
@@ -157,22 +191,47 @@ export async function PUT(request: NextRequest) {
     if (body.price !== undefined) updateData.price = body.price != null ? parseFloat(String(body.price)) : null
     if (body.action !== undefined) updateData.action = body.action
     if (body.photoUrl !== undefined) updateData.photoUrl = body.photoUrl
+    if (body.photoUrls !== undefined) updateData.photoUrls = body.photoUrls ? JSON.stringify(body.photoUrls) : null
     if (body.extra !== undefined) updateData.extra = body.extra ? JSON.stringify(body.extra) : null
     if (body.jaulaStatus !== undefined) updateData.jaulaStatus = body.jaulaStatus
     if (body.jaulaFechaEntrada !== undefined) updateData.jaulaFechaEntrada = body.jaulaFechaEntrada
     if (body.jaulaOrigen !== undefined) updateData.jaulaOrigen = body.jaulaOrigen
     if (body.jaulaFechaSalida !== undefined) updateData.jaulaFechaSalida = body.jaulaFechaSalida
     if (body.jaulaDestino !== undefined) updateData.jaulaDestino = body.jaulaDestino
+    if (body.jaulaFechaLimite !== undefined) updateData.jaulaFechaLimite = body.jaulaFechaLimite
     if (body.zoneId !== undefined) updateData.zoneId = body.zoneId
     if (body.zonaOrigen !== undefined) updateData.zonaOrigen = body.zonaOrigen
     if (body.zonaDestino !== undefined) updateData.zonaDestino = body.zonaDestino
 
+    // Auto-calculate jaulaFechaLimite if jaulaStatus is being set to 'en_jaula'
+    // and jaulaFechaEntrada is provided (or already exists on the item)
+    if (body.jaulaStatus === 'en_jaula') {
+      const existing = await db.inventoryItem.findUnique({ where: { id } })
+      if (existing) {
+        const fechaEntrada = body.jaulaFechaEntrada || existing.jaulaFechaEntrada
+        if (fechaEntrada) {
+          const extraRaw = body.extra || (existing.extra ? JSON.parse(existing.extra) : {})
+          const diasCuarentena = extraRaw.diasCuarentena || 40
+          const entrada = new Date(fechaEntrada)
+          updateData.jaulaFechaLimite = new Date(entrada.getTime() + diasCuarentena * 24 * 60 * 60 * 1000)
+        }
+      }
+    }
+
     const result = await db.inventoryItem.update({
       where: { id },
       data: updateData,
+      include: { photos: true },
     })
 
-    return NextResponse.json({ success: true, data: result })
+    return NextResponse.json({
+      success: true,
+      data: {
+        ...result,
+        extra: result.extra ? JSON.parse(result.extra) : null,
+        photoUrls: result.photoUrls ? JSON.parse(result.photoUrls) : null,
+      },
+    })
   } catch (error) {
     console.error('Error updating inventory item:', error)
     return NextResponse.json({ success: false, error: 'Error updating inventory item' }, { status: 500 })

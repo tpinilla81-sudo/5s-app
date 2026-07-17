@@ -40,12 +40,14 @@ export async function GET(request: NextRequest) {
       include: {
         project: { select: { id: true, name: true, company: true } },
         zone: { select: { id: true, name: true } },
+        photos: true,
       },
     })
 
     const parsed = items.map(item => ({
       ...item,
       extra: item.extra ? JSON.parse(item.extra) : null,
+      photoUrls: item.photoUrls ? JSON.parse(item.photoUrls) : null,
       projectName: item.project?.name || '',
       zoneName: item.zone?.name || '',
     }))

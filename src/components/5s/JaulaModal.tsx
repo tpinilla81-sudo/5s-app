@@ -25,9 +25,16 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Card, CardContent } from '@/components/ui/card';
-import { Package, Building2, Printer, Tag } from 'lucide-react';
+import { Package, Building2, Printer, Tag, Camera, ZoomIn, X } from 'lucide-react';
 import { use5SStore } from '@/lib/store';
 import TagPrinter from '@/components/5s/TagPrinter';
+
+interface JaulaPhoto {
+  id: string;
+  photoUrl: string;
+  photoType: string;
+  title: string;
+}
 
 interface JaulaItem {
   id: string;
@@ -37,15 +44,19 @@ interface JaulaItem {
   quantity: number;
   quantityUnneeded: number;
   price: number | null;
+  photoUrl: string | null;
+  photoUrls: string | null;
   jaulaStatus: string;
   jaulaFechaEntrada: string | null;
   jaulaOrigen: string | null;
   jaulaFechaSalida: string | null;
   jaulaDestino: string | null;
+  jaulaFechaLimite: string | null;
   zonaOrigen: string | null;
   zonaDestino: string | null;
   extra?: Record<string, string | number>;
   project?: { name: string };
+  photos?: JaulaPhoto[];
 }
 
 interface JaulaModalProps {
@@ -58,6 +69,7 @@ export default function JaulaModal({ open, onClose }: JaulaModalProps) {
   const [jaulaItems, setJaulaItems] = useState<JaulaItem[]>([]);
   const [jaulaFilter, setJaulaFilter] = useState<string>('all');
   const [isLoading, setIsLoading] = useState(false);
+  const [lightboxPhoto, setLightboxPhoto] = useState<string | null>(null);
 
   useEffect(() => {
     if (open) loadJaulaItems();
@@ -205,11 +217,13 @@ export default function JaulaModal({ open, onClose }: JaulaModalProps) {
                 <Table>
                   <TableHeader>
                     <TableRow>
+                      <TableHead className="text-xs">Foto</TableHead>
                       <TableHead className="text-xs">Elemento</TableHead>
                       <TableHead className="text-xs">Cantidad</TableHead>
                       <TableHead className="text-xs">Precio</TableHead>
                       <TableHead className="text-xs">Proyecto/Origen</TableHead>
                       <TableHead className="text-xs">F. Entrada</TableHead>
+                      <TableHead className="text-xs">F. Límite</TableHead>
                       <TableHead className="text-xs">Estado</TableHead>
                       <TableHead className="text-xs">Decisión</TableHead>
                       <TableHead className="text-xs">F. Salida</TableHead>
@@ -217,8 +231,47 @@ export default function JaulaModal({ open, onClose }: JaulaModalProps) {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filteredJaulaItems.map(item => (
+                    {filteredJaulaItems.map(item => {
+                      // Get photos from either photos relation or photoUrls JSON
+                      const itemPhotos: JaulaPhoto[] = item.photos || [];
+                      let parsedPhotoUrls: {url?: string, type?: string}[] = [];
+                      if (item.photoUrls) {
+                        try { parsedPhotoUrls = JSON.parse(item.photoUrls); } catch {}
+                      }
+                      const mainPhoto = itemPhotos[0]?.photoUrl || parsedPhotoUrls[0]?.url || item.photoUrl;
+                      // Compute fecha limite
+                      const diasCuarentena = Number(item.extra?.diasCuarentena ?? 40);
+                      let fechaLimite: string | null = item.jaulaFechaLimite || null;
+                      if (!fechaLimite && item.jaulaFechaEntrada) {
+                        try {
+                          const d = new Date(item.jaulaFechaEntrada);
+                          d.setDate(d.getDate() + diasCuarentena);
+                          fechaLimite = d.toISOString();
+                        } catch {}
+                      }
+                      const isExpired = fechaLimite && new Date(fechaLimite) < new Date();
+
+                      return (
                       <TableRow key={item.id}>
+                        <TableCell className="text-xs">
+                          {mainPhoto ? (
+                            <div className="relative group">
+                              <img
+                                src={mainPhoto}
+                                alt={item.name}
+                                className="w-10 h-10 object-cover rounded border cursor-pointer"
+                                onClick={() => setLightboxPhoto(mainPhoto!)}
+                              />
+                              {itemPhotos.length > 1 && (
+                                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[8px] rounded-full w-3.5 h-3.5 flex items-center justify-center">+{itemPhotos.length - 1}</span>
+                              )}
+                            </div>
+                          ) : (
+                            <div className="w-10 h-10 bg-gray-100 rounded border flex items-center justify-center">
+                              <Camera className="h-4 w-4 text-gray-300" />
+                            </div>
+                          )}
+                        </TableCell>
                         <TableCell className="text-xs font-medium">{item.name}</TableCell>
                         <TableCell className="text-xs text-center">{item.quantityUnneeded || item.quantity}</TableCell>
                         <TableCell className="text-xs text-right">
@@ -232,6 +285,14 @@ export default function JaulaModal({ open, onClose }: JaulaModalProps) {
                         </TableCell>
                         <TableCell className="text-xs">
                           {item.jaulaFechaEntrada ? new Date(item.jaulaFechaEntrada).toLocaleDateString('es-ES') : '—'}
+                        </TableCell>
+                        <TableCell className="text-xs">
+                          {fechaLimite ? (
+                            <span className={isExpired ? 'text-red-600 font-bold' : 'text-amber-600'}>
+                              {new Date(fechaLimite).toLocaleDateString('es-ES')}
+                              {isExpired && ' ⚠'}
+                            </span>
+                          ) : '—'}
                         </TableCell>
                         <TableCell>{getJaulaStatusBadge(item.jaulaStatus)}</TableCell>
                         <TableCell className="text-xs">
@@ -249,7 +310,8 @@ export default function JaulaModal({ open, onClose }: JaulaModalProps) {
                         </TableCell>
                         <TableCell className="text-xs">{item.jaulaDestino || item.zonaDestino || '—'}</TableCell>
                       </TableRow>
-                    ))}
+                    );
+                    })}
                   </TableBody>
                 </Table>
               </div>
@@ -260,6 +322,16 @@ export default function JaulaModal({ open, onClose }: JaulaModalProps) {
             </>
           )}
         </div>
+
+        {/* Photo lightbox */}
+        {lightboxPhoto && (
+          <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center" onClick={() => setLightboxPhoto(null)}>
+            <button className="absolute top-4 right-4 text-white" onClick={() => setLightboxPhoto(null)}>
+              <X className="h-6 w-6" />
+            </button>
+            <img src={lightboxPhoto} alt="Foto" className="max-w-[90vw] max-h-[85vh] object-contain rounded-lg" />
+          </div>
+        )}
       </DialogContent>
     </Dialog>
   );

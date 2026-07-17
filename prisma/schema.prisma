@@ -217,7 +217,8 @@ model InventoryItem {
   quantityUnneeded  Int       @default(0) // Cuántos innecesarios
   price             Float? // Precio en euros
   action            String? // Acción a tomar
-  photoUrl          String?
+  photoUrl          String? // Foto principal (legacy, kept for compat)
+  photoUrls         String? // JSON array: [{url, type, caption}] — multiple photos with traceability
   extra             String? // JSON: S-specific fields (estado, frecuenciaUso, nivel, fuente, etc.)
   projectId         String
   zoneId            String? // Which zone this item belongs to
@@ -227,6 +228,7 @@ model InventoryItem {
   jaulaOrigen       String? // Área de origen
   jaulaFechaSalida  DateTime? // Fecha salida de la jaula
   jaulaDestino      String? // Área de destino
+  jaulaFechaLimite  DateTime? // Fecha límite de cuarentena (calculada: entrada + días cuarentena)
   zonaOrigen        String? // Zone where the material was found
   zonaDestino       String? // Zone where the material is now (can be same as origen)
   createdAt         DateTime  @default(now())
@@ -234,6 +236,7 @@ model InventoryItem {
 
   project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
   zone    Zone?   @relation(fields: [zoneId], references: [id], onDelete: SetNull)
+  photos  PhotoLibrary[] // Photos linked to this inventory item
 
   @@index([projectId])
   @@index([sStep, projectId])
@@ -523,27 +526,30 @@ model BoardSlotStandard {
 }
 
 model PhotoLibrary {
-  id          String   @id @default(cuid())
-  sStep       Int // 1-5 (which S step)
-  miniStep    Int      @default(2) // 2=Fotos (before/after), can also be 4=Autoeval, 5=Audit
-  title       String // Photo title/description
-  description String? // Additional notes
-  photoUrl    String // URL of the uploaded photo
-  photoType   String  @default("antes") // "antes" (before), "despues" (after), "referencia", "hallazgo", "mejora"
-  category    String  @default("general") // Category for grouping
-  tags        String? // JSON array of tags
-  projectId   String
-  zoneId      String? // Zone the photo belongs to
-  uploadedBy  String? // User ID who uploaded
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id              String   @id @default(cuid())
+  sStep           Int // 1-5 (which S step)
+  miniStep        Int      @default(2) // 2=Fotos (before/after), can also be 4=Autoeval, 5=Audit
+  title           String // Photo title/description
+  description     String? // Additional notes
+  photoUrl        String // URL of the uploaded photo
+  photoType       String  @default("antes") // "antes" (before), "despues" (after), "referencia", "hallazgo", "mejora"
+  category        String  @default("general") // Category for grouping
+  tags            String? // JSON array of tags
+  projectId       String
+  zoneId          String? // Zone the photo belongs to
+  uploadedBy      String? // User ID who uploaded
+  inventoryItemId String? // FK: links photo to a specific inventory item (traceability)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 
-  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  zone    Zone?   @relation(fields: [zoneId], references: [id], onDelete: SetNull)
+  project       Project        @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  zone          Zone?          @relation(fields: [zoneId], references: [id], onDelete: SetNull)
+  inventoryItem InventoryItem? @relation(fields: [inventoryItemId], references: [id], onDelete: SetNull)
 
   @@index([projectId])
   @@index([sStep, projectId])
   @@index([photoType])
+  @@index([inventoryItemId])
 }
 
 model PDCAItem {

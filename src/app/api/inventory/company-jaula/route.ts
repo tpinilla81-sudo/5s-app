@@ -42,6 +42,7 @@ export async function GET(request: NextRequest) {
       include: {
         project: { select: { id: true, name: true, company: true } },
         zone: { select: { id: true, name: true } },
+        photos: true,
       },
     })
 
@@ -49,7 +50,14 @@ export async function GET(request: NextRequest) {
 
     const parsed = items.map(item => {
       const extra = item.extra ? JSON.parse(item.extra) : null
-      const fechaLimite = item.jaulaFechaLimite
+
+      // FIX: For items where jaulaFechaLimite is null, compute it from jaulaFechaEntrada + diasCuarentena
+      let fechaLimite = item.jaulaFechaLimite
+      if (!fechaLimite && item.jaulaFechaEntrada) {
+        const diasCuarentena = extra?.diasCuarentena || 40
+        fechaLimite = new Date(new Date(item.jaulaFechaEntrada).getTime() + diasCuarentena * 24 * 60 * 60 * 1000)
+      }
+
       const diasRestantes = fechaLimite
         ? Math.ceil((new Date(fechaLimite).getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
         : null
@@ -61,9 +69,15 @@ export async function GET(request: NextRequest) {
         else estadoTemporal = 'ok'
       }
 
+      // Parse photoUrls JSON for convenience
+      const photoUrlsParsed = item.photoUrls ? JSON.parse(item.photoUrls) : null
+
       return {
         ...item,
         extra,
+        photoUrls: photoUrlsParsed,
+        // Computed fechaLimite (may differ from DB value if it was null and we computed it)
+        computedFechaLimite: fechaLimite,
         diasRestantes,
         estadoTemporal,
         projectName: item.project?.name || '',

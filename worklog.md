@@ -412,3 +412,43 @@ Stage Summary:
 - Contadores de Mejora Continua muestran datos correctos
 - Todas las rutas a S5 Step 3 abren el mismo modal (ActionPlanModal)
 - Producción: https://5s-app-one.vercel.app
+
+---
+Task ID: 11
+Agent: Main Agent
+Task: Integrar fotos, inventarios y Jaula con trazabilidad bidireccional
+
+Work Log:
+- Análisis completo de la desconexión entre fotos (PhotoLibrary), inventarios (InventoryItem) y Jaula
+- Identificados 8 puntos de desconexión: fotos no vinculadas a items, Jaula sin fotos, sin fecha límite, etc.
+- Cambios en Prisma schema:
+  - Añadido photoUrls String? (JSON array) a InventoryItem para múltiples fotos con metadata
+  - Añadido jaulaFechaLimite DateTime? a InventoryItem para cuarentena
+  - Añadido inventoryItemId String? FK a PhotoLibrary para vincular fotos con items
+  - Añadida relación photos PhotoLibrary[] en InventoryItem
+- Cambios en APIs:
+  - /api/inventory POST: auto-calcula jaulaStatus='en_jaula' para S1 innecesario + jaulaFechaLimite
+  - /api/inventory GET: incluye photos: true (relación) y parsea photoUrls JSON
+  - /api/inventory PUT: acepta photoUrls para actualización
+  - /api/inventory/company-jaula: fix bug jaulaFechaLimite + incluye fotos
+  - /api/inventory/activos: incluye fotos
+  - /api/inventory/company-necesarios: incluye fotos
+  - /api/photo-library POST: acepta inventoryItemId, actualiza photoUrls del item automáticamente
+  - /api/photo-library GET: filtra por inventoryItemId
+  - /api/photo-library DELETE: limpia photoUrls del item al eliminar foto
+- Cambios en componentes:
+  - InventarioModal: sección "Fotos del Paso 2", adjuntar fotos a items, galería de vinculación, columnas de fotos en tabla, lightbox, S3 antes/después, S1 Jaula con fotos
+  - JaulaModal: columna Foto con thumbnails, columna F. Límite con expiración, lightbox de fotos
+- Verificación API:
+  - Creación de item S1 innecesario auto jaulaStatus='en_jaula' + jaulaFechaLimite OK
+  - Vinculación foto-inventario vía photo-library API OK
+  - Jaula muestra fotos y fecha límite OK
+
+Stage Summary:
+- Integración fotos-inventario-jaula IMPLEMENTADA
+- Fotos del Paso 2 se pueden vincular a items del Paso 3
+- Items de inventario pueden tener múltiples fotos con tipo (antes/después/referencia)
+- Jaula muestra fotos de los items + fecha límite de cuarentena + alerta de expiración
+- S3 puntos de suciedad soportan fotos antes/después
+- Auto-cálculo de jaulaFechaLimite = entrada + días cuarentena (default 40)
+- Producción: https://5s-app-one.vercel.app
