@@ -35,9 +35,13 @@ export async function GET(request: NextRequest) {
       include: {
         zones: {
           include: {
-            members: {
+            memberZones: {
               include: {
-                user: { select: { id: true, name: true, email: true, role: true } },
+                member: {
+                  include: {
+                    user: { select: { id: true, name: true, email: true, role: true } },
+                  },
+                },
               },
             },
           },
@@ -195,7 +199,8 @@ export async function GET(request: NextRequest) {
 
       // Build zones with their responsable info
       const zonesWithResponsable = project.zones.map(z => {
-        const responsable = z.members.find(m => m.role === 'responsable')
+        const responsableMember = (z.memberZones || []).find(mz => mz.member?.role === 'responsable')
+        const responsable = responsableMember?.member
         return {
           id: z.id,
           name: z.name,
@@ -205,7 +210,7 @@ export async function GET(request: NextRequest) {
             name: responsable.user.name,
             email: responsable.user.email,
           } : null,
-          memberCount: z.members.length,
+          memberCount: z.memberZones?.length || 0,
         }
       })
 
@@ -280,6 +285,7 @@ export async function GET(request: NextRequest) {
     })
   } catch (error) {
     console.error('Error fetching gerente stats:', error)
-    return NextResponse.json({ success: false, error: 'Error fetching gerente stats' }, { status: 500 })
+    const errorMessage = error instanceof Error ? error.message : 'Error fetching gerente stats'
+    return NextResponse.json({ success: false, error: errorMessage }, { status: 500 })
   }
 }
