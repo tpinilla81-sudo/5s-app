@@ -452,3 +452,27 @@ Stage Summary:
 - S3 puntos de suciedad soportan fotos antes/después
 - Auto-cálculo de jaulaFechaLimite = entrada + días cuarentena (default 40)
 - Producción: https://5s-app-one.vercel.app
+---
+Task ID: 1
+Agent: Main Agent
+Task: Implement admin read-only in 5S panels, only gestor can change this permission
+
+Work Log:
+- Explored the complete permission system: RolePermissions.tsx, permissions API route, store.ts, usePermissions.ts, schema.prisma
+- Found admin already has read-only 5S permissions by default (only _a0 view, no _a1 execute)
+- Found API route already blocks admin from modifying own permissions (line 254)
+- Found UI isLocked() already blocks admin from toggling own permissions
+- Fixed RolePermissions.tsx: Changed all `viewMode === 'edit' && isAdmin` to `viewMode === 'edit' && canEdit` so gestor can also see edit controls
+- Fixed usePermissions.ts: canEditPermissions() now returns true for both admin AND gestor
+- Fixed info banner: Updated text from "El Gestor no interviene aquí" to correct description
+- Updated .env with new PostgreSQL connection string (Neon)
+- Ran prisma db push to verify database schema is in sync
+- Created baseline migration for PostgreSQL
+- Build passes successfully
+
+Stage Summary:
+- Admin is read-only in 5S panels (by design - only _a0 view permissions, no _a1 execute)
+- Only gestor can change admin permissions (enforced in API + UI)
+- Gestor can now properly use the permission editing UI (Switch controls, bulk actions)
+- Database switched from SQLite to PostgreSQL (Neon)
+- Vercel deployment requires re-authentication (OIDC token expired)

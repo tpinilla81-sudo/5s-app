@@ -46,7 +46,8 @@ export function usePermissions() {
 
   const canEditPermissions = useCallback((): boolean => {
     if (!currentUser) return false
-    return currentUser.role === 'admin'
+    // Both gestor and admin can edit permissions (gestor can edit all roles including admin)
+    return currentUser.role === 'admin' || currentUser.role === 'gestor'
   }, [currentUser])
 
   return {

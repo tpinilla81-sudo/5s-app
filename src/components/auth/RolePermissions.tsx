@@ -414,7 +414,7 @@ export default function RolePermissions({ open, onClose }: RolePermissionsProps)
             >
               <div className="p-5 space-y-5">
                 {/* Edit mode: bulk actions per S */}
-                {viewMode === 'edit' && isAdmin && (
+                {viewMode === 'edit' && canEdit && (
                   <div className="flex gap-2 mb-2">
                     <Button variant="outline" size="sm"
                       className="text-xs border-green-300 text-green-600 hover:bg-green-50"
@@ -472,7 +472,7 @@ export default function RolePermissions({ open, onClose }: RolePermissionsProps)
                                   const locked = isLocked(role.id, perm.id)
                                   return (
                                     <td key={role.id} className="p-3 border-t text-center">
-                                      {viewMode === 'edit' && isAdmin ? (
+                                      {viewMode === 'edit' && canEdit ? (
                                         <TooltipProvider>
                                           <Tooltip>
                                             <TooltipTrigger asChild>
@@ -564,7 +564,7 @@ export default function RolePermissions({ open, onClose }: RolePermissionsProps)
                         const locked = isLocked(role.id, perm.id)
                         return (
                           <td key={role.id} className="p-3 border-t text-center">
-                            {viewMode === 'edit' && isAdmin ? (
+                            {viewMode === 'edit' && canEdit ? (
                               <TooltipProvider>
                                 <Tooltip>
                                   <TooltipTrigger asChild>
@@ -750,7 +750,7 @@ export default function RolePermissions({ open, onClose }: RolePermissionsProps)
                   <Shield className="h-5 w-5 shrink-0 mt-0.5" />
                   <div>
                     <p className="font-semibold">Permisos de Proyecto — Admin de Empresa</p>
-                    <p className="text-xs mt-1 text-purple-600">Cada empresa configura los permisos de sus propios proyectos. El Gestor no interviene aquí — solo el Admin de cada empresa decide qué puede hacer cada rol dentro de su proyecto.</p>
+                    <p className="text-xs mt-1 text-purple-600">Cada empresa configura los permisos de sus propios proyectos. El Admin de Empresa decide qué puede hacer cada rol dentro de su proyecto. Los permisos del Admin solo los puede cambiar el Gestor.</p>
                   </div>
                 </div>
 
@@ -776,7 +776,7 @@ export default function RolePermissions({ open, onClose }: RolePermissionsProps)
                           <span className="text-xs font-bold" style={{ color: role.color }}>{pct}%</span>
                         </div>
                         <div className="text-[10px] text-muted-foreground">{total} permisos</div>
-                        {viewMode === 'edit' && isAdmin && (
+                        {viewMode === 'edit' && canEdit && (
                           <div className="flex gap-1.5 mt-2">
                             <Button variant="outline" size="sm" className="h-6 text-[10px] flex-1 border-green-300 text-green-600 hover:bg-green-50"
                               onClick={() => toggleAllForRole(role.id, true)}>Todo ON</Button>
