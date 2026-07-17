@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db, ensureSystemConfigTable } from '@/lib/db'
+import { AUDIT_CHECKLISTS } from '@/lib/5s-constants'
 
 /**
  * POST /api/seed/templates
@@ -44,14 +45,47 @@ export async function POST(request: NextRequest) {
     let created = 0
     let fixed = 0
 
-    // FIX miniStep and titles on existing templates.
+    // FIX miniStep, titles, notaMinima and legacy content on existing templates.
     // This ensures templates are always in the correct Paso regardless of previous state.
+    const CORRECT_NOTA_MINIMA: Record<string, number> = {
+      formacion: 80,
+      examen: 80,
+      autoevaluacion: 70,
+      auditoria: 75,
+    }
     for (const tpl of existing) {
       const correctStep = CORRECT_MINI_STEP[tpl.type]
+      const correctNota = CORRECT_NOTA_MINIMA[tpl.type]
+      const updates: Record<string, any> = {}
       if (correctStep && tpl.miniStep !== correctStep) {
+        updates.miniStep = correctStep
+      }
+      if (correctNota && tpl.notaMinima !== correctNota) {
+        updates.notaMinima = correctNota
+      }
+      // Fix legacy auditoria/autoevaluacion content: migrate from criteria/items format
+      // to proper sections format using AUDIT_CHECKLISTS
+      if ((tpl.type === 'auditoria' || tpl.type === 'autoevaluacion') && tpl.sStep >= 1 && tpl.sStep <= 5) {
+        try {
+          const parsed = typeof tpl.content === 'string' ? JSON.parse(tpl.content) : tpl.content
+          // Check if legacy format (criteria or items array) or empty sections
+          const isLegacy = (parsed.criteria && Array.isArray(parsed.criteria)) ||
+                          (parsed.items && Array.isArray(parsed.items)) ||
+                          (parsed.sections && Array.isArray(parsed.sections) && parsed.sections.length === 0)
+          if (isLegacy) {
+            const builtIn = AUDIT_CHECKLISTS[tpl.sStep as keyof typeof AUDIT_CHECKLISTS]
+            if (builtIn && builtIn.length > 0) {
+              updates.content = JSON.stringify({ sections: builtIn })
+            }
+          }
+        } catch (e) {
+          // If content can't be parsed, leave it as is
+        }
+      }
+      if (Object.keys(updates).length > 0) {
         await db.template.update({
           where: { id: tpl.id },
-          data: { miniStep: correctStep },
+          data: updates,
         })
         fixed++
       }
@@ -237,6 +271,7 @@ export async function POST(request: NextRequest) {
 
       // ─── Autoevaluación (Paso 4) ───
       if (!exists(s, 'autoevaluacion')) {
+        const auditSections = AUDIT_CHECKLISTS[s as keyof typeof AUDIT_CHECKLISTS]
         await db.template.create({
           data: {
             type: 'autoevaluacion',
@@ -244,7 +279,7 @@ export async function POST(request: NextRequest) {
             miniStep: 4,
             title: `Autoevaluación S${s} - ${S_JAPANESE[s - 1]}`,
             description: `Checklist de autoevaluación para ${S_NAMES[s - 1]}`,
-            content: JSON.stringify({ sections: [] }),
+            content: JSON.stringify({ sections: auditSections || [] }),
             notaMinima: 70,
           },
         })
@@ -346,6 +381,7 @@ export async function POST(request: NextRequest) {
 
       // ─── Auditoría Externa (Paso 5) ───
       if (!exists(s, 'auditoria')) {
+        const auditSections = AUDIT_CHECKLISTS[s as keyof typeof AUDIT_CHECKLISTS]
         await db.template.create({
           data: {
             type: 'auditoria',
@@ -353,7 +389,7 @@ export async function POST(request: NextRequest) {
             miniStep: 5,
             title: `Auditoría S${s} - ${S_JAPANESE[s - 1]}`,
             description: `Criterios de auditoría para ${S_NAMES[s - 1]}`,
-            content: JSON.stringify({ sections: [] }),
+            content: JSON.stringify({ sections: auditSections || [] }),
             notaMinima: 75,
           },
         })

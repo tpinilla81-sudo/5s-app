@@ -144,6 +144,17 @@ export async function fetchAllChecklistTemplates(
   } catch (e) {
     console.error(`Error fetching all ${type} templates:`, e)
   }
+
+  // ── Fallback: fill missing S-steps from AUDIT_CHECKLISTS constants ──
+  for (let s = 1; s <= 5; s++) {
+    if (!result[s] || result[s].length === 0) {
+      const builtIn = AUDIT_CHECKLISTS[s as keyof typeof AUDIT_CHECKLISTS]
+      if (builtIn && builtIn.length > 0) {
+        result[s] = builtIn
+      }
+    }
+  }
+
   return result
 }
 

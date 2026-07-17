@@ -300,3 +300,57 @@ Stage Summary:
 - Inventario de puntos de suciedad funciona con 5 items precargados de la plantilla
 - Checklist de auditoría muestra 5 criterios correctos para S3
 - Fallos pendientes: preguntas de examen mezcladas, paso 1 no actualiza Progress al aprobar examen
+
+---
+Task ID: 9
+Agent: Main Agent
+Task: Testear y corregir los 5 pasos de S4 (Estandarizar/Seiketsu) en producción
+
+Work Log:
+- Testeado S4 completo (5 pasos) en producción https://5s-app-one.vercel.app
+- Paso 1 (Formación + Examen): ✅ Funciona correctamente, 6 preguntas, aprobado
+- Paso 2 (Fotografías): ✅ Modal abre correctamente, completado vía admin skip
+- Paso 3 (Inventario + Biblioteca de Estándares): ✅ Muestra inventario con 5 items, Biblioteca muestra "No hay estándares" (correcto, no se han creado), requiere layout
+- Paso 4 (Autoevaluación): ✅ Funciona, antes mostraba solo 5 puntos
+- Paso 5 (Auditoría): ✅ Funciona, antes mostraba solo 5 puntos
+
+Fallos encontrados y corregidos:
+
+1. CRÍTICO — Plantillas de auditoría y autoevaluación tenían formato legacy con solo 5 ítems
+   - Causa raíz: Las plantillas en la BD usaban formato legacy ({criteria: [...]} o {items: [...]}) con solo 5 ítems, pero las constantes AUDIT_CHECKLISTS definen 25 ítems para S4
+   - El fallback a constantes no se alcanzaba porque templateToAuditSections() parseaba el formato legacy y devolvía 5 ítems (sections.length > 0)
+   - FIX: Modificado seed/templates/route.ts para:
+     a) Detectar plantillas con formato legacy (criteria/items) o sections vacías
+     b) Migrar automáticamente al formato sections con contenido completo de AUDIT_CHECKLISTS
+     c) Corregir notaMinima (70 autoevaluación, 75 auditoría)
+     d) Corregir miniStep (4 autoevaluación, 5 auditoría)
+   - Resultado: 50 plantillas corregidas en ejecución del seed
+
+2. MEDIO — Admin skip no bypaseaba validaciones del API
+   - Causa: handleAdminSkip en InventarioModal, AutoevaluacionModal, FotosModal, ActionPlanModal y AuditoriaModal no pasaban skipMissingTemplate: true
+   - El API valida prerequisitos cuando completed=true y no hay skipMissingTemplate
+   - FIX: Añadido skipMissingTemplate: true en todos los handleAdminSkip de todos los modales
+
+3. MEDIO — fetchAllChecklistTemplates no tenía fallback a constantes
+   - Causa: La función que carga todas las plantillas para la auditoría trimestral no usaba AUDIT_CHECKLISTS como fallback
+   - FIX: Añadido bucle que rellana S-steps faltantes desde AUDIT_CHECKLISTS constantes
+
+4. MENOR — Plantillas nuevas se creaban con {sections: []} vacío
+   - FIX: Ahora se crean con el contenido completo de AUDIT_CHECKLISTS directamente
+
+Verificación post-fix:
+- Autoevaluación S4 muestra 5 secciones con 25 ítems (4.1-4.5) ✅
+- Auditoría S4 muestra 5 secciones con 25 ítems (4.1-4.5) ✅
+- S4 completado al 100% en zona Almacén ✅
+- Admin skip funciona correctamente ✅
+
+Desplegado a producción: https://5s-app-one.vercel.app
+
+Stage Summary:
+- S4 (Estandarizar/Seiketsu) COMPLETADO al 100%
+- 4 bugs corregidos (1 crítico, 2 medios, 1 menor)
+- Checklist de auditoría/autoevaluación ahora muestra 25 ítems en 5 secciones (antes 5)
+- Admin skip funciona en todos los modales (bypasea validaciones)
+- Fallback robusto a AUDIT_CHECKLISTS en fetchAllChecklistTemplates
+- Plantillas de todas las S migradas automáticamente al formato correcto
+- Producción: https://5s-app-one.vercel.app

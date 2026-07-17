@@ -1,0 +1,714 @@
+     1→export interface SStep {
+     2→  id: number;
+     3→  name: string;
+     4→  japaneseName: string;
+     5→  spanishName: string;
+     6→  color: string;
+     7→  bgColor: string;
+     8→  description: string;
+     9→}
+    10→
+    11→export interface MiniStep {
+    12→  id: number;
+    13→  name: string;
+    14→  icon: string;
+    15→  description: string;
+    16→  /** S-specific descriptions override the default description */
+    17→  descriptionByS?: Record<number, string>;
+    18→}
+    19→
+    20→export const S_STEPS: SStep[] = [
+    21→  {
+    22→    id: 1,
+    23→    name: 'REVISAR',
+    24→    japaneseName: 'Seiri',
+    25→    spanishName: 'Clasificar',
+    26→    color: '#8B5CF6',
+    27→    bgColor: '#EDE9FE',
+    28→    description: 'Clasificar y separar los elementos necesarios de los innecesarios en el lugar de trabajo.',
+    29→  },
+    30→  {
+    31→    id: 2,
+    32→    name: 'ORDENAR',
+    33→    japaneseName: 'Seiton',
+    34→    spanishName: 'Organizar',
+    35→    color: '#EAB308',
+    36→    bgColor: '#FEF9C3',
+    37→    description: 'Organizar los elementos necesarios de manera que sean fáciles de encontrar, usar y devolver.',
+    38→  },
+    39→  {
+    40→    id: 3,
+    41→    name: 'LIMPIAR',
+    42→    japaneseName: 'Seiso',
+    43→    spanishName: 'Limpiar',
+    44→    color: '#3B82F6',
+    45→    bgColor: '#DBEAFE',
+    46→    description: 'Limpiar el lugar de trabajo identificando y eliminando las fuentes de suciedad.',
+    47→  },
+    48→  {
+    49→    id: 4,
+    50→    name: 'ESTANDARIZAR',
+    51→    japaneseName: 'Seiketsu',
+    52→    spanishName: 'Estandarizar',
+    53→    color: '#F43F5E',
+    54→    bgColor: '#FFE4E6',
+    55→    description: 'Crear estándares y normas que mantengan los logros de las 3S anteriores.',
+    56→  },
+    57→  {
+    58→    id: 5,
+    59→    name: 'MANTENER',
+    60→    japaneseName: 'Shitsuke',
+    61→    spanishName: 'Disciplina',
+    62→    color: '#F97316',
+    63→    bgColor: '#FFEDD5',
+    64→    description: 'Crear el hábito de respetar los estándares establecidos mediante disciplina y compromiso.',
+    65→  },
+    66→];
+    67→
+    68→// ─── Phase 6: Mejora Continua (PDCA / Ciclo de Deming) ──────────────────────
+    69→export interface PDCAStep {
+    70→  id: number;       // 1=D, 2=P, 3=C, 4=A
+    71→  letter: string;   // D, P, C, A
+    72→  name: string;     // Do, Plan, Check, Act
+    73→  spanishName: string;
+    74→  color: string;
+    75→  bgColor: string;
+    76→  icon: string;
+    77→  description: string;
+    78→}
+    79→
+    80→export const PDCA_STEPS: PDCAStep[] = [
+    81→  {
+    82→    id: 1,
+    83→    letter: 'D',
+    84→    name: 'Do',
+    85→    spanishName: 'Hacer',
+    86→    color: '#2563EB',
+    87→    bgColor: '#DBEAFE',
+    88→    icon: 'Play',
+    89→    description: 'Ejecutar las acciones planificadas. Implementar las mejoras identificadas y llevar a cabo las actividades del plan de acción.',
+    90→  },
+    91→  {
+    92→    id: 2,
+    93→    letter: 'P',
+    94→    name: 'Plan',
+    95→    spanishName: 'Planificar',
+    96→    color: '#7C3AED',
+    97→    bgColor: '#EDE9FE',
+    98→    icon: 'ClipboardList',
+    99→    description: 'Planificar las mejoras. Identificar oportunidades de mejora, establecer objetivos, definir acciones y asignar responsables.',
+   100→  },
+   101→  {
+   102→    id: 3,
+   103→    letter: 'C',
+   104→    name: 'Check',
+   105→    spanishName: 'Verificar',
+   106→    color: '#059669',
+   107→    bgColor: '#D1FAE5',
+   108→    icon: 'SearchCheck',
+   109→    description: 'Verificar los resultados. Comparar los resultados obtenidos con los objetivos planificados mediante indicadores y auditorías.',
+   110→  },
+   111→  {
+   112→    id: 4,
+   113→    letter: 'A',
+   114→    name: 'Act',
+   115→    spanishName: 'Actuar',
+   116→    color: '#DC2626',
+   117→    bgColor: '#FEE2E2',
+   118→    icon: 'Rocket',
+   119→    description: 'Actuar sobre las diferencias. Estandarizar los éxitos, corregir las desviaciones y comenzar un nuevo ciclo de mejora.',
+   120→  },
+   121→];
+   122→
+   123→// Templates available in the PDCA phase
+   124→export const PDCA_TEMPLATES = {
+   125→  pdca_board: {
+   126→    name: 'Tablero PDCA',
+   127→    description: 'Tablero visual del ciclo de Deming para seguimiento de mejoras',
+   128→    applyTo: [1, 2, 3, 4] as number[], // Available in all PDCA steps
+   129→  },
+   130→  plan_accion: {
+   131→    name: 'Plan de Acción',
+   132→    description: 'Plan de acción con responsables, plazos y seguimiento',
+   133→    applyTo: [1, 2] as number[], // Do + Plan
+   134→  },
+   135→  realizacion_estandar: {
+   136→    name: 'B - Realización de Estándar',
+   137→    description: 'Plantilla para la realización y documentación de estándares',
+   138→    applyTo: [2, 4] as number[], // Plan + Act
+   139→  },
+   140→  kpi: {
+   141→    name: 'KPIs de Mejora',
+   142→    description: 'Indicadores clave de rendimiento para medir la mejora continua',
+   143→    applyTo: [2, 3] as number[], // Plan + Check
+   144→  },
+   145→} as const;
+   146→
+   147→// ─── MC Sections (Objetivos) ──────────────────────────────────────────────────
+   148→export interface MCSection {
+   149→  id: number;
+   150→  key: string;
+   151→  name: string;
+   152→  icon: string;
+   153→  description: string;
+   154→}
+   155→
+   156→export const MC_SECTIONS: MCSection[] = [
+   157→  {
+   158→    id: 1,
+   159→    key: 'objetivos',
+   160→    name: 'Objetivos',
+   161→    icon: 'Target',
+   162→    description: 'Define los objetivos de mejora continua para el proyecto. Establece metas medibles y plazos.',
+   163→  },
+   164→];
+   165→
+   166→// ─── MC Step Config for Template Manager ──────────────────────────────────────
+   167→export const MC_STEP_CONFIG = {
+   168→  id: 6,
+   169→  name: 'MEJORA CONTINUA',
+   170→  japaneseName: 'Kaizen',
+   171→  spanishName: 'Mejora Continua',
+   172→  color: '#16A34A',
+   173→  bgColor: '#DCFCE7',
+   174→  description: 'Fase 6 — Ciclo de Deming (D-P-C-A): Do, Plan, Check, Act. Mejora continua mediante auditorías periódicas, plan de acción y KPIs.',
+   175→} as const;
+   176→
+   177→// MC Paso config for template manager — maps PDCA steps + Objetivos section
+   178→export const MC_PASO_CONFIG = [
+   179→  { paso: 1, label: 'Do — Hacer', key: 'do', icon: 'Play', types: ['pdca', 'plan_accion'] },
+   180→  { paso: 2, label: 'Plan — Planificar', key: 'plan', icon: 'ClipboardList', types: ['pdca', 'plan_accion', 'estandar'] },
+   181→  { paso: 3, label: 'Check — Verificar', key: 'check', icon: 'SearchCheck', types: ['pdca', 'kpi'] },
+   182→  { paso: 4, label: 'Act — Actuar', key: 'act', icon: 'Rocket', types: ['pdca', 'estandar'] },
+   183→  { paso: 5, label: 'Objetivos', key: 'objetivos', icon: 'Target', types: ['kpi'] },
+   184→] as const;
+   185→
+   186→export const MINI_STEPS: MiniStep[] = [
+   187→  {
+   188→    id: 1,
+   189→    name: 'Formación + Examen',
+   190→    icon: 'GraduationCap',
+   191→    description: 'Completa la formación y aprueba el examen (mínimo 80%)',
+   192→  },
+   193→  {
+   194→    id: 2,
+   195→    name: 'Fotografías (Antes)',
+   196→    icon: 'Camera',
+   197→    description: 'Toma fotografías de las zonas para documentar el estado actual antes de actuar',
+   198→    descriptionByS: {
+   199→      1: 'Fotografía la zona para ver qué elementos innecesarios hay antes de clasificar',
+   200→      2: 'Fotografía la zona para ver cómo está organizada antes de reordenar',
+   201→      3: 'Fotografía la zona para documentar los puntos de suciedad antes de limpiar',
+   202→      4: 'Fotografía la zona para documentar el estado actual antes de estandarizar',
+   203→      5: 'Fotografía la zona para documentar el nivel de cumplimiento de los estándares',
+   204→    },
+   205→  },
+   206→  {
+   207→    id: 3,
+   208→    name: 'Inventario',
+   209→    icon: 'ClipboardList',
+   210→    description: 'Registra los elementos correspondientes a esta S',
+   211→    descriptionByS: {
+   212→      1: 'Inventaria SOLO los elementos innecesarios. Incluye ubicación, cantidad, precio (€), estado y decisión (Jaula, Tirar o Eliminar)',
+   213→      2: 'Inventaria SOLO los elementos necesarios: ubicación, frecuencia de uso, cercanía y método de identificación',
+   214→      3: 'Inventaria los puntos de suciedad: tipo, nivel, fuente y método de limpieza',
+   215→      4: 'Inventaria los estándares implantados: tipo, estado, documentación y cumplimiento. Incluye la Biblioteca de Estándares',
+   216→      5: 'Plan de Acción: Define las acciones a realizar para mantener la disciplina y mejora continua',
+   217→    },
+   218→  },
+   219→  {
+   220→    id: 4,
+   221→    name: 'Autoevaluación (Interna)',
+   222→    icon: 'CheckSquare',
+   223→    description: 'Checklist de verificación interna con el mismo formato que la auditoría',
+   224→    descriptionByS: {
+   225→      1: 'Verifica internamente la clasificación de elementos mediante checklist',
+   226→      2: 'Verifica internamente la organización y señalización mediante checklist',
+   227→      3: 'Verifica internamente la limpieza y mantenimiento mediante checklist',
+   228→      4: 'Verifica internamente la estandarización e indicadores mediante checklist',
+   229→      5: 'Verifica internamente la disciplina y gestión de anomalías mediante checklist',
+   230→    },
+   231→  },
+   232→  {
+   233→    id: 5,
+   234→    name: 'Auditoría Externa',
+   235→    icon: 'ShieldCheck',
+   236→    description: 'Validación por un auditor externo con el mismo checklist',
+   237→    descriptionByS: {
+   238→      1: 'Auditoría externa de la S1: Clasificación de innecesarios',
+   239→      2: 'Auditoría externa de la S2: Organización y ubicación',
+   240→      3: 'Auditoría externa de la S3: Limpieza y mantenimiento',
+   241→      4: 'Auditoría externa de la S4: Estandarización e indicadores',
+   242→      5: 'Auditoría externa de la S5: Disciplina y mejora continua',
+   243→    },
+   244→  },
+   245→];
+   246→
+   247→/**
+   248→ * Inventory configuration per S-step.
+   249→ * Each S has its own set of categories, extra fields, and template name.
+   250→ */
+   251→export interface HierarchicalDropdown {
+   252→  prefijo_codigo: string;
+   253→  subcategorias: string[];
+   254→}
+   255→
+   256→export interface InventoryConfig {
+   257→  title: string;
+   258→  subtitle: string;
+   259→  categories: { value: string; label: string; color: string }[];
+   260→  extraFields: { key: string; label: string; type: 'select' | 'text' | 'number'; options?: string[] }[];
+   261→  templateName: string;
+   262→  /** Hierarchical category→subcategory mapping (optional, from custom templates) */
+   263→  desplegables_jerarquicos?: Record<string, HierarchicalDropdown>;
+   264→}
+   265→
+   266→export const INVENTORY_CONFIGS: Record<number, InventoryConfig> = {
+   267→  1: {
+   268→    title: 'Inventario de Innecesarios (Clasificación)',
+   269→    subtitle: 'SEIRI — Clasifica los elementos innecesarios y decide su destino (Jaula/Tirar/Eliminar)',
+   270→    categories: [
+   271→      { value: 'innecesario', label: 'Innecesario', color: 'bg-red-100 text-red-800' },
+   272→    ],
+   273→    extraFields: [
+   274→      // === Campos de Innecesario (rojo) ===
+   275→      { key: 'estado', label: 'Estado', type: 'select', options: ['Bueno', 'Regular', 'Malo'] },
+   276→      { key: 'frecuenciaUso', label: 'Frecuencia uso', type: 'select', options: ['Diario', 'Semanal', 'Quincenal', 'Mensual', 'Trimestral', 'Anual', 'Nunca'] },
+   277→      { key: 'decision', label: 'Decisión', type: 'select', options: ['Jaula', 'Tirar', 'Eliminar'] },
+   278→      // === Datos de Etiqueta (naranja) ===
+   279→      { key: 'diasCuarentena', label: 'Días cuarentena', type: 'select', options: ['7', '15', '20', '30', '40', '60', '90'] },
+   280→    ],
+   281→    templateName: 'S1_Inventario_Innecesarios_Seiri.xlsx',
+   282→  },
+   283→  2: {
+   284→    title: 'Inventario de Necesarios',
+   285→    subtitle: 'SEITON — Organiza los elementos necesarios en su ubicación correcta',
+   286→    categories: [
+   287→      { value: 'muy_frecuente', label: 'Muy frecuente', color: 'bg-green-100 text-green-800' },
+   288→      { value: 'frecuente', label: 'Frecuente', color: 'bg-blue-100 text-blue-800' },
+   289→      { value: 'ocasional', label: 'Ocasional', color: 'bg-yellow-100 text-yellow-800' },
+   290→      { value: 'raro', label: 'Raro', color: 'bg-red-100 text-red-800' },
+   291→    ],
+   292→    extraFields: [
+   293→      { key: 'ubicacionAsignada', label: 'Ubicación asignada', type: 'text' },
+   294→      { key: 'metodoIdentificacion', label: 'Método identificación', type: 'select', options: ['Etiqueta', 'Código color', 'Señal visual', 'Sombra/Contorno', 'Código numérico', 'Otro'] },
+   295→      { key: 'cercania', label: 'Cercanía al puesto', type: 'select', options: ['Muy cerca (brazo)', 'Cerca (1-3 pasos)', 'Media distancia', 'Poco accesible'] },
+   296→    ],
+   297→    templateName: 'S2_Inventario_Necesarios_Seiton.xlsx',
+   298→  },
+   299→  3: {
+   300→    title: 'Inventario de Puntos de Suciedad',
+   301→    subtitle: 'SEISO — Identifica y registra los puntos de suciedad de la zona',
+   302→    categories: [
+   303→      { value: 'polvo', label: 'Polvo', color: 'bg-gray-100 text-gray-800' },
+   304→      { value: 'grasa', label: 'Grasa', color: 'bg-yellow-100 text-yellow-800' },
+   305→      { value: 'mancha', label: 'Mancha', color: 'bg-orange-100 text-orange-800' },
+   306→      { value: 'residuos', label: 'Residuos', color: 'bg-red-100 text-red-800' },
+   307→      { value: 'humedad', label: 'Humedad', color: 'bg-blue-100 text-blue-800' },
+   308→      { value: 'oxidacion', label: 'Oxidación', color: 'bg-amber-100 text-amber-800' },
+   309→      { value: 'otro', label: 'Otro', color: 'bg-purple-100 text-purple-800' },
+   310→    ],
+   311→    extraFields: [
+   312→      { key: 'nivel', label: 'Nivel', type: 'select', options: ['Leve', 'Moderado', 'Grave'] },
+   313→      { key: 'fuente', label: 'Fuente de suciedad', type: 'select', options: ['Proceso productivo', 'Medio ambiente', 'Falta de limpieza', 'Escape/Fuga', 'Desgaste', 'Derrame', 'Otro'] },
+   314→      { key: 'metodoLimpieza', label: 'Método limpieza', type: 'select', options: ['Aspirado', 'Fregado', 'Pulido', 'Desinfección', 'Reparación', 'Otro'] },
+   315→      { key: 'frecuenciaLimpieza', label: 'Frecuencia limpieza', type: 'select', options: ['Diaria', '3 veces/semana', 'Semanal', 'Quincenal', 'Mensual'] },
+   316→    ],
+   317→    templateName: 'S3_Inventario_Puntos_Suciedad_Seiso.xlsx',
+   318→  },
+   319→  4: {
+   320→    title: 'Inventario de Estándares Implantados',
+   321→    subtitle: 'SEIKETSU — Registra los estándares y su estado de implantación',
+   322→    categories: [
+   323→      { value: 'visual', label: 'Visual', color: 'bg-blue-100 text-blue-800' },
+   324→      { value: 'procedimiento', label: 'Procedimiento', color: 'bg-green-100 text-green-800' },
+   325→      { value: 'checklist', label: 'Checklist', color: 'bg-purple-100 text-purple-800' },
+   326→      { value: 'senalizacion', label: 'Señalización', color: 'bg-yellow-100 text-yellow-800' },
+   327→      { value: 'diagrama', label: 'Diagrama flujo', color: 'bg-cyan-100 text-cyan-800' },
+   328→      { value: 'registro', label: 'Registro', color: 'bg-gray-100 text-gray-800' },
+   329→      { value: 'otro', label: 'Otro', color: 'bg-orange-100 text-orange-800' },
+   330→    ],
+   331→    extraFields: [
+   332→      { key: 'estadoEstandar', label: 'Estado', type: 'select', options: ['Implantado', 'En proceso', 'Pendiente'] },
+   333→      { key: 'documentado', label: 'Documentado', type: 'select', options: ['Sí', 'No', 'Parcialmente'] },
+   334→      { key: 'cumplimiento', label: 'Cumplimiento %', type: 'number' },
+   335→      { key: 'fechaRevision', label: 'Fecha revisión', type: 'text' },
+   336→    ],
+   337→    templateName: 'S4_Inventario_Estandares_Seiketsu.xlsx',
+   338→  },
+   339→  5: {
+   340→    title: 'Inventario de Prácticas de Disciplina',
+   341→    subtitle: 'SHITSUKE — Registra los hábitos y prácticas de disciplina observados',
+   342→    categories: [
+   343→      { value: 'cumplido', label: 'Cumplido', color: 'bg-green-100 text-green-800' },
+   344→      { value: 'parcial', label: 'Parcial', color: 'bg-yellow-100 text-yellow-800' },
+   345→      { value: 'incumplido', label: 'Incumplido', color: 'bg-red-100 text-red-800' },
+   346→    ],
+   347→    extraFields: [
+   348→      { key: 'practica', label: 'Práctica/Hábito', type: 'text' },
+   349→      { key: 'responsable', label: 'Responsable', type: 'text' },
+   350→      { key: 'frecuencia', label: 'Frecuencia', type: 'select', options: ['Diaria', 'Semanal', 'Mensual'] },
+   351→    ],
+   352→    templateName: 'S5_Inventario_Disciplina_Shitsuke.xlsx',
+   353→  },
+   354→};
+   355→
+   356→export const MIN_PHOTOS = 10;
+   357→export const INVENTORY_CLASSIFY_THRESHOLD = 80;
+   358→export const ACTION_PLAN_MIN_ITEMS = 3;
+   359→export const SELF_EVAL_THRESHOLD = 70;
+   360→export const AUDIT_PASS_THRESHOLD = 75;
+   361→export const EXAM_PASS_THRESHOLD = 80;
+   362→
+   363→// ============================================================
+   364→// Audit Checklist Data (extracted from user's Excel template)
+   365→// Same checklist for step 4 (internal) and step 5 (external)
+   366→// ============================================================
+   367→
+   368→export interface AuditSection {
+   369→  id: string;           // e.g. "1.1"
+   370→  title: string;        // e.g. "MATERIALES"
+   371→  items: AuditCheckItem[];
+   372→}
+   373→
+   374→export interface AuditCheckItem {
+   375→  id: string;           // e.g. "1.1.1"
+   376→  description: string;  // The checklist criterion
+   377→  hasOther?: boolean;   // If true, includes "Otros (Indicar cuál)" free text
+   378→}
+   379→
+   380→export const AUDIT_CHECKLISTS: Record<number, AuditSection[]> = {
+   381→  1: [
+   382→    {
+   383→      id: '1.1', title: 'MATERIALES',
+   384→      items: [
+   385→        { id: '1.1.1', description: 'Consumibles' },
+   386→        { id: '1.1.2', description: 'Materia Prima' },
+   387→        { id: '1.1.3', description: 'Producto acabado o en proceso' },
+   388→        { id: '1.1.4', description: 'Otros (Indicar cuál)', hasOther: true },
+   389→      ],
+   390→    },
+   391→    {
+   392→      id: '1.2', title: 'MÁQUINAS Y EQUIPOS',
+   393→      items: [
+   394→        { id: '1.2.1', description: 'Máquinas (Inducción, bombeo, apriete, engrase…)' },
+   395→        { id: '1.2.2', description: 'Utillajes (volteo, apoyo, montaje…)' },
+   396→        { id: '1.2.3', description: 'Equipos y accesorios de Elevación (Grúas, eslingas, cáncamos, cables, grilletes…)' },
+   397→        { id: '1.2.4', description: 'Equipos de transporte (Carretillas, transpaletas, plataformas elevadoras, vehículos…)' },
+   398→        { id: '1.2.5', description: 'Equipos de ensayo (galgas, testers, banco de pruebas…)' },
+   399→        { id: '1.2.6', description: 'Herramientas de ensamblaje' },
+   400→        { id: '1.2.7', description: 'EQUIPOS INFORMÁTICOS' },
+   401→      ],
+   402→    },
+   403→    {
+   404→      id: '1.3', title: 'TRANSPORTE Y ALMACENAJE',
+   405→      items: [
+   406→        { id: '1.3.1', description: 'Contenedores vacíos, cajas, bidones, botes, cubos…' },
+   407→        { id: '1.3.2', description: 'Pallets u otros elementos de apoyo, tacos' },
+   408→        { id: '1.3.3', description: 'Bolsas, plásticos, protecciones, elementos de flejado' },
+   409→        { id: '1.3.4', description: 'Productos de limpieza, paños, escobas…' },
+   410→        { id: '1.3.5', description: 'Otros (Indicar cuál)', hasOther: true },
+   411→      ],
+   412→    },
+   413→    {
+   414→      id: '1.4', title: 'MOBILIARIO',
+   415→      items: [
+   416→        { id: '1.4.1', description: 'Bancos de trabajo' },
+   417→        { id: '1.4.2', description: 'Paneles herramienta' },
+   418→        { id: '1.4.3', description: 'Armarios o taquillas' },
+   419→        { id: '1.4.4', description: 'Sillas, mesas' },
+   420→        { id: '1.4.5', description: 'Paneles u otros soportes para información' },
+   421→        { id: '1.4.6', description: 'Otros (Indicar cuál)', hasOther: true },
+   422→      ],
+   423→    },
+   424→    {
+   425→      id: '1.5', title: 'INFORMACIÓN',
+   426→      items: [
+   427→        { id: '1.5.1', description: 'Planos o Instrucciones de trabajo' },
+   428→        { id: '1.5.2', description: 'Posters u otra información divulgativa' },
+   429→        { id: '1.5.3', description: 'Gráficos o indicadores' },
+   430→        { id: '1.5.4', description: 'Carpetas o bandejas con documentación innecesaria' },
+   431→        { id: '1.5.5', description: 'Otros (Indicar cuál)', hasOther: true },
+   432→      ],
+   433→    },
+   434→  ],
+   435→
+   436→  2: [
+   437→    {
+   438→      id: '2.1', title: 'EQUIPOS Y MÁQUINAS',
+   439→      items: [
+   440→        { id: '2.1.1', description: 'Los equipos y máquinas están identificados con su número de equipo correspondiente' },
+   441→        { id: '2.1.2', description: 'La identificación anterior es visible (no es necesario manipular partes del equipo)' },
+   442→        { id: '2.1.3', description: 'Otros (Indicar cuál)', hasOther: true },
+   443→      ],
+   444→    },
+   445→    {
+   446→      id: '2.2', title: 'PASILLOS Y LUGARES DE UBICACIÓN',
+   447→      items: [
+   448→        { id: '2.2.1', description: 'Los pasillos y zonas de trabajo delimitados claramente' },
+   449→        { id: '2.2.2', description: 'Cuando algo falta, ¿todo el mundo sabe lo que falta? Todos pueden reconocer donde deben ubicarse.' },
+   450→        { id: '2.2.3', description: 'Los pallets de entrada y salida de material' },
+   451→        { id: '2.2.4', description: 'Los equipos móviles (escaleras, transpaletas, carros, utillajes sobre ruedas)' },
+   452→        { id: '2.2.5', description: 'Los medios de transporte (transpaletas, plataformas, carretillas, coches, camiones…)' },
+   453→        { id: '2.2.6', description: 'Las herramientas cuentan con ubicaciones señalizadas inequívocamente (sistemas poka-yoke, siluetas, etiquetas identificativas)' },
+   454→        { id: '2.2.7', description: 'Consumibles' },
+   455→      ],
+   456→    },
+   457→    {
+   458→      id: '2.3', title: 'SEÑALIZACIÓN',
+   459→      items: [
+   460→        { id: '2.3.1', description: 'Están señalizados de forma visible e inequívoca los mandos de maniobra de los equipos y máquinas (sentido de movimiento, on/off, stop, parada de emergencia…)' },
+   461→        { id: '2.3.2', description: 'Se puede reconocer cuando las máquinas están en tensión (con señal luminosa tipo led o similar)' },
+   462→        { id: '2.3.3', description: 'Existe señalización de peligro cuando las máquinas están en funcionamiento (luz rotatoria luminosa, señal destellante, aviso sonoro, balizamiento o cartel advertencia)' },
+   463→        { id: '2.3.4', description: 'La señalización del lugar es adecuada y visible desde todos los puntos (en especial la relativa a medios de extinción y vías de evacuación)' },
+   464→        { id: '2.3.5', description: 'Otros (Indicar cuál)', hasOther: true },
+   465→      ],
+   466→    },
+   467→    {
+   468→      id: '2.4', title: 'STOCKS DE MATERIAL',
+   469→      items: [
+   470→        { id: '2.4.1', description: 'Están identificados los materiales en el área de trabajo?' },
+   471→        { id: '2.4.2', description: 'Las etiquetas identificativas están en buenas condiciones, son claras y visibles' },
+   472→        { id: '2.4.3', description: 'La identificación informa acerca del cliente y proveedor' },
+   473→        { id: '2.4.4', description: 'La identificación contiene la denominación del material, referencia o artículo' },
+   474→        { id: '2.4.5', description: 'Es correcta la información, coincide esta con el material al que identifican y su ubicación' },
+   475→        { id: '2.4.6', description: 'Otros (Indicar cuál)', hasOther: true },
+   476→      ],
+   477→    },
+   478→    {
+   479→      id: '2.5', title: 'LAYOUT',
+   480→      items: [
+   481→        { id: '2.5.1', description: 'Existe un layout actualizado de la zona que refleja la disposición real de equipos, máquinas y elementos' },
+   482→        { id: '2.5.2', description: 'El layout está visible y accesible para todo el personal de la zona' },
+   483→        { id: '2.5.3', description: 'Las ubicaciones en el layout están codificadas y referenciadas (nomenclatura de posiciones)' },
+   484→        { id: '2.5.4', description: 'El layout se actualiza tras cada cambio de disposición de la zona' },
+   485→        { id: '2.5.5', description: 'El flujo de materiales y personas está definido en el layout (entradas, salidas, recorridos)' },
+   486→        { id: '2.5.6', description: 'Otros (Indicar cuál)', hasOther: true },
+   487→      ],
+   488→    },
+   489→    {
+   490→      id: '2.6', title: 'CÓDIGO DE COLORES / MARCADO DE SUELO',
+   491→      items: [
+   492→        { id: '2.6.1', description: 'Existe un código de colores definido y documentado para el marcado del suelo de la zona' },
+   493→        { id: '2.6.2', description: 'El código de colores es conocido por todo el personal (está expuesto o en la biblioteca de estándares)' },
+   494→        { id: '2.6.3', description: 'Las líneas de suelo están pintadas o pegadas en buen estado, sin desgaste ni roturas' },
+   495→        { id: '2.6.4', description: 'Los pasillos de circulación están delimitados con el color correspondiente según el código' },
+   496→        { id: '2.6.5', description: 'Las zonas de almacenamiento y ubicación de materiales están delimitadas con el color correspondiente' },
+   497→        { id: '2.6.6', description: 'Las zonas de peligro/restricción están marcadas con el color de aviso correspondiente' },
+   498→        { id: '2.6.7', description: 'Las áreas de evacuación y seguridad están señalizadas en suelo según normativa' },
+   499→        { id: '2.6.8', description: 'Otros (Indicar cuál)', hasOther: true },
+   500→      ],
+   501→    },
+   502→  ],
+   503→
+   504→  3: [
+   505→    {
+   506→      id: '3.1', title: 'MÁQUINAS O PUESTOS DE TRABAJO',
+   507→      items: [
+   508→        { id: '3.1.1', description: 'Máquinas herramienta o grandes utillajes anclados al suelo (volteo o anclaje de piezas para ensamblar)' },
+   509→        { id: '3.1.2', description: 'Bancos de trabajo o de pruebas' },
+   510→        { id: '3.1.3', description: 'Grúas, carretillas y otros vehículos móviles' },
+   511→        { id: '3.1.4', description: 'Andamios' },
+   512→        { id: '3.1.5', description: 'Mesas, taburetes, sillas' },
+   513→        { id: '3.1.6', description: 'Otros (Indicar cuál)', hasOther: true },
+   514→      ],
+   515→    },
+   516→    {
+   517→      id: '3.2', title: 'ENTORNO DE TRABAJO',
+   518→      items: [
+   519→        { id: '3.2.1', description: 'Suelos' },
+   520→        { id: '3.2.2', description: 'Paredes, columnas, techos, ventanas, puertas, alfeizares…' },
+   521→        { id: '3.2.3', description: 'Paneles informativos y de gestión operativa (producción, indicadores…)' },
+   522→        { id: '3.2.4', description: 'Otros (Indicar cuál)', hasOther: true },
+   523→      ],
+   524→    },
+   525→    {
+   526→      id: '3.3', title: 'HERRAMIENTAS Y EQUIPOS',
+   527→      items: [
+   528→        { id: '3.3.1', description: 'Están limpias las herramientas? Se pueden manipular sin mancharse? (no hay restos de grasas, silicona, pintura seca..)' },
+   529→        { id: '3.3.2', description: 'Los equipos de trabajo, bombas de apriete, útiles...' },
+   530→        { id: '3.3.3', description: 'Están limpios los equipos y accesorios de elevación' },
+   531→        { id: '3.3.4', description: 'Se mantiene limpio el equipamiento en el interior de los armarios y/o cajones, incluso si no se está usando' },
+   532→        { id: '3.3.5', description: 'Otros (Indicar cuál)', hasOther: true },
+   533→      ],
+   534→    },
+   535→    {
+   536→      id: '3.4', title: 'MANTENER LIMPIO',
+   537→      items: [
+   538→        { id: '3.4.1', description: '¿Se sabe quién debe limpiar, cuándo y dónde?' },
+   539→        { id: '3.4.2', description: '¿Cubre las necesidades de la zona? (tener en cuenta el resultado en los puntos anteriores)' },
+   540→        { id: '3.4.3', description: '¿Se realiza la limpieza según lo planificado? (frecuencia, dedicación de tiempo, etc..)' },
+   541→        { id: '3.4.4', description: 'Están limpios los Equipos de Protección Individual EPI (gafas, protección respiratoria, cascos, guantes…)' },
+   542→        { id: '3.4.5', description: 'Se evidencia una tendencia a manchar menos en la rutina del trabajo diario (la ropa de trabajo se mantiene limpia, no se dejan huellas en superficies limpias, se limpia cuando se ensucia, no hay basura en lugares de paso…)' },
+   543→        { id: '3.4.6', description: 'Otros (Indicar cuál)', hasOther: true },
+   544→      ],
+   545→    },
+   546→    {
+   547→      id: '3.5', title: 'KIT DE LIMPIEZA',
+   548→      items: [
+   549→        { id: '3.5.1', description: 'Hay un kit de limpieza básico disponible en la zona?' },
+   550→        { id: '3.5.2', description: 'Es adecuado el kit de limpieza al tipo de suciedad y superficies a limpiar? (desengrasante si hay que limpiar grasa, escoba si hay que barrer…)' },
+   551→        { id: '3.5.3', description: 'La cantidad de contenedores es adecuada a los residuos generados, estos no están excesivamente llenos (tapa cerrada) ni hay basura fuera del contenedor.' },
+   552→        { id: '3.5.4', description: 'Se realiza una recogida selectiva de los residuos (como mínimo los residuos peligrosos deben estar separados de los residuos inertes)' },
+   553→        { id: '3.5.5', description: 'Otros (Indicar cuál)', hasOther: true },
+   554→      ],
+   555→    },
+   556→  ],
+   557→
+   558→  4: [
+   559→    {
+   560→      id: '4.1', title: 'ESTANDARIZACIÓN',
+   561→      items: [
+   562→        { id: '4.1.1', description: 'Se respetan los estándares globales en cuanto a marcaje y uso en Suelos' },
+   563→        { id: '4.1.2', description: 'Se respetan los estándares globales en cuanto a marcaje y uso en Pasillos' },
+   564→        { id: '4.1.3', description: 'Se respetan los estándares globales en cuanto a marcaje y uso en Zonas de trabajo, entrada y salida de materiales' },
+   565→        { id: '4.1.4', description: 'Se respetan los estándares globales en cuanto a marcaje y uso en Residuos, zonas de riesgo permanente y de paso no permitido' },
+   566→        { id: '4.1.5', description: 'Está construido según el estándar corporativo el Panel PDCA' },
+   567→        { id: '4.1.6', description: 'Está construido según el estándar corporativo el Panel Lay Out Global' },
+   568→        { id: '4.1.7', description: 'Otros (Indicar cuál)', hasOther: true },
+   569→      ],
+   570→    },
+   571→    {
+   572→      id: '4.2', title: 'RESPETAR ESTÁNDARES',
+   573→      items: [
+   574→        { id: '4.2.1', description: 'Las ubicaciones en el suelo son respetadas, todo está ubicado en su lugar correspondiente' },
+   575→        { id: '4.2.2', description: 'Las ubicaciones de las herramientas en los paneles y cajas (incluso en el interior) son respetadas, no se encuentran herramientas fuera de ubicación' },
+   576→        { id: '4.2.3', description: 'Se aplican los estándares creados en una zona o departamento en el resto de zonas (copiar-pegar). No hay diferentes estándares para la misma función (diferentes códigos de colores, formatos, señalización, etc)' },
+   577→        { id: '4.2.4', description: 'La documentación se encuentra organizada y clasificada de forma que facilita su localización' },
+   578→        { id: '4.2.5', description: 'Otros (Indicar cuál)', hasOther: true },
+   579→      ],
+   580→    },
+   581→    {
+   582→      id: '4.3', title: 'INSPECCIÓN Y MANTENIMIENTO',
+   583→      items: [
+   584→        { id: '4.3.1', description: 'Existen planes de inspección para máquinas y equipos de trabajo que requieran mantenimiento periódico?' },
+   585→        { id: '4.3.2', description: 'Podemos reconocer visualmente si las máquinas y equipos han pasado la inspección periódica correspondiente de forma favorable (con etiquetas de colores o sistemas análogos)' },
+   586→        { id: '4.3.3', description: 'Se aplica un sistema con código de colores para la indicación visual del estado de revisión en los equipos y accesorios de elevación?' },
+   587→        { id: '4.3.4', description: 'Otros (Indicar cuál)', hasOther: true },
+   588→      ],
+   589→    },
+   590→    {
+   591→      id: '4.4', title: 'INSTRUCCIONES VISUALES',
+   592→      items: [
+   593→        { id: '4.4.1', description: 'Existen instrucciones gráficas en puntos visibles del área de trabajo sobre estándares de uso común (check list, fichas o planes de izado, diagramas de flujo, secuencias de proceso, instrucciones punto a punto,…)' },
+   594→        { id: '4.4.2', description: 'Los productos químicos están correctamente identificados, contenido, peligrosidad, riesgos para la salud,…y acompañados de su ficha de datos de seguridad' },
+   595→        { id: '4.4.3', description: 'Las señalizaciones de peligro e instrucciones de las máquinas y equipos se conservan de forma que sigan siendo útiles al usuario del equipo' },
+   596→        { id: '4.4.4', description: 'Se dispone de instrucciones visuales de cómo actuar en caso de emergencia (incendio, evacuación, derrame, accidente, etc.)' },
+   597→        { id: '4.4.5', description: 'Otros (Indicar cuál)', hasOther: true },
+   598→      ],
+   599→    },
+   600→    {
+   601→      id: '4.5', title: 'INDICADORES VISUALES',
+   602→      items: [
+   603→        { id: '4.5.1', description: 'Existe un panel o documento en lugar visible para el seguimiento de la producción (previsto/real, hitos, o similar)' },
+   604→        { id: '4.5.2', description: 'Se realiza un seguimiento visual de acciones correctivas, preventivas y de mejora continua (gráfico acciones PDCA, incidencias de calidad, etc..)' },
+   605→        { id: '4.5.3', description: 'Se mantienen actualizados todos los indicadores visuales existentes en la zona/proceso. Es una rutina constante la actualización y seguimiento' },
+   606→        { id: '4.5.4', description: 'Otros (Indicar cuál)', hasOther: true },
+   607→      ],
+   608→    },
+   609→  ],
+   610→
+   611→  5: [
+   612→    {
+   613→      id: '5.1', title: 'AUDITORÍAS',
+   614→      items: [
+   615→        { id: '5.1.1', description: 'Se realizan auditorías semanales 5S' },
+   616→        { id: '5.1.2', description: 'Se transforman las anomalías en acciones correctivas o de mejora con el fin de que no se repitan' },
+   617→        { id: '5.1.3', description: 'Si están implantadas otras herramientas de inspección o comprobación, estas son utilizadas según el estándar' },
+   618→        { id: '5.1.4', description: 'Otros (Indicar cuál)', hasOther: true },
+   619→      ],
+   620→    },
+   621→    {
+   622→      id: '5.2', title: 'GESTIÓN DE ANOMALÍAS',
+   623→      items: [
+   624→        { id: '5.2.1', description: 'Hay un sistema de declaración de anomalías implantado, entendiendo por "declaración de anomalías" hacerlas visibles, evitar que los problemas queden escondidos.' },
+   625→        { id: '5.2.2', description: 'Se encuentran evidencias de que el sistema de declaración de anomalías es eficaz, las anomalías se registran y se resuelven de forma efectiva, evitando que se repitan' },
+   626→        { id: '5.2.3', description: 'Existen instrucciones visuales del funcionamiento del sistema de declaración de anomalías' },
+   627→        { id: '5.2.4', description: 'Otros (Indicar cuál)', hasOther: true },
+   628→      ],
+   629→    },
+   630→    {
+   631→      id: '5.3', title: 'ACCIÓN',
+   632→      items: [
+   633→        { id: '5.3.1', description: 'Se gestiona la mejora continua a través del panel PDCA visual de la zona' },
+   634→        { id: '5.3.2', description: 'Las acciones de mejora se incluyen en el plan de acción y se realizan acciones semanalmente (mejora continua)' },
+   635→        { id: '5.3.3', description: 'Se lleva a cabo un seguimiento por medio de indicadores que miden la continuidad del ciclo PDCA.' },
+   636→        { id: '5.3.4', description: 'Otros (Indicar cuál)', hasOther: true },
+   637→      ],
+   638→    },
+   639→  ],
+   640→};
+   641→
+   642→/**
+   643→ * Audit result for a single checklist item
+   644→ */
+   645→export interface AuditItemResult {
+   646→  itemId: string;
+   647→  status: 'ok' | 'nok' | 'na';   // OK / NOK / No aplica
+   648→  hallazgo?: string;               // Referencia del hallazgo (desviación detectada)
+   649→  mejora?: string;                 // Punto a Mejorar (sugerencia)
+   650→  photoRef?: string;               // Referencia a foto (biblioteca de fotos paso 2)
+   651→  otherText?: string;              // Texto libre para items "Otros"
+   652→}
+   653→
+   654→/**
+   655→ * Complete audit result for one S-step
+   656→ */
+   657→export interface AuditResult {
+   658→  sStep: number;
+   659→  miniStep: number;               // 4 (autoevaluación interna) or 5 (auditoría externa)
+   660→  results: AuditItemResult[];
+   661→  score: number;                   // 0-100
+   662→  observaciones?: string;
+   663→  auditor?: string;                // Nombre del auditor (solo para paso 5)
+   664→  fecha?: string;                  // Fecha de la auditoría
+   665→}
+   666→
+   667→/** Calculate total items per S from the actual checklist data */
+   668→export function getAuditTotalItems(sStep: number): number {
+   669→  const sections = AUDIT_CHECKLISTS[sStep];
+   670→  if (!sections) return 0;
+   671→  return sections.reduce((sum, section) => sum + section.items.length, 0);
+   672→}
+   673→
+   674→/** Total items per S for scoring (computed from actual checklist data) */
+   675→export const AUDIT_TOTAL_ITEMS: Record<number, number> = {
+   676→  1: getAuditTotalItems(1),
+   677→  2: getAuditTotalItems(2),
+   678→  3: getAuditTotalItems(3),
+   679→  4: getAuditTotalItems(4),
+   680→  5: getAuditTotalItems(5),
+   681→};
+   682→
+   683→/** Combined quarterly audit (all 5 S together) — sStep=0 */
+   684→export const QUARTERLY_AUDIT_CHECKLIST: AuditSection[] = Object.values(AUDIT_CHECKLISTS).flat();
+   685→
+   686→/** Weekly audit — only cleaning (S3) checklist */
+   687→export const WEEKLY_AUDIT_CHECKLIST: AuditSection[] = AUDIT_CHECKLISTS[3];
+   688→
+   689→/** Monthly audit — abbreviated version: first 2 items from each section per S */
+   690→export const MONTHLY_AUDIT_CHECKLIST: AuditSection[] = Object.entries(AUDIT_CHECKLISTS).flatMap(([sStep, sections]) =>
+   691→  sections.map(section => ({
+   692→    ...section,
+   693→    items: section.items.slice(0, 2), // First 2 items per section for abbreviated audit
+   694→  }))
+   695→);
+   696→
+   697→/** Total items for weekly audit */
+   698→export const WEEKLY_AUDIT_TOTAL_ITEMS = WEEKLY_AUDIT_CHECKLIST.reduce(
+   699→  (sum, section) => sum + section.items.length,
+   700→  0
+   701→);
+   702→
+   703→/** Total items for monthly audit */
+   704→export const MONTHLY_AUDIT_TOTAL_ITEMS = MONTHLY_AUDIT_CHECKLIST.reduce(
+   705→  (sum, section) => sum + section.items.length,
+   706→  0
+   707→);
+   708→
+   709→/** Total items for quarterly combined audit */
+   710→export const QUARTERLY_AUDIT_TOTAL_ITEMS = QUARTERLY_AUDIT_CHECKLIST.reduce(
+   711→  (sum, section) => sum + section.items.length,
+   712→  0
+   713→);
+   714→
