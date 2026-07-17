@@ -181,7 +181,12 @@ export async function GET() {
     }
 
     if (upsertPromises.length > 0) {
-      await Promise.all(upsertPromises)
+      // Batch upserts to avoid overwhelming the connection pool (Neon limit)
+      const BATCH_SIZE = 20
+      for (let i = 0; i < upsertPromises.length; i += BATCH_SIZE) {
+        const batch = upsertPromises.slice(i, i + BATCH_SIZE)
+        await Promise.all(batch)
+      }
       configs = await db.rolePermissionConfig.findMany()
     }
 
@@ -189,12 +194,16 @@ export async function GET() {
     const allValidPermIds = new Set(ALL_PERMISSIONS)
     const staleConfigs = configs.filter(c => !allValidPermIds.has(c.permission))
     if (staleConfigs.length > 0) {
-      const deletePromises = staleConfigs.map(c =>
-        db.rolePermissionConfig.deleteMany({
-          where: { role: c.role, permission: c.permission },
-        })
-      )
-      await Promise.all(deletePromises)
+      // Batch deletes to avoid overwhelming the connection pool
+      const BATCH_SIZE = 20
+      for (let i = 0; i < staleConfigs.length; i += BATCH_SIZE) {
+        const batch = staleConfigs.slice(i, i + BATCH_SIZE)
+        await Promise.all(batch.map(c =>
+          db.rolePermissionConfig.deleteMany({
+            where: { role: c.role, permission: c.permission },
+          })
+        ))
+      }
       configs = await db.rolePermissionConfig.findMany()
     }
 
@@ -306,7 +315,12 @@ export async function POST(request: NextRequest) {
         )
       }
     }
-    await Promise.all(createPromises)
+    // Batch creates to avoid overwhelming the connection pool (Neon limit)
+    const BATCH_SIZE = 20
+    for (let i = 0; i < createPromises.length; i += BATCH_SIZE) {
+      const batch = createPromises.slice(i, i + BATCH_SIZE)
+      await Promise.all(batch)
+    }
 
     const configs = await db.rolePermissionConfig.findMany()
     const result: Record<string, Record<string, boolean>> = {}
