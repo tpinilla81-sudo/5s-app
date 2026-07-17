@@ -158,6 +158,31 @@ export async function GET(request: NextRequest) {
       db.actionItem.count({ where }),
     ])
 
+    // Additional counts for MaintenanceView counters
+    const [
+      checklistResponses,
+      auditResultsCount,
+      inventoryCount,
+    ] = await Promise.all([
+      db.checklistResponse.count({ where: baseWhere }),
+      db.auditResult.count({ where: baseWhere }),
+      db.inventoryItem.count({ where: baseWhere }),
+    ])
+    // Count photos from progress items (non-null photoUrls)
+    const photosCount = progressItems.filter(p => p.photoUrls && p.photoUrls.length > 2).length
+
+    // Per-S details (photos, actions, completed steps) for MaintenanceView
+    const perSDetails: Record<number, { photos: number; actions: number; completed: number }> = {}
+    for (let s = 1; s <= 5; s++) {
+      const sPhotos = progressItems.filter(p => p.sStep === s && p.photoUrls && p.photoUrls.length > 2).length
+      const sActions = await db.actionItem.count({ where: { ...where, sStep: s } })
+      perSDetails[s] = {
+        photos: sPhotos,
+        actions: sActions,
+        completed: perSProgress[s]?.completed || 0,
+      }
+    }
+
     // For company scope: get per-project breakdown (scoped to user's companies)
     let perProjectBreakdown = null
     if (companyScope === 'empresa') {
@@ -225,6 +250,14 @@ export async function GET(request: NextRequest) {
         totalMiniSteps,
         quesitosEarned,
         perSProgress,
+        perS: perSDetails,
+        total: {
+          checklistResponses: checklistResponses,
+          auditResults: auditResultsCount,
+          actionItems: totalActions,
+          inventory: inventoryCount,
+          completedSteps: completedMiniSteps,
+        },
         actions: {
           abierta,
           en_proceso,

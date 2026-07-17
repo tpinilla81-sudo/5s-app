@@ -55,14 +55,13 @@ interface SStepDetailProps {
 }
 
 /**
- * For miniStep 3: All S steps open 'inventario' with S-specific config
- * S5 inventario shows discipline practices inventory; action plan is accessible via Step 4 results
+ * For miniStep 3: S5 opens ActionPlanModal, all other S steps open InventarioModal with S-specific config
+ * S5 Step 3 = Plan de Acción (discipline action plan)
  * All other miniSteps are the same for every S.
  */
 function getModalType(miniStepId: number, sStep: number): ModalType {
-  // S5 Step 3 is still inventario (discipline practices) — action plan is accessible from Step 4 results
   if (miniStepId === 3) {
-    return 'inventario';
+    return sStep === 5 ? 'actionplan' : 'inventario';
   }
   const map: Record<number, ModalType> = {
     1: 'formacion',

@@ -354,3 +354,61 @@ Stage Summary:
 - Fallback robusto a AUDIT_CHECKLISTS en fetchAllChecklistTemplates
 - Plantillas de todas las S migradas automáticamente al formato correcto
 - Producción: https://5s-app-one.vercel.app
+
+---
+Task ID: 10
+Agent: Main Agent
+Task: Testear y corregir los 5 pasos de S5 (Mantener/Shitsuke) en producción
+
+Work Log:
+- Testeado S5 completo (5 pasos) en producción https://5s-app-one.vercel.app
+- Paso 1 (Formación + Examen): ✅ Funciona correctamente, contenido S5 correcto, 5 preguntas, aprobado
+- Paso 2 (Fotografías): ✅ Modal abre correctamente, tipos de foto disponibles, completado vía admin skip
+- Paso 3 (Plan de Acción): 🔴 BUG CRÍTICO — Botón "Nueva Entrada" mostraba "Error: Missing description"
+- Paso 4 (Autoevaluación): ✅ Funciona, 3 secciones con 12 puntos, scoring en tiempo real
+- Paso 5 (Auditoría): ✅ Funciona, modelo de scoring con mejoras, umbral 75%
+
+Fallos encontrados y corregidos:
+
+1. CRÍTICO — Botón "Nueva Entrada" del ActionPlanModal no funcionaba
+   - Causa: handleAddAction enviaba itemDescription: '' y hallazgo: '' al POST /api/actions
+   - El API rechazaba con "Missing description" porque ambos campos eran falsy
+   - FIX: Modificado /api/actions/route.ts — cuando source='actionplan', usa placeholder "Nueva entrada"
+   - effectiveDescription = hallazgo || itemDescription || (source === 'actionplan' ? 'Nueva entrada' : '')
+   - Ahora las entradas se crean como borradores editables con placeholder
+
+2. ALTO — Inconsistencia getModalType() entre archivos
+   - page.tsx y ResponsablePanel.tsx: S5 Step 3 → 'actionplan'
+   - SStepDetail.tsx: S5 Step 3 → 'inventario' (SIEMPRE inventario)
+   - Dependiendo de la ruta de navegación, se abrían modales diferentes
+   - FIX: SStepDetail.tsx ahora coincide con page.tsx: S5 Step 3 → 'actionplan'
+
+3. MEDIO — API PUT /api/actions no permitía actualizar hallazgo ni itemDescription
+   - Causa: El PUT handler no incluía body.hallazgo ni body.itemDescription en updateData
+   - El usuario podía editar la descripción en el UI pero los cambios no se guardaban
+   - FIX: Añadidos hallazgo, itemDescription, notas y auditor al PUT handler
+
+4. MEDIO — Contadores de Mejora Continua mostraban 0/5 pasos para todas las S
+   - Causa: /api/stats devolvía perSProgress pero el componente usaba stats.perS
+   - También faltaban stats.total con checklistResponses, auditResults, actionItems, inventory
+   - FIX: Ampliado /api/stats/route.ts para incluir:
+     - stats.perS: {photos, actions, completed} por cada S (1-5)
+     - stats.total: {checklistResponses, auditResults, actionItems, inventory, completedSteps}
+     - Fotos contadas desde progressItems con photoUrls no vacíos
+
+Verificación post-fix:
+- "Nueva Entrada" crea entrada correctamente ✅
+- S5 Step 3 abre ActionPlanModal desde todas las rutas ✅
+- Edición inline de hallazgo se guarda correctamente ✅
+- Contadores muestran valores correctos (25 pasos completados, 5/5 por S) ✅
+- S5 completo (5 pasos) completado en zona Almacén ✅
+
+Desplegado a producción: https://5s-app-one.vercel.app
+
+Stage Summary:
+- S5 (Mantener/Shitsuke) COMPLETADO al 100%
+- 4 bugs corregidos (1 crítico, 1 alto, 2 medios)
+- Plan de Acción funcional: crear, editar y completar entradas
+- Contadores de Mejora Continua muestran datos correctos
+- Todas las rutas a S5 Step 3 abren el mismo modal (ActionPlanModal)
+- Producción: https://5s-app-one.vercel.app

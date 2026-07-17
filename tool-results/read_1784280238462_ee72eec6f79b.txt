@@ -1,0 +1,593 @@
+     1→     1→'use client';
+     2→     2→
+     3→     3→import { useState, useEffect } from 'react';
+     4→     4→import { motion } from 'framer-motion';
+     5→     5→import { S_STEPS, MINI_STEPS } from '@/lib/5s-constants';
+     6→     6→import { use5SStore } from '@/lib/store';
+     7→     7→import MiniStepCard from './MiniStepCard';
+     8→     8→import { ArrowLeft, Trophy, ChevronDown, ChevronRight, ShieldCheck, AlertTriangle, AlertCircle, Camera } from 'lucide-react';
+     9→     9→import { Button } from '@/components/ui/button';
+    10→    10→import { Progress } from '@/components/ui/progress';
+    11→    11→import { Badge } from '@/components/ui/badge';
+    12→    12→import { Card, CardContent } from '@/components/ui/card';
+    13→    13→import QuesitoDisplay from './QuesitoDisplay';
+    14→    14→
+    15→    15→export type ModalType = 'formacion' | 'fotos' | 'inventario' | 'actionplan' | 'autoevaluacion' | 'auditoria' | 'globalActionPlan' | 'globalInventory' | 'auditResults' | 'photoLibrary';
+    16→    16→
+    17→    17→interface AuditHistoryItem {
+    18→    18→  id: string;
+    19→    19→  auditorName: string;
+    20→    20→  result: string;
+    21→    21→  score: number | null;
+    22→    22→  observations: string | null;
+    23→    23→  auditDate: string;
+    24→    24→  checklistData: string | null;
+    25→    25→}
+    26→    26→
+    27→    27→interface OverdueAction {
+    28→    28→  id: string;
+    29→    29→  itemDescription: string;
+    30→    30→  responsable: string | null;
+    31→    31→  fechaLimite: string | null;
+    32→    32→}
+    33→    33→
+    34→    34→interface RelatedAction {
+    35→    35→  id: string;
+    36→    36→  hallazgo: string;
+    37→    37→  itemDescription: string;
+    38→    38→  mejora: string | null;
+    39→    39→  responsable: string | null;
+    40→    40→  estado: string;
+    41→    41→  fechaCompromiso: string | null;
+    42→    42→  fechaReal: string | null;
+    43→    43→  fechaResolucion: string | null;
+    44→    44→  accionCorrectiva: string | null;
+    45→    45→  accionesPreventivas: string | null;
+    46→    46→  verificadoPor: string | null;
+    47→    47→  porcentaje: number | null;
+    48→    48→  zoneId: string | null;
+    49→    49→}
+    50→    50→
+    51→    51→interface SStepDetailProps {
+    52→    52→  sStep: number;
+    53→    53→  onBack: () => void;
+    54→    54→  onOpenModal: (type: ModalType, miniStep: number) => void;
+    55→    55→}
+    56→    56→
+    57→    57→/**
+    58→    58→ * For miniStep 3: All S steps open 'inventario' with S-specific config
+    59→    59→ * S5 inventario shows discipline practices inventory; action plan is accessible via Step 4 results
+    60→    60→ * All other miniSteps are the same for every S.
+    61→    61→ */
+    62→    62→function getModalType(miniStepId: number, sStep: number): ModalType {
+    63→    63→  // S5 Step 3 is still inventario (discipline practices) — action plan is accessible from Step 4 results
+    64→    64→  if (miniStepId === 3) {
+    65→    65→    return 'inventario';
+    66→    66→  }
+    67→    67→  const map: Record<number, ModalType> = {
+    68→    68→    1: 'formacion',
+    69→    69→    2: 'fotos',
+    70→    70→    4: 'autoevaluacion',
+    71→    71→    5: 'auditoria',
+    72→    72→  };
+    73→    73→  return map[miniStepId] || 'formacion';
+    74→    74→}
+    75→    75→
+    76→    76→export default function SStepDetail({ sStep, onBack, onOpenModal }: SStepDetailProps) {
+    77→    77→  const { getMiniStepStatus, isQuesitoEarned, progress, currentUser, adminFreeNavigation, currentProject, currentZone, employeeProgress } = use5SStore();
+    78→    78→  const sStepData = S_STEPS.find(s => s.id === sStep);
+    79→    79→  const earned = isQuesitoEarned(sStep);
+    80→    80→
+    81→    81→  // TASK 6: Audit history state
+    82→    82→  const [auditHistory, setAuditHistory] = useState<AuditHistoryItem[]>([]);
+    83→    83→  const [showAuditHistory, setShowAuditHistory] = useState(false);
+    84→    84→
+    85→    85→  // TASK 8: Overdue actions state
+    86→    86→  const [overdueActions, setOverdueActions] = useState<OverdueAction[]>([]);
+    87→    87→
+    88→    88→  // Related action items for audit disfunciones
+    89→    89→  const [relatedActions, setRelatedActions] = useState<RelatedAction[]>([]);
+    90→    90→
+    91→    91→  const loadAuditHistory = async () => {
+    92→    92→    try {
+    93→    93→      const params = currentProject
+    94→    94→        ? `?sStep=${sStep}&projectId=${currentProject.id}`
+    95→    95→        : `?sStep=${sStep}`;
+    96→    96→      const res = await fetch(`/api/audit${params}`);
+    97→    97→      const json = await res.json();
+    98→    98→      if (json.success) {
+    99→    99→        setAuditHistory(json.audits || json.data || []);
+   100→   100→      }
+   101→   101→    } catch (error) {
+   102→   102→      console.error('Error loading audit history:', error);
+   103→   103→    }
+   104→   104→  };
+   105→   105→
+   106→   106→  const loadOverdueActions = async () => {
+   107→   107→    try {
+   108→   108→      const today = new Date().toISOString().split('T')[0];
+   109→   109→      const params = currentProject
+   110→   110→        ? `?sStep=${sStep}&projectId=${currentProject.id}`
+   111→   111→        : `?sStep=${sStep}`;
+   112→   112→      const res = await fetch(`/api/actions${params}`);
+   113→   113→      const json = await res.json();
+   114→   114→      if (json.success && json.data) {
+   115→   115→        const overdue = json.data.filter((a: any) =>
+   116→   116→          (a.estado === 'abierta' || a.estado === 'en_proceso')
+   117→   117→          && a.fechaLimite
+   118→   118→          && new Date(a.fechaLimite).toISOString().split('T')[0] < today
+   119→   119→        );
+   120→   120→        setOverdueActions(overdue);
+   121→   121→      }
+   122→   122→    } catch (error) {
+   123→   123→      console.error('Error loading overdue actions:', error);
+   124→   124→    }
+   125→   125→  };
+   126→   126→
+   127→   127→  const loadRelatedActions = async () => {
+   128→   128→    try {
+   129→   129→      const params = new URLSearchParams();
+   130→   130→      params.set('sStep', String(sStep));
+   131→   131→      if (currentProject?.id) params.set('projectId', currentProject.id);
+   132→   132→      if (currentUser?.id) params.set('userId', currentUser.id);
+   133→   133→      if (currentUser?.role) params.set('userRole', currentUser.role);
+   134→   134→      const res = await fetch(`/api/actions?${params.toString()}`);
+   135→   135→      const json = await res.json();
+   136→   136→      if (json.success && json.data) {
+   137→   137→        const auditActions = json.data.filter((a: any) =>
+   138→   138→          a.source?.startsWith('auditoria')
+   139→   139→        ).map((a: any) => ({
+   140→   140→          id: a.id,
+   141→   141→          hallazgo: a.hallazgo || '',
+   142→   142→          itemDescription: a.itemDescription || '',
+   143→   143→          mejora: a.mejora || null,
+   144→   144→          responsable: a.responsable || null,
+   145→   145→          estado: a.estado || 'abierta',
+   146→   146→          fechaCompromiso: a.fechaCompromiso || null,
+   147→   147→          fechaReal: a.fechaReal || null,
+   148→   148→          fechaResolucion: a.fechaResolucion || null,
+   149→   149→          accionCorrectiva: a.accionCorrectiva || null,
+   150→   150→          accionesPreventivas: a.accionesPreventivas || null,
+   151→   151→          verificadoPor: a.verificadoPor || null,
+   152→   152→          porcentaje: a.porcentaje || null,
+   153→   153→          zoneId: a.zoneId || null,
+   154→   154→        }));
+   155→   155→        setRelatedActions(auditActions);
+   156→   156→      }
+   157→   157→    } catch (error) {
+   158→   158→      console.error('Error loading related actions:', error);
+   159→   159→    }
+   160→   160→  };
+   161→   161→
+   162→   162→  useEffect(() => {
+   163→   163→    loadAuditHistory();
+   164→   164→    loadOverdueActions();
+   165→   165→    loadRelatedActions();
+   166→   166→  }, [sStep, currentProject]);
+   167→   167→
+   168→   168→  if (!sStepData) return null;
+   169→   169→
+   170→   170→  const sProgress = progress.filter(p => p.sStep === sStep);
+   171→   171→
+   172→   172→  // Use getMiniStepStatus as the single source of truth for step completion
+   173→   173→  // This ensures the progress bar matches the visual dots on the Board5S
+   174→   174→  let completedCount = 0;
+   175→   175→  for (let ms = 1; ms <= 5; ms++) {
+   176→   176→    const status = getMiniStepStatus(sStep, ms);
+   177→   177→    if (status === 'completed' || status === 'completed_viewonly') completedCount++;
+   178→   178→  }
+   179→   179→  const totalSteps = 5; // Always 5 mini-steps per S
+   180→   180→  const progressPercent = Math.min(Math.round((completedCount / totalSteps) * 100), 100);
+   181→   181→
+   182→   182→  return (
+   183→   183→    <motion.div
+   184→   184→      initial={{ opacity: 0, x: 50 }}
+   185→   185→      animate={{ opacity: 1, x: 0 }}
+   186→   186→      exit={{ opacity: 0, x: -50 }}
+   187→   187→      transition={{ duration: 0.3 }}
+   188→   188→      className="w-full max-w-2xl mx-auto"
+   189→   189→    >
+   190→   190→      {/* Header */}
+   191→   191→      <div className="flex items-center gap-3 mb-6">
+   192→   192→        <Button
+   193→   193→          variant="ghost"
+   194→   194→          size="icon"
+   195→   195→          onClick={onBack}
+   196→   196→          className="shrink-0"
+   197→   197→        >
+   198→   198→          <ArrowLeft className="h-5 w-5" />
+   199→   199→        </Button>
+   200→   200→        <div className="flex-1">
+   201→   201→          <div className="flex items-center gap-2">
+   202→   202→            <div
+   203→   203→              className="w-4 h-4 rounded-full"
+   204→   204→              style={{ backgroundColor: sStepData.color }}
+   205→   205→            />
+   206→   206→            <h2 className="text-xl font-bold" style={{ color: sStepData.color }}>
+   207→   207→              {sStepData.name}
+   208→   208→            </h2>
+   209→   209→            <span className="text-sm text-muted-foreground">
+   210→   210→              ({sStepData.japaneseName} - {sStepData.spanishName})
+   211→   211→            </span>
+   212→   212→          </div>
+   213→   213→          <p className="text-sm text-muted-foreground mt-1">
+   214→   214→            {sStepData.description}
+   215→   215→          </p>
+   216→   216→        </div>
+   217→   217→        <Button
+   218→   218→          variant="outline"
+   219→   219→          size="sm"
+   220→   220→          onClick={() => onOpenModal('photoLibrary', 2)}
+   221→   221→          className="gap-1.5 shrink-0"
+   222→   222→          style={{ borderColor: sStepData.color + '60', color: sStepData.color }}
+   223→   223→        >
+   224→   224→          <Camera className="h-4 w-4" />
+   225→   225→          <span className="text-xs">Biblioteca</span>
+   226→   226→        </Button>
+   227→   227→      </div>
+   228→   228→
+   229→   229→      {/* TASK 8: Overdue actions banner */}
+   230→   230→      {overdueActions.length > 0 && (
+   231→   231→        <motion.div
+   232→   232→          initial={{ opacity: 0, y: -10 }}
+   233→   233→          animate={{ opacity: 1, y: 0 }}
+   234→   234→          className="mb-4 p-3 rounded-lg bg-red-50 border border-red-200 flex items-center gap-2"
+   235→   235→        >
+   236→   236→          <AlertTriangle className="h-4 w-4 text-red-600 shrink-0" />
+   237→   237→          <div className="flex-1">
+   238→   238→            <span className="text-sm text-red-700 font-medium">
+   239→   239→              {overdueActions.length} acción(es) con fecha vencida en {sStepData.name}
+   240→   240→            </span>
+   241→   241→            <div className="mt-1 space-y-0.5">
+   242→   242→              {overdueActions.slice(0, 3).map(action => (
+   243→   243→                <p key={action.id} className="text-xs text-red-600">
+   244→   244→                  • {action.itemDescription} {action.responsable && `(${action.responsable})`}
+   245→   245→                </p>
+   246→   246→              ))}
+   247→   247→              {overdueActions.length > 3 && (
+   248→   248→                <p className="text-xs text-red-500">... y {overdueActions.length - 3} más</p>
+   249→   249→              )}
+   250→   250→            </div>
+   251→   251→          </div>
+   252→   252→        </motion.div>
+   253→   253→      )}
+   254→   254→
+   255→   255→      {/* Progress bar */}
+   256→   256→      <div className="mb-6 px-1">
+   257→   257→        <div className="flex justify-between items-center mb-2">
+   258→   258→          <span className="text-sm font-medium">Progreso</span>
+   259→   259→          <span className="text-sm text-muted-foreground">{completedCount}/{totalSteps} completados</span>
+   260→   260→        </div>
+   261→   261→        <Progress value={progressPercent} className="h-3" />
+   262→   262→      </div>
+   263→   263→
+   264→   264→      {/* Quesito display */}
+   265→   265→      {earned && (
+   266→   266→        <motion.div
+   267→   267→          initial={{ scale: 0.8, opacity: 0 }}
+   268→   268→          animate={{ scale: 1, opacity: 1 }}
+   269→   269→          className="mb-6 p-4 rounded-lg border-2 bg-green-50 border-green-200 flex items-center gap-3"
+   270→   270→        >
+   271→   271→          <Trophy className="h-8 w-8 text-green-500" />
+   272→   272→          <div>
+   273→   273→            <p className="font-bold text-green-700">¡Quesito Obtenido!</p>
+   274→   274→            <p className="text-sm text-green-600">Ha completado todos los mini-pasos de {sStepData.name}</p>
+   275→   275→          </div>
+   276→   276→          <div className="ml-auto">
+   277→   277→            <QuesitoDisplay sStep={sStep} />
+   278→   278→          </div>
+   279→   279→        </motion.div>
+   280→   280→      )}
+   281→   281→
+   282→   282→      {/* TASK 6: Audit History (collapsible) - enhanced with full action details */}
+   283→   283→      {(auditHistory.length > 0 || relatedActions.length > 0) && (
+   284→   284→        <Card className="mb-4 border-2 border-blue-200 bg-blue-50/30">
+   285→   285→          <button
+   286→   286→            className="w-full p-3 flex items-center gap-2 hover:bg-blue-100/30 transition-colors text-left"
+   287→   287→            onClick={() => setShowAuditHistory(!showAuditHistory)}
+   288→   288→          >
+   289→   289→            {showAuditHistory ? (
+   290→   290→              <ChevronDown className="h-4 w-4 text-blue-600" />
+   291→   291→            ) : (
+   292→   292→              <ChevronRight className="h-4 w-4 text-blue-600" />
+   293→   293→            )}
+   294→   294→            <ShieldCheck className="h-4 w-4 text-blue-600" />
+   295→   295→            <span className="text-sm font-semibold text-blue-800">Historial de Auditorías</span>
+   296→   296→            <Badge variant="outline" className="text-xs border-blue-300 text-blue-700">{auditHistory.length}</Badge>
+   297→   297→            {relatedActions.length > 0 && (
+   298→   298→              <Badge className="bg-orange-100 text-orange-700 text-[10px]">
+   299→   299→                {relatedActions.filter(a => a.estado === 'abierta' || a.estado === 'en_proceso').length} disfunc. abiertas
+   300→   300→              </Badge>
+   301→   301→            )}
+   302→   302→            <div className="ml-auto flex items-center gap-1">
+   303→   303→              {auditHistory.filter(a => a.result === 'no_apto').length > 0 && (
+   304→   304→                <Badge className="bg-red-100 text-red-700 text-[10px]">
+   305→   305→                  {auditHistory.filter(a => a.result === 'no_apto').length} no apto(s)
+   306→   306→                </Badge>
+   307→   307→              )}
+   308→   308→              {auditHistory.filter(a => a.result === 'apto').length > 0 && (
+   309→   309→                <Badge className="bg-green-100 text-green-700 text-[10px]">
+   310→   310→                  {auditHistory.filter(a => a.result === 'apto').length} apto(s)
+   311→   311→                </Badge>
+   312→   312→              )}
+   313→   313→            </div>
+   314→   314→          </button>
+   315→   315→          {showAuditHistory && (
+   316→   316→            <CardContent className="px-4 pb-4 pt-0 space-y-3">
+   317→   317→              {auditHistory.map((audit, idx) => {
+   318→   318→                // Parse checklist data to find NOK items
+   319→   319→                let nokItems: Array<{ itemId: string; hallazgo?: string; mejora?: string }> = [];
+   320→   320→                try {
+   321→   321→                  if (audit.checklistData) {
+   322→   322→                    const parsed = typeof audit.checklistData === 'string' ? JSON.parse(audit.checklistData) : audit.checklistData;
+   323→   323→                    if (Array.isArray(parsed)) {
+   324→   324→                      nokItems = parsed.filter((r: any) => r.status === 'nok');
+   325→   325→                    }
+   326→   326→                  }
+   327→   327→                } catch {}
+   328→   328→
+   329→   329→                // Find related action items for this audit
+   330→   330→                const auditRelatedActions = relatedActions.filter(a =>
+   331→   331→                  a.hallazgo && nokItems.some(nok => nok.itemId && a.hallazgo.includes(nok.itemId))
+   332→   332→                );
+   333→   333→                // If no exact match, show all related actions for this sStep
+   334→   334→                const displayActions = auditRelatedActions.length > 0 ? auditRelatedActions : [];
+   335→   335→
+   336→   336→                return (
+   337→   337→                  <div
+   338→   338→                    key={audit.id}
+   339→   339→                    className={`p-3 rounded-lg border text-xs ${
+   340→   340→                      audit.result === 'apto' ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'
+   341→   341→                    }`}
+   342→   342→                  >
+   343→   343→                    <div className="flex items-center justify-between mb-1">
+   344→   344→                      <div className="flex items-center gap-2">
+   345→   345→                        <span className="font-semibold">Auditoría {idx + 1}</span>
+   346→   346→                        <Badge className={audit.result === 'apto' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}>
+   347→   347→                          {audit.result === 'apto' ? '✅ Apto' : '❌ No Apto'}
+   348→   348→                        </Badge>
+   349→   349→                        {audit.score !== null && (
+   350→   350→                          <Badge variant="outline" className="text-[10px]">
+   351→   351→                            {audit.score}%
+   352→   352→                          </Badge>
+   353→   353→                        )}
+   354→   354→                      </div>
+   355→   355→                      <span className="text-muted-foreground">
+   356→   356→                        {new Date(audit.auditDate).toLocaleDateString('es-ES')}
+   357→   357→                      </span>
+   358→   358→                    </div>
+   359→   359→                    <div className="flex items-center gap-3 text-muted-foreground">
+   360→   360→                      <span>Auditor: <strong>{audit.auditorName}</strong></span>
+   361→   361→                    </div>
+   362→   362→                    {audit.observations && (
+   363→   363→                      <p className="mt-1 text-muted-foreground italic">"{audit.observations}"</p>
+   364→   364→                    )}
+   365→   365→                    {nokItems.length > 0 && (
+   366→   366→                      <div className="mt-2 space-y-0.5">
+   367→   367→                        <p className="font-medium text-red-700">Disfunciones ({nokItems.length}):</p>
+   368→   368→                        {nokItems.map((nok, nIdx) => (
+   369→   369→                          <div key={nIdx} className="pl-3 text-red-600">
+   370→   370→                            • {nok.itemId} {nok.hallazgo ? `— ${nok.hallazgo}` : ''}
+   371→   371→                          </div>
+   372→   372→                        ))}
+   373→   373→                      </div>
+   374→   374→                    )}
+   375→   375→
+   376→   376→                    {/* Related action items with full details */}
+   377→   377→                    {displayActions.length > 0 && (
+   378→   378→                      <div className="mt-3 border-t border-blue-200 pt-2">
+   379→   379→                        <p className="font-semibold text-blue-700 mb-1.5">
+   380→   380→                          Plan de Acción — Seguimiento de Disfunciones:
+   381→   381→                        </p>
+   382→   382→                        <div className="space-y-1.5">
+   383→   383→                          {displayActions.map(action => (
+   384→   384→                            <div key={action.id} className="bg-white/80 border rounded p-2 space-y-1">
+   385→   385→                              <div className="grid grid-cols-2 gap-1.5">
+   386→   386→                                <div>
+   387→   387→                                  <span className="text-muted-foreground font-medium">Concepto:</span>
+   388→   388→                                  <p className="font-medium">{action.hallazgo || action.itemDescription || '—'}</p>
+   389→   389→                                </div>
+   390→   390→                                <div>
+   391→   391→                                  <span className="text-muted-foreground font-medium">Plan de Acción:</span>
+   392→   392→                                  <p className="font-medium">{action.accionCorrectiva || action.mejora || '—'}</p>
+   393→   393→                                </div>
+   394→   394→                                <div>
+   395→   395→                                  <span className="text-muted-foreground font-medium">Responsable:</span>
+   396→   396→                                  <p className="font-medium">{action.responsable || 'Sin asignar'}</p>
+   397→   397→                                </div>
+   398→   398→                                <div>
+   399→   399→                                  <span className="text-muted-foreground font-medium">Estado:</span>
+   400→   400→                                  <Badge className={
+   401→   401→                                    action.estado === 'abierta' ? 'bg-red-100 text-red-800' :
+   402→   402→                                    action.estado === 'en_proceso' ? 'bg-amber-100 text-amber-800' :
+   403→   403→                                    'bg-green-100 text-green-800'
+   404→   404→                                  }>
+   405→   405→                                    {action.estado === 'abierta' ? 'Abierta' :
+   406→   406→                                     action.estado === 'en_proceso' ? 'En Proceso' :
+   407→   407→                                     action.estado === 'resuelta' ? 'Resuelta' : 'Cerrada'}
+   408→   408→                                  </Badge>
+   409→   409→                                </div>
+   410→   410→                                <div>
+   411→   411→                                  <span className="text-muted-foreground font-medium">Fecha Compromiso:</span>
+   412→   412→                                  <p className="font-medium text-blue-600">
+   413→   413→                                    {action.fechaCompromiso ? new Date(action.fechaCompromiso).toLocaleDateString('es-ES') : '—'}
+   414→   414→                                  </p>
+   415→   415→                                </div>
+   416→   416→                                <div>
+   417→   417→                                  <span className="text-muted-foreground font-medium">Fecha Real Cierre:</span>
+   418→   418→                                  <p className="font-medium text-green-600">
+   419→   419→                                    {action.fechaReal || action.fechaResolucion
+   420→   420→                                      ? new Date(action.fechaReal || action.fechaResolucion!).toLocaleDateString('es-ES')
+   421→   421→                                      : '—'}
+   422→   422→                                  </p>
+   423→   423→                                </div>
+   424→   424→                              </div>
+   425→   425→                              {action.accionesPreventivas && (
+   426→   426→                                <div>
+   427→   427→                                  <span className="text-muted-foreground font-medium">Acciones Preventivas:</span>
+   428→   428→                                  <p>{action.accionesPreventivas}</p>
+   429→   429→                                </div>
+   430→   430→                              )}
+   431→   431→                            </div>
+   432→   432→                          ))}
+   433→   433→                        </div>
+   434→   434→                      </div>
+   435→   435→                    )}
+   436→   436→                  </div>
+   437→   437→                );
+   438→   438→              })}
+   439→   439→
+   440→   440→              {/* Show ALL related audit actions if not matched to specific audits */}
+   441→   441→              {relatedActions.length > 0 && auditHistory.length === 0 && (
+   442→   442→                <div className="p-3 rounded-lg border bg-orange-50 border-orange-200 text-xs">
+   443→   443→                  <p className="font-semibold text-orange-700 mb-1.5">
+   444→   444→                    Disfunciones de Auditoría ({relatedActions.length}):
+   445→   445→                  </p>
+   446→   446→                  <div className="space-y-1.5">
+   447→   447→                    {relatedActions.map(action => (
+   448→   448→                      <div key={action.id} className="bg-white/80 border rounded p-2 space-y-1">
+   449→   449→                        <div className="grid grid-cols-2 gap-1.5">
+   450→   450→                          <div>
+   451→   451→                            <span className="text-muted-foreground font-medium">Concepto:</span>
+   452→   452→                            <p className="font-medium">{action.hallazgo || action.itemDescription || '—'}</p>
+   453→   453→                          </div>
+   454→   454→                          <div>
+   455→   455→                            <span className="text-muted-foreground font-medium">Plan de Acción:</span>
+   456→   456→                            <p className="font-medium">{action.accionCorrectiva || action.mejora || '—'}</p>
+   457→   457→                          </div>
+   458→   458→                          <div>
+   459→   459→                            <span className="text-muted-foreground font-medium">Responsable:</span>
+   460→   460→                            <p className="font-medium">{action.responsable || 'Sin asignar'}</p>
+   461→   461→                          </div>
+   462→   462→                          <div>
+   463→   463→                            <span className="text-muted-foreground font-medium">Estado:</span>
+   464→   464→                            <Badge className={
+   465→   465→                              action.estado === 'abierta' ? 'bg-red-100 text-red-800' :
+   466→   466→                              action.estado === 'en_proceso' ? 'bg-amber-100 text-amber-800' :
+   467→   467→                              'bg-green-100 text-green-800'
+   468→   468→                            }>
+   469→   469→                              {action.estado === 'abierta' ? 'Abierta' :
+   470→   470→                               action.estado === 'en_proceso' ? 'En Proceso' :
+   471→   471→                               action.estado === 'resuelta' ? 'Resuelta' : 'Cerrada'}
+   472→   472→                            </Badge>
+   473→   473→                          </div>
+   474→   474→                          <div>
+   475→   475→                            <span className="text-muted-foreground font-medium">Fecha Compromiso:</span>
+   476→   476→                            <p className="font-medium text-blue-600">
+   477→   477→                              {action.fechaCompromiso ? new Date(action.fechaCompromiso).toLocaleDateString('es-ES') : '—'}
+   478→   478→                            </p>
+   479→   479→                          </div>
+   480→   480→                          <div>
+   481→   481→                            <span className="text-muted-foreground font-medium">Fecha Real Cierre:</span>
+   482→   482→                            <p className="font-medium text-green-600">
+   483→   483→                              {action.fechaReal || action.fechaResolucion
+   484→   484→                                ? new Date(action.fechaReal || action.fechaResolucion!).toLocaleDateString('es-ES')
+   485→   485→                                : '—'}
+   486→   486→                            </p>
+   487→   487→                          </div>
+   488→   488→                        </div>
+   489→   489→                      </div>
+   490→   490→                    ))}
+   491→   491→                  </div>
+   492→   492→                </div>
+   493→   493→              )}
+   494→   494→            </CardContent>
+   495→   495→          )}
+   496→   496→        </Card>
+   497→   497→      )}
+   498→   498→
+   499→   499→      {/* Mini-steps vertical path */}
+   500→   500→      <div className="relative">
+   501→   501→        {/* Connecting line */}
+   502→   502→        <div
+   503→   503→          className="absolute left-8 top-12 bottom-12 w-0.5"
+   504→   504→          style={{ backgroundColor: `${sStepData.color}30` }}
+   505→   505→        />
+   506→   506→
+   507→   507→        <div className="space-y-4">
+   508→   508→          {MINI_STEPS.map((miniStep, index) => {
+   509→   509→            const status = getMiniStepStatus(sStep, miniStep.id);
+   510→   510→            const miniStepProgress = sProgress.find(p => p.miniStep === miniStep.id);
+   511→   511→
+   512→   512→            // Store now handles all role-based locking in getMiniStepStatus
+   513→   513→            const effectiveStatus = status;
+   514→   514→
+   515→   515→            // Employee progress info for individual steps (1: Formación + 4: Autoevaluación) when zone is selected
+   516→   516→            const isIndividualStep = miniStep.id === 1 || miniStep.id === 4;
+   517→   517→            const zoneEmpProgress = currentZone && isIndividualStep
+   518→   518→              ? employeeProgress.filter(ep =>
+   519→   519→                  ep.sStep === sStep &&
+   520→   520→                  ep.miniStep === miniStep.id &&
+   521→   521→                  ep.zoneId === currentZone.id
+   522→   522→                )
+   523→   523→              : [];
+   524→   524→            const completedEmployees = zoneEmpProgress.filter(ep => ep.completed).length;
+   525→   525→            const totalEmployees = zoneEmpProgress.length;
+   526→   526→
+   527→   527→            return (
+   528→   528→              <motion.div
+   529→   529→                key={miniStep.id}
+   530→   530→                initial={{ opacity: 0, y: 20 }}
+   531→   531→                animate={{ opacity: 1, y: 0 }}
+   532→   532→                transition={{ delay: index * 0.1 }}
+   533→   533→              >
+   534→   534→                <MiniStepCard
+   535→   535→                  miniStep={miniStep}
+   536→   536→                  sStep={sStep}
+   537→   537→                  status={effectiveStatus}
+   538→   538→                  score={miniStepProgress?.score ?? null}
+   539→   539→                  color={sStepData.color}
+   540→   540→                  lockedReason={
+   541→   541→                    // Permission-driven lock reasons with specific messages
+   542→   542→                    effectiveStatus === 'completed_viewonly'
+   543→   543→                      ? 'Solo lectura (completado)'
+   544→   544→                      : effectiveStatus === 'locked' && use5SStore.getState().canView(sStep, miniStep.id) && !use5SStore.getState().canPerform(sStep, miniStep.id)
+   545→   545→                        ? (miniStep.id === 5 ? 'Solo auditores pueden realizar auditorías' : 'Solo lectura')
+   546→   546→                        : miniStep.id === 5 && effectiveStatus === 'locked' && use5SStore.getState().canPerform(sStep, 5)
+   547→   547→                          ? 'Completa pasos 1-4 primero'
+   548→   548→                          : miniStep.id === 3 && (sStep === 2 || sStep === 3 || sStep === 4) && effectiveStatus === 'locked'
+   549→   549→                            ? 'Completa el paso anterior y sube/dibuja un layout'
+   550→   550→                            : miniStep.id > 1 && effectiveStatus === 'locked' && use5SStore.getState().canPerform(sStep, miniStep.id)
+   551→   551→                              ? `Completa el paso ${miniStep - 1} primero`
+   552→   552→                              : effectiveStatus === 'locked'
+   553→   553→                                ? 'Sin permiso'
+   554→   554→                                : undefined
+   555→   555→                  }
+   556→   556→                  notes={miniStepProgress?.notes ?? null}
+   557→   557→                  onClick={() => {
+   558→   558→                    // Only allow opening modal if status is 'completed' (has a1) or 'available'
+   559→   559→                    // 'completed_viewonly' and 'locked' cannot open modals
+   560→   560→                    if (effectiveStatus === 'completed' || effectiveStatus === 'available') {
+   561→   561→                      onOpenModal(getModalType(miniStep.id, sStep), miniStep.id);
+   562→   562→                    }
+   563→   563→                  }}
+   564→   564→                />
+   565→   565→                {/* Employee completion indicator for individual steps */}
+   566→   566→                {currentZone && isIndividualStep && totalEmployees > 0 && (
+   567→   567→                  <div className="ml-16 mt-1 flex items-center gap-1.5">
+   568→   568→                    <div className="flex -space-x-1">
+   569→   569→                      {Array.from({ length: totalEmployees }).map((_, i) => (
+   570→   570→                        <div
+   571→   571→                          key={i}
+   572→   572→                          className={`w-4 h-4 rounded-full border-2 border-white text-[7px] flex items-center justify-center font-bold ${
+   573→   573→                            i < completedEmployees ? 'bg-green-500 text-white' : 'bg-gray-200 text-gray-500'
+   574→   574→                          }`}
+   575→   575→                        >
+   576→   576→                          {i < completedEmployees ? '✓' : ''}
+   577→   577→                        </div>
+   578→   578→                      ))}
+   579→   579→                    </div>
+   580→   580→                    <span className="text-[10px] text-muted-foreground">
+   581→   581→                      {completedEmployees}/{totalEmployees} empleados
+   582→   582→                    </span>
+   583→   583→                  </div>
+   584→   584→                )}
+   585→   585→              </motion.div>
+   586→   586→            );
+   587→   587→          })}
+   588→   588→        </div>
+   589→   589→      </div>
+   590→   590→    </motion.div>
+   591→   591→  );
+   592→   592→}
+   593→   593→

@@ -162,7 +162,9 @@ export async function POST(request: NextRequest) {
       semanaReal,
     } = body
 
-    if (!hallazgo && !itemDescription) {
+    // Allow draft entries from actionplan source with placeholder description
+    const effectiveDescription = hallazgo || itemDescription || (source === 'actionplan' ? 'Nueva entrada' : '')
+    if (!effectiveDescription) {
       return NextResponse.json({ success: false, error: 'Missing description' }, { status: 400 })
     }
 
@@ -192,8 +194,8 @@ export async function POST(request: NextRequest) {
         sStep: sStep || 0,
         miniStep: miniStep || 3,
         itemId: itemId || `ACT-${Date.now()}`,
-        itemDescription: itemDescription || '',
-        hallazgo: hallazgo || itemDescription || '',
+        itemDescription: effectiveDescription,
+        hallazgo: effectiveDescription,
         mejora: mejora || null,
         responsable: responsable || null,
         prioridad: prioridad || 'media',
@@ -269,6 +271,11 @@ export async function PUT(request: NextRequest) {
     if (body.semanaPrevista !== undefined) updateData.semanaPrevista = body.semanaPrevista
     if (body.porcentaje !== undefined) updateData.porcentaje = body.porcentaje
     if (body.semanaReal !== undefined) updateData.semanaReal = body.semanaReal
+    // Description fields
+    if (body.hallazgo !== undefined) updateData.hallazgo = body.hallazgo
+    if (body.itemDescription !== undefined) updateData.itemDescription = body.itemDescription
+    if (body.notas !== undefined) updateData.notas = body.notas
+    if (body.auditor !== undefined) updateData.auditor = body.auditor
 
     // If resolving, set resolution date
     if (body.estado === 'resuelta' || body.estado === 'cerrada') {
