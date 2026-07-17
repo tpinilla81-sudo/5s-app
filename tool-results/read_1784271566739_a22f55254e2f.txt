@@ -1,0 +1,720 @@
+     1→'use client'
+     2→
+     3→import { useState, useRef, useEffect, useCallback } from 'react'
+     4→import { use5SStore } from '@/lib/store'
+     5→import { Button } from '@/components/ui/button'
+     6→import { Input } from '@/components/ui/input'
+     7→import { Label } from '@/components/ui/label'
+     8→import { Badge } from '@/components/ui/badge'
+     9→import {
+    10→  Dialog,
+    11→  DialogContent,
+    12→  DialogHeader,
+    13→  DialogTitle,
+    14→} from '@/components/ui/dialog'
+    15→import {
+    16→  Select,
+    17→  SelectContent,
+    18→  SelectItem,
+    19→  SelectTrigger,
+    20→  SelectValue,
+    21→} from '@/components/ui/select'
+    22→import {
+    23→  Square, Circle, Minus, Type, MousePointer, Trash2, Download,
+    24→  Upload, Save, X, Undo2, RotateCcw, Image as ImageIcon, Palette
+    25→} from 'lucide-react'
+    26→import { toast } from 'sonner'
+    27→
+    28→// We need dynamic import for Konva since it needs window
+    29→let Stage: any, Layer: any, Rect: any, KCircle: any, Line: any, Text: any, KImage: any, Group: any, Arrow: any
+    30→
+    31→// 5S Floor marking color codes — Based on company standard "CUADRO DE COLORES: SEÑALIZACIÓN EN SUELO Y COMPONENTES"
+    32→const FLOOR_COLORS = [
+    33→  { color: '#0E6BA8', label: 'Azul RAL 5017 — Entrada de material / Recepción / Zona suministro logística', ral: 'RAL 5017' },
+    34→  { color: '#2D8C3C', label: 'Verde RAL 6032 — Salida de material premontado', ral: 'RAL 6032' },
+    35→  { color: '#E8E8E8', label: 'Blanco RAL 9003 — Elementos estáticos (carros, mesas, utilajes fijos)', ral: 'RAL 9003' },
+    36→  { color: '#F5E649', label: 'Amarillo RAL 1016 — Área de trabajo', ral: 'RAL 1016' },
+    37→  { color: '#CC0000', label: 'Rojo RAL 3000 — Equipos protección contra incendios', ral: 'RAL 3000' },
+    38→  { color: '#F5A623', label: 'Amarillo anaranjado RAL 1003 — Elementos de seguridad (barandillas, barreras)', ral: 'RAL 1003' },
+    39→  { color: '#8B8B00', label: 'Franjas amarillo/negro — Pasillos y zonas de paso', ral: 'Franjas' },
+    40→  { color: '#FF6666', label: 'Franjas blanco/rojo — Áreas de riesgo permanente', ral: 'Franjas' },
+    41→  { color: '#CC4444', label: 'Franjas rojo/verde — Riesgo de explosión / Trabajos en caliente prohibidos', ral: 'Franjas' },
+    42→  { color: '#66CC66', label: 'Franjas verde/blanco — Área de trabajos en caliente', ral: 'Franjas' },
+    43→  { color: '#8E9498', label: 'Gris RAL 7001 — Medio Ambiente / Gestión de residuos', ral: 'RAL 7001' },
+    44→  { color: '#E85D04', label: 'Naranja RAL 2004 — Fondo del suelo', ral: 'RAL 2004' },
+    45→]
+    46→
+    47→const DRAW_TOOLS = [
+    48→  { id: 'select', label: 'Seleccionar', icon: MousePointer },
+    49→  { id: 'rect', label: 'Rectángulo / Zona', icon: Square },
+    50→  { id: 'circle', label: 'Círculo / Equipo', icon: Circle },
+    51→  { id: 'line', label: 'Línea / Pasillo', icon: Minus },
+    52→  { id: 'arrow', label: 'Flecha / Flujo', icon: RotateCcw },
+    53→  { id: 'text', label: 'Texto / Etiqueta', icon: Type },
+    54→]
+    55→
+    56→interface ShapeData {
+    57→  id: string
+    58→  type: 'rect' | 'circle' | 'line' | 'arrow' | 'text'
+    59→  x: number
+    60→  y: number
+    61→  width?: number
+    62→  height?: number
+    63→  radius?: number
+    64→  points?: number[]
+    65→  fill?: string
+    66→  stroke?: string
+    67→  strokeWidth?: number
+    68→  text?: string
+    69→  fontSize?: number
+    70→  dash?: number[]
+    71→  opacity?: number
+    72→}
+    73→
+    74→interface LayoutEditorProps {
+    75→  open: boolean
+    76→  onClose: () => void
+    77→  onSave?: (imageDataUrl: string, shapes: ShapeData[]) => void
+    78→  initialImage?: string | null
+    79→  initialShapes?: ShapeData[]
+    80→  sStep?: number // Which S step this layout belongs to (default: 2)
+    81→}
+    82→
+    83→export default function LayoutEditor({ open, onClose, onSave, initialImage, initialShapes, sStep: sStepProp }: LayoutEditorProps) {
+    84→  const { currentProject, currentZone } = use5SStore()
+    85→  const [konvaReady, setKonvaReady] = useState(false)
+    86→  const [tool, setTool] = useState<string>('select')
+    87→  const [color, setColor] = useState('#F5E649')
+    88→  const [shapes, setShapes] = useState<ShapeData[]>(initialShapes || [])
+    89→  const [bgImage, setBgImage] = useState<string | null>(initialImage || null)
+    90→  const [bgImageObj, setBgImageObj] = useState<HTMLImageElement | null>(null)
+    91→  const [isDrawing, setIsDrawing] = useState(false)
+    92→  const [drawStart, setDrawStart] = useState<{ x: number; y: number } | null>(null)
+    93→  const [selectedId, setSelectedId] = useState<string | null>(null)
+    94→  const [textInput, setTextInput] = useState('')
+    95→  const [showTextInput, setShowTextInput] = useState(false)
+    96→  const [textPosition, setTextPosition] = useState<{ x: number; y: number } | null>(null)
+    97→  const [showColorPicker, setShowColorPicker] = useState(false)
+    98→  const [stageSize, setStageSize] = useState({ width: 800, height: 600 })
+    99→  const [saveName, setSaveName] = useState('')
+   100→  const [isSaving, setIsSaving] = useState(false)
+   101→
+   102→  const stageRef = useRef<any>(null)
+   103→  const containerRef = useRef<HTMLDivElement>(null)
+   104→  const fileInputRef = useRef<HTMLInputElement>(null)
+   105→
+   106→  // Dynamic import of Konva (needs window)
+   107→  useEffect(() => {
+   108→    if (typeof window !== 'undefined' && !konvaReady) {
+   109→      import('react-konva').then((mod) => {
+   110→        Stage = mod.Stage
+   111→        Layer = mod.Layer
+   112→        Rect = mod.Rect
+   113→        KCircle = mod.Circle
+   114→        Line = mod.Line
+   115→        Text = mod.Text
+   116→        KImage = mod.Image
+   117→        Group = mod.Group
+   118→        Arrow = mod.Arrow
+   119→        setKonvaReady(true)
+   120→      }).catch(err => {
+   121→        console.error('Failed to load Konva:', err)
+   122→      })
+   123→    }
+   124→  }, [konvaReady])
+   125→
+   126→  // Load background image
+   127→  useEffect(() => {
+   128→    if (bgImage) {
+   129→      const img = new window.Image()
+   130→      img.crossOrigin = 'anonymous'
+   131→      img.onload = () => setBgImageObj(img)
+   132→      img.src = bgImage
+   133→    } else {
+   134→      setBgImageObj(null)
+   135→    }
+   136→  }, [bgImage])
+   137→
+   138→  // Responsive stage size
+   139→  useEffect(() => {
+   140→    const updateSize = () => {
+   141→      if (containerRef.current) {
+   142→        const rect = containerRef.current.getBoundingClientRect()
+   143→        setStageSize({ width: Math.floor(rect.width), height: Math.floor(rect.height) })
+   144→      }
+   145→    }
+   146→    if (open) {
+   147→      updateSize()
+   148→      window.addEventListener('resize', updateSize)
+   149→      return () => window.removeEventListener('resize', updateSize)
+   150→    }
+   151→  }, [open])
+   152→
+   153→  const generateId = () => `shape_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`
+   154→
+   155→  const handleStageMouseDown = useCallback((e: any) => {
+   156→    if (tool === 'select') {
+   157→      const clickedOnEmpty = e.target === e.target.getStage()
+   158→      if (clickedOnEmpty) setSelectedId(null)
+   159→      return
+   160→    }
+   161→
+   162→    const stage = e.target.getStage()
+   163→    const pos = stage.getPointerPosition()
+   164→    if (!pos) return
+   165→
+   166→    if (tool === 'text') {
+   167→      setTextPosition({ x: pos.x, y: pos.y })
+   168→      setShowTextInput(true)
+   169→      setTextInput('')
+   170→      return
+   171→    }
+   172→
+   173→    setIsDrawing(true)
+   174→    setDrawStart({ x: pos.x, y: pos.y })
+   175→
+   176→    if (tool === 'rect') {
+   177→      const newShape: ShapeData = {
+   178→        id: generateId(),
+   179→        type: 'rect',
+   180→        x: pos.x,
+   181→        y: pos.y,
+   182→        width: 0,
+   183→        height: 0,
+   184→        fill: color + '40',
+   185→        stroke: color,
+   186→        strokeWidth: 2,
+   187→      }
+   188→      setShapes(prev => [...prev, newShape])
+   189→      setSelectedId(newShape.id)
+   190→    } else if (tool === 'circle') {
+   191→      const newShape: ShapeData = {
+   192→        id: generateId(),
+   193→        type: 'circle',
+   194→        x: pos.x,
+   195→        y: pos.y,
+   196→        radius: 0,
+   197→        fill: color + '60',
+   198→        stroke: color,
+   199→        strokeWidth: 2,
+   200→      }
+   201→      setShapes(prev => [...prev, newShape])
+   202→      setSelectedId(newShape.id)
+   203→    } else if (tool === 'line') {
+   204→      const newShape: ShapeData = {
+   205→        id: generateId(),
+   206→        type: 'line',
+   207→        x: 0,
+   208→        y: 0,
+   209→        points: [pos.x, pos.y, pos.x, pos.y],
+   210→        stroke: color,
+   211→        strokeWidth: 4,
+   212→      }
+   213→      setShapes(prev => [...prev, newShape])
+   214→      setSelectedId(newShape.id)
+   215→    } else if (tool === 'arrow') {
+   216→      const newShape: ShapeData = {
+   217→        id: generateId(),
+   218→        type: 'arrow',
+   219→        x: 0,
+   220→        y: 0,
+   221→        points: [pos.x, pos.y, pos.x, pos.y],
+   222→        stroke: color,
+   223→        strokeWidth: 3,
+   224→        fill: color,
+   225→      }
+   226→      setShapes(prev => [...prev, newShape])
+   227→      setSelectedId(newShape.id)
+   228→    }
+   229→  }, [tool, color])
+   230→
+   231→  const handleStageMouseMove = useCallback((e: any) => {
+   232→    if (!isDrawing || !drawStart) return
+   233→    const stage = e.target.getStage()
+   234→    const pos = stage.getPointerPosition()
+   235→    if (!pos) return
+   236→
+   237→    setShapes(prev => {
+   238→      const updated = [...prev]
+   239→      const last = updated[updated.length - 1]
+   240→      if (!last) return prev
+   241→
+   242→      if (last.type === 'rect') {
+   243→        updated[updated.length - 1] = {
+   244→          ...last,
+   245→          width: pos.x - drawStart.x,
+   246→          height: pos.y - drawStart.y,
+   247→        }
+   248→      } else if (last.type === 'circle') {
+   249→        const dx = pos.x - drawStart.x
+   250→        const dy = pos.y - drawStart.y
+   251→        updated[updated.length - 1] = {
+   252→          ...last,
+   253→          radius: Math.sqrt(dx * dx + dy * dy),
+   254→        }
+   255→      } else if (last.type === 'line' || last.type === 'arrow') {
+   256→        const pts = [...last.points!]
+   257→        pts[2] = pos.x
+   258→        pts[3] = pos.y
+   259→        updated[updated.length - 1] = { ...last, points: pts }
+   260→      }
+   261→      return updated
+   262→    })
+   263→  }, [isDrawing, drawStart])
+   264→
+   265→  const handleStageMouseUp = useCallback(() => {
+   266→    setIsDrawing(false)
+   267→    setDrawStart(null)
+   268→  }, [])
+   269→
+   270→  const handleTextSubmit = () => {
+   271→    if (textInput && textPosition) {
+   272→      const newShape: ShapeData = {
+   273→        id: generateId(),
+   274→        type: 'text',
+   275→        x: textPosition.x,
+   276→        y: textPosition.y,
+   277→        text: textInput,
+   278→        fill: color,
+   279→        fontSize: 16,
+   280→      }
+   281→      setShapes(prev => [...prev, newShape])
+   282→      setSelectedId(newShape.id)
+   283→    }
+   284→    setShowTextInput(false)
+   285→    setTextPosition(null)
+   286→    setTextInput('')
+   287→  }
+   288→
+   289→  const handleDelete = () => {
+   290→    if (selectedId) {
+   291→      setShapes(prev => prev.filter(s => s.id !== selectedId))
+   292→      setSelectedId(null)
+   293→    }
+   294→  }
+   295→
+   296→  const handleUndo = () => {
+   297→    setShapes(prev => prev.slice(0, -1))
+   298→    setSelectedId(null)
+   299→  }
+   300→
+   301→  const handleClear = () => {
+   302→    if (confirm('¿Borrar todo el dibujo?')) {
+   303→      setShapes([])
+   304→      setSelectedId(null)
+   305→    }
+   306→  }
+   307→
+   308→  const handleExportImage = () => {
+   309→    if (stageRef.current) {
+   310→      const dataUrl = stageRef.current.toDataURL({ pixelRatio: 2 })
+   311→      const link = document.createElement('a')
+   312→      link.download = `layout_${currentZone?.name || 'zona'}_${new Date().toISOString().slice(0, 10)}.png`
+   313→      link.href = dataUrl
+   314→      link.click()
+   315→    }
+   316→  }
+   317→
+   318→  const handleSaveToLibrary = async () => {
+   319→    if (!currentProject) {
+   320→      toast.error('No hay proyecto seleccionado. Selecciona un proyecto primero.')
+   321→      return
+   322→    }
+   323→    if (shapes.length === 0 && !bgImage) {
+   324→      toast.error('No hay elementos dibujados. Dibuja algo antes de guardar.')
+   325→      return
+   326→    }
+   327→    setIsSaving(true)
+   328→    try {
+   329→      // Export canvas to image
+   330→      let dataUrl: string | null = null
+   331→      try {
+   332→        dataUrl = stageRef.current?.toDataURL({ pixelRatio: 2 }) || null
+   333→      } catch (e) {
+   334→        console.error('[LayoutEditor] Error exporting canvas:', e)
+   335→      }
+   336→      if (!dataUrl) {
+   337→        toast.error('No se pudo exportar el dibujo. Intenta de nuevo.')
+   338→        setIsSaving(false)
+   339→        return
+   340→      }
+   341→      const shapesJson = JSON.stringify(shapes)
+   342→
+   343→      // Auto-generate name if not provided
+   344→      const layoutName = saveName || `Layout ${currentZone?.name || 'Zona'} ${new Date().toLocaleDateString('es-ES')}`
+   345→      const effectiveSStep = sStepProp || 2
+   346→
+   347→      // Upload the image file to storage instead of storing huge base64 in DB
+   348→      let photoUrl: string | null = null
+   349→      try {
+   350→        // Convert data URL to File
+   351→        const res = await fetch(dataUrl)
+   352→        const blob = await res.blob()
+   353→        const file = new File([blob], `layout_${Date.now()}.png`, { type: 'image/png' })
+   354→        const formData = new FormData()
+   355→        formData.append('file', file)
+   356→        formData.append('projectId', currentProject.id)
+   357→        formData.append('filename', `${currentProject.id}_layout_${effectiveSStep}_${Date.now()}.png`)
+   358→        const uploadRes = await fetch('/api/upload', { method: 'POST', body: formData })
+   359→        if (!uploadRes.ok) {
+   360→          console.error('[LayoutEditor] Upload HTTP error:', uploadRes.status, uploadRes.statusText)
+   361→          photoUrl = dataUrl
+   362→        } else {
+   363→          const uploadJson = await uploadRes.json()
+   364→          if (uploadJson.success && uploadJson.url) {
+   365→            photoUrl = uploadJson.url
+   366→          } else {
+   367→            console.warn('[LayoutEditor] Upload returned no URL:', uploadJson)
+   368→            photoUrl = dataUrl
+   369→          }
+   370→        }
+   371→      } catch (uploadErr) {
+   372→        console.error('[LayoutEditor] Error uploading layout image:', uploadErr)
+   373→        photoUrl = dataUrl // Fallback: store data URL directly
+   374→      }
+   375→
+   376→      if (!photoUrl) {
+   377→        toast.error('Error: no se pudo obtener la imagen del layout')
+   378→        setIsSaving(false)
+   379→        return
+   380→      }
+   381→
+   382→      // If photoUrl is a data URL (fallback), it might be too large for JSON body.
+   383→      // In that case, skip storing the photoUrl in the standard and just save shapes.
+   384→      const isDataUrl = photoUrl.startsWith('data:')
+   385→      const standardData: Record<string, unknown> = {
+   386→        sStep: effectiveSStep,
+   387→        title: layoutName,
+   388→        description: 'Layout dibujado con editor',
+   389→        category: 'layout',
+   390→        content: shapesJson,
+   391→        photoUrl: isDataUrl ? null : photoUrl, // Don't store huge data URLs
+   392→        status: 'activo',
+   393→        version: 1,
+   394→        projectId: currentProject.id,
+   395→        zoneId: currentZone?.id || null,
+   396→      }
+   397→
+   398→      console.log('[LayoutEditor] Saving standard:', {
+   399→        sStep: effectiveSStep,
+   400→        category: 'layout',
+   401→        hasPhotoUrl: !!standardData.photoUrl,
+   402→        shapesCount: shapes.length,
+   403→        projectId: currentProject.id,
+   404→        zoneId: currentZone?.id,
+   405→      })
+   406→
+   407→      const saveRes = await fetch('/api/standards', {
+   408→        method: 'POST',
+   409→        headers: { 'Content-Type': 'application/json' },
+   410→        body: JSON.stringify(standardData),
+   411→      })
+   412→
+   413→      if (!saveRes.ok) {
+   414→        console.error('[LayoutEditor] Standards API HTTP error:', saveRes.status, saveRes.statusText)
+   415→        toast.error(`Error al guardar (HTTP ${saveRes.status}). Intenta de nuevo.`)
+   416→        setIsSaving(false)
+   417→        return
+   418→      }
+   419→
+   420→      const saveJson = await saveRes.json()
+   421→
+   422→      if (saveJson.success) {
+   423→        if (onSave) onSave(dataUrl, shapes)
+   424→        toast.success('Layout guardado en la Biblioteca de Estándares')
+   425→        setSaveName('')
+   426→      } else {
+   427→        console.error('[LayoutEditor] Standards API error:', saveJson.error)
+   428→        toast.error(`Error al guardar: ${saveJson.error || 'Error desconocido'}`)
+   429→      }
+   430→    } catch (e: any) {
+   431→      console.error('[LayoutEditor] Error saving layout:', e)
+   432→      toast.error(`Error al guardar el layout: ${e?.message || 'Error desconocido'}`)
+   433→    } finally {
+   434→      setIsSaving(false)
+   435→    }
+   436→  }
+   437→
+   438→  const handleUploadBg = async (file: File) => {
+   439→    const formData = new FormData()
+   440→    formData.append('file', file)
+   441→    formData.append('projectId', currentProject?.id || '')
+   442→    try {
+   443→      const res = await fetch('/api/upload', { method: 'POST', body: formData })
+   444→      const json = await res.json()
+   445→      if (json.url) setBgImage(json.url)
+   446→    } catch (e) {
+   447→      console.error('Upload error:', e)
+   448→    }
+   449→  }
+   450→
+   451→  // Shape render helper
+   452→  const renderShape = (shape: ShapeData) => {
+   453→    const isSelected = shape.id === selectedId
+   454→    const commonProps = {
+   455→      onClick: () => { if (tool === 'select') setSelectedId(shape.id) },
+   456→      onTap: () => { if (tool === 'select') setSelectedId(shape.id) },
+   457→      draggable: tool === 'select',
+   458→    }
+   459→
+   460→    switch (shape.type) {
+   461→      case 'rect':
+   462→        return (
+   463→          <Rect
+   464→            key={shape.id}
+   465→            {...commonProps}
+   466→            x={shape.x}
+   467→            y={shape.y}
+   468→            width={shape.width}
+   469→            height={shape.height}
+   470→            fill={shape.fill}
+   471→            stroke={isSelected ? '#00FF00' : shape.stroke}
+   472→            strokeWidth={isSelected ? 3 : shape.strokeWidth}
+   473→            onDragEnd={(e: any) => {
+   474→              setShapes(prev => prev.map(s =>
+   475→                s.id === shape.id ? { ...s, x: e.target.x(), y: e.target.y() } : s
+   476→              ))
+   477→            }}
+   478→          />
+   479→        )
+   480→      case 'circle':
+   481→        return (
+   482→          <KCircle
+   483→            key={shape.id}
+   484→            {...commonProps}
+   485→            x={shape.x}
+   486→            y={shape.y}
+   487→            radius={shape.radius}
+   488→            fill={shape.fill}
+   489→            stroke={isSelected ? '#00FF00' : shape.stroke}
+   490→            strokeWidth={isSelected ? 3 : shape.strokeWidth}
+   491→            onDragEnd={(e: any) => {
+   492→              setShapes(prev => prev.map(s =>
+   493→                s.id === shape.id ? { ...s, x: e.target.x(), y: e.target.y() } : s
+   494→              ))
+   495→            }}
+   496→          />
+   497→        )
+   498→      case 'line':
+   499→        return (
+   500→          <Line
+   501→            key={shape.id}
+   502→            {...commonProps}
+   503→            points={shape.points}
+   504→            stroke={isSelected ? '#00FF00' : shape.stroke}
+   505→            strokeWidth={isSelected ? shape.strokeWidth! + 2 : shape.strokeWidth}
+   506→            lineCap="round"
+   507→            lineJoin="round"
+   508→          />
+   509→        )
+   510→      case 'arrow':
+   511→        return (
+   512→          <Arrow
+   513→            key={shape.id}
+   514→            {...commonProps}
+   515→            points={shape.points}
+   516→            fill={shape.fill}
+   517→            stroke={isSelected ? '#00FF00' : shape.stroke}
+   518→            strokeWidth={isSelected ? shape.strokeWidth! + 2 : shape.strokeWidth}
+   519→            pointerLength={10}
+   520→            pointerWidth={10}
+   521→          />
+   522→        )
+   523→      case 'text':
+   524→        return (
+   525→          <Text
+   526→            key={shape.id}
+   527→            {...commonProps}
+   528→            x={shape.x}
+   529→            y={shape.y}
+   530→            text={shape.text}
+   531→            fontSize={shape.fontSize}
+   532→            fill={shape.fill}
+   533→            stroke={isSelected ? '#00FF00' : undefined}
+   534→            strokeWidth={isSelected ? 1 : 0}
+   535→            onDragEnd={(e: any) => {
+   536→              setShapes(prev => prev.map(s =>
+   537→                s.id === shape.id ? { ...s, x: e.target.x(), y: e.target.y() } : s
+   538→              ))
+   539→            }}
+   540→          />
+   541→        )
+   542→      default:
+   543→        return null
+   544→    }
+   545→  }
+   546→
+   547→  if (!konvaReady) {
+   548→    return (
+   549→      <Dialog open={open} onOpenChange={(o) => { if (!o) onClose() }}>
+   550→        <DialogContent className="max-w-4xl max-h-[90vh]">
+   551→          <div className="flex items-center justify-center py-12">
+   552→            <p className="text-muted-foreground">Cargando editor...</p>
+   553→          </div>
+   554→        </DialogContent>
+   555→      </Dialog>
+   556→    )
+   557→  }
+   558→
+   559→  return (
+   560→    <Dialog open={open} onOpenChange={(o) => { if (!o) onClose() }}>
+   561→      <DialogContent className="max-w-[95vw] max-h-[95vh] overflow-hidden flex flex-col p-0">
+   562→        <DialogHeader className="px-4 py-3 border-b shrink-0">
+   563→          <DialogTitle className="flex items-center gap-2 text-base">
+   564→            <Square className="h-5 w-5 text-teal-600" />
+   565→            Editor de Layout
+   566→          </DialogTitle>
+   567→          <p className="text-xs text-muted-foreground mt-0.5">
+   568→            Dibuja el layout de la zona: pasillos, zonas de trabajo, ubicación de equipos, código de colores de marcado de suelo...
+   569→          </p>
+   570→        </DialogHeader>
+   571→
+   572→        {/* Toolbar */}
+   573→        <div className="px-4 py-2 border-b bg-gray-50/80 flex items-center gap-2 flex-wrap shrink-0">
+   574→          {/* Drawing tools */}
+   575→          <div className="flex items-center gap-1 border-r pr-2 mr-1">
+   576→            {DRAW_TOOLS.map(t => (
+   577→              <Button key={t.id} variant={tool === t.id ? 'default' : 'ghost'} size="sm"
+   578→                onClick={() => setTool(t.id)}
+   579→                className={`h-7 w-7 p-0 text-xs ${tool === t.id ? 'bg-teal-600 text-white' : ''}`}
+   580→                title={t.label}>
+   581→                <t.icon className="h-3.5 w-3.5" />
+   582→              </Button>
+   583→            ))}
+   584→          </div>
+   585→
+   586→          {/* Color */}
+   587→          <div className="relative">
+   588→            <Button variant="ghost" size="sm" onClick={() => setShowColorPicker(!showColorPicker)}
+   589→              className="h-7 gap-1.5 text-xs">
+   590→              <div className="w-4 h-4 rounded border" style={{ backgroundColor: color }} />
+   591→              <Palette className="h-3 w-3" />
+   592→            </Button>
+   593→            {showColorPicker && (
+   594→              <div className="absolute top-full left-0 z-50 mt-1 bg-white border rounded-lg shadow-xl p-2 w-80 max-h-[70vh] overflow-y-auto">
+   595→                <p className="text-[10px] font-semibold text-muted-foreground mb-1.5">Código de Colores — Señalización en Suelo y Componentes</p>
+   596→                {FLOOR_COLORS.map(fc => (
+   597→                  <button key={fc.color} onClick={() => { setColor(fc.color); setShowColorPicker(false) }}
+   598→                    className="flex items-center gap-2 w-full px-2 py-1.5 rounded hover:bg-gray-100 text-left">
+   599→                    <div className="w-5 h-5 rounded border shrink-0" style={{ backgroundColor: fc.color }} />
+   600→                    <div className="flex-1 min-w-0">
+   601→                      <span className="text-[10px] font-medium block truncate">{fc.label}</span>
+   602→                      {fc.ral && <span className="text-[8px] text-muted-foreground">{fc.ral}</span>}
+   603→                    </div>
+   604→                  </button>
+   605→                ))}
+   606→              </div>
+   607→            )}
+   608→          </div>
+   609→
+   610→          {/* Stroke width for lines */}
+   611→          {(tool === 'line' || tool === 'arrow') && (
+   612→            <Select value={String(shapes[shapes.length - 1]?.strokeWidth || 4)} onValueChange={v => {
+   613→              // Just visual feedback, new shapes will use this
+   614→            }}>
+   615→              <SelectTrigger className="w-20 h-7 text-xs"><SelectValue /></SelectTrigger>
+   616→              <SelectContent>
+   617→                <SelectItem value="2">Fino</SelectItem>
+   618→                <SelectItem value="4">Medio</SelectItem>
+   619→                <SelectItem value="8">Grueso</SelectItem>
+   620→                <SelectItem value="12">Muy grueso</SelectItem>
+   621→              </SelectContent>
+   622→            </Select>
+   623→          )}
+   624→
+   625→          <div className="flex-1" />
+   626→
+   627→          {/* Actions */}
+   628→          <Button variant="ghost" size="sm" onClick={() => fileInputRef.current?.click()}
+   629→            className="h-7 gap-1 text-xs" title="Subir plano de fondo">
+   630→            <Upload className="h-3 w-3" /> Fondo
+   631→          </Button>
+   632→          <input ref={fileInputRef} type="file" accept="image/*" className="hidden"
+   633→            onChange={e => { const f = e.target.files?.[0]; if (f) handleUploadBg(f) }} />
+   634→          <Button variant="ghost" size="sm" onClick={handleUndo}
+   635→            className="h-7 gap-1 text-xs" title="Deshacer">
+   636→            <Undo2 className="h-3 w-3" />
+   637→          </Button>
+   638→          <Button variant="ghost" size="sm" onClick={handleDelete}
+   639→            className="h-7 gap-1 text-xs text-red-500" title="Eliminar seleccionado">
+   640→            <Trash2 className="h-3 w-3" />
+   641→          </Button>
+   642→          <Button variant="ghost" size="sm" onClick={handleClear}
+   643→            className="h-7 gap-1 text-xs text-red-500" title="Borrar todo">
+   644→            <RotateCcw className="h-3 w-3" />
+   645→          </Button>
+   646→          <Button variant="outline" size="sm" onClick={handleExportImage}
+   647→            className="h-7 gap-1 text-xs" title="Descargar como PNG">
+   648→            <Download className="h-3 w-3" /> PNG
+   649→          </Button>
+   650→        </div>
+   651→
+   652→        {/* Canvas area */}
+   653→        <div ref={containerRef} className="flex-1 min-h-0 bg-gray-100 relative"
+   654→          style={{ cursor: tool === 'select' ? 'default' : 'crosshair' }}>
+   655→          <Stage
+   656→            ref={stageRef}
+   657→            width={stageSize.width}
+   658→            height={stageSize.height}
+   659→            onMouseDown={handleStageMouseDown}
+   660→            onMouseMove={handleStageMouseMove}
+   661→            onMouseUp={handleStageMouseUp}
+   662→            onTouchStart={handleStageMouseDown}
+   663→            onTouchMove={handleStageMouseMove}
+   664→            onTouchEnd={handleStageMouseUp}
+   665→          >
+   666→            <Layer>
+   667→              {/* Background image */}
+   668→              {bgImageObj && (
+   669→                <KImage image={bgImageObj}
+   670→                  x={0} y={0}
+   671→                  width={stageSize.width}
+   672→                  height={stageSize.height}
+   673→                  opacity={0.4}
+   674→                />
+   675→              )}
+   676→              {/* Grid pattern */}
+   677→              {/* Shapes */}
+   678→              {shapes.map(renderShape)}
+   679→            </Layer>
+   680→          </Stage>
+   681→
+   682→          {/* Text input overlay */}
+   683→          {showTextInput && textPosition && (
+   684→            <div className="absolute bg-white border rounded shadow-lg p-2 z-50"
+   685→              style={{ left: textPosition.x, top: textPosition.y }}>
+   686→              <Input autoFocus value={textInput}
+   687→                onChange={e => setTextInput(e.target.value)}
+   688→                onKeyDown={e => { if (e.key === 'Enter') handleTextSubmit() }}
+   689→                placeholder="Escribe texto..."
+   690→                className="h-7 text-xs w-48" />
+   691→              <div className="flex gap-1 mt-1">
+   692→                <Button size="sm" onClick={handleTextSubmit}
+   693→                  className="h-6 text-[10px] bg-teal-600 text-white">OK</Button>
+   694→                <Button size="sm" variant="ghost" onClick={() => setShowTextInput(false)}
+   695→                  className="h-6 text-[10px]">Cancelar</Button>
+   696→              </div>
+   697→            </div>
+   698→          )}
+   699→        </div>
+   700→
+   701→        {/* Save bar */}
+   702→        <div className="px-4 py-2 border-t bg-white flex items-center gap-3 shrink-0">
+   703→          <Input value={saveName} onChange={e => setSaveName(e.target.value)}
+   704→            placeholder="Nombre del layout (ej: Layout Zona Montaje)"
+   705→            className="h-8 text-xs flex-1 max-w-xs" />
+   706→          <Button onClick={handleSaveToLibrary} disabled={isSaving}
+   707→            className="gap-1 bg-teal-600 hover:bg-teal-700 text-white text-xs h-8">
+   708→            <Save className="h-3 w-3" />
+   709→            {isSaving ? 'Guardando...' : 'Guardar en Biblioteca de Estándares'}
+   710→          </Button>
+   711→          <div className="flex-1" />
+   712→          <Badge variant="outline" className="text-[10px]">
+   713→            {shapes.length} elementos
+   714→          </Badge>
+   715→        </div>
+   716→      </DialogContent>
+   717→    </Dialog>
+   718→  )
+   719→}
+   720→

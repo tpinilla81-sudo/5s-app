@@ -48,6 +48,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: 'No exam template found for this S' }, { status: 404 })
     }
 
+    // Validate that the template's sStep matches the requested sStep
+    if (template.sStep !== sStep) {
+      console.warn(`Exam template sStep mismatch: requested S${sStep}, got template for S${template.sStep} (id: ${template.id})`)
+      return NextResponse.json({ success: false, error: `Examen no disponible para S${sStep}. Plantilla encontrada corresponde a S${template.sStep}.` }, { status: 404 })
+    }
+
     const parsedContent = JSON.parse(template.content)
     const questions = (parsedContent.questions || parsedContent) as Array<{
       question: string

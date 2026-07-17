@@ -41,7 +41,7 @@ interface InventoryItemData {
   quantity: number
   action: string | null
   photoUrl: string | null
-  estimatedValue: number | null
+  price: number | null
   projectId: string
   createdAt: string
   updatedAt: string
@@ -121,7 +121,7 @@ export default function CompanyInventoryList({ onBack }: Props) {
 
   const handleEdit = (item: InventoryItemData) => {
     setEditingItem(item)
-    setEditValue(item.estimatedValue?.toString() || '')
+    setEditValue(item.price?.toString() || '')
     setEditCategory(item.category)
     setEditAction(item.action || '')
   }
@@ -135,7 +135,7 @@ export default function CompanyInventoryList({ onBack }: Props) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           id: editingItem.id,
-          estimatedValue: editValue ? parseFloat(editValue) : null,
+          price: editValue ? parseFloat(editValue) : null,
           category: editCategory,
           action: editAction || null,
         }),
@@ -180,13 +180,13 @@ export default function CompanyInventoryList({ onBack }: Props) {
   // Filter by view mode
   const displayedItems = items.filter(item => {
     if (viewMode === 'innecesario') return item.category === 'innecesario' || item.category === 'dudoso'
-    if (viewMode === 'dinero') return (item.estimatedValue || 0) > 0
+    if (viewMode === 'dinero') return (item.price || 0) > 0
     return true
   })
 
   const totalParadoDisplayed = displayedItems
     .filter(i => i.category === 'innecesario' || i.category === 'dudoso')
-    .reduce((sum, i) => sum + (i.estimatedValue || 0) * i.quantity, 0)
+    .reduce((sum, i) => sum + (i.price || 0) * i.quantity, 0)
 
   return (
     <div className="space-y-4">
@@ -393,10 +393,10 @@ export default function CompanyInventoryList({ onBack }: Props) {
                           {item.quantity > 1 && (
                             <Badge variant="outline" className="text-xs">x{item.quantity}</Badge>
                           )}
-                          {item.estimatedValue && item.estimatedValue > 0 && (
+                          {item.price && item.price > 0 && (
                             <Badge variant="outline" className="text-xs border-red-200 text-red-700 bg-red-50">
                               <Euro className="h-3 w-3 mr-0.5" />
-                              {((item.estimatedValue * item.quantity)).toLocaleString('es-ES', { minimumFractionDigits: 0, maximumFractionDigits: 2 })} €
+                              {((item.price * item.quantity)).toLocaleString('es-ES', { minimumFractionDigits: 0, maximumFractionDigits: 2 })} €
                             </Badge>
                           )}
                         </div>

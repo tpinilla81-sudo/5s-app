@@ -94,14 +94,19 @@ export default function RadarChart5S({ projectId, auditScores, periodLabel, comp
   }
 
   const chartData = S_STEPS.map(s => {
-    const target = targetMap[s.id] || { objetivo: 70, min: 50, max: 100 };
+    const target = targetMap[s.id] || { objetivo: 70, notaMinima: 50 };
+    // AuditTarget model has: notaMinima (min passing score) and objetivo (target score)
+    // No explicit min/max in schema — derive min from notaMinima, max is always 100
+    const objetivoVal = target.objetivo ?? 70;
+    const minVal = target.notaMinima ?? 50;
+    const maxVal = 100;
     return {
       subject: s.japaneseName,
       S: `${s.id}S`,
       audit: scoreMap[s.id] !== undefined ? scoreMap[s.id] : 0,
-      objetivo: target.objetivo,
-      min: target.min,
-      max: target.max,
+      objetivo: objetivoVal,
+      min: minVal,
+      max: maxVal,
     };
   });
 

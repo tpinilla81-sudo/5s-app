@@ -100,11 +100,11 @@ export async function GET(request: NextRequest) {
 
     const dineroParado = items
       .filter(i => i.category === 'innecesario' || i.category === 'dudoso')
-      .reduce((sum, i) => sum + (i.estimatedValue || 0) * i.quantity, 0)
+      .reduce((sum, i) => sum + (i.price || 0) * i.quantity, 0)
 
     // Items with estimated value
-    const itemsWithValue = items.filter(i => i.estimatedValue && i.estimatedValue > 0)
-    const totalValue = items.reduce((sum, i) => sum + (i.estimatedValue || 0) * i.quantity, 0)
+    const itemsWithValue = items.filter(i => i.price && i.price > 0)
+    const totalValue = items.reduce((sum, i) => sum + (i.price || 0) * i.quantity, 0)
 
     return NextResponse.json({
       success: true,
@@ -147,14 +147,14 @@ export async function PUT(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { id, estimatedValue, category, action, notas } = body
+    const { id, price, category, action, notas } = body
 
     if (!id) {
       return NextResponse.json({ success: false, error: 'Inventory item id is required' }, { status: 400 })
     }
 
     const updateData: any = {}
-    if (estimatedValue !== undefined) updateData.estimatedValue = estimatedValue
+    if (price !== undefined) updateData.price = price
     if (category !== undefined) updateData.category = category
     if (action !== undefined) updateData.action = action
 

@@ -34,6 +34,8 @@ import type { InventoryConfig } from '@/lib/5s-constants';
 import LayoutEditor from '@/components/5s/LayoutEditor';
 import ColorCodeTable from '@/components/5s/ColorCodeTable';
 import TagPrinter from '@/components/5s/TagPrinter';
+import CleaningPlanPanel from '@/components/5s/CleaningPlanPanel';
+import BibliotecaEstandaresView from '@/components/5s/BibliotecaEstandaresView';
 
 interface InventoryItemData {
   id?: string;
@@ -1560,61 +1562,27 @@ export default function InventarioModal({ open, onClose, sStep, miniStep }: Inve
               </CardContent>
             </Card>
 
-            {/* Biblioteca de Estándares — only for 4S */}
-            {sStep === 4 && items.length > 0 && (
-              <Card className="border-2 border-blue-200 bg-blue-50/30">
-                <CardContent className="p-4">
-                  <div className="flex items-center gap-2 mb-3">
-                    <BookOpen className="h-5 w-5 text-blue-600" />
-                    <h4 className="font-semibold text-blue-800">Biblioteca de Estándares</h4>
-                  </div>
-                  <p className="text-xs text-blue-700 mb-3">
-                    Resumen de todos los estándares inventariados organizados por tipo y estado de implantación.
-                  </p>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    {Object.entries(
-                      items.reduce((acc, item) => {
-                        const cat = config.categories.find(c => c.value === item.category);
-                        const label = cat?.label || item.category;
-                        if (!acc[label]) acc[label] = [];
-                        acc[label].push(item);
-                        return acc;
-                      }, {} as Record<string, InventoryItemData[]>)
-                    ).map(([catLabel, catItems]) => (
-                      <div key={catLabel} className="bg-white rounded-lg border p-3">
-                        <div className="flex items-center justify-between mb-2">
-                          <span className="text-sm font-medium">{catLabel}</span>
-                          <Badge variant="secondary" className="text-xs">{catItems.length}</Badge>
-                        </div>
-                        <div className="space-y-1">
-                          {catItems.map(item => {
-                            const estado = item.extra?.estadoEstandar || '—';
-                            const cumplimiento = item.extra?.cumplimiento;
-                            const estadoColor = estado === 'Implantado' ? 'text-green-600' : estado === 'En proceso' ? 'text-amber-600' : 'text-red-600';
-                            return (
-                              <div key={item.id} className="flex items-center justify-between text-xs">
-                                <span className="truncate flex-1 mr-2">{item.name}</span>
-                                <div className="flex items-center gap-2 shrink-0">
-                                  {cumplimiento != null && (
-                                    <span className="text-muted-foreground">{cumplimiento}%</span>
-                                  )}
-                                  <span className={estadoColor}>{estado}</span>
-                                </div>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                  <div className="mt-3 flex gap-4 text-xs text-blue-700">
-                    <span>Total: {items.length}</span>
-                    <span>Implantados: {items.filter(i => i.extra?.estadoEstandar === 'Implantado').length}</span>
-                    <span>En proceso: {items.filter(i => i.extra?.estadoEstandar === 'En proceso').length}</span>
-                    <span>Pendientes: {items.filter(i => i.extra?.estadoEstandar === 'Pendiente').length}</span>
-                  </div>
-                </CardContent>
-              </Card>
+            {/* ═══ S3: Plan de Limpieza e Inspección ═══ */}
+            {sStep === 3 && (
+              <div className="mt-2">
+                <CleaningPlanPanel
+                  sStep={sStep}
+                  inventoryItems={items.map(i => ({
+                    name: i.name,
+                    location: i.location,
+                    category: i.category,
+                    extra: i.extra ? JSON.stringify(i.extra) : null,
+                  }))}
+                  isReadOnly={isReadOnly}
+                />
+              </div>
+            )}
+
+            {/* ═══ S4: Biblioteca de Estándares ═══ */}
+            {sStep === 4 && (
+              <div className="mt-2">
+                <BibliotecaEstandaresView />
+              </div>
             )}
 
             {/* Items table */}

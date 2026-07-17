@@ -55,12 +55,14 @@ interface SStepDetailProps {
 }
 
 /**
- * For miniStep 3: S1-S4 open 'inventario', S5 opens 'actionplan'
+ * For miniStep 3: All S steps open 'inventario' with S-specific config
+ * S5 inventario shows discipline practices inventory; action plan is accessible via Step 4 results
  * All other miniSteps are the same for every S.
  */
 function getModalType(miniStepId: number, sStep: number): ModalType {
+  // S5 Step 3 is still inventario (discipline practices) — action plan is accessible from Step 4 results
   if (miniStepId === 3) {
-    return sStep === 5 ? 'actionplan' : 'inventario';
+    return 'inventario';
   }
   const map: Record<number, ModalType> = {
     1: 'formacion',
@@ -510,8 +512,8 @@ export default function SStepDetail({ sStep, onBack, onOpenModal }: SStepDetailP
             // Store now handles all role-based locking in getMiniStepStatus
             const effectiveStatus = status;
 
-            // Employee progress info for individual steps (1 only) when zone is selected
-            const isIndividualStep = miniStep.id === 1;
+            // Employee progress info for individual steps (1: Formación + 4: Autoevaluación) when zone is selected
+            const isIndividualStep = miniStep.id === 1 || miniStep.id === 4;
             const zoneEmpProgress = currentZone && isIndividualStep
               ? employeeProgress.filter(ep =>
                   ep.sStep === sStep &&

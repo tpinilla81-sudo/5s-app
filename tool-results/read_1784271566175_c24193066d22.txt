@@ -1,0 +1,699 @@
+     1→'use client';
+     2→
+     3→import { useState, useEffect, useCallback } from 'react';
+     4→import {
+     5→  Dialog,
+     6→  DialogContent,
+     7→  DialogHeader,
+     8→  DialogTitle,
+     9→} from '@/components/ui/dialog';
+    10→import { Button } from '@/components/ui/button';
+    11→import { Badge } from '@/components/ui/badge';
+    12→import { Input } from '@/components/ui/input';
+    13→import { Textarea } from '@/components/ui/textarea';
+    14→import {
+    15→  Select,
+    16→  SelectContent,
+    17→  SelectItem,
+    18→  SelectTrigger,
+    19→  SelectValue,
+    20→} from '@/components/ui/select';
+    21→import { ListChecks, Plus, Trash2, ChevronDown, ChevronRight, AlertTriangle, Maximize2, Minimize2 } from 'lucide-react';
+    22→import { toast } from 'sonner';
+    23→import { use5SStore } from '@/lib/store';
+    24→import { S_STEPS, ACTION_PLAN_MIN_ITEMS } from '@/lib/5s-constants';
+    25→
+    26→interface ActionItemData {
+    27→  id: string;
+    28→  numeroEntrada: number;
+    29→  fechaEntrada: string;
+    30→  comunicadoPor: string;
+    31→  semana: string;
+    32→  seccionDemandante: string;
+    33→  clienteZona: string;
+    34→  personaDemandada: string;
+    35→  seccionDemandada: string;
+    36→  hallazgo: string; // DESCRIPCIÓN
+    37→  impactoObjetivo: string;
+    38→  enviado: string;
+    39→  accionCorrectiva: string;
+    40→  accionesPreventivas: string;
+    41→  semanaPrevista: string;
+    42→  responsable: string; // PERSONA RESPONSABLE
+    43→  porcentaje: number;
+    44→  estado: string;
+    45→  semanaReal: string;
+    46→  // Legacy fields kept for compatibility
+    47→  descripcion: string;
+    48→  fechaCompromiso: string;
+    49→  fechaLimite: string;
+    50→  fechaReal: string;
+    51→  prioridad: string;
+    52→  zoneId: string;
+    53→  zoneName: string;
+    54→  verificadoPor: string;
+    55→  sStep: number;
+    56→  miniStep: number;
+    57→}
+    58→
+    59→interface ZoneData {
+    60→  id: string;
+    61→  name: string;
+    62→}
+    63→
+    64→interface ActionPlanModalProps {
+    65→  open: boolean;
+    66→  onClose: () => void;
+    67→  sStep: number;
+    68→  miniStep: number;
+    69→}
+    70→
+    71→const ESTADO_OPTIONS = [
+    72→  { value: 'abierta', label: 'Abierta', color: 'bg-red-100 text-red-800' },
+    73→  { value: 'en_proceso', label: 'En Proceso', color: 'bg-yellow-100 text-yellow-800' },
+    74→  { value: 'resuelta', label: 'Resuelta', color: 'bg-green-100 text-green-800' },
+    75→  { value: 'cerrada', label: 'Cerrada', color: 'bg-gray-100 text-gray-600' },
+    76→];
+    77→
+    78→const ENVIADO_OPTIONS = ['Sí', 'No', 'Pendiente'];
+    79→
+    80→// Generate week options (W1-W52)
+    81→const WEEK_OPTIONS = Array.from({ length: 53 }, (_, i) => `W${i + 1}`);
+    82→
+    83→// Color sections matching the uploaded image
+    84→const SECTION_COLORS = {
+    85→  demandante: 'bg-amber-50 border-amber-300 text-amber-900', // Yellow section
+    86→  accion: 'bg-sky-50 border-sky-300 text-sky-900',           // Blue section
+    87→  seguimiento: 'bg-orange-50 border-orange-300 text-orange-900', // Orange section
+    88→};
+    89→
+    90→const HEADER_COLORS = {
+    91→  demandante: 'bg-amber-400 text-white',
+    92→  accion: 'bg-sky-400 text-white',
+    93→  seguimiento: 'bg-orange-400 text-white',
+    94→};
+    95→
+    96→export default function ActionPlanModal({ open, onClose, sStep, miniStep }: ActionPlanModalProps) {
+    97→  const { fetchProgress, currentUser, adminFreeNavigation, currentProject, currentZone, canPerform, canView, hasPermission } = use5SStore();
+    98→  const sStepData = S_STEPS.find(s => s.id === sStep);
+    99→  const canSkipSteps = hasPermission('skip_steps');
+   100→  const canPerformStep = canPerform(sStep, miniStep);
+   101→  const canViewStep = canView(sStep, miniStep);
+   102→  // Permission-driven: read-only if no execute perm OR if candado closed for skip_steps users
+   103→  const isReadOnly = !canPerformStep || (canSkipSteps && !adminFreeNavigation);
+   104→
+   105→  const [actions, setActions] = useState<ActionItemData[]>([]);
+   106→  const [isCompleted, setIsCompleted] = useState(false);
+   107→  const [zones, setZones] = useState<ZoneData[]>([]);
+   108→  const [expandedRow, setExpandedRow] = useState<string | null>(null);
+   109→  const [isFullscreen, setIsFullscreen] = useState(true);
+   110→
+   111→  const loadZones = async () => {
+   112→    if (!currentProject) return;
+   113→    try {
+   114→      const res = await fetch(`/api/projects/${currentProject.id}/zones`);
+   115→      if (res.ok) {
+   116→        const json = await res.json();
+   117→        setZones(json.zones || json.data || []);
+   118→      }
+   119→    } catch (error) {
+   120→      console.error('Error loading zones:', error);
+   121→    }
+   122→  };
+   123→
+   124→  const loadActions = async () => {
+   125→    try {
+   126→      const params = new URLSearchParams();
+   127→      // When opened globally (miniStep=0), load ALL actions; otherwise filter by sStep
+   128→      const isGlobal = miniStep === 0;
+   129→      if (!isGlobal) {
+   130→        params.set('sStep', String(sStep));
+   131→      }
+   132→      if (currentProject?.id) params.set('projectId', currentProject.id);
+   133→      if (currentUser?.id) params.set('userId', currentUser.id);
+   134→      if (currentUser?.role) params.set('userRole', currentUser.role);
+   135→      const res = await fetch(`/api/actions?${params.toString()}`);
+   136→      const json = await res.json();
+   137→      if (json.success && json.data) {
+   138→        setActions(json.data.map((a: any) => ({
+   139→          id: a.id,
+   140→          numeroEntrada: a.numeroEntrada || 0,
+   141→          fechaEntrada: a.fechaEntrada ? new Date(a.fechaEntrada).toISOString().split('T')[0] : (a.createdAt ? new Date(a.createdAt).toISOString().split('T')[0] : ''),
+   142→          comunicadoPor: a.comunicadoPor || '',
+   143→          semana: a.semana || '',
+   144→          seccionDemandante: a.seccionDemandante || '',
+   145→          clienteZona: a.clienteZona || a.zone?.name || '',
+   146→          personaDemandada: a.personaDemandada || '',
+   147→          seccionDemandada: a.seccionDemandada || '',
+   148→          hallazgo: a.hallazgo || a.itemDescription || '',
+   149→          impactoObjetivo: a.impactoObjetivo || '',
+   150→          enviado: a.enviado || '',
+   151→          accionCorrectiva: a.accionCorrectiva || a.mejora || '',
+   152→          accionesPreventivas: a.accionesPreventivas || '',
+   153→          semanaPrevista: a.semanaPrevista || '',
+   154→          responsable: a.responsable || '',
+   155→          porcentaje: a.porcentaje || 0,
+   156→          estado: a.estado === 'abierta' ? 'abierta' : a.estado === 'en_proceso' ? 'en_proceso' : a.estado === 'resuelta' || a.estado === 'cerrada' ? 'resuelta' : 'abierta',
+   157→          semanaReal: a.semanaReal || '',
+   158→          // Legacy
+   159→          descripcion: a.itemDescription || a.hallazgo || '',
+   160→          fechaCompromiso: a.fechaCompromiso ? new Date(a.fechaCompromiso).toISOString().split('T')[0] : '',
+   161→          fechaLimite: a.fechaLimite ? new Date(a.fechaLimite).toISOString().split('T')[0] : '',
+   162→          fechaReal: a.fechaReal ? new Date(a.fechaReal).toISOString().split('T')[0] : '',
+   163→          prioridad: a.prioridad || 'media',
+   164→          zoneId: a.zoneId || '',
+   165→          zoneName: a.zone?.name || '',
+   166→          verificadoPor: a.verificadoPor || '',
+   167→          sStep: a.sStep || sStep,
+   168→          miniStep: a.miniStep || 3,
+   169→        })));
+   170→      }
+   171→    } catch (error) {
+   172→      console.error('Error loading actions:', error);
+   173→      toast.error('Error al cargar las acciones');
+   174→    }
+   175→  };
+   176→
+   177→  useEffect(() => {
+   178→    if (open) {
+   179→      loadActions();
+   180→      loadZones();
+   181→    }
+   182→  }, [open, sStep]);
+   183→
+   184→  const getNextNumero = () => {
+   185→    if (actions.length === 0) return 1;
+   186→    return Math.max(...actions.map(a => a.numeroEntrada || 0)) + 1;
+   187→  };
+   188→
+   189→  const getCurrentWeek = () => {
+   190→    const now = new Date();
+   191→    const start = new Date(now.getFullYear(), 0, 1);
+   192→    const diff = now.getTime() - start.getTime();
+   193→    const oneWeek = 1000 * 60 * 60 * 24 * 7;
+   194→    return `W${Math.ceil((diff / oneWeek) + start.getDay() / 7)}`;
+   195→  };
+   196→
+   197→  const handleAddAction = async () => {
+   198→    if (!currentProject?.id) {
+   199→      toast.error('No hay proyecto seleccionado.');
+   200→      return;
+   201→    }
+   202→
+   203→    const nextNumero = getNextNumero();
+   204→    const today = new Date().toISOString().split('T')[0];
+   205→    const currentWeek = getCurrentWeek();
+   206→
+   207→    try {
+   208→      const res = await fetch('/api/actions', {
+   209→        method: 'POST',
+   210→        headers: { 'Content-Type': 'application/json' },
+   211→        body: JSON.stringify({
+   212→          sStep,
+   213→          miniStep: 3,
+   214→          itemId: `PA-${sStep}-${Date.now()}`,
+   215→          itemDescription: '',
+   216→          hallazgo: '',
+   217→          source: 'actionplan',
+   218→          projectId: currentProject.id,
+   219→          zoneId: currentZone?.id || null,
+   220→          // New Plan de Acción fields
+   221→          numeroEntrada: nextNumero,
+   222→          fechaEntrada: today,
+   223→          semana: currentWeek,
+   224→          estado: 'abierta',
+   225→          enviado: 'Pendiente',
+   226→          porcentaje: 0,
+   227→        }),
+   228→      });
+   229→
+   230→      const json = await res.json();
+   231→      if (json.success) {
+   232→        toast.success('Entrada agregada correctamente');
+   233→        await loadActions();
+   234→      } else {
+   235→        toast.error(`Error: ${json.error || 'Error desconocido'}`);
+   236→      }
+   237→    } catch (error) {
+   238→      console.error('Error adding action:', error);
+   239→      toast.error('Error de conexión al agregar la entrada');
+   240→    }
+   241→  };
+   242→
+   243→  const handleUpdateField = async (actionId: string, field: string, value: any) => {
+   244→    // Optimistic update
+   245→    setActions(prev => prev.map(a =>
+   246→      a.id === actionId ? { ...a, [field]: value } : a
+   247→    ));
+   248→
+   249→    try {
+   250→      const res = await fetch(`/api/actions?id=${actionId}`, {
+   251→        method: 'PUT',
+   252→        headers: { 'Content-Type': 'application/json' },
+   253→        body: JSON.stringify({ [field]: value }),
+   254→      });
+   255→      const json = await res.json();
+   256→      if (!json.success) {
+   257→        toast.error(`Error al actualizar: ${json.error || 'Error desconocido'}`);
+   258→        await loadActions(); // Revert
+   259→      }
+   260→    } catch (error) {
+   261→      console.error('Error updating action:', error);
+   262→      await loadActions(); // Revert
+   263→    }
+   264→  };
+   265→
+   266→  const handleDeleteAction = async (id: string) => {
+   267→    if (!confirm('¿Eliminar esta entrada?')) return;
+   268→    try {
+   269→      const res = await fetch(`/api/actions?id=${id}`, { method: 'DELETE' });
+   270→      const json = await res.json();
+   271→      if (json.success) {
+   272→        setActions(prev => prev.filter(a => a.id !== id));
+   273→        toast.success('Entrada eliminada');
+   274→      } else {
+   275→        toast.error(`Error al eliminar: ${json.error || 'Error desconocido'}`);
+   276→      }
+   277→    } catch (error) {
+   278→      console.error('Error deleting action:', error);
+   279→      toast.error('Error de conexión al eliminar');
+   280→    }
+   281→  };
+   282→
+   283→  // Count completed actions
+   284→  const completedCount = actions.filter(a => a.estado === 'resuelta' || a.estado === 'cerrada').length;
+   285→  const totalActions = actions.length;
+   286→  const canComplete = totalActions >= ACTION_PLAN_MIN_ITEMS;
+   287→  const progressPercent = totalActions > 0 ? Math.round((completedCount / totalActions) * 100) : 0;
+   288→
+   289→  const handleComplete = async () => {
+   290→    if (!canComplete) return;
+   291→    try {
+   292→      const res = await fetch(`/api/progress/step?sStep=${sStep}&miniStep=${miniStep}`, {
+   293→        method: 'PUT',
+   294→        headers: { 'Content-Type': 'application/json' },
+   295→        body: JSON.stringify({
+   296→          completed: true,
+   297→          score: progressPercent,
+   298→          projectId: currentProject?.id,
+   299→          zoneId: currentZone?.id || null,
+   300→        }),
+   301→      });
+   302→      const json = await res.json();
+   303→      if (json.success) {
+   304→        setIsCompleted(true);
+   305→        await fetchProgress();
+   306→      }
+   307→    } catch (error) {
+   308→      console.error('Error completing action plan:', error);
+   309→    }
+   310→  };
+   311→
+   312→  const handleAdminSkip = async () => {
+   313→    try {
+   314→      const res = await fetch(`/api/progress/step?sStep=${sStep}&miniStep=${miniStep}`, {
+   315→        method: 'PUT',
+   316→        headers: { 'Content-Type': 'application/json' },
+   317→        body: JSON.stringify({ completed: true, score: 100, notes: 'Completado por administrador (skip)', projectId: currentProject?.id, zoneId: currentZone?.id || null }),
+   318→      });
+   319→      const json = await res.json();
+   320→      if (json.success) {
+   321→        await fetchProgress();
+   322→        onClose();
+   323→      }
+   324→    } catch (error) {
+   325→      console.error('Error admin skip:', error);
+   326→    }
+   327→  };
+   328→
+   329→  const getEstadoBadge = (estado: string) => {
+   330→    const opt = ESTADO_OPTIONS.find(e => e.value === estado);
+   331→    return opt || ESTADO_OPTIONS[0];
+   332→  };
+   333→
+   334→  return (
+   335→    <Dialog open={open} onOpenChange={() => onClose()}>
+   336→      <DialogContent size={isFullscreen ? "fullscreen" : "xl"} className="flex flex-col overflow-hidden p-0">
+   337→        <DialogHeader className="px-6 pt-6 pb-2 flex-shrink-0">
+   338→          <DialogTitle className="flex items-center gap-2">
+   339→            <ListChecks className="h-5 w-5" style={{ color: sStepData?.color }} />
+   340→            <span>Plan de Acción{miniStep === 0 ? ' — Global' : ` — ${sStepData?.name}`}</span>
+   341→            {sStepData && miniStep !== 0 && (
+   342→              <Badge variant="outline" style={{ borderColor: sStepData?.color, color: sStepData?.color }}>
+   343→                {sStepData?.japaneseName}
+   344→              </Badge>
+   345→            )}
+   346→            <button
+   347→              onClick={() => setIsFullscreen(!isFullscreen)}
+   348→              className="ml-auto p-1 rounded hover:bg-muted transition-colors"
+   349→              title={isFullscreen ? "Reducir ventana" : "Pantalla completa"}
+   350→            >
+   351→              {isFullscreen ? <Minimize2 className="h-4 w-4 text-muted-foreground" /> : <Maximize2 className="h-4 w-4 text-muted-foreground" />}
+   352→            </button>
+   353→          </DialogTitle>
+   354→        </DialogHeader>
+   355→
+   356→        {canSkipSteps && !isCompleted && (
+   357→          <div className="mx-6 flex items-center gap-2 p-2 bg-amber-50 border border-amber-200 rounded-lg flex-shrink-0">
+   358→            <span className="text-xs text-amber-700 font-medium">Modo Admin:</span>
+   359→            <Button
+   360→              variant="outline"
+   361→              size="sm"
+   362→              className="text-xs border-amber-300 text-amber-700 hover:bg-amber-100"
+   363→              onClick={handleAdminSkip}
+   364→            >
+   365→              Completar paso sin plan
+   366→            </Button>
+   367→          </div>
+   368→        )}
+   369→
+   370→        {isReadOnly && (
+   371→          <div className="flex items-center gap-2 p-2 mx-6 flex-shrink-0 bg-blue-50 border border-blue-200 rounded-lg">
+   372→            <span className="text-xs text-blue-700 font-medium">Solo lectura: {canSkipSteps ? 'Activa el candado para poder realizar pasos.' : 'Puedes ver pero no modificar.'}</span>
+   373→          </div>
+   374→        )}
+   375→
+   376→        <div className="flex-1 overflow-y-auto px-6 pb-6 min-h-0">
+   377→        {isCompleted ? (
+   378→          <div className="text-center py-8">
+   379→            <div className="text-4xl mb-3">✅</div>
+   380→            <h3 className="text-xl font-bold mb-2">¡Plan de Acción Completado!</h3>
+   381→            <p className="text-muted-foreground">
+   382→              Se han definido {totalActions} acciones, {completedCount} completadas ({progressPercent}%).
+   383→            </p>
+   384→          </div>
+   385→        ) : (
+   386→          <div className="flex-1 flex flex-col min-h-0 space-y-3">
+   387→            {/* Stats bar */}
+   388→            <div className="flex items-center justify-between p-2 bg-muted rounded-lg text-sm">
+   389→              <div className="flex items-center gap-3">
+   390→                <span className="font-medium">{totalActions} entradas</span>
+   391→                <span className="text-muted-foreground">({completedCount} resueltas — {progressPercent}%)</span>
+   392→              </div>
+   393→              <div className="flex items-center gap-2">
+   394→                <Button
+   395→                  onClick={handleAddAction}
+   396→                  size="sm"
+   397→                  style={{ backgroundColor: sStepData?.color }}
+   398→                  className="text-white"
+   399→                >
+   400→                  <Plus className="h-4 w-4 mr-1" /> Nueva Entrada
+   401→                </Button>
+   402→              </div>
+   403→            </div>
+   404→
+   405→            {/* Scrollable table */}
+   406→            <div className="flex-1 overflow-auto border rounded-lg">
+   407→              <table className="w-full text-xs border-collapse min-w-[1200px]">
+   408→                <thead className="sticky top-0 z-10">
+   409→                  <tr>
+   410→                    {/* Yellow section: Demanda */}
+   411→                    <th colSpan={9} className={`${HEADER_COLORS.demandante} px-2 py-1.5 text-center text-xs font-bold border border-amber-500`}>
+   412→                      DEMANDA
+   413→                    </th>
+   414→                    {/* Blue section: Acción */}
+   415→                    <th colSpan={4} className={`${HEADER_COLORS.accion} px-2 py-1.5 text-center text-xs font-bold border border-sky-500`}>
+   416→                      ACCIÓN
+   417→                    </th>
+   418→                    {/* Orange section: Seguimiento */}
+   419→                    <th colSpan={5} className={`${HEADER_COLORS.seguimiento} px-2 py-1.5 text-center text-xs font-bold border border-orange-500`}>
+   420→                      SEGUIMIENTO
+   421→                    </th>
+   422→                    <th className="bg-gray-400 text-white px-1 py-1.5 text-center text-xs font-bold border border-gray-500 w-8">
+   423→                      🗑
+   424→                    </th>
+   425→                  </tr>
+   426→                  <tr>
+   427→                    {/* Yellow section headers */}
+   428→                    <th className={`${HEADER_COLORS.demandante} px-1 py-1 text-center font-semibold border border-amber-400 whitespace-nowrap`}>Nº</th>
+   429→                    <th className={`${HEADER_COLORS.demandante} px-1 py-1 text-center font-semibold border border-amber-400 whitespace-nowrap`}>Fecha</th>
+   430→                    <th className={`${HEADER_COLORS.demandante} px-1 py-1 text-center font-semibold border border-amber-400 whitespace-nowrap`}>Comunicado por</th>
+   431→                    <th className={`${HEADER_COLORS.demandante} px-1 py-1 text-center font-semibold border border-amber-400 whitespace-nowrap`}>Semana</th>
+   432→                    <th className={`${HEADER_COLORS.demandante} px-1 py-1 text-center font-semibold border border-amber-400 whitespace-nowrap`}>Sección Demandante</th>
+   433→                    <th className={`${HEADER_COLORS.demandante} px-1 py-1 text-center font-semibold border border-amber-400 whitespace-nowrap`}>Cliente / Zona</th>
+   434→                    <th className={`${HEADER_COLORS.demandante} px-1 py-1 text-center font-semibold border border-amber-400 whitespace-nowrap`}>Persona Demandada</th>
+   435→                    <th className={`${HEADER_COLORS.demandante} px-1 py-1 text-center font-semibold border border-amber-400 whitespace-nowrap`}>Sección Demandada</th>
+   436→                    <th className={`${HEADER_COLORS.demandante} px-1 py-1 text-center font-semibold border border-amber-400 whitespace-nowrap`}>Descripción</th>
+   437→                    {/* Blue section headers */}
+   438→                    <th className={`${HEADER_COLORS.accion} px-1 py-1 text-center font-semibold border border-sky-400 whitespace-nowrap`}>Impacto Objetivo</th>
+   439→                    <th className={`${HEADER_COLORS.accion} px-1 py-1 text-center font-semibold border border-sky-400 whitespace-nowrap`}>Enviado</th>
+   440→                    <th className={`${HEADER_COLORS.accion} px-1 py-1 text-center font-semibold border border-sky-400 whitespace-nowrap`}>Acción Correctiva</th>
+   441→                    <th className={`${HEADER_COLORS.accion} px-1 py-1 text-center font-semibold border border-sky-400 whitespace-nowrap`}>Acciones Preventivas</th>
+   442→                    {/* Orange section headers */}
+   443→                    <th className={`${HEADER_COLORS.seguimiento} px-1 py-1 text-center font-semibold border border-orange-400 whitespace-nowrap`}>Semana Prevista</th>
+   444→                    <th className={`${HEADER_COLORS.seguimiento} px-1 py-1 text-center font-semibold border border-orange-400 whitespace-nowrap`}>Persona Responsable</th>
+   445→                    <th className={`${HEADER_COLORS.seguimiento} px-1 py-1 text-center font-semibold border border-orange-400 whitespace-nowrap`}>%</th>
+   446→                    <th className={`${HEADER_COLORS.seguimiento} px-1 py-1 text-center font-semibold border border-orange-400 whitespace-nowrap`}>Estado</th>
+   447→                    <th className={`${HEADER_COLORS.seguimiento} px-1 py-1 text-center font-semibold border border-orange-400 whitespace-nowrap`}>Semana Real</th>
+   448→                    <th className="bg-gray-300 text-gray-700 px-1 py-1 border border-gray-400 w-8"></th>
+   449→                  </tr>
+   450→                </thead>
+   451→                <tbody>
+   452→                  {actions.length === 0 ? (
+   453→                    <tr>
+   454→                      <td colSpan={19} className="text-center py-12 text-muted-foreground">
+   455→                        <ListChecks className="h-8 w-8 mx-auto mb-2 opacity-50" />
+   456→                        <p className="text-sm">No hay entradas en el Plan de Acción</p>
+   457→                        <p className="text-xs mt-1">Haga clic en &quot;Nueva Entrada&quot; para agregar acciones</p>
+   458→                      </td>
+   459→                    </tr>
+   460→                  ) : (
+   461→                    actions.map((action) => {
+   462→                      const isExpanded = expandedRow === action.id;
+   463→                      const estadoBadge = getEstadoBadge(action.estado);
+   464→
+   465→                      return (
+   466→                        <tr key={action.id} className="hover:bg-muted/30 group">
+   467→                          {/* Yellow section: Demanda */}
+   468→                          <td className={`${SECTION_COLORS.demandante} px-1 py-1 border border-amber-200 text-center font-bold`}>
+   469→                            {action.numeroEntrada || '-'}
+   470→                          </td>
+   471→                          <td className={`${SECTION_COLORS.demandante} px-1 py-1 border border-amber-200`}>
+   472→                            <Input
+   473→                              type="date"
+   474→                              value={action.fechaEntrada}
+   475→                              onChange={e => handleUpdateField(action.id, 'fechaEntrada', e.target.value)}
+   476→                              className="h-6 text-[10px] p-0 px-1 bg-transparent border-0 focus:bg-white focus:border focus:border-amber-400"
+   477→                            />
+   478→                          </td>
+   479→                          <td className={`${SECTION_COLORS.demandante} px-1 py-1 border border-amber-200`}>
+   480→                            <Input
+   481→                              type="text"
+   482→                              value={action.comunicadoPor}
+   483→                              onChange={e => handleUpdateField(action.id, 'comunicadoPor', e.target.value)}
+   484→                              placeholder="Quién comunica"
+   485→                              className="h-6 text-[10px] p-0 px-1 bg-transparent border-0 focus:bg-white focus:border focus:border-amber-400 w-24"
+   486→                            />
+   487→                          </td>
+   488→                          <td className={`${SECTION_COLORS.demandante} px-1 py-1 border border-amber-200`}>
+   489→                            <Select
+   490→                              value={action.semana || '__none__'}
+   491→                              onValueChange={val => handleUpdateField(action.id, 'semana', val === '__none__' ? '' : val)}
+   492→                            >
+   493→                              <SelectTrigger className="h-6 text-[10px] p-0 px-1 bg-transparent border-0 w-16">
+   494→                                <SelectValue placeholder="Sem" />
+   495→                              </SelectTrigger>
+   496→                              <SelectContent className="max-h-48">
+   497→                                <SelectItem value="__none__">—</SelectItem>
+   498→                                {WEEK_OPTIONS.map(w => (
+   499→                                  <SelectItem key={w} value={w}>{w}</SelectItem>
+   500→                                ))}
+   501→                              </SelectContent>
+   502→                            </Select>
+   503→                          </td>
+   504→                          <td className={`${SECTION_COLORS.demandante} px-1 py-1 border border-amber-200`}>
+   505→                            <Input
+   506→                              type="text"
+   507→                              value={action.seccionDemandante}
+   508→                              onChange={e => handleUpdateField(action.id, 'seccionDemandante', e.target.value)}
+   509→                              placeholder="Sección"
+   510→                              className="h-6 text-[10px] p-0 px-1 bg-transparent border-0 focus:bg-white focus:border focus:border-amber-400 w-24"
+   511→                            />
+   512→                          </td>
+   513→                          <td className={`${SECTION_COLORS.demandante} px-1 py-1 border border-amber-200`}>
+   514→                            <Input
+   515→                              type="text"
+   516→                              value={action.clienteZona}
+   517→                              onChange={e => handleUpdateField(action.id, 'clienteZona', e.target.value)}
+   518→                              placeholder="Zona"
+   519→                              className="h-6 text-[10px] p-0 px-1 bg-transparent border-0 focus:bg-white focus:border focus:border-amber-400 w-24"
+   520→                            />
+   521→                          </td>
+   522→                          <td className={`${SECTION_COLORS.demandante} px-1 py-1 border border-amber-200`}>
+   523→                            <Input
+   524→                              type="text"
+   525→                              value={action.personaDemandada}
+   526→                              onChange={e => handleUpdateField(action.id, 'personaDemandada', e.target.value)}
+   527→                              placeholder="Persona"
+   528→                              className="h-6 text-[10px] p-0 px-1 bg-transparent border-0 focus:bg-white focus:border focus:border-amber-400 w-24"
+   529→                            />
+   530→                          </td>
+   531→                          <td className={`${SECTION_COLORS.demandante} px-1 py-1 border border-amber-200`}>
+   532→                            <Input
+   533→                              type="text"
+   534→                              value={action.seccionDemandada}
+   535→                              onChange={e => handleUpdateField(action.id, 'seccionDemandada', e.target.value)}
+   536→                              placeholder="Sección"
+   537→                              className="h-6 text-[10px] p-0 px-1 bg-transparent border-0 focus:bg-white focus:border focus:border-amber-400 w-24"
+   538→                            />
+   539→                          </td>
+   540→                          <td className={`${SECTION_COLORS.demandante} px-1 py-1 border border-amber-200`}>
+   541→                            <Textarea
+   542→                              value={action.hallazgo}
+   543→                              onChange={e => handleUpdateField(action.id, 'hallazgo', e.target.value)}
+   544→                              placeholder="Descripción del problema..."
+   545→                              className="h-6 text-[10px] p-0 px-1 bg-transparent border-0 focus:bg-white focus:border focus:border-amber-400 min-w-[120px] resize-none"
+   546→                              rows={1}
+   547→                            />
+   548→                          </td>
+   549→
+   550→                          {/* Blue section: Acción */}
+   551→                          <td className={`${SECTION_COLORS.accion} px-1 py-1 border border-sky-200`}>
+   552→                            <Input
+   553→                              type="text"
+   554→                              value={action.impactoObjetivo}
+   555→                              onChange={e => handleUpdateField(action.id, 'impactoObjetivo', e.target.value)}
+   556→                              placeholder="Impacto"
+   557→                              className="h-6 text-[10px] p-0 px-1 bg-transparent border-0 focus:bg-white focus:border focus:border-sky-400 w-24"
+   558→                            />
+   559→                          </td>
+   560→                          <td className={`${SECTION_COLORS.accion} px-1 py-1 border border-sky-200`}>
+   561→                            <Select
+   562→                              value={action.enviado || '__none__'}
+   563→                              onValueChange={val => handleUpdateField(action.id, 'enviado', val === '__none__' ? '' : val)}
+   564→                            >
+   565→                              <SelectTrigger className="h-6 text-[10px] p-0 px-1 bg-transparent border-0 w-20">
+   566→                                <SelectValue placeholder="—"/>
+   567→                              </SelectTrigger>
+   568→                              <SelectContent>
+   569→                                <SelectItem value="__none__">—</SelectItem>
+   570→                                {ENVIADO_OPTIONS.map(opt => (
+   571→                                  <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+   572→                                ))}
+   573→                              </SelectContent>
+   574→                            </Select>
+   575→                          </td>
+   576→                          <td className={`${SECTION_COLORS.accion} px-1 py-1 border border-sky-200`}>
+   577→                            <Textarea
+   578→                              value={action.accionCorrectiva}
+   579→                              onChange={e => handleUpdateField(action.id, 'accionCorrectiva', e.target.value)}
+   580→                              placeholder="Acción correctiva..."
+   581→                              className="h-6 text-[10px] p-0 px-1 bg-transparent border-0 focus:bg-white focus:border focus:border-sky-400 min-w-[120px] resize-none"
+   582→                              rows={1}
+   583→                            />
+   584→                          </td>
+   585→                          <td className={`${SECTION_COLORS.accion} px-1 py-1 border border-sky-200`}>
+   586→                            <Textarea
+   587→                              value={action.accionesPreventivas}
+   588→                              onChange={e => handleUpdateField(action.id, 'accionesPreventivas', e.target.value)}
+   589→                              placeholder="Acciones preventivas..."
+   590→                              className="h-6 text-[10px] p-0 px-1 bg-transparent border-0 focus:bg-white focus:border focus:border-sky-400 min-w-[120px] resize-none"
+   591→                              rows={1}
+   592→                            />
+   593→                          </td>
+   594→
+   595→                          {/* Orange section: Seguimiento */}
+   596→                          <td className={`${SECTION_COLORS.seguimiento} px-1 py-1 border border-orange-200`}>
+   597→                            <Select
+   598→                              value={action.semanaPrevista || '__none__'}
+   599→                              onValueChange={val => handleUpdateField(action.id, 'semanaPrevista', val === '__none__' ? '' : val)}
+   600→                            >
+   601→                              <SelectTrigger className="h-6 text-[10px] p-0 px-1 bg-transparent border-0 w-16">
+   602→                                <SelectValue placeholder="Sem" />
+   603→                              </SelectTrigger>
+   604→                              <SelectContent className="max-h-48">
+   605→                                <SelectItem value="__none__">—</SelectItem>
+   606→                                {WEEK_OPTIONS.map(w => (
+   607→                                  <SelectItem key={w} value={w}>{w}</SelectItem>
+   608→                                ))}
+   609→                              </SelectContent>
+   610→                            </Select>
+   611→                          </td>
+   612→                          <td className={`${SECTION_COLORS.seguimiento} px-1 py-1 border border-orange-200`}>
+   613→                            <Input
+   614→                              type="text"
+   615→                              value={action.responsable}
+   616→                              onChange={e => handleUpdateField(action.id, 'responsable', e.target.value)}
+   617→                              placeholder="Responsable"
+   618→                              className="h-6 text-[10px] p-0 px-1 bg-transparent border-0 focus:bg-white focus:border focus:border-orange-400 w-24"
+   619→                            />
+   620→                          </td>
+   621→                          <td className={`${SECTION_COLORS.seguimiento} px-1 py-1 border border-orange-200 text-center`}>
+   622→                            <Input
+   623→                              type="number"
+   624→                              min={0}
+   625→                              max={100}
+   626→                              value={action.porcentaje}
+   627→                              onChange={e => handleUpdateField(action.id, 'porcentaje', parseFloat(e.target.value) || 0)}
+   628→                              className="h-6 text-[10px] p-0 px-1 bg-transparent border-0 focus:bg-white focus:border focus:border-orange-400 w-12 text-center"
+   629→                            />
+   630→                          </td>
+   631→                          <td className={`${SECTION_COLORS.seguimiento} px-1 py-1 border border-orange-200`}>
+   632→                            <Select
+   633→                              value={action.estado}
+   634→                              onValueChange={val => handleUpdateField(action.id, 'estado', val)}
+   635→                            >
+   636→                              <SelectTrigger className="h-6 text-[10px] p-0 px-1 bg-transparent border-0 w-20">
+   637→                                <SelectValue />
+   638→                              </SelectTrigger>
+   639→                              <SelectContent>
+   640→                                {ESTADO_OPTIONS.map(opt => (
+   641→                                  <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+   642→                                ))}
+   643→                              </SelectContent>
+   644→                            </Select>
+   645→                          </td>
+   646→                          <td className={`${SECTION_COLORS.seguimiento} px-1 py-1 border border-orange-200`}>
+   647→                            <Select
+   648→                              value={action.semanaReal || '__none__'}
+   649→                              onValueChange={val => handleUpdateField(action.id, 'semanaReal', val === '__none__' ? '' : val)}
+   650→                            >
+   651→                              <SelectTrigger className="h-6 text-[10px] p-0 px-1 bg-transparent border-0 w-16">
+   652→                                <SelectValue placeholder="Sem" />
+   653→                              </SelectTrigger>
+   654→                              <SelectContent className="max-h-48">
+   655→                                <SelectItem value="__none__">—</SelectItem>
+   656→                                {WEEK_OPTIONS.map(w => (
+   657→                                  <SelectItem key={w} value={w}>{w}</SelectItem>
+   658→                                ))}
+   659→                              </SelectContent>
+   660→                            </Select>
+   661→                          </td>
+   662→                          <td className="px-1 py-1 border border-gray-200 text-center">
+   663→                            <button
+   664→                              onClick={() => handleDeleteAction(action.id)}
+   665→                              className="text-red-400 hover:text-red-600 transition-colors"
+   666→                              title="Eliminar entrada"
+   667→                            >
+   668→                              <Trash2 className="h-3.5 w-3.5" />
+   669→                            </button>
+   670→                          </td>
+   671→                        </tr>
+   672→                      );
+   673→                    })
+   674→                  )}
+   675→                </tbody>
+   676→              </table>
+   677→            </div>
+   678→
+   679→            {/* Footer with completion button */}
+   680→            <div className="flex items-center justify-between pt-2">
+   681→              <div className="text-xs text-muted-foreground">
+   682→                Mín. {ACTION_PLAN_MIN_ITEMS} entradas para completar el paso
+   683→              </div>
+   684→              <Button
+   685→                onClick={handleComplete}
+   686→                disabled={!canComplete || isReadOnly}
+   687→                style={canComplete ? { backgroundColor: sStepData?.color } : undefined}
+   688→              >
+   689→                Completar Plan de Acción ({totalActions}/{ACTION_PLAN_MIN_ITEMS} mín.)
+   690→              </Button>
+   691→            </div>
+   692→          </div>
+   693→        )}
+   694→        </div>
+   695→      </DialogContent>
+   696→    </Dialog>
+   697→  );
+   698→}
+   699→

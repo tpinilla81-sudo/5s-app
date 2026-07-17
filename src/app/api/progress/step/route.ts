@@ -91,6 +91,32 @@ async function validateStepPrerequisites(
     }
   }
 
+  // S3 Step 3 additional: requires at least one cleaning plan standard
+  if (miniStep === 3 && sStep === 3) {
+    const cleaningWhere: any = { projectId, category: 'procedimiento', sStep }
+    if (zoneId) cleaningWhere.zoneId = zoneId
+    const cleaningCount = await db.standard.count({ where: cleaningWhere })
+    if (cleaningCount === 0) {
+      // Also check for inventory items (dirt points) as an alternative
+      const inventoryWhere: any = { projectId, sStep }
+      if (zoneId) inventoryWhere.zoneId = zoneId
+      const inventoryCount = await db.inventoryItem.count({ where: inventoryWhere })
+      if (inventoryCount === 0) {
+        return { valid: false, error: `Debes inventariar puntos de suciedad y crear un plan de limpieza antes de completar este paso` }
+      }
+    }
+  }
+
+  // S4 Step 3 additional: requires at least one standard (procedimiento, visual, checklist, etc.)
+  if (miniStep === 3 && sStep === 4) {
+    const standardsWhere: any = { projectId, sStep }
+    if (zoneId) standardsWhere.zoneId = zoneId
+    const standardsCount = await db.standard.count({ where: standardsWhere })
+    if (standardsCount === 0) {
+      return { valid: false, error: `Debes crear al menos un estándar en la Biblioteca de Estándares antes de completar este paso` }
+    }
+  }
+
   return { valid: true }
 }
 
@@ -224,7 +250,23 @@ export async function PUT(request: NextRequest) {
       }
     }
 
-    return await handleProgressUpdate(sStepNum, miniStepNum, { completed, score, notes, photoUrls, projectId, zoneId })
+    const result = await handleProgressUpdate(sStepNum, miniStepNum, { completed, score, notes, photoUrls, projectId, zoneId })
+
+    // Auto-notify auditors when a step is completed (check if steps 1-4 are all done and step 5 isn't)
+    if (completed && projectId) {
+      try {
+        await fetch(new URL('/api/notifications/auto', request.url).toString(), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ projectId }),
+        })
+      } catch (notifError) {
+        console.error('Error sending auto-notification:', notifError)
+        // Non-blocking: don't fail the step completion if notification fails
+      }
+    }
+
+    return result
   } catch (error) {
     console.error('Error updating progress:', error)
     return NextResponse.json({ success: false, error: 'Error updating progress' }, { status: 500 })

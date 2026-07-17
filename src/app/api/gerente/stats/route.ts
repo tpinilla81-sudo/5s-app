@@ -43,6 +43,7 @@ export async function GET(request: NextRequest) {
           },
         },
         progress: true,
+        employeeProgress: true,
         inventoryItems: true,
         actionItems: true,
         checklistResponses: true,
@@ -88,7 +89,28 @@ export async function GET(request: NextRequest) {
     const perProject = []
 
     for (const project of projects) {
-      const projectCompleted = project.progress.filter(p => p.completed).length
+      // Count zone-level completed steps from Progress
+      let projectCompleted = project.progress.filter(p => p.completed).length
+
+      // Also count individual employee progress for steps 1 and 4 (which are per-employee)
+      // A zone-level step is considered "done" if ANY employee has completed it
+      const zones = project.zones || []
+      for (const zone of zones) {
+        for (const miniStep of [1, 4]) {
+          for (let s = 1; s <= 5; s++) {
+            // Check if zone-level progress already counts this
+            const zoneProgressExists = project.progress.some(p => p.sStep === s && p.miniStep === miniStep && p.zoneId === zone.id && p.completed)
+            if (!zoneProgressExists) {
+              // Check if any employee completed this step in this zone
+              const empDone = project.employeeProgress?.some(ep => ep.sStep === s && ep.miniStep === miniStep && ep.zoneId === zone.id && ep.completed)
+              if (empDone) {
+                projectCompleted++
+              }
+            }
+          }
+        }
+      }
+
       totalCompletedSteps += projectCompleted
       totalMiniSteps += 25
 
@@ -110,10 +132,10 @@ export async function GET(request: NextRequest) {
       for (const item of project.inventoryItems) {
         if (item.category === 'innecesario') {
           totalInnecesario++
-          dineroParado += (item.estimatedValue || 0) * item.quantity
+          dineroParado += (item.price || 0) * item.quantity
         } else if (item.category === 'dudoso') {
           totalDudoso++
-          dineroParado += (item.estimatedValue || 0) * item.quantity
+          dineroParado += (item.price || 0) * item.quantity
         } else {
           totalUtil++
         }
@@ -129,7 +151,22 @@ export async function GET(request: NextRequest) {
       // Per-S data
       for (let s = 1; s <= 5; s++) {
         const sProgress = project.progress.filter(p => p.sStep === s)
-        perS[s].completed += sProgress.filter(p => p.completed).length
+        let sCompleted = sProgress.filter(p => p.completed).length
+
+        // Also count employee progress for steps 1 and 4 of this S
+        for (const zone of zones) {
+          for (const miniStep of [1, 4]) {
+            const zoneProgressExists = sProgress.some(p => p.miniStep === miniStep && p.zoneId === zone.id && p.completed)
+            if (!zoneProgressExists) {
+              const empDone = project.employeeProgress?.some(ep => ep.sStep === s && ep.miniStep === miniStep && ep.zoneId === zone.id && ep.completed)
+              if (empDone) {
+                sCompleted++
+              }
+            }
+          }
+        }
+
+        perS[s].completed += sCompleted
         perS[s].total += 5
         perS[s].actions += project.actionItems.filter(a => a.sStep === s).length
         perS[s].inventory += project.inventoryItems.filter(i => i.sStep === s).length
@@ -187,7 +224,7 @@ export async function GET(request: NextRequest) {
         innecesarios: project.inventoryItems.filter(i => i.category === 'innecesario').length,
         dineroParado: project.inventoryItems
           .filter(i => i.category === 'innecesario' || i.category === 'dudoso')
-          .reduce((sum, i) => sum + (i.estimatedValue || 0) * i.quantity, 0),
+          .reduce((sum, i) => sum + (i.price || 0) * i.quantity, 0),
       })
     }
 
