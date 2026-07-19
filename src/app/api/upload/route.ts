@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { uploadToStorage, isStorageConfigured } from '@/lib/supabase-storage'
+import { put, del } from '@vercel/blob'
 import path from 'path'
 import fs from 'fs'
 
@@ -19,18 +20,31 @@ export async function POST(request: NextRequest) {
     const safeFilename = filename || `photo_${Date.now()}_${file.name || 'upload.jpg'}`
     const contentType = file.type || 'image/jpeg'
 
-    // Strategy 1: Try Supabase Storage (works on Vercel / cloud)
+    // Strategy 1: Vercel Blob (preferred for production on Vercel)
+    if (process.env.BLOB_READ_WRITE_TOKEN) {
+      try {
+        const blob = await put(`5s-photos/${safeFilename}`, file, {
+          contentType,
+          access: 'public',
+        })
+        console.log('[Upload] Uploaded to Vercel Blob:', blob.url)
+        return NextResponse.json({ success: true, url: blob.url })
+      } catch (blobError) {
+        console.warn('[Upload] Vercel Blob upload failed, trying next strategy:', blobError)
+      }
+    }
+
+    // Strategy 2: Supabase Storage (alternative cloud storage)
     if (isStorageConfigured()) {
       const result = await uploadToStorage(file, safeFilename, contentType)
       if (result) {
         console.log('[Upload] Uploaded to Supabase Storage:', result.url)
         return NextResponse.json({ success: true, url: result.url })
       }
-      // If Supabase failed, fall through to local
       console.warn('[Upload] Supabase upload failed, falling back to local storage')
     }
 
-    // Strategy 2: Local filesystem (works in development)
+    // Strategy 3: Local filesystem (development only)
     try {
       const uploadsDir = path.join(process.cwd(), 'public', 'uploads', 'photos')
 
@@ -55,7 +69,7 @@ export async function POST(request: NextRequest) {
     } catch (localError) {
       console.error('[Upload] Local filesystem save failed:', localError)
       return NextResponse.json(
-        { success: false, error: 'Error al guardar el archivo' },
+        { success: false, error: 'Error al guardar el archivo. Configure BLOB_READ_WRITE_TOKEN o Supabase para producción.' },
         { status: 500 }
       )
     }
@@ -80,6 +94,17 @@ export async function DELETE(request: NextRequest) {
       )
     }
 
+    // If it's a Vercel Blob URL, delete from blob storage
+    if (url.includes('blob.vercel-storage.com') && process.env.BLOB_READ_WRITE_TOKEN) {
+      try {
+        await del(url)
+        console.log('[Upload] Deleted from Vercel Blob:', url)
+        return NextResponse.json({ success: true })
+      } catch (e) {
+        console.warn('[Upload] Vercel Blob delete failed:', e)
+      }
+    }
+
     // If it's a local file, delete it
     if (url.startsWith('/uploads/')) {
       const filePath = path.join(process.cwd(), 'public', url)
@@ -90,7 +115,6 @@ export async function DELETE(request: NextRequest) {
     }
 
     // If it's a Supabase URL, we'd need the path — for now just return success
-    // (Supabase cleanup can be handled separately)
     return NextResponse.json({ success: true })
   } catch (error) {
     console.error('[Upload] Delete error:', error)
