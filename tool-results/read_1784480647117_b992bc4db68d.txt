@@ -197,15 +197,15 @@
    197→          <ArrowLeft className="h-5 w-5" />
    198→        </Button>
    199→        <div className="flex-1">
-   200→          <div className="flex items-center gap-2">
+   200→          <div className="flex items-center gap-2 flex-wrap">
    201→            <div
-   202→              className="w-4 h-4 rounded-full"
+   202→              className="w-4 h-4 rounded-full shrink-0"
    203→              style={{ backgroundColor: sStepData.color }}
    204→            />
-   205→            <h2 className="text-xl font-bold" style={{ color: sStepData.color }}>
+   205→            <h2 className="text-lg sm:text-xl font-bold" style={{ color: sStepData.color }}>
    206→              {sStepData.name}
    207→            </h2>
-   208→            <span className="text-sm text-muted-foreground">
+   208→            <span className="text-xs sm:text-sm text-muted-foreground">
    209→              ({sStepData.japaneseName} - {sStepData.spanishName})
    210→            </span>
    211→          </div>
@@ -381,7 +381,7 @@
    381→                        <div className="space-y-1.5">
    382→                          {displayActions.map(action => (
    383→                            <div key={action.id} className="bg-white/80 border rounded p-2 space-y-1">
-   384→                              <div className="grid grid-cols-2 gap-1.5">
+   384→                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
    385→                                <div>
    386→                                  <span className="text-muted-foreground font-medium">Concepto:</span>
    387→                                  <p className="font-medium">{action.hallazgo || action.itemDescription || '—'}</p>
@@ -445,7 +445,7 @@
    445→                  <div className="space-y-1.5">
    446→                    {relatedActions.map(action => (
    447→                      <div key={action.id} className="bg-white/80 border rounded p-2 space-y-1">
-   448→                        <div className="grid grid-cols-2 gap-1.5">
+   448→                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
    449→                          <div>
    450→                            <span className="text-muted-foreground font-medium">Concepto:</span>
    451→                            <p className="font-medium">{action.hallazgo || action.itemDescription || '—'}</p>
