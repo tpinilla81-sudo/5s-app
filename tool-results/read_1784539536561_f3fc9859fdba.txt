@@ -1,0 +1,902 @@
+     1→     1→'use client';
+     2→     2→
+     3→     3→import { useState, useEffect, useCallback } from 'react';
+     4→     4→import { Button } from '@/components/ui/button';
+     5→     5→import { Badge } from '@/components/ui/badge';
+     6→     6→import { Input } from '@/components/ui/input';
+     7→     7→import { Textarea } from '@/components/ui/textarea';
+     8→     8→import {
+     9→     9→  Select,
+    10→    10→  SelectContent,
+    11→    11→  SelectItem,
+    12→    12→  SelectTrigger,
+    13→    13→  SelectValue,
+    14→    14→} from '@/components/ui/select';
+    15→    15→import {
+    16→    16→  Dialog,
+    17→    17→  DialogContent,
+    18→    18→  DialogHeader,
+    19→    19→  DialogTitle,
+    20→    20→} from '@/components/ui/dialog';
+    21→    21→import {
+    22→    22→  ListChecks, Plus, Trash2, Loader2, Filter, ChevronDown,
+    23→    23→  FileText, User, Calendar, Target, ArrowRight, CheckCircle2,
+    24→    24→  Clock, AlertCircle, X, Expand,
+    25→    25→} from 'lucide-react';
+    26→    26→import { toast } from 'sonner';
+    27→    27→import { use5SStore } from '@/lib/store';
+    28→    28→import { S_STEPS } from '@/lib/5s-constants';
+    29→    29→
+    30→    30→// ═══════════════════════════════════════════════════════
+    31→    31→// Types
+    32→    32→// ═══════════════════════════════════════════════════════
+    33→    33→interface ActionItemData {
+    34→    34→  id: string;
+    35→    35→  numeroEntrada: number;
+    36→    36→  fechaEntrada: string;
+    37→    37→  comunicadoPor: string;
+    38→    38→  semana: string;
+    39→    39→  seccionDemandante: string;
+    40→    40→  clienteZona: string;
+    41→    41→  personaDemandada: string;
+    42→    42→  seccionDemandada: string;
+    43→    43→  hallazgo: string;
+    44→    44→  impactoObjetivo: string;
+    45→    45→  enviado: string;
+    46→    46→  accionCorrectiva: string;
+    47→    47→  accionesPreventivas: string;
+    48→    48→  semanaPrevista: string;
+    49→    49→  responsable: string;
+    50→    50→  porcentaje: number;
+    51→    51→  estado: string;
+    52→    52→  semanaReal: string;
+    53→    53→  sStep: number;
+    54→    54→  miniStep: number;
+    55→    55→  zoneName: string;
+    56→    56→}
+    57→    57→
+    58→    58→interface ZoneData {
+    59→    59→  id: string;
+    60→    60→  name: string;
+    61→    61→}
+    62→    62→
+    63→    63→const ESTADO_OPTIONS = [
+    64→    64→  { value: 'abierta', label: 'Abierta', color: 'bg-red-100 text-red-800', icon: AlertCircle },
+    65→    65→  { value: 'en_proceso', label: 'En Proceso', color: 'bg-yellow-100 text-yellow-800', icon: Clock },
+    66→    66→  { value: 'resuelta', label: 'Resuelta', color: 'bg-green-100 text-green-800', icon: CheckCircle2 },
+    67→    67→  { value: 'cerrada', label: 'Cerrada', color: 'bg-gray-100 text-gray-600', icon: X },
+    68→    68→];
+    69→    69→
+    70→    70→const WEEK_OPTIONS = Array.from({ length: 53 }, (_, i) => `W${i + 1}`);
+    71→    71→
+    72→    72→const S_COLORS: Record<number, string> = {
+    73→    73→  1: '#8B5CF6', 2: '#EAB308', 3: '#3B82F6', 4: '#F43F5E', 5: '#F97316',
+    74→    74→};
+    75→    75→
+    76→    76→const S_BG_COLORS: Record<number, string> = {
+    77→    77→  1: 'bg-violet-100 text-violet-800',
+    78→    78→  2: 'bg-yellow-100 text-yellow-800',
+    79→    79→  3: 'bg-blue-100 text-blue-800',
+    80→    80→  4: 'bg-rose-100 text-rose-800',
+    81→    81→  5: 'bg-orange-100 text-orange-800',
+    82→    82→};
+    83→    83→
+    84→    84→const SECTION_COLORS = {
+    85→    85→  demandante: 'bg-amber-50 border-amber-300',
+    86→    86→  accion: 'bg-sky-50 border-sky-300',
+    87→    87→  seguimiento: 'bg-orange-50 border-orange-300',
+    88→    88→};
+    89→    89→
+    90→    90→// ═══════════════════════════════════════════════════════
+    91→    91→// S-Step Badge Component
+    92→    92→// ═══════════════════════════════════════════════════════
+    93→    93→function SStepBadge({ sStep, compact = false }: { sStep: number; compact?: boolean }) {
+    94→    94→  const stepData = S_STEPS.find(s => s.id === sStep);
+    95→    95→  if (compact) {
+    96→    96→    return (
+    97→    97→      <span
+    98→    98→        className="inline-flex items-center justify-center w-7 h-7 rounded-md text-white font-black text-[10px] shrink-0"
+    99→    99→        style={{ backgroundColor: S_COLORS[sStep] }}
+   100→   100→        title={stepData ? `S${sStep} — ${stepData.japaneseName} (${stepData.spanishName})` : `S${sStep}`}
+   101→   101→      >
+   102→   102→        S{sStep}
+   103→   103→      </span>
+   104→   104→    );
+   105→   105→  }
+   106→   106→  return (
+   107→   107→    <div className="flex items-center gap-1.5">
+   108→   108→      <span
+   109→   109→        className="inline-flex items-center justify-center w-8 h-8 rounded-lg text-white font-black text-xs shrink-0"
+   110→   110→        style={{ backgroundColor: S_COLORS[sStep] }}
+   111→   111→      >
+   112→   112→        S{sStep}
+   113→   113→      </span>
+   114→   114→      <span className="text-[11px] font-semibold hidden sm:inline" style={{ color: S_COLORS[sStep] }}>
+   115→   115→        {stepData?.japaneseName}
+   116→   116→      </span>
+   117→   117→    </div>
+   118→   118→  );
+   119→   119→}
+   120→   120→
+   121→   121→// ═══════════════════════════════════════════════════════
+   122→   122→// New Entry Dialog
+   123→   123→// ═══════════════════════════════════════════════════════
+   124→   124→function NewEntryDialog({
+   125→   125→  open,
+   126→   126→  onClose,
+   127→   127→  onConfirm,
+   128→   128→}: {
+   129→   129→  open: boolean;
+   130→   130→  onClose: () => void;
+   131→   131→  onConfirm: (sStep: number) => void;
+   132→   132→}) {
+   133→   133→  const [selectedS, setSelectedS] = useState<number>(1);
+   134→   134→
+   135→   135→  return (
+   136→   136→    <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
+   137→   137→      <DialogContent className="sm:max-w-md">
+   138→   138→        <DialogHeader>
+   139→   139→          <DialogTitle className="flex items-center gap-2">
+   140→   140→            <Plus className="h-5 w-5 text-rose-600" />
+   141→   141→            Nueva Entrada — Plan de Acción
+   142→   142→          </DialogTitle>
+   143→   143→        </DialogHeader>
+   144→   144→        <div className="py-4 space-y-4">
+   145→   145→          <p className="text-sm text-muted-foreground">
+   146→   146→            Selecciona desde qué S proviene la evidencia:
+   147→   147→          </p>
+   148→   148→          <div className="grid grid-cols-5 gap-2">
+   149→   149→            {S_STEPS.map(s => (
+   150→   150→              <button
+   151→   151→                key={s.id}
+   152→   152→                onClick={() => setSelectedS(s.id)}
+   153→   153→                className={`flex flex-col items-center gap-1 p-3 rounded-xl border-2 transition-all ${
+   154→   154→                  selectedS === s.id
+   155→   155→                    ? 'scale-105 shadow-md'
+   156→   156→                    : 'opacity-60 hover:opacity-80'
+   157→   157→                }`}
+   158→   158→                style={{
+   159→   159→                  borderColor: selectedS === s.id ? S_COLORS[s.id] : 'transparent',
+   160→   160→                  backgroundColor: selectedS === s.id ? S_COLORS[s.id] + '15' : 'transparent',
+   161→   161→                }}
+   162→   162→              >
+   163→   163→                <span
+   164→   164→                  className="w-10 h-10 rounded-lg flex items-center justify-center text-white font-black text-sm"
+   165→   165→                  style={{ backgroundColor: S_COLORS[s.id] }}
+   166→   166→                >
+   167→   167→                  S{s.id}
+   168→   168→                </span>
+   169→   169→                <span className="text-[10px] font-semibold" style={{ color: S_COLORS[s.id] }}>
+   170→   170→                  {s.japaneseName}
+   171→   171→                </span>
+   172→   172→              </button>
+   173→   173→            ))}
+   174→   174→          </div>
+   175→   175→        </div>
+   176→   176→        <div className="flex justify-end gap-2">
+   177→   177→          <Button variant="outline" onClick={onClose}>Cancelar</Button>
+   178→   178→          <Button
+   179→   179→            onClick={() => onConfirm(selectedS)}
+   180→   180→            style={{ backgroundColor: S_COLORS[selectedS] }}
+   181→   181→            className="text-white gap-1.5"
+   182→   182→          >
+   183→   183→            <Plus className="h-4 w-4" />
+   184→   184→            Crear en S{selectedS}
+   185→   185→          </Button>
+   186→   186→        </div>
+   187→   187→      </DialogContent>
+   188→   188→    </Dialog>
+   189→   189→  );
+   190→   190→}
+   191→   191→
+   192→   192→// ═══════════════════════════════════════════════════════
+   193→   193→// Mobile Action Card (for small screens)
+   194→   194→// ═══════════════════════════════════════════════════════
+   195→   195→function ActionCard({
+   196→   196→  action,
+   197→   197→  onUpdateField,
+   198→   198→  onDelete,
+   199→   199→}: {
+   200→   200→  action: ActionItemData;
+   201→   201→  onUpdateField: (id: string, field: string, value: any) => void;
+   202→   202→  onDelete: (id: string) => void;
+   203→   203→}) {
+   204→   204→  const [expanded, setExpanded] = useState(false);
+   205→   205→  const estadoInfo = ESTADO_OPTIONS.find(e => e.value === action.estado) || ESTADO_OPTIONS[0];
+   206→   206→
+   207→   207→  return (
+   208→   208→    <div className="rounded-xl border bg-white shadow-sm overflow-hidden">
+   209→   209→      {/* Card header — always visible */}
+   210→   210→      <div
+   211→   211→        className="flex items-center gap-2 px-3 py-2.5 cursor-pointer"
+   212→   212→        onClick={() => setExpanded(!expanded)}
+   213→   213→      >
+   214→   214→        <SStepBadge sStep={action.sStep} compact />
+   215→   215→        <div className="flex-1 min-w-0">
+   216→   216→          <div className="flex items-center gap-2">
+   217→   217→            <span className="font-mono font-bold text-xs text-gray-500">#{action.numeroEntrada}</span>
+   218→   218→            <span className="text-xs text-muted-foreground truncate">
+   219→   219→              {action.hallazgo || 'Sin descripción'}
+   220→   220→            </span>
+   221→   221→          </div>
+   222→   222→        </div>
+   223→   223→        <Badge className={`text-[10px] px-1.5 py-0 ${estadoInfo.color}`}>
+   224→   224→          {estadoInfo.label}
+   225→   225→        </Badge>
+   226→   226→        <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${expanded ? 'rotate-180' : ''}`} />
+   227→   227→      </div>
+   228→   228→
+   229→   229→      {/* Compact summary line */}
+   230→   230→      {!expanded && (
+   231→   231→        <div className="px-3 pb-2.5 flex items-center gap-3 text-[11px] text-muted-foreground">
+   232→   232→          {action.responsable && (
+   233→   233→            <span className="flex items-center gap-1"><User className="h-3 w-3" />{action.responsable}</span>
+   234→   234→          )}
+   235→   235→          {action.semanaPrevista && (
+   236→   236→            <span className="flex items-center gap-1"><Calendar className="h-3 w-3" />{action.semanaPrevista}</span>
+   237→   237→          )}
+   238→   238→          <span className="flex items-center gap-1"><Target className="h-3 w-3" />{action.porcentaje}%</span>
+   239→   239→        </div>
+   240→   240→      )}
+   241→   241→
+   242→   242→      {/* Expanded details */}
+   243→   243→      {expanded && (
+   244→   244→        <div className="border-t px-3 py-3 space-y-3">
+   245→   245→          {/* DEMANDA */}
+   246→   246→          <div>
+   247→   247→            <div className="text-[10px] font-bold text-amber-600 uppercase tracking-wider mb-1.5 flex items-center gap-1">
+   248→   248→              <FileText className="h-3 w-3" /> Demanda
+   249→   249→            </div>
+   250→   250→            <div className="grid grid-cols-2 gap-x-3 gap-y-1.5">
+   251→   251→              <Field label="Fecha" compact>
+   252→   252→                <Input type="date" value={action.fechaEntrada} onChange={e => onUpdateField(action.id, 'fechaEntrada', e.target.value)}
+   253→   253→                  className="h-7 text-xs p-0 px-1.5 border rounded" />
+   254→   254→              </Field>
+   255→   255→              <Field label="Semana" compact>
+   256→   256→                <Select value={action.semana || 'W1'} onValueChange={v => onUpdateField(action.id, 'semana', v)}>
+   257→   257→                  <SelectTrigger className="h-7 text-xs p-0 px-1.5 border rounded w-full">
+   258→   258→                    <SelectValue />
+   259→   259→                  </SelectTrigger>
+   260→   260→                  <SelectContent className="max-h-48">
+   261→   261→                    {WEEK_OPTIONS.map(w => <SelectItem key={w} value={w} className="text-xs">{w}</SelectItem>)}
+   262→   262→                  </SelectContent>
+   263→   263→                </Select>
+   264→   264→              </Field>
+   265→   265→              <Field label="Comunicado por" compact>
+   266→   266→                <Input value={action.comunicadoPor} onChange={e => onUpdateField(action.id, 'comunicadoPor', e.target.value)}
+   267→   267→                  className="h-7 text-xs p-0 px-1.5 border rounded" placeholder="Auditor" />
+   268→   268→              </Field>
+   269→   269→              <Field label="Sección Demand." compact>
+   270→   270→                <Input value={action.seccionDemandante} onChange={e => onUpdateField(action.id, 'seccionDemandante', e.target.value)}
+   271→   271→                  className="h-7 text-xs p-0 px-1.5 border rounded" placeholder="Sección" />
+   272→   272→              </Field>
+   273→   273→              <Field label="Zona / Cliente" compact>
+   274→   274→                <Input value={action.clienteZona} onChange={e => onUpdateField(action.id, 'clienteZona', e.target.value)}
+   275→   275→                  className="h-7 text-xs p-0 px-1.5 border rounded" placeholder="Zona" />
+   276→   276→              </Field>
+   277→   277→              <Field label="Persona Demand." compact>
+   278→   278→                <Input value={action.personaDemandada} onChange={e => onUpdateField(action.id, 'personaDemandada', e.target.value)}
+   279→   279→                  className="h-7 text-xs p-0 px-1.5 border rounded" placeholder="Persona" />
+   280→   280→              </Field>
+   281→   281→              <Field label="Sección Recept." compact>
+   282→   282→                <Input value={action.seccionDemandada} onChange={e => onUpdateField(action.id, 'seccionDemandada', e.target.value)}
+   283→   283→                  className="h-7 text-xs p-0 px-1.5 border rounded" placeholder="Sección" />
+   284→   284→              </Field>
+   285→   285→              <Field label="Impacto Obj." compact>
+   286→   286→                <Input value={action.impactoObjetivo} onChange={e => onUpdateField(action.id, 'impactoObjetivo', e.target.value)}
+   287→   287→                  className="h-7 text-xs p-0 px-1.5 border rounded" placeholder="Impacto" />
+   288→   288→              </Field>
+   289→   289→            </div>
+   290→   290→          </div>
+   291→   291→
+   292→   292→          {/* ACCIÓN */}
+   293→   293→          <div>
+   294→   294→            <div className="text-[10px] font-bold text-sky-600 uppercase tracking-wider mb-1.5 flex items-center gap-1">
+   295→   295→              <ArrowRight className="h-3 w-3" /> Acción
+   296→   296→            </div>
+   297→   297→            <div className="space-y-1.5">
+   298→   298→              <Field label="Descripción / Hallazgo" compact>
+   299→   299→                <Textarea value={action.hallazgo} onChange={e => onUpdateField(action.id, 'hallazgo', e.target.value)}
+   300→   300→                  className="text-xs p-1.5 border rounded resize-none min-h-[48px]" placeholder="Descripción de la deficiencia" rows={2} />
+   301→   301→              </Field>
+   302→   302→              <Field label="Acción Correctiva" compact>
+   303→   303→                <Textarea value={action.accionCorrectiva} onChange={e => onUpdateField(action.id, 'accionCorrectiva', e.target.value)}
+   304→   304→                  className="text-xs p-1.5 border rounded resize-none min-h-[48px]" placeholder="Acción correctiva" rows={2} />
+   305→   305→              </Field>
+   306→   306→              <Field label="Acciones Preventivas" compact>
+   307→   307→                <Textarea value={action.accionesPreventivas} onChange={e => onUpdateField(action.id, 'accionesPreventivas', e.target.value)}
+   308→   308→                  className="text-xs p-1.5 border rounded resize-none min-h-[48px]" placeholder="Acciones preventivas" rows={2} />
+   309→   309→              </Field>
+   310→   310→              <Field label="Enviado" compact>
+   311→   311→                <Select value={action.enviado || 'Pendiente'} onValueChange={v => onUpdateField(action.id, 'enviado', v)}>
+   312→   312→                  <SelectTrigger className="h-7 text-xs p-0 px-1.5 border rounded w-full">
+   313→   313→                    <SelectValue />
+   314→   314→                  </SelectTrigger>
+   315→   315→                  <SelectContent>
+   316→   316→                    <SelectItem value="Sí" className="text-xs">Sí</SelectItem>
+   317→   317→                    <SelectItem value="No" className="text-xs">No</SelectItem>
+   318→   318→                    <SelectItem value="Pendiente" className="text-xs">Pendiente</SelectItem>
+   319→   319→                  </SelectContent>
+   320→   320→                </Select>
+   321→   321→              </Field>
+   322→   322→            </div>
+   323→   323→          </div>
+   324→   324→
+   325→   325→          {/* SEGUIMIENTO */}
+   326→   326→          <div>
+   327→   327→            <div className="text-[10px] font-bold text-orange-600 uppercase tracking-wider mb-1.5 flex items-center gap-1">
+   328→   328→              <CheckCircle2 className="h-3 w-3" /> Seguimiento
+   329→   329→            </div>
+   330→   330→            <div className="grid grid-cols-2 gap-x-3 gap-y-1.5">
+   331→   331→              <Field label="Sem. Prevista" compact>
+   332→   332→                <Select value={action.semanaPrevista || 'W1'} onValueChange={v => onUpdateField(action.id, 'semanaPrevista', v)}>
+   333→   333→                  <SelectTrigger className="h-7 text-xs p-0 px-1.5 border rounded w-full">
+   334→   334→                    <SelectValue />
+   335→   335→                  </SelectTrigger>
+   336→   336→                  <SelectContent className="max-h-48">
+   337→   337→                    {WEEK_OPTIONS.map(w => <SelectItem key={w} value={w} className="text-xs">{w}</SelectItem>)}
+   338→   338→                  </SelectContent>
+   339→   339→                </Select>
+   340→   340→              </Field>
+   341→   341→              <Field label="Responsable" compact>
+   342→   342→                <Input value={action.responsable} onChange={e => onUpdateField(action.id, 'responsable', e.target.value)}
+   343→   343→                  className="h-7 text-xs p-0 px-1.5 border rounded" placeholder="Responsable" />
+   344→   344→              </Field>
+   345→   345→              <Field label="Estado" compact>
+   346→   346→                <Select value={action.estado} onValueChange={v => onUpdateField(action.id, 'estado', v)}>
+   347→   347→                  <SelectTrigger className="h-7 text-xs p-0 px-1.5 border rounded w-full">
+   348→   348→                    <SelectValue />
+   349→   349→                  </SelectTrigger>
+   350→   350→                  <SelectContent>
+   351→   351→                    {ESTADO_OPTIONS.map(opt => (
+   352→   352→                      <SelectItem key={opt.value} value={opt.value} className="text-xs">{opt.label}</SelectItem>
+   353→   353→                    ))}
+   354→   354→                  </SelectContent>
+   355→   355→                </Select>
+   356→   356→              </Field>
+   357→   357→              <Field label="Progreso %" compact>
+   358→   358→                <Input type="number" min={0} max={100} value={action.porcentaje}
+   359→   359→                  onChange={e => onUpdateField(action.id, 'porcentaje', Number(e.target.value))}
+   360→   360→                  className="h-7 text-xs p-0 px-1.5 border rounded w-full text-center" />
+   361→   361→              </Field>
+   362→   362→              <Field label="Sem. Real" compact>
+   363→   363→                <Select value={action.semanaReal || 'W1'} onValueChange={v => onUpdateField(action.id, 'semanaReal', v)}>
+   364→   364→                  <SelectTrigger className="h-7 text-xs p-0 px-1.5 border rounded w-full">
+   365→   365→                    <SelectValue />
+   366→   366→                  </SelectTrigger>
+   367→   367→                  <SelectContent className="max-h-48">
+   368→   368→                    {WEEK_OPTIONS.map(w => <SelectItem key={w} value={w} className="text-xs">{w}</SelectItem>)}
+   369→   369→                  </SelectContent>
+   370→   370→                </Select>
+   371→   371→              </Field>
+   372→   372→            </div>
+   373→   373→          </div>
+   374→   374→
+   375→   375→          {/* Delete button */}
+   376→   376→          <div className="flex justify-end pt-1">
+   377→   377→            <Button variant="ghost" size="sm" className="text-red-500 hover:text-red-700 hover:bg-red-50 gap-1 text-xs h-7"
+   378→   378→              onClick={() => onDelete(action.id)}>
+   379→   379→              <Trash2 className="h-3.5 w-3.5" /> Eliminar
+   380→   380→            </Button>
+   381→   381→          </div>
+   382→   382→        </div>
+   383→   383→      )}
+   384→   384→    </div>
+   385→   385→  );
+   386→   386→}
+   387→   387→
+   388→   388→// ═══════════════════════════════════════════════════════
+   389→   389→// Field helper for mobile cards
+   390→   390→// ═══════════════════════════════════════════════════════
+   391→   391→function Field({ label, children, compact = false }: { label: string; children: React.ReactNode; compact?: boolean }) {
+   392→   392→  return (
+   393→   393→    <div className={compact ? '' : 'space-y-1'}>
+   394→   394→      <label className="text-[10px] font-medium text-muted-foreground leading-tight block">{label}</label>
+   395→   395→      {children}
+   396→   396→    </div>
+   397→   397→  );
+   398→   398→}
+   399→   399→
+   400→   400→// ═══════════════════════════════════════════════════════
+   401→   401→// Main Component — Unified Plan de Acción
+   402→   402→// ═══════════════════════════════════════════════════════
+   403→   403→export default function PlanDeAccionView() {
+   404→   404→  const { currentUser, currentProject, currentZone } = use5SStore();
+   405→   405→  const [actions, setActions] = useState<ActionItemData[]>([]);
+   406→   406→  const [isLoading, setIsLoading] = useState(true);
+   407→   407→  const [filterEstado, setFilterEstado] = useState<string>('all');
+   408→   408→  const [filterS, setFilterS] = useState<string>('all');
+   409→   409→  const [zones, setZones] = useState<ZoneData[]>([]);
+   410→   410→  const [showNewDialog, setShowNewDialog] = useState(false);
+   411→   411→
+   412→   412→  // Load zones
+   413→   413→  useEffect(() => {
+   414→   414→    if (!currentProject) return;
+   415→   415→    const loadZones = async () => {
+   416→   416→      try {
+   417→   417→        const res = await fetch(`/api/projects/${currentProject.id}/zones`);
+   418→   418→        if (res.ok) {
+   419→   419→          const json = await res.json();
+   420→   420→          setZones(json.zones || json.data || []);
+   421→   421→        }
+   422→   422→      } catch (e) { console.error('Error loading zones:', e); }
+   423→   423→    };
+   424→   424→    loadZones();
+   425→   425→  }, [currentProject?.id]);
+   426→   426→
+   427→   427→  // Load ALL actions for the project
+   428→   428→  const loadActions = useCallback(async () => {
+   429→   429→    if (!currentProject?.id) return;
+   430→   430→    setIsLoading(true);
+   431→   431→    try {
+   432→   432→      const params = new URLSearchParams();
+   433→   433→      params.set('projectId', currentProject.id);
+   434→   434→      if (currentUser?.id) params.set('userId', currentUser.id);
+   435→   435→      if (currentUser?.role) params.set('userRole', currentUser.role);
+   436→   436→      const res = await fetch(`/api/actions?${params.toString()}`);
+   437→   437→      const json = await res.json();
+   438→   438→      if (json.success && json.data) {
+   439→   439→        setActions(json.data.map((a: any) => ({
+   440→   440→          id: a.id,
+   441→   441→          numeroEntrada: a.numeroEntrada || 0,
+   442→   442→          fechaEntrada: a.fechaEntrada ? new Date(a.fechaEntrada).toISOString().split('T')[0] : (a.createdAt ? new Date(a.createdAt).toISOString().split('T')[0] : ''),
+   443→   443→          comunicadoPor: a.comunicadoPor || '',
+   444→   444→          semana: a.semana || '',
+   445→   445→          seccionDemandante: a.seccionDemandante || '',
+   446→   446→          clienteZona: a.clienteZona || a.zone?.name || '',
+   447→   447→          personaDemandada: a.personaDemandada || '',
+   448→   448→          seccionDemandada: a.seccionDemandada || '',
+   449→   449→          hallazgo: a.hallazgo || a.itemDescription || '',
+   450→   450→          impactoObjetivo: a.impactoObjetivo || '',
+   451→   451→          enviado: a.enviado || '',
+   452→   452→          accionCorrectiva: a.accionCorrectiva || a.mejora || '',
+   453→   453→          accionesPreventivas: a.accionesPreventivas || '',
+   454→   454→          semanaPrevista: a.semanaPrevista || '',
+   455→   455→          responsable: a.responsable || '',
+   456→   456→          porcentaje: a.porcentaje || 0,
+   457→   457→          estado: a.estado || 'abierta',
+   458→   458→          semanaReal: a.semanaReal || '',
+   459→   459→          sStep: a.sStep || 1,
+   460→   460→          miniStep: a.miniStep || 4,
+   461→   461→          zoneName: a.zone?.name || '',
+   462→   462→        })));
+   463→   463→      }
+   464→   464→    } catch (e) {
+   465→   465→      console.error('Error loading actions:', e);
+   466→   466→      toast.error('Error al cargar las acciones');
+   467→   467→    } finally {
+   468→   468→      setIsLoading(false);
+   469→   469→    }
+   470→   470→  }, [currentProject?.id, currentUser?.id, currentUser?.role]);
+   471→   471→
+   472→   472→  useEffect(() => { loadActions(); }, [loadActions]);
+   473→   473→
+   474→   474→  const getNextNumero = () => {
+   475→   475→    if (actions.length === 0) return 1;
+   476→   476→    return Math.max(...actions.map(a => a.numeroEntrada || 0)) + 1;
+   477→   477→  };
+   478→   478→
+   479→   479→  const getCurrentWeek = () => {
+   480→   480→    const now = new Date();
+   481→   481→    const start = new Date(now.getFullYear(), 0, 1);
+   482→   482→    const diff = now.getTime() - start.getTime();
+   483→   483→    const oneWeek = 1000 * 60 * 60 * 24 * 7;
+   484→   484→    return `W${Math.ceil((diff / oneWeek) + start.getDay() / 7)}`;
+   485→   485→  };
+   486→   486→
+   487→   487→  const handleAddAction = async (sStep: number) => {
+   488→   488→    if (!currentProject?.id) {
+   489→   489→      toast.error('No hay proyecto seleccionado.');
+   490→   490→      return;
+   491→   491→    }
+   492→   492→    const nextNumero = getNextNumero();
+   493→   493→    const today = new Date().toISOString().split('T')[0];
+   494→   494→    const currentWeek = getCurrentWeek();
+   495→   495→    try {
+   496→   496→      const res = await fetch('/api/actions', {
+   497→   497→        method: 'POST',
+   498→   498→        headers: { 'Content-Type': 'application/json' },
+   499→   499→        body: JSON.stringify({
+   500→   500→          sStep,
+   501→   501→          miniStep: 4,
+   502→   502→          itemId: `PA-${sStep}-${Date.now()}`,
+   503→   503→          itemDescription: '',
+   504→   504→          hallazgo: '',
+   505→   505→          source: 'actionplan',
+   506→   506→          projectId: currentProject.id,
+   507→   507→          zoneId: currentZone?.id || null,
+   508→   508→          numeroEntrada: nextNumero,
+   509→   509→          fechaEntrada: today,
+   510→   510→          semana: currentWeek,
+   511→   511→          estado: 'abierta',
+   512→   512→          enviado: 'Pendiente',
+   513→   513→          porcentaje: 0,
+   514→   514→        }),
+   515→   515→      });
+   516→   516→      const json = await res.json();
+   517→   517→      if (json.success) {
+   518→   518→        toast.success(`Entrada creada en S${sStep}`);
+   519→   519→        await loadActions();
+   520→   520→      } else {
+   521→   521→        toast.error(`Error: ${json.error || 'Error desconocido'}`);
+   522→   522→      }
+   523→   523→    } catch (e) {
+   524→   524→      console.error('Error adding action:', e);
+   525→   525→      toast.error('Error de conexión');
+   526→   526→    }
+   527→   527→    setShowNewDialog(false);
+   528→   528→  };
+   529→   529→
+   530→   530→  const handleUpdateField = async (actionId: string, field: string, value: any) => {
+   531→   531→    setActions(prev => prev.map(a => a.id === actionId ? { ...a, [field]: value } : a));
+   532→   532→    try {
+   533→   533→      const res = await fetch(`/api/actions?id=${actionId}`, {
+   534→   534→        method: 'PUT',
+   535→   535→        headers: { 'Content-Type': 'application/json' },
+   536→   536→        body: JSON.stringify({ [field]: value }),
+   537→   537→      });
+   538→   538→      const json = await res.json();
+   539→   539→      if (!json.success) {
+   540→   540→        toast.error(`Error al actualizar: ${json.error || 'Error desconocido'}`);
+   541→   541→        await loadActions();
+   542→   542→      }
+   543→   543→    } catch (e) {
+   544→   544→      console.error('Error updating action:', e);
+   545→   545→      await loadActions();
+   546→   546→    }
+   547→   547→  };
+   548→   548→
+   549→   549→  const handleDeleteAction = async (id: string) => {
+   550→   550→    if (!confirm('¿Eliminar esta entrada?')) return;
+   551→   551→    try {
+   552→   552→      const res = await fetch(`/api/actions?id=${id}`, { method: 'DELETE' });
+   553→   553→      const json = await res.json();
+   554→   554→      if (json.success) {
+   555→   555→        setActions(prev => prev.filter(a => a.id !== id));
+   556→   556→        toast.success('Entrada eliminada');
+   557→   557→      } else {
+   558→   558→        toast.error(`Error al eliminar: ${json.error || 'Error desconocido'}`);
+   559→   559→      }
+   560→   560→    } catch (e) {
+   561→   561→      console.error('Error deleting action:', e);
+   562→   562→      toast.error('Error de conexión');
+   563→   563→    }
+   564→   564→  };
+   565→   565→
+   566→   566→  // Filter actions
+   567→   567→  const filteredActions = actions
+   568→   568→    .filter(a => filterEstado === 'all' || a.estado === filterEstado)
+   569→   569→    .filter(a => filterS === 'all' || a.sStep === Number(filterS));
+   570→   570→
+   571→   571→  // Stats
+   572→   572→  const totalActions = actions.length;
+   573→   573→  const completedActions = actions.filter(a => a.estado === 'resuelta' || a.estado === 'cerrada').length;
+   574→   574→  const openActions = actions.filter(a => a.estado === 'abierta').length;
+   575→   575→  const inProgressActions = actions.filter(a => a.estado === 'en_proceso').length;
+   576→   576→
+   577→   577→  const getEstadoBadge = (estado: string) => {
+   578→   578→    const opt = ESTADO_OPTIONS.find(e => e.value === estado);
+   579→   579→    return opt || ESTADO_OPTIONS[0];
+   580→   580→  };
+   581→   581→
+   582→   582→  return (
+   583→   583→    <div className="flex flex-col h-full">
+   584→   584→      {/* Header */}
+   585→   585→      <div className="px-3 sm:px-4 py-2.5 border-b bg-white shrink-0">
+   586→   586→        <div className="flex items-center justify-between gap-2">
+   587→   587→          <div className="flex items-center gap-2 min-w-0">
+   588→   588→            <ListChecks className="h-5 w-5 text-rose-600 shrink-0" />
+   589→   589→            <h2 className="text-base sm:text-lg font-bold truncate">Plan de Acción</h2>
+   590→   590→            <Badge variant="outline" className="text-[10px] shrink-0 hidden sm:inline-flex">
+   591→   591→              {totalActions} entrada{totalActions !== 1 ? 's' : ''}
+   592→   592→            </Badge>
+   593→   593→          </div>
+   594→   594→          <Button size="sm" className="gap-1 text-xs h-8 shrink-0" onClick={() => setShowNewDialog(true)}
+   595→   595→            style={{ backgroundColor: '#E11D48' }}>
+   596→   596→            <Plus className="h-3.5 w-3.5" />
+   597→   597→            <span className="hidden sm:inline">Nueva Entrada</span>
+   598→   598→            <span className="sm:hidden">Nueva</span>
+   599→   599→          </Button>
+   600→   600→        </div>
+   601→   601→
+   602→   602→        {/* Stats row */}
+   603→   603→        <div className="flex items-center gap-2 mt-2 overflow-x-auto pb-1">
+   604→   604→          <button
+   605→   605→            onClick={() => setFilterEstado('all')}
+   606→   606→            className={`flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-medium border transition-colors whitespace-nowrap ${
+   607→   607→              filterEstado === 'all' ? 'bg-gray-900 text-white border-gray-900' : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
+   608→   608→            }`}
+   609→   609→          >
+   610→   610→            Todas {totalActions}
+   611→   611→          </button>
+   612→   612→          <button
+   613→   613→            onClick={() => setFilterEstado('abierta')}
+   614→   614→            className={`flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-medium border transition-colors whitespace-nowrap ${
+   615→   615→              filterEstado === 'abierta' ? 'bg-red-600 text-white border-red-600' : 'bg-white text-red-600 border-red-200 hover:bg-red-50'
+   616→   616→            }`}
+   617→   617→          >
+   618→   618→            <AlertCircle className="h-3 w-3" /> Abiertas {openActions}
+   619→   619→          </button>
+   620→   620→          <button
+   621→   621→            onClick={() => setFilterEstado('en_proceso')}
+   622→   622→            className={`flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-medium border transition-colors whitespace-nowrap ${
+   623→   623→              filterEstado === 'en_proceso' ? 'bg-yellow-600 text-white border-yellow-600' : 'bg-white text-yellow-600 border-yellow-200 hover:bg-yellow-50'
+   624→   624→            }`}
+   625→   625→          >
+   626→   626→            <Clock className="h-3 w-3" /> En Proceso {inProgressActions}
+   627→   627→          </button>
+   628→   628→          <button
+   629→   629→            onClick={() => setFilterEstado('resuelta')}
+   630→   630→            className={`flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-medium border transition-colors whitespace-nowrap ${
+   631→   631→              filterEstado === 'resuelta' ? 'bg-green-600 text-white border-green-600' : 'bg-white text-green-600 border-green-200 hover:bg-green-50'
+   632→   632→            }`}
+   633→   633→          >
+   634→   634→            <CheckCircle2 className="h-3 w-3" /> Resueltas {completedActions}
+   635→   635→          </button>
+   636→   636→
+   637→   637→          {/* S-step filter pills */}
+   638→   638→          <div className="h-4 w-px bg-gray-200 mx-1 shrink-0" />
+   639→   639→          {S_STEPS.map(s => {
+   640→   640→            const count = actions.filter(a => a.sStep === s.id).length;
+   641→   641→            return (
+   642→   642→              <button
+   643→   643→                key={s.id}
+   644→   644→                onClick={() => setFilterS(filterS === String(s.id) ? 'all' : String(s.id))}
+   645→   645→                className={`flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-medium border transition-colors whitespace-nowrap ${
+   646→   646→                  filterS === String(s.id)
+   647→   647→                    ? 'text-white border-transparent'
+   648→   648→                    : 'bg-white border-gray-200 hover:opacity-80'
+   649→   649→                }`}
+   650→   650→                style={filterS === String(s.id) ? { backgroundColor: S_COLORS[s.id], borderColor: S_COLORS[s.id] } : { color: S_COLORS[s.id] }}
+   651→   651→              >
+   652→   652→                S{s.id} ({count})
+   653→   653→              </button>
+   654→   654→            );
+   655→   655→          })}
+   656→   656→
+   657→   657→          {/* Reset filters */}
+   658→   658→          {(filterEstado !== 'all' || filterS !== 'all') && (
+   659→   659→            <button
+   660→   660→              onClick={() => { setFilterEstado('all'); setFilterS('all'); }}
+   661→   661→              className="flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-medium text-gray-500 hover:text-gray-700 hover:bg-gray-100 transition-colors whitespace-nowrap"
+   662→   662→            >
+   663→   663→              <X className="h-3 w-3" /> Limpiar
+   664→   664→            </button>
+   665→   665→          )}
+   666→   666→        </div>
+   667→   667→      </div>
+   668→   668→
+   669→   669→      {/* Content */}
+   670→   670→      {isLoading ? (
+   671→   671→        <div className="flex-1 flex items-center justify-center">
+   672→   672→          <Loader2 className="h-8 w-8 text-rose-500 animate-spin" />
+   673→   673→        </div>
+   674→   674→      ) : filteredActions.length === 0 ? (
+   675→   675→        <div className="flex-1 flex flex-col items-center justify-center text-center p-6">
+   676→   676→          <ListChecks className="h-12 w-12 text-gray-300 mb-3" />
+   677→   677→          <p className="text-sm font-medium text-muted-foreground mb-1">
+   678→   678→            {actions.length === 0 ? 'No hay entradas en el Plan de Acción' : 'No hay entradas con estos filtros'}
+   679→   679→          </p>
+   680→   680→          <p className="text-xs text-muted-foreground mb-4">
+   681→   681→            {actions.length === 0 ? 'Pulsa "Nueva Entrada" para crear la primera.' : 'Cambia los filtros o limpia la selección.'}
+   682→   682→          </p>
+   683→   683→          {actions.length === 0 && (
+   684→   684→            <Button size="sm" className="gap-1 text-xs" onClick={() => setShowNewDialog(true)}
+   685→   685→              style={{ backgroundColor: '#E11D48' }}>
+   686→   686→              <Plus className="h-3.5 w-3.5" /> Nueva Entrada
+   687→   687→            </Button>
+   688→   688→          )}
+   689→   689→        </div>
+   690→   690→      ) : (
+   691→   691→        <>
+   692→   692→          {/* MOBILE: Card-based layout */}
+   693→   693→          <div className="flex-1 min-h-0 overflow-auto p-3 space-y-2 lg:hidden">
+   694→   694→            {filteredActions.map(action => (
+   695→   695→              <ActionCard
+   696→   696→                key={action.id}
+   697→   697→                action={action}
+   698→   698→                onUpdateField={handleUpdateField}
+   699→   699→                onDelete={handleDeleteAction}
+   700→   700→              />
+   701→   701→            ))}
+   702→   702→          </div>
+   703→   703→
+   704→   704→          {/* DESKTOP: Table layout */}
+   705→   705→          <div className="flex-1 min-h-0 overflow-auto p-4 hidden lg:block">
+   706→   706→            <div className="overflow-auto border rounded-lg">
+   707→   707→              <table className="w-full text-xs border-collapse min-w-[1200px]">
+   708→   708→                <thead className="sticky top-0 z-10">
+   709→   709→                  <tr>
+   710→   710→                    <th className="bg-gray-600 text-white px-1.5 py-1.5 text-center font-bold border border-gray-500 w-10">
+   711→   711→                      Origen
+   712→   712→                    </th>
+   713→   713→                    <th colSpan={9} className="bg-amber-400 text-white px-2 py-1.5 text-center text-xs font-bold border border-amber-500">
+   714→   714→                      DEMANDA
+   715→   715→                    </th>
+   716→   716→                    <th colSpan={4} className="bg-sky-400 text-white px-2 py-1.5 text-center text-xs font-bold border border-sky-500">
+   717→   717→                      ACCIÓN
+   718→   718→                    </th>
+   719→   719→                    <th colSpan={5} className="bg-orange-400 text-white px-2 py-1.5 text-center text-xs font-bold border border-orange-500">
+   720→   720→                      SEGUIMIENTO
+   721→   721→                    </th>
+   722→   722→                    <th className="bg-gray-400 text-white px-1 py-1.5 text-center text-xs font-bold border border-gray-500 w-8">
+   723→   723→                      🗑
+   724→   724→                    </th>
+   725→   725→                  </tr>
+   726→   726→                  <tr>
+   727→   727→                    {/* Origen column */}
+   728→   728→                    <th className="bg-gray-500 text-white px-1 py-1 text-center font-semibold border border-gray-400 whitespace-nowrap">S</th>
+   729→   729→                    {/* Yellow section headers */}
+   730→   730→                    <th className="bg-amber-400 text-white px-1 py-1 text-center font-semibold border border-amber-400 whitespace-nowrap">Nº</th>
+   731→   731→                    <th className="bg-amber-400 text-white px-1 py-1 text-center font-semibold border border-amber-400 whitespace-nowrap">Fecha</th>
+   732→   732→                    <th className="bg-amber-400 text-white px-1 py-1 text-center font-semibold border border-amber-400 whitespace-nowrap">Comunicado por</th>
+   733→   733→                    <th className="bg-amber-400 text-white px-1 py-1 text-center font-semibold border border-amber-400 whitespace-nowrap">Semana</th>
+   734→   734→                    <th className="bg-amber-400 text-white px-1 py-1 text-center font-semibold border border-amber-400 whitespace-nowrap">Sección Demand.</th>
+   735→   735→                    <th className="bg-amber-400 text-white px-1 py-1 text-center font-semibold border border-amber-400 whitespace-nowrap">Zona</th>
+   736→   736→                    <th className="bg-amber-400 text-white px-1 py-1 text-center font-semibold border border-amber-400 whitespace-nowrap">Persona Demand.</th>
+   737→   737→                    <th className="bg-amber-400 text-white px-1 py-1 text-center font-semibold border border-amber-400 whitespace-nowrap">Sección Recept.</th>
+   738→   738→                    <th className="bg-amber-400 text-white px-1 py-1 text-center font-semibold border border-amber-400 whitespace-nowrap">Impacto Obj.</th>
+   739→   739→                    {/* Blue section headers */}
+   740→   740→                    <th className="bg-sky-400 text-white px-1 py-1 text-center font-semibold border border-sky-400 whitespace-nowrap">Descripción</th>
+   741→   741→                    <th className="bg-sky-400 text-white px-1 py-1 text-center font-semibold border border-sky-400 whitespace-nowrap">Acción Correctiva</th>
+   742→   742→                    <th className="bg-sky-400 text-white px-1 py-1 text-center font-semibold border border-sky-400 whitespace-nowrap">Acciones Preventivas</th>
+   743→   743→                    <th className="bg-sky-400 text-white px-1 py-1 text-center font-semibold border border-sky-400 whitespace-nowrap">Enviado</th>
+   744→   744→                    {/* Orange section headers */}
+   745→   745→                    <th className="bg-orange-400 text-white px-1 py-1 text-center font-semibold border border-orange-400 whitespace-nowrap">Sem. Prevista</th>
+   746→   746→                    <th className="bg-orange-400 text-white px-1 py-1 text-center font-semibold border border-orange-400 whitespace-nowrap">Responsable</th>
+   747→   747→                    <th className="bg-orange-400 text-white px-1 py-1 text-center font-semibold border border-orange-400 whitespace-nowrap">Estado</th>
+   748→   748→                    <th className="bg-orange-400 text-white px-1 py-1 text-center font-semibold border border-orange-400 whitespace-nowrap">Progreso %</th>
+   749→   749→                    <th className="bg-orange-400 text-white px-1 py-1 text-center font-semibold border border-orange-400 whitespace-nowrap">Sem. Real</th>
+   750→   750→                  </tr>
+   751→   751→                </thead>
+   752→   752→                <tbody>
+   753→   753→                  {filteredActions.map((action) => {
+   754→   754→                    const estadoInfo = getEstadoBadge(action.estado);
+   755→   755→                    return (
+   756→   756→                      <tr key={action.id} className={`border-b hover:bg-gray-50 ${action.estado === 'resuelta' || action.estado === 'cerrada' ? 'bg-green-50/50' : ''}`}>
+   757→   757→                        {/* Origen S badge */}
+   758→   758→                        <td className="px-1 py-1 border text-center bg-gray-50">
+   759→   759→                          <span
+   760→   760→                            className="inline-flex items-center justify-center w-7 h-7 rounded text-white font-black text-[10px]"
+   761→   761→                            style={{ backgroundColor: S_COLORS[action.sStep] }}
+   762→   762→                            title={`S${action.sStep} — ${S_STEPS.find(s => s.id === action.sStep)?.japaneseName}`}
+   763→   763→                          >
+   764→   764→                            S{action.sStep}
+   765→   765→                          </span>
+   766→   766→                        </td>
+   767→   767→                        {/* Yellow: Demanda */}
+   768→   768→                        <td className={`px-1 py-1 border ${SECTION_COLORS.demandante} text-center font-mono font-bold`}>
+   769→   769→                          {action.numeroEntrada || '—'}
+   770→   770→                        </td>
+   771→   771→                        <td className={`px-1 py-1 border ${SECTION_COLORS.demandante}`}>
+   772→   772→                          <Input type="date" value={action.fechaEntrada} onChange={e => handleUpdateField(action.id, 'fechaEntrada', e.target.value)}
+   773→   773→                            className="h-6 text-[10px] p-0 px-1 border-0 bg-transparent" />
+   774→   774→                        </td>
+   775→   775→                        <td className={`px-1 py-1 border ${SECTION_COLORS.demandante}`}>
+   776→   776→                          <Input value={action.comunicadoPor} onChange={e => handleUpdateField(action.id, 'comunicadoPor', e.target.value)}
+   777→   777→                            className="h-6 text-[10px] p-0 px-1 border-0 bg-transparent" placeholder="Auditor" />
+   778→   778→                        </td>
+   779→   779→                        <td className={`px-1 py-1 border ${SECTION_COLORS.demandante} text-center`}>
+   780→   780→                          <Select value={action.semana || 'W1'} onValueChange={v => handleUpdateField(action.id, 'semana', v)}>
+   781→   781→                            <SelectTrigger className="h-6 text-[10px] p-0 px-1 border-0 bg-transparent w-16">
+   782→   782→                              <SelectValue />
+   783→   783→                            </SelectTrigger>
+   784→   784→                            <SelectContent className="max-h-48">
+   785→   785→                              {WEEK_OPTIONS.map(w => <SelectItem key={w} value={w} className="text-xs">{w}</SelectItem>)}
+   786→   786→                            </SelectContent>
+   787→   787→                          </Select>
+   788→   788→                        </td>
+   789→   789→                        <td className={`px-1 py-1 border ${SECTION_COLORS.demandante}`}>
+   790→   790→                          <Input value={action.seccionDemandante} onChange={e => handleUpdateField(action.id, 'seccionDemandante', e.target.value)}
+   791→   791→                            className="h-6 text-[10px] p-0 px-1 border-0 bg-transparent" placeholder="Sección" />
+   792→   792→                        </td>
+   793→   793→                        <td className={`px-1 py-1 border ${SECTION_COLORS.demandante}`}>
+   794→   794→                          <Input value={action.clienteZona} onChange={e => handleUpdateField(action.id, 'clienteZona', e.target.value)}
+   795→   795→                            className="h-6 text-[10px] p-0 px-1 border-0 bg-transparent" placeholder="Zona" />
+   796→   796→                        </td>
+   797→   797→                        <td className={`px-1 py-1 border ${SECTION_COLORS.demandante}`}>
+   798→   798→                          <Input value={action.personaDemandada} onChange={e => handleUpdateField(action.id, 'personaDemandada', e.target.value)}
+   799→   799→                            className="h-6 text-[10px] p-0 px-1 border-0 bg-transparent" placeholder="Persona" />
+   800→   800→                        </td>
+   801→   801→                        <td className={`px-1 py-1 border ${SECTION_COLORS.demandante}`}>
+   802→   802→                          <Input value={action.seccionDemandada} onChange={e => handleUpdateField(action.id, 'seccionDemandada', e.target.value)}
+   803→   803→                            className="h-6 text-[10px] p-0 px-1 border-0 bg-transparent" placeholder="Sección" />
+   804→   804→                        </td>
+   805→   805→                        <td className={`px-1 py-1 border ${SECTION_COLORS.demandante}`}>
+   806→   806→                          <Input value={action.impactoObjetivo} onChange={e => handleUpdateField(action.id, 'impactoObjetivo', e.target.value)}
+   807→   807→                            className="h-6 text-[10px] p-0 px-1 border-0 bg-transparent" placeholder="Impacto" />
+   808→   808→                        </td>
+   809→   809→                        {/* Blue: Acción */}
+   810→   810→                        <td className={`px-1 py-1 border ${SECTION_COLORS.accion}`}>
+   811→   811→                          <Textarea value={action.hallazgo} onChange={e => handleUpdateField(action.id, 'hallazgo', e.target.value)}
+   812→   812→                            className="h-6 text-[10px] p-0 px-1 border-0 bg-transparent resize-none min-h-[24px]" placeholder="Descripción deficiencia" rows={1} />
+   813→   813→                        </td>
+   814→   814→                        <td className={`px-1 py-1 border ${SECTION_COLORS.accion}`}>
+   815→   815→                          <Textarea value={action.accionCorrectiva} onChange={e => handleUpdateField(action.id, 'accionCorrectiva', e.target.value)}
+   816→   816→                            className="h-6 text-[10px] p-0 px-1 border-0 bg-transparent resize-none min-h-[24px]" placeholder="Acción correctiva" rows={1} />
+   817→   817→                        </td>
+   818→   818→                        <td className={`px-1 py-1 border ${SECTION_COLORS.accion}`}>
+   819→   819→                          <Textarea value={action.accionesPreventivas} onChange={e => handleUpdateField(action.id, 'accionesPreventivas', e.target.value)}
+   820→   820→                            className="h-6 text-[10px] p-0 px-1 border-0 bg-transparent resize-none min-h-[24px]" placeholder="Acciones preventivas" rows={1} />
+   821→   821→                        </td>
+   822→   822→                        <td className={`px-1 py-1 border ${SECTION_COLORS.accion} text-center`}>
+   823→   823→                          <Select value={action.enviado || 'Pendiente'} onValueChange={v => handleUpdateField(action.id, 'enviado', v)}>
+   824→   824→                            <SelectTrigger className="h-6 text-[10px] p-0 px-1 border-0 bg-transparent w-16">
+   825→   825→                              <SelectValue />
+   826→   826→                            </SelectTrigger>
+   827→   827→                            <SelectContent>
+   828→   828→                              <SelectItem value="Sí" className="text-xs">Sí</SelectItem>
+   829→   829→                              <SelectItem value="No" className="text-xs">No</SelectItem>
+   830→   830→                              <SelectItem value="Pendiente" className="text-xs">Pendiente</SelectItem>
+   831→   831→                            </SelectContent>
+   832→   832→                          </Select>
+   833→   833→                        </td>
+   834→   834→                        {/* Orange: Seguimiento */}
+   835→   835→                        <td className={`px-1 py-1 border ${SECTION_COLORS.seguimiento} text-center`}>
+   836→   836→                          <Select value={action.semanaPrevista || 'W1'} onValueChange={v => handleUpdateField(action.id, 'semanaPrevista', v)}>
+   837→   837→                            <SelectTrigger className="h-6 text-[10px] p-0 px-1 border-0 bg-transparent w-16">
+   838→   838→                              <SelectValue />
+   839→   839→                            </SelectTrigger>
+   840→   840→                            <SelectContent className="max-h-48">
+   841→   841→                              {WEEK_OPTIONS.map(w => <SelectItem key={w} value={w} className="text-xs">{w}</SelectItem>)}
+   842→   842→                            </SelectContent>
+   843→   843→                          </Select>
+   844→   844→                        </td>
+   845→   845→                        <td className={`px-1 py-1 border ${SECTION_COLORS.seguimiento}`}>
+   846→   846→                          <Input value={action.responsable} onChange={e => handleUpdateField(action.id, 'responsable', e.target.value)}
+   847→   847→                            className="h-6 text-[10px] p-0 px-1 border-0 bg-transparent" placeholder="Responsable" />
+   848→   848→                        </td>
+   849→   849→                        <td className={`px-1 py-1 border ${SECTION_COLORS.seguimiento} text-center`}>
+   850→   850→                          <Select value={action.estado} onValueChange={v => handleUpdateField(action.id, 'estado', v)}>
+   851→   851→                            <SelectTrigger className="h-6 text-[10px] p-0 px-1 border-0 bg-transparent w-20">
+   852→   852→                              <SelectValue />
+   853→   853→                            </SelectTrigger>
+   854→   854→                            <SelectContent>
+   855→   855→                              {ESTADO_OPTIONS.map(opt => (
+   856→   856→                                <SelectItem key={opt.value} value={opt.value} className="text-xs">{opt.label}</SelectItem>
+   857→   857→                              ))}
+   858→   858→                            </SelectContent>
+   859→   859→                          </Select>
+   860→   860→                        </td>
+   861→   861→                        <td className={`px-1 py-1 border ${SECTION_COLORS.seguimiento} text-center`}>
+   862→   862→                          <Input type="number" min={0} max={100} value={action.porcentaje}
+   863→   863→                            onChange={e => handleUpdateField(action.id, 'porcentaje', Number(e.target.value))}
+   864→   864→                            className="h-6 text-[10px] p-0 px-1 border-0 bg-transparent w-14 text-center" />
+   865→   865→                        </td>
+   866→   866→                        <td className={`px-1 py-1 border ${SECTION_COLORS.seguimiento} text-center`}>
+   867→   867→                          <Select value={action.semanaReal || 'W1'} onValueChange={v => handleUpdateField(action.id, 'semanaReal', v)}>
+   868→   868→                            <SelectTrigger className="h-6 text-[10px] p-0 px-1 border-0 bg-transparent w-16">
+   869→   869→                              <SelectValue />
+   870→   870→                            </SelectTrigger>
+   871→   871→                            <SelectContent className="max-h-48">
+   872→   872→                              {WEEK_OPTIONS.map(w => <SelectItem key={w} value={w} className="text-xs">{w}</SelectItem>)}
+   873→   873→                            </SelectContent>
+   874→   874→                          </Select>
+   875→   875→                        </td>
+   876→   876→                        {/* Delete */}
+   877→   877→                        <td className="px-1 py-1 border text-center bg-gray-50">
+   878→   878→                          <button onClick={() => handleDeleteAction(action.id)}
+   879→   879→                            className="text-red-400 hover:text-red-600 transition-colors">
+   880→   880→                            <Trash2 className="h-3.5 w-3.5" />
+   881→   881→                          </button>
+   882→   882→                        </td>
+   883→   883→                      </tr>
+   884→   884→                    );
+   885→   885→                  })}
+   886→   886→                </tbody>
+   887→   887→              </table>
+   888→   888→            </div>
+   889→   889→          </div>
+   890→   890→        </>
+   891→   891→      )}
+   892→   892→
+   893→   893→      {/* New Entry Dialog */}
+   894→   894→      <NewEntryDialog
+   895→   895→        open={showNewDialog}
+   896→   896→        onClose={() => setShowNewDialog(false)}
+   897→   897→        onConfirm={handleAddAction}
+   898→   898→      />
+   899→   899→    </div>
+   900→   900→  );
+   901→   901→}
+   902→   902→

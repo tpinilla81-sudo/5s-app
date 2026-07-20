@@ -97,7 +97,7 @@ interface FiveSState {
   progress: ProgressItem[]
   employeeProgress: EmployeeProgressItem[]
   currentView: 'board' | 'detail' | 'admin' | 'maintenance' | 'gerente'
-  activeTab: 'board' | 'gerente' | 'admin' | 'maintenance' | 'gestion' | 'actionplan'
+  activeTab: 'board' | 'gerente' | 'admin' | 'maintenance' | 'gestion' | 'actionplan' | 'jaula' | 'activos' | 'puntoLimpio'
   selectedSStep: number | null
   activeModal: 'formacion' | 'fotos' | 'inventario' | 'actionplan' | 'autoevaluacion' | 'auditoria' | 'globalActionPlan' | 'globalInventory' | 'auditResults' | 'standardsLibrary' | 'photoLibrary' | null
   activeMiniStep: number | null

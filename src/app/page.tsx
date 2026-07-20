@@ -24,9 +24,9 @@ import ConstructorPanel from '@/components/admin/ConstructorPanel';
 import MaintenanceView from '@/components/5s/MaintenanceView';
 import GerentePanel from '@/components/auth/GerentePanel';
 import PlanDeAccionView from '@/components/5s/PlanDeAccionView';
-import JaulaModal from '@/components/5s/JaulaModal';
-import ActivosModal from '@/components/5s/ActivosModal';
-import PuntoLimpioModal from '@/components/5s/PuntoLimpioModal';
+import JaulaView from '@/components/5s/JaulaView';
+import ActivosView from '@/components/5s/ActivosView';
+import PuntoLimpioView from '@/components/5s/PuntoLimpioView';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
@@ -119,9 +119,7 @@ export default function HomePage() {
   const [unreadNotifs, setUnreadNotifs] = useState(0);
   const [showNotifs, setShowNotifs] = useState(false);
   const [notifs, setNotifs] = useState<any[]>([]);
-  const [showJaulaModal, setShowJaulaModal] = useState(false);
-  const [showActivosModal, setShowActivosModal] = useState(false);
-  const [showPuntoLimpioModal, setShowPuntoLimpioModal] = useState(false);
+
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [appVersion, setAppVersion] = useState<string>('...');
 
@@ -279,7 +277,7 @@ export default function HomePage() {
   // Available tabs based on role
   // GESTOR (dueño de la app): ONLY sees "Gestión" tab (company management platform)
   // ADMIN (admin de empresa): sees operational tabs (board, gerencia, admin, mejora continua)
-  const availableTabs: { key: 'board' | 'gerente' | 'admin' | 'maintenance' | 'gestion' | 'actionplan'; label: string; icon: React.ReactNode }[] = [];
+  const availableTabs: { key: 'board' | 'gerente' | 'admin' | 'maintenance' | 'gestion' | 'actionplan' | 'jaula' | 'activos' | 'puntoLimpio'; label: string; icon: React.ReactNode }[] = [];
 
   if (isGestor) {
     // Gestor ONLY sees the platform management tab
@@ -292,6 +290,10 @@ export default function HomePage() {
     if (!isAuditor) {
       availableTabs.push({ key: 'actionplan', label: 'Plan de Acción', icon: <ListChecks className="h-3.5 w-3.5" /> });
     }
+    // Jaula, Activos, Punto Limpio tabs
+    availableTabs.push({ key: 'jaula', label: 'Jaula', icon: <Package className="h-3.5 w-3.5" /> });
+    availableTabs.push({ key: 'activos', label: 'Activos', icon: <BoxSelect className="h-3.5 w-3.5" /> });
+    availableTabs.push({ key: 'puntoLimpio', label: 'P. Limpio', icon: <Droplets className="h-3.5 w-3.5" /> });
     if (canSeeGerentePanel) {
       availableTabs.push({ key: 'gerente', label: 'Gerencia', icon: <BarChart3 className="h-3.5 w-3.5" /> });
     }
@@ -520,7 +522,7 @@ export default function HomePage() {
                     {/* 📦 Inventario */}
                     {canSeeNotifications && (
                       <button className="flex items-center gap-3 w-full px-3 py-3 rounded-lg hover:bg-red-50 transition-colors text-left min-h-[44px]"
-                        onClick={() => { setMobileMenuOpen(false); setShowJaulaModal(true); }}>
+                        onClick={() => { setMobileMenuOpen(false); setActiveTab('jaula'); }}>
                         <Package className="h-5 w-5 text-red-500 shrink-0" />
                         <span className="text-sm font-medium text-red-600">Jaula</span>
                       </button>
@@ -528,7 +530,7 @@ export default function HomePage() {
                     {/* ✅ Activos */}
                     {canSeeNotifications && (
                       <button className="flex items-center gap-3 w-full px-3 py-3 rounded-lg hover:bg-green-50 transition-colors text-left min-h-[44px]"
-                        onClick={() => { setMobileMenuOpen(false); setShowActivosModal(true); }}>
+                        onClick={() => { setMobileMenuOpen(false); setActiveTab('activos'); }}>
                         <BoxSelect className="h-5 w-5 text-green-500 shrink-0" />
                         <span className="text-sm font-medium text-green-600">Activos</span>
                       </button>
@@ -536,7 +538,7 @@ export default function HomePage() {
                     {/* 💧 Punto Limpio */}
                     {canSeeNotifications && (
                       <button className="flex items-center gap-3 w-full px-3 py-3 rounded-lg hover:bg-blue-50 transition-colors text-left min-h-[44px]"
-                        onClick={() => { setMobileMenuOpen(false); setShowPuntoLimpioModal(true); }}>
+                        onClick={() => { setMobileMenuOpen(false); setActiveTab('puntoLimpio'); }}>
                         <Droplets className="h-5 w-5 text-blue-500 shrink-0" />
                         <span className="text-sm font-medium text-blue-600">Punto Limpio</span>
                       </button>
@@ -647,7 +649,7 @@ export default function HomePage() {
             {canSeeNotifications && (
               <Button variant="outline" size="sm"
                 className="gap-1 text-[10px] h-8 border-red-300 text-red-600 hover:bg-red-50"
-                onClick={() => setShowJaulaModal(true)}
+                onClick={() => setActiveTab('jaula')}
                 title="Jaula de Excedentes">
                 <Package className="h-3 w-3" />
                 <span className="hidden sm:inline">Jaula</span>
@@ -657,7 +659,7 @@ export default function HomePage() {
             {canSeeNotifications && (
               <Button variant="outline" size="sm"
                 className="gap-1 text-[10px] h-8 border-green-300 text-green-600 hover:bg-green-50"
-                onClick={() => setShowActivosModal(true)}
+                onClick={() => setActiveTab('activos')}
                 title="Activos (Necesarios)">
                 <BoxSelect className="h-3 w-3" />
                 <span className="hidden sm:inline">Activos</span>
@@ -667,7 +669,7 @@ export default function HomePage() {
             {canSeeNotifications && (
               <Button variant="outline" size="sm"
                 className="gap-1 text-[10px] h-8 border-blue-300 text-blue-600 hover:bg-blue-50"
-                onClick={() => setShowPuntoLimpioModal(true)}
+                onClick={() => setActiveTab('puntoLimpio')}
                 title="Punto Limpio (Suciedad)">
                 <Droplets className="h-3 w-3" />
                 <span className="hidden sm:inline">P. Limpio</span>
@@ -1251,6 +1253,27 @@ export default function HomePage() {
                 </motion.div>
               )}
 
+              {/* ═══ TAB: JAULA ═══ */}
+              {activeTab === 'jaula' && (
+                <motion.div key="jaula" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex-1 min-h-0 overflow-hidden">
+                  <JaulaView />
+                </motion.div>
+              )}
+
+              {/* ═══ TAB: ACTIVOS ═══ */}
+              {activeTab === 'activos' && (
+                <motion.div key="activos" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex-1 min-h-0 overflow-hidden">
+                  <ActivosView />
+                </motion.div>
+              )}
+
+              {/* ═══ TAB: PUNTO LIMPIO ═══ */}
+              {activeTab === 'puntoLimpio' && (
+                <motion.div key="puntoLimpio" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex-1 min-h-0 overflow-hidden">
+                  <PuntoLimpioView />
+                </motion.div>
+              )}
+
               {/* ═══ TAB: GESTIÓN (Solo Gestor - Dueño de la app) ═══ */}
               {activeTab === 'gestion' && isGestor && (
                 <motion.div key="gestion" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex-1 min-h-0 overflow-auto p-4">
@@ -1346,12 +1369,7 @@ export default function HomePage() {
       {/* Role Permissions Modal */}
       <RolePermissions open={showRolePermissions} onClose={() => setShowRolePermissions(false)} />
 
-      {/* Jaula de Excedentes Modal */}
-      <JaulaModal open={showJaulaModal} onClose={() => setShowJaulaModal(false)} />
-      {/* Activos (Necesarios) Modal */}
-      <ActivosModal open={showActivosModal} onClose={() => setShowActivosModal(false)} />
-      {/* Punto Limpio Modal */}
-      <PuntoLimpioModal open={showPuntoLimpioModal} onClose={() => setShowPuntoLimpioModal(false)} />
+
 
       {/* Version indicator — small badge to verify deployment freshness */}
       {authView === 'board' && (
