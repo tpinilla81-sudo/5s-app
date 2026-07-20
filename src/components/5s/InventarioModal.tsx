@@ -146,17 +146,94 @@ export default function InventarioModal({ open, onClose, sStep, miniStep }: Inve
 
   useEffect(() => {
     if (open) {
-      loadInventory();
+      // Load config/template FIRST — importTemplateItems will call loadInventory internally
+      // after saving template items to DB, so items get proper IDs and are editable.
+      // We do NOT call loadInventory() separately here to avoid race conditions.
+      loadCustomInventoryConfig().then(() => {
+        // loadCustomInventoryConfig may or may not have called loadInventory via importTemplateItems.
+        // If no template items were found, loadInventory wasn't called, so load it now.
+        // We check by seeing if items are still empty after config load.
+        setItems(prev => {
+          if (prev.length === 0) {
+            loadInventory();
+          }
+          return prev;
+        });
+      });
       // Load layouts for any S step that has layout support (S2 primarily, also S3/S4 for estandares)
       if (sStep === 2 || sStep === 3 || sStep === 4) loadLayouts();
-      // Load custom inventory template if available
-      loadCustomInventoryConfig();
       // Reset zonaOrigen to current zone when opening
       setNewItem(prev => ({ ...prev, zonaOrigen: currentZone?.name || null }));
       // Load Step 2 photos for this zone/project
       loadStep2Photos();
     }
   }, [open, sStep]);
+
+  // Helper: import template items into the database so they get real IDs and become editable
+  const importTemplateItems = async (templateItems: any[]) => {
+    if (!currentProject?.id || !templateItems.length) return;
+    try {
+      // Check if items already exist in DB for this step/project/zone — avoid duplicates
+      const existingRes = await fetch(`/api/inventory?sStep=${sStep}&projectId=${currentProject.id}${currentZone?.id ? `&zoneId=${currentZone.id}` : ''}`);
+      const existingJson = await existingRes.json();
+      const existingNames = new Set(
+        (existingJson.success ? existingJson.data : []).map((i: any) => i.name?.trim().toLowerCase())
+      );
+
+      // Only import items that don't already exist in the DB
+      const itemsToCreate = templateItems.filter(
+        (item: any) => item.name && !existingNames.has(item.name.trim().toLowerCase())
+      );
+
+      if (itemsToCreate.length === 0) {
+        // All items already in DB — just reload from API to get proper IDs
+        await loadInventory();
+        return;
+      }
+
+      // Create each item via POST so they get database IDs
+      for (const item of itemsToCreate) {
+        const isInnecesario = sStep === 1 && item.category === 'innecesario';
+        const isNecesario = sStep === 1 && item.category === 'necesario';
+        const qty = item.quantity || 1;
+        const extra = { ...(item.extra || {}) };
+        if (sStep === 1 && isInnecesario && !extra.decision) {
+          extra.decision = 'Jaula';
+        }
+
+        await fetch('/api/inventory', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            sStep,
+            projectId: currentProject.id,
+            zoneId: currentZone?.id || null,
+            name: item.name,
+            location: item.location || '',
+            category: item.category || '',
+            quantity: qty,
+            quantityNeeded: isNecesario ? qty : (item.quantityNeeded || 0),
+            quantityUnneeded: isInnecesario ? qty : (item.quantityUnneeded || 0),
+            price: item.price ?? null,
+            action: item.action || (isInnecesario ? (extra.decision || 'Jaula') : ''),
+            extra,
+            jaulaStatus: isInnecesario && extra.decision !== 'Eliminar' && extra.decision !== 'Tirar' ? 'en_jaula' : '',
+            jaulaFechaEntrada: isInnecesario && extra.decision !== 'Eliminar' && extra.decision !== 'Tirar' ? new Date().toISOString() : null,
+            jaulaOrigen: isInnecesario ? (currentZone?.name || currentProject.name || '') : null,
+            zonaOrigen: currentZone?.name || null,
+            zonaDestino: isInnecesario ? (extra.decision === 'Tirar' || extra.decision === 'Eliminar' ? 'Residuo' : 'Jaula') : null,
+          }),
+        });
+      }
+
+      // Now reload from API — items will have real database IDs and be fully editable
+      await loadInventory();
+    } catch (e) {
+      console.error('Error importing template items:', e);
+      // Fallback: just reload from API
+      await loadInventory();
+    }
+  };
 
   const loadCustomInventoryConfig = async () => {
     try {
@@ -181,36 +258,16 @@ export default function InventarioModal({ open, onClose, sStep, miniStep }: Inve
                 ...(content.desplegables_jerarquicos ? { desplegables_jerarquicos: content.desplegables_jerarquicos } : {}),
               });
               setHasTemplate(true);
-              // Pre-load items from legacy {items: [...]} format if present
+              // Auto-import template items into DB so they get IDs and become editable
               if (content.items && Array.isArray(content.items) && content.items.length > 0) {
-                setItems(content.items.map((item: any) => ({
-                  name: item.name || '',
-                  location: item.location || '',
-                  category: item.category || '',
-                  quantity: item.quantity || 1,
-                  quantityNeeded: item.quantityNeeded || 0,
-                  quantityUnneeded: item.quantityUnneeded || 0,
-                  price: item.price ?? null,
-                  action: item.action || '',
-                  extra: item.extra || {},
-                })));
+                await importTemplateItems(content.items);
               }
             } else if (content.items && Array.isArray(content.items)) {
               // Legacy format: {items: [...]} — use default config but load items
               setCustomConfig(null);
               setHasTemplate(true);
               if (content.items.length > 0) {
-                setItems(content.items.map((item: any) => ({
-                  name: item.name || '',
-                  location: item.location || '',
-                  category: item.category || '',
-                  quantity: item.quantity || 1,
-                  quantityNeeded: item.quantityNeeded || 0,
-                  quantityUnneeded: item.quantityUnneeded || 0,
-                  price: item.price ?? null,
-                  action: item.action || '',
-                  extra: item.extra || {},
-                })));
+                await importTemplateItems(content.items);
               }
             } else {
               // Unknown format — use default config as fallback
@@ -243,36 +300,16 @@ export default function InventarioModal({ open, onClose, sStep, miniStep }: Inve
               ...(content.desplegables_jerarquicos ? { desplegables_jerarquicos: content.desplegables_jerarquicos } : {}),
             });
             setHasTemplate(true);
-            // Pre-load items from legacy {items: [...]} format if present
+            // Auto-import template items into DB so they get IDs and become editable
             if (content.items && Array.isArray(content.items) && content.items.length > 0) {
-              setItems(content.items.map((item: any) => ({
-                name: item.name || '',
-                location: item.location || '',
-                category: item.category || '',
-                quantity: item.quantity || 1,
-                quantityNeeded: item.quantityNeeded || 0,
-                quantityUnneeded: item.quantityUnneeded || 0,
-                price: item.price ?? null,
-                action: item.action || '',
-                extra: item.extra || {},
-              })));
+              await importTemplateItems(content.items);
             }
           } else if (content.items && Array.isArray(content.items)) {
             // Legacy format: {items: [...]} — use default config but load items
             setCustomConfig(null);
             setHasTemplate(true);
             if (content.items.length > 0) {
-              setItems(content.items.map((item: any) => ({
-                name: item.name || '',
-                location: item.location || '',
-                category: item.category || '',
-                quantity: item.quantity || 1,
-                quantityNeeded: item.quantityNeeded || 0,
-                quantityUnneeded: item.quantityUnneeded || 0,
-                price: item.price ?? null,
-                action: item.action || '',
-                extra: item.extra || {},
-              })));
+              await importTemplateItems(content.items);
             }
           } else {
             // Unknown format — use default config as fallback

@@ -1,0 +1,597 @@
+     1→'use client';
+     2→
+     3→import { useState, useEffect, useCallback } from 'react';
+     4→import { Button } from '@/components/ui/button';
+     5→import { Badge } from '@/components/ui/badge';
+     6→import { Input } from '@/components/ui/input';
+     7→import {
+     8→  Select,
+     9→  SelectContent,
+    10→  SelectItem,
+    11→  SelectTrigger,
+    12→  SelectValue,
+    13→} from '@/components/ui/select';
+    14→import {
+    15→  Package, Plus, Trash2, Loader2,
+    16→  X,
+    17→} from 'lucide-react';
+    18→import { toast } from 'sonner';
+    19→import { use5SStore } from '@/lib/store';
+    20→import { INVENTORY_CONFIGS } from '@/lib/5s-constants';
+    21→import type { InventoryConfig } from '@/lib/5s-constants';
+    22→import TagPrinter from '@/components/5s/TagPrinter';
+    23→
+    24→// ═══════════════════════════════════════════════════════
+    25→// Types
+    26→// ═══════════════════════════════════════════════════════
+    27→interface JaulaPhoto {
+    28→  id: string;
+    29→  photoUrl: string;
+    30→  photoType: string;
+    31→  title: string;
+    32→}
+    33→
+    34→interface JaulaItem {
+    35→  id: string;
+    36→  name: string;
+    37→  location: string;
+    38→  category: string;
+    39→  quantity: number;
+    40→  quantityUnneeded: number;
+    41→  price: number | null;
+    42→  photoUrl: string | null;
+    43→  photoUrls: string | null;
+    44→  jaulaStatus: string;
+    45→  jaulaFechaEntrada: string | null;
+    46→  jaulaOrigen: string | null;
+    47→  jaulaFechaSalida: string | null;
+    48→  jaulaDestino: string | null;
+    49→  jaulaFechaLimite: string | null;
+    50→  zonaOrigen: string | null;
+    51→  zonaDestino: string | null;
+    52→  extra?: Record<string, string | number>;
+    53→  project?: { name: string };
+    54→  photos?: JaulaPhoto[];
+    55→}
+    56→
+    57→const S1_CONFIG = INVENTORY_CONFIGS[1];
+    58→const defaultConfig = INVENTORY_CONFIGS[1];
+    59→
+    60→const JAULA_STATUS = [
+    61→  { value: 'en_jaula', label: 'En Jaula', color: 'bg-red-100 text-red-800' },
+    62→  { value: 'reclamado', label: 'Reclamado', color: 'bg-amber-100 text-amber-800' },
+    63→  { value: 'transferido', label: 'Transferido', color: 'bg-green-100 text-green-800' },
+    64→];
+    65→
+    66→// ═══════════════════════════════════════════════════════
+    67→// Component
+    68→// ═══════════════════════════════════════════════════════
+    69→export default function JaulaView() {
+    70→  const { currentProject, currentZone } = use5SStore();
+    71→  const [jaulaItems, setJaulaItems] = useState<JaulaItem[]>([]);
+    72→  const [jaulaFilter, setJaulaFilter] = useState<string>('all');
+    73→  const [isLoading, setIsLoading] = useState(true);
+    74→  const [lightboxPhoto, setLightboxPhoto] = useState<string | null>(null);
+    75→  const [customConfig, setCustomConfig] = useState<InventoryConfig | null>(null);
+    76→  const [hasTemplate, setHasTemplate] = useState<boolean | null>(null);
+    77→
+    78→  const config: InventoryConfig = customConfig || INVENTORY_CONFIGS[1];
+    79→
+    80→  const loadCustomInventoryConfig = async () => {
+    81→    try {
+    82→      // If the zone has a board config, fetch inventory template from that config
+    83→      if (currentZone?.boardConfigId) {
+    84→        const slotsRes = await fetch(`/api/board-slots?boardConfigId=${currentZone.boardConfigId}&sStep=1&miniStep=3`);
+    85→        const slotsJson = await slotsRes.json();
+    86→        if (slotsJson.success && slotsJson.data.length > 0) {
+    87→          const slot = slotsJson.data[0];
+    88→          const inventarioTemplates = (slot.templates || []).filter(
+    89→            (t: any) => t.template?.type === 'inventario'
+    90→          );
+    91→          if (inventarioTemplates.length > 0) {
+    92→            const content = JSON.parse(inventarioTemplates[0].template.content);
+    93→            if (content.categories && content.extraFields) {
+    94→              setCustomConfig({
+    95→                title: content.title || defaultConfig.title,
+    96→                subtitle: content.subtitle || defaultConfig.subtitle,
+    97→                templateName: content.templateName || defaultConfig.templateName,
+    98→                categories: content.categories,
+    99→                extraFields: content.extraFields,
+   100→                ...(content.desplegables_jerarquicos ? { desplegables_jerarquicos: content.desplegables_jerarquicos } : {}),
+   101→              });
+   102→              setHasTemplate(true);
+   103→            } else {
+   104→              // Unknown format — use default config as fallback
+   105→              setCustomConfig(null);
+   106→              setHasTemplate(true);
+   107→            }
+   108→          } else {
+   109→            // No inventario template assigned in this board slot — use default config
+   110→            setCustomConfig(null);
+   111→            setHasTemplate(true);
+   112→          }
+   113→        } else {
+   114→          // No slot configured for this step — use default config
+   115→          setCustomConfig(null);
+   116→          setHasTemplate(true);
+   117→        }
+   118→      } else {
+   119→        // Fallback: load global template
+   120→        const res = await fetch(`/api/templates?type=inventario&sStep=1&miniStep=3`);
+   121→        const json = await res.json();
+   122→        if (json.success && json.data && json.data.length > 0) {
+   123→          const content = JSON.parse(json.data[0].content);
+   124→          if (content.categories && content.extraFields) {
+   125→            setCustomConfig({
+   126→              title: content.title || defaultConfig.title,
+   127→              subtitle: content.subtitle || defaultConfig.subtitle,
+   128→              templateName: content.templateName || defaultConfig.templateName,
+   129→              categories: content.categories,
+   130→              extraFields: content.extraFields,
+   131→              ...(content.desplegables_jerarquicos ? { desplegables_jerarquicos: content.desplegables_jerarquicos } : {}),
+   132→            });
+   133→            setHasTemplate(true);
+   134→          } else {
+   135→            // Unknown format — use default config as fallback
+   136→            setCustomConfig(null);
+   137→            setHasTemplate(true);
+   138→          }
+   139→        } else {
+   140→          // No global template — use default config (INVENTORY_CONFIGS has entries for all 5 S steps)
+   141→          setCustomConfig(null);
+   142→          setHasTemplate(true);
+   143→        }
+   144→      }
+   145→    } catch (e) {
+   146→      console.error('Error loading custom inventory config:', e);
+   147→      // On error, use default config so the view still works
+   148→      setCustomConfig(null);
+   149→      setHasTemplate(true);
+   150→    }
+   151→  };
+   152→
+   153→  // Load data on mount
+   154→  useEffect(() => {
+   155→    loadJaulaItems();
+   156→    loadCustomInventoryConfig();
+   157→  }, [currentProject, currentZone]);
+   158→
+   159→  const loadJaulaItems = async () => {
+   160→    setIsLoading(true);
+   161→    try {
+   162→      let url = '/api/inventory?jaulaOnly=true';
+   163→      if (currentProject?.id) url += `&projectId=${currentProject.id}`;
+   164→      if (currentZone?.id) url += `&zoneId=${currentZone.id}`;
+   165→      const res = await fetch(url);
+   166→      const json = await res.json();
+   167→      if (json.success) {
+   168→        setJaulaItems(json.data || []);
+   169→      }
+   170→    } catch (error) {
+   171→      console.error('Error loading jaula items:', error);
+   172→      toast.error('Error al cargar la jaula');
+   173→    } finally {
+   174→      setIsLoading(false);
+   175→    }
+   176→  };
+   177→
+   178→  const handleAddItem = async () => {
+   179→    if (!currentProject?.id) {
+   180→      toast.error('No hay proyecto seleccionado');
+   181→      return;
+   182→    }
+   183→    try {
+   184→      const res = await fetch('/api/inventory', {
+   185→        method: 'POST',
+   186→        headers: { 'Content-Type': 'application/json' },
+   187→        body: JSON.stringify({
+   188→          sStep: 1,
+   189→          name: '',
+   190→          location: currentZone?.name || '',
+   191→          category: 'innecesario',
+   192→          quantity: 1,
+   193→          quantityUnneeded: 1,
+   194→          price: null,
+   195→          action: 'jaula',
+   196→          projectId: currentProject.id,
+   197→          zoneId: currentZone?.id || null,
+   198→          jaulaStatus: 'en_jaula',
+   199→          jaulaFechaEntrada: new Date().toISOString(),
+   200→          extra: JSON.stringify({
+   201→            estado: '',
+   202→            frecuenciaUso: '',
+   203→            decision: 'Jaula',
+   204→            diasCuarentena: '40',
+   205→          }),
+   206→        }),
+   207→      });
+   208→      const json = await res.json();
+   209→      if (json.success) {
+   210→        toast.success('Nueva entrada agregada a la Jaula');
+   211→        await loadJaulaItems();
+   212→      } else {
+   213→        toast.error(`Error: ${json.error || 'Error desconocido'}`);
+   214→      }
+   215→    } catch (e) {
+   216→      console.error('Error adding item:', e);
+   217→      toast.error('Error de conexión');
+   218→    }
+   219→  };
+   220→
+   221→  const handleUpdateField = async (itemId: string, field: string, value: any) => {
+   222→    setJaulaItems(prev => prev.map(item => {
+   223→      if (item.id !== itemId) return item;
+   224→      if (field.startsWith('extra.')) {
+   225→        const extraKey = field.replace('extra.', '');
+   226→        return { ...item, extra: { ...item.extra, [extraKey]: value } };
+   227→      }
+   228→      return { ...item, [field]: value };
+   229→    }));
+   230→
+   231→    try {
+   232→      let body: any;
+   233→      if (field.startsWith('extra.')) {
+   234→        const extraKey = field.replace('extra.', '');
+   235→        const item = jaulaItems.find(i => i.id === itemId);
+   236→        const updatedExtra = { ...(item?.extra || {}), [extraKey]: value };
+   237→        body = { extra: JSON.stringify(updatedExtra) };
+   238→      } else {
+   239→        body = { [field]: value };
+   240→      }
+   241→      const res = await fetch(`/api/inventory?id=${itemId}`, {
+   242→        method: 'PUT',
+   243→        headers: { 'Content-Type': 'application/json' },
+   244→        body: JSON.stringify(body),
+   245→      });
+   246→      const json = await res.json();
+   247→      if (!json.success) {
+   248→        toast.error(`Error al actualizar: ${json.error || 'Error'}`);
+   249→        await loadJaulaItems();
+   250→      }
+   251→    } catch (e) {
+   252→      console.error('Error updating:', e);
+   253→      await loadJaulaItems();
+   254→    }
+   255→  };
+   256→
+   257→  const filteredJaulaItems = jaulaFilter === 'all'
+   258→    ? jaulaItems
+   259→    : jaulaItems.filter(i => i.jaulaStatus === jaulaFilter);
+   260→
+   261→  const totalJaulaValue = filteredJaulaItems.reduce(
+   262→    (sum, i) => sum + (i.price || 0) * (i.quantityUnneeded || i.quantity), 0
+   263→  );
+   264→
+   265→  // Stats
+   266→  const enJaula = jaulaItems.filter(i => i.jaulaStatus === 'en_jaula').length;
+   267→  const reclamados = jaulaItems.filter(i => i.jaulaStatus === 'reclamado').length;
+   268→  const transferidos = jaulaItems.filter(i => i.jaulaStatus === 'transferido').length;
+   269→
+   270→  const getStatusBadge = (status: string) => {
+   271→    const opt = JAULA_STATUS.find(s => s.value === status);
+   272→    if (!opt) return <Badge className="bg-gray-100 text-gray-400 text-[10px]">—</Badge>;
+   273→    return <Badge className={`text-[10px] px-1.5 py-0 ${opt.color}`}>{opt.label}</Badge>;
+   274→  };
+   275→
+   276→  // Tag data for printing
+   277→  const tagItems = filteredJaulaItems
+   278→    .filter(i => !i.extra?.decision || i.extra.decision === 'Jaula')
+   279→    .map(i => {
+   280→      const dias = Number(i.extra?.diasCuarentena ?? 40);
+   281→      let fechaRevision: string | null = null;
+   282→      if (i.jaulaFechaEntrada) {
+   283→        try {
+   284→          const d = new Date(i.jaulaFechaEntrada);
+   285→          d.setDate(d.getDate() + dias);
+   286→          fechaRevision = d.toISOString();
+   287→        } catch {}
+   288→      }
+   289→      return {
+   290→        nombre: i.name,
+   291→        ubicacion: i.location,
+   292→        cantidad: i.quantityUnneeded || i.quantity,
+   293→        estado: String(i.extra?.estado ?? ''),
+   294→        frecuenciaUso: String(i.extra?.frecuenciaUso ?? ''),
+   295→        decision: 'Jaula' as string,
+   296→        fechaEntrada: i.jaulaFechaEntrada,
+   297→        fechaRevision,
+   298→        diasCuarentena: dias,
+   299→        zonaOrigen: i.zonaOrigen || i.jaulaOrigen,
+   300→      };
+   301→    });
+   302→
+   303→  return (
+   304→    <div className="flex flex-col h-full">
+   305→      {/* Header */}
+   306→      <div className="px-3 sm:px-4 py-2.5 border-b bg-white shrink-0">
+   307→        <div className="flex items-center justify-between gap-2">
+   308→          <div className="flex items-center gap-2 min-w-0">
+   309→            <Package className="h-5 w-5 text-red-600 shrink-0" />
+   310→            <h2 className="text-base sm:text-lg font-bold truncate">Jaula de Excedentes</h2>
+   311→            {currentZone && (
+   312→              <Badge variant="outline" className="border-red-300 text-red-700 text-[10px] shrink-0 hidden sm:inline-flex">
+   313→                {currentZone.name}
+   314→              </Badge>
+   315→            )}
+   316→            <Badge className="bg-red-100 text-red-800 text-[10px] shrink-0">
+   317→              {jaulaItems.length} elemento{jaulaItems.length !== 1 ? 's' : ''}
+   318→            </Badge>
+   319→          </div>
+   320→          <Button size="sm" className="gap-1 text-xs h-8 shrink-0 bg-red-600 hover:bg-red-700" onClick={handleAddItem}>
+   321→            <Plus className="h-3.5 w-3.5" />
+   322→            <span className="hidden sm:inline">Nueva Entrada</span>
+   323→            <span className="sm:hidden">Nueva</span>
+   324→          </Button>
+   325→        </div>
+   326→
+   327→        {/* Info panel */}
+   328→        <div className="p-2.5 rounded-lg border-l-4 border-red-500 bg-red-50/30 mt-2">
+   329→          <div className="flex items-center gap-2 mb-0.5">
+   330→            <div className="w-3 h-3 rounded bg-red-500" />
+   331→            <span className="text-xs font-medium text-red-800">Etiqueta ROJA — Innecesario</span>
+   332→          </div>
+   333→          <p className="text-[11px] text-muted-foreground">
+   334→            Elementos innecesarios clasificados en S1. Se envían a la JAULA o se ELIMINAN.
+   335→          </p>
+   336→        </div>
+   337→
+   338→        {/* Filter pills */}
+   339→        <div className="flex items-center gap-1.5 mt-2 overflow-x-auto pb-1">
+   340→          {tagItems.length > 0 && <TagPrinter items={tagItems} />}
+   341→          {tagItems.length > 0 && <div className="h-4 w-px bg-gray-200 mx-1 shrink-0" />}
+   342→          {/* Status filters */}
+   343→          {[
+   344→            { key: 'all', label: 'Todos', count: jaulaItems.length, active: jaulaFilter === 'all' },
+   345→            { key: 'en_jaula', label: 'En Jaula', count: enJaula, active: jaulaFilter === 'en_jaula' },
+   346→            { key: 'reclamado', label: 'Reclamado', count: reclamados, active: jaulaFilter === 'reclamado' },
+   347→            { key: 'transferido', label: 'Transferido', count: transferidos, active: jaulaFilter === 'transferido' },
+   348→          ].map(f => (
+   349→            <button
+   350→              key={f.key}
+   351→              onClick={() => setJaulaFilter(f.key)}
+   352→              className={`px-2 py-1 rounded-full text-[10px] font-medium border transition-colors whitespace-nowrap ${
+   353→                f.active ? 'bg-gray-900 text-white border-gray-900' : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
+   354→              }`}
+   355→            >
+   356→              {f.label} {f.count}
+   357→            </button>
+   358→          ))}
+   359→          {jaulaFilter !== 'all' && (
+   360→            <button onClick={() => setJaulaFilter('all')}
+   361→              className="flex items-center gap-0.5 px-2 py-1 rounded-full text-[10px] text-gray-500 hover:bg-gray-100">
+   362→              <X className="h-3 w-3" /> Limpiar
+   363→            </button>
+   364→          )}
+   365→        </div>
+   366→      </div>
+   367→
+   368→      {/* Content */}
+   369→      <div className="flex-1 overflow-hidden flex flex-col px-3 sm:px-4 pb-4 min-h-0">
+   370→        {isLoading ? (
+   371→          <div className="flex-1 flex items-center justify-center">
+   372→            <Loader2 className="h-8 w-8 text-red-500 animate-spin" />
+   373→          </div>
+   374→        ) : filteredJaulaItems.length === 0 ? (
+   375→          <div className="flex-1 flex flex-col items-center justify-center text-center">
+   376→            <Package className="h-10 w-10 text-gray-300 mb-2" />
+   377→            <p className="text-sm text-muted-foreground">
+   378→              {jaulaItems.length === 0 ? 'No hay elementos en la jaula' : 'No hay elementos con este filtro'}
+   379→            </p>
+   380→            {jaulaItems.length === 0 && (
+   381→              <Button size="sm" className="mt-3 gap-1 text-xs bg-red-600" onClick={handleAddItem}>
+   382→                <Plus className="h-3.5 w-3.5" /> Registrar primer elemento
+   383→              </Button>
+   384→            )}
+   385→          </div>
+   386→        ) : (
+   387→          <div className="flex-1 overflow-auto">
+   388→            {/* Desktop table */}
+   389→            <div className="overflow-x-auto border rounded-lg hidden md:block">
+   390→              <table className="w-full text-xs border-collapse min-w-[1000px]">
+   391→                <thead className="sticky top-0 z-10">
+   392→                  <tr>
+   393→                    <th className="bg-red-500 text-white px-2 py-1.5 text-center font-bold border border-red-600">ELEMENTO</th>
+   394→                    <th className="bg-amber-400 text-white px-2 py-1.5 text-center font-bold border border-amber-500" colSpan={4}>CLASIFICACIÓN</th>
+   395→                    <th className="bg-sky-400 text-white px-2 py-1.5 text-center font-bold border border-sky-500" colSpan={3}>JAULA</th>
+   396→                    <th className="bg-green-500 text-white px-2 py-1.5 text-center font-bold border border-green-600" colSpan={2}>SEGUIMIENTO</th>
+   397→                    <th className="bg-gray-400 text-white px-1 py-1.5 text-center font-bold border border-gray-500 w-8">🗑</th>
+   398→                  </tr>
+   399→                  <tr>
+   400→                    <th className="bg-red-400 text-white px-1 py-1 font-semibold border border-red-300 whitespace-nowrap">Nombre</th>
+   401→                    <th className="bg-amber-300 text-white px-1 py-1 font-semibold border border-amber-300 whitespace-nowrap">Ubicación</th>
+   402→                    <th className="bg-amber-300 text-white px-1 py-1 font-semibold border border-amber-300 whitespace-nowrap">Cant.</th>
+   403→                    <th className="bg-amber-300 text-white px-1 py-1 font-semibold border border-amber-300 whitespace-nowrap">Estado</th>
+   404→                    <th className="bg-amber-300 text-white px-1 py-1 font-semibold border border-amber-300 whitespace-nowrap">Decisión</th>
+   405→                    <th className="bg-sky-300 text-white px-1 py-1 font-semibold border border-sky-300 whitespace-nowrap">F. Entrada</th>
+   406→                    <th className="bg-sky-300 text-white px-1 py-1 font-semibold border border-sky-300 whitespace-nowrap">Días cuar.</th>
+   407→                    <th className="bg-sky-300 text-white px-1 py-1 font-semibold border border-sky-300 whitespace-nowrap">F. Límite</th>
+   408→                    <th className="bg-green-400 text-white px-1 py-1 font-semibold border border-green-400 whitespace-nowrap">Estado Jaula</th>
+   409→                    <th className="bg-green-400 text-white px-1 py-1 font-semibold border border-green-400 whitespace-nowrap">F. Salida / Destino</th>
+   410→                  </tr>
+   411→                </thead>
+   412→                <tbody>
+   413→                  {filteredJaulaItems.map(item => {
+   414→                    const diasCuarentena = Number(item.extra?.diasCuarentena ?? 40);
+   415→                    let fechaLimite: string | null = item.jaulaFechaLimite || null;
+   416→                    if (!fechaLimite && item.jaulaFechaEntrada) {
+   417→                      try {
+   418→                        const d = new Date(item.jaulaFechaEntrada);
+   419→                        d.setDate(d.getDate() + diasCuarentena);
+   420→                        fechaLimite = d.toISOString();
+   421→                      } catch {}
+   422→                    }
+   423→                    const isExpired = fechaLimite && new Date(fechaLimite) < new Date();
+   424→
+   425→                    return (
+   426→                      <tr key={item.id} className={`border-b hover:bg-gray-50 ${
+   427→                        item.jaulaStatus === 'transferido' ? 'bg-green-50/30' : ''
+   428→                      }`}>
+   429→                        {/* Elemento */}
+   430→                        <td className="px-1 py-1 border bg-red-50 font-medium">
+   431→                          <Input value={item.name} onChange={e => handleUpdateField(item.id, 'name', e.target.value)}
+   432→                            className="h-6 text-[10px] p-0 px-1 border-0 bg-transparent font-medium" placeholder="Elemento" />
+   433→                        </td>
+   434→                        {/* Clasificación */}
+   435→                        <td className="px-1 py-1 border bg-amber-50">
+   436→                          <Input value={item.location} onChange={e => handleUpdateField(item.id, 'location', e.target.value)}
+   437→                            className="h-6 text-[10px] p-0 px-1 border-0 bg-transparent" placeholder="Ubicación" />
+   438→                        </td>
+   439→                        <td className="px-1 py-1 border bg-amber-50 text-center">
+   440→                          <Input type="number" min={1} value={item.quantityUnneeded || item.quantity}
+   441→                            onChange={e => handleUpdateField(item.id, 'quantityUnneeded', Number(e.target.value))}
+   442→                            className="h-6 text-[10px] p-0 px-1 border-0 bg-transparent w-10 text-center" />
+   443→                        </td>
+   444→                        <td className="px-1 py-1 border bg-amber-50 text-center">
+   445→                          <Select value={String(item.extra?.estado || '')} onValueChange={v => handleUpdateField(item.id, 'extra.estado', v)}>
+   446→                            <SelectTrigger className="h-6 text-[10px] p-0 px-1 border-0 bg-transparent w-16">
+   447→                              <SelectValue />
+   448→                            </SelectTrigger>
+   449→                            <SelectContent>
+   450→                              {(config.extraFields.find(f => f.key === 'estado')?.options || ['Bueno', 'Regular', 'Malo']).map(o => (
+   451→                                <SelectItem key={o} value={o} className="text-xs">{o}</SelectItem>
+   452→                              ))}
+   453→                            </SelectContent>
+   454→                          </Select>
+   455→                        </td>
+   456→                        <td className="px-1 py-1 border bg-amber-50 text-center">
+   457→                          <Select value={String(item.extra?.decision || 'Jaula')} onValueChange={v => handleUpdateField(item.id, 'extra.decision', v)}>
+   458→                            <SelectTrigger className="h-6 text-[10px] p-0 px-1 border-0 bg-transparent w-16">
+   459→                              <SelectValue />
+   460→                            </SelectTrigger>
+   461→                            <SelectContent>
+   462→                              {(config.extraFields.find(f => f.key === 'decision')?.options || ['Jaula', 'Tirar', 'Eliminar', 'Reubicar']).map(o => (
+   463→                                <SelectItem key={o} value={o} className="text-xs">{o}</SelectItem>
+   464→                              ))}
+   465→                            </SelectContent>
+   466→                          </Select>
+   467→                        </td>
+   468→                        {/* Jaula */}
+   469→                        <td className="px-1 py-1 border bg-sky-50 text-center">
+   470→                          <Input type="date" value={item.jaulaFechaEntrada ? new Date(item.jaulaFechaEntrada).toISOString().split('T')[0] : ''}
+   471→                            onChange={e => handleUpdateField(item.id, 'jaulaFechaEntrada', e.target.value ? new Date(e.target.value).toISOString() : null)}
+   472→                            className="h-6 text-[10px] p-0 px-1 border-0 bg-transparent" />
+   473→                        </td>
+   474→                        <td className="px-1 py-1 border bg-sky-50 text-center">
+   475→                          <Select value={String(item.extra?.diasCuarentena || '40')} onValueChange={v => handleUpdateField(item.id, 'extra.diasCuarentena', v)}>
+   476→                            <SelectTrigger className="h-6 text-[10px] p-0 px-1 border-0 bg-transparent w-12">
+   477→                              <SelectValue />
+   478→                            </SelectTrigger>
+   479→                            <SelectContent>
+   480→                              {(config.extraFields.find(f => f.key === 'diasCuarentena')?.options || ['7', '15', '20', '30', '40', '60', '90']).map(o => (
+   481→                                <SelectItem key={o} value={o} className="text-xs">{o}d</SelectItem>
+   482→                              ))}
+   483→                            </SelectContent>
+   484→                          </Select>
+   485→                        </td>
+   486→                        <td className="px-1 py-1 border bg-sky-50 text-center">
+   487→                          {fechaLimite ? (
+   488→                            <span className={`text-[10px] ${isExpired ? 'text-red-600 font-bold' : 'text-amber-600'}`}>
+   489→                              {new Date(fechaLimite).toLocaleDateString('es-ES')}
+   490→                              {isExpired && ' ⚠'}
+   491→                            </span>
+   492→                          ) : <span className="text-[10px] text-muted-foreground">—</span>}
+   493→                        </td>
+   494→                        {/* Seguimiento */}
+   495→                        <td className="px-1 py-1 border bg-green-50 text-center">
+   496→                          <Select value={item.jaulaStatus} onValueChange={v => handleUpdateField(item.id, 'jaulaStatus', v)}>
+   497→                            <SelectTrigger className="h-6 text-[10px] p-0 px-1 border-0 bg-transparent w-20">
+   498→                              <SelectValue />
+   499→                            </SelectTrigger>
+   500→                            <SelectContent>
+   501→                              {JAULA_STATUS.map(opt => (
+   502→                                <SelectItem key={opt.value} value={opt.value} className="text-xs">{opt.label}</SelectItem>
+   503→                              ))}
+   504→                            </SelectContent>
+   505→                          </Select>
+   506→                        </td>
+   507→                        <td className="px-1 py-1 border bg-green-50">
+   508→                          <div className="flex items-center gap-1">
+   509→                            <Input type="date" value={item.jaulaFechaSalida ? new Date(item.jaulaFechaSalida).toISOString().split('T')[0] : ''}
+   510→                              onChange={e => handleUpdateField(item.id, 'jaulaFechaSalida', e.target.value ? new Date(e.target.value).toISOString() : null)}
+   511→                              className="h-6 text-[10px] p-0 px-1 border-0 bg-transparent w-20" />
+   512→                            <Input value={item.jaulaDestino || ''} onChange={e => handleUpdateField(item.id, 'jaulaDestino', e.target.value)}
+   513→                              className="h-6 text-[10px] p-0 px-1 border-0 bg-transparent w-16" placeholder="Dest." />
+   514→                          </div>
+   515→                        </td>
+   516→                        {/* Delete */}
+   517→                        <td className="px-1 py-1 border text-center bg-gray-50">
+   518→                          <button onClick={() => {
+   519→                            if (!confirm('¿Eliminar este elemento?')) return;
+   520→                            fetch(`/api/inventory?id=${item.id}`, { method: 'DELETE' })
+   521→                              .then(r => r.json())
+   522→                              .then(j => { if (j.success) { setJaulaItems(p => p.filter(i => i.id !== item.id)); toast.success('Eliminado'); } })
+   523→                              .catch(() => toast.error('Error'));
+   524→                          }} className="text-red-400 hover:text-red-600">
+   525→                            <Trash2 className="h-3.5 w-3.5" />
+   526→                          </button>
+   527→                        </td>
+   528→                      </tr>
+   529→                    );
+   530→                  })}
+   531→                </tbody>
+   532→              </table>
+   533→            </div>
+   534→
+   535→            {/* Mobile cards */}
+   536→            <div className="space-y-2 md:hidden">
+   537→              {filteredJaulaItems.map(item => {
+   538→                const diasCuarentena = Number(item.extra?.diasCuarentena ?? 40);
+   539→                let fechaLimite: string | null = item.jaulaFechaLimite || null;
+   540→                if (!fechaLimite && item.jaulaFechaEntrada) {
+   541→                  try {
+   542→                    const d = new Date(item.jaulaFechaEntrada);
+   543→                    d.setDate(d.getDate() + diasCuarentena);
+   544→                    fechaLimite = d.toISOString();
+   545→                  } catch {}
+   546→                }
+   547→                const isExpired = fechaLimite && new Date(fechaLimite) < new Date();
+   548→
+   549→                return (
+   550→                  <div key={item.id} className="rounded-xl border bg-white shadow-sm overflow-hidden">
+   551→                    <div className="flex items-center gap-2 px-3 py-2.5">
+   552→                      <span className="text-xs font-medium truncate flex-1">{item.name || 'Sin nombre'}</span>
+   553→                      {getStatusBadge(item.jaulaStatus)}
+   554→                      <Badge className={`text-[10px] px-1.5 py-0 ${
+   555→                        item.extra?.decision === 'Jaula' ? 'bg-orange-100 text-orange-800'
+   556→                        : item.extra?.decision === 'Eliminar' ? 'bg-red-100 text-red-800'
+   557→                        : 'bg-gray-100 text-gray-800'
+   558→                      }`}>
+   559→                        {String(item.extra?.decision || 'Jaula')}
+   560→                      </Badge>
+   561→                    </div>
+   562→                    <div className="px-3 pb-2 text-[11px] text-muted-foreground flex items-center gap-3">
+   563→                      <span>📦 {item.quantityUnneeded || item.quantity} uds</span>
+   564→                      {item.price && <span>💰 {(item.price * (item.quantityUnneeded || item.quantity)).toFixed(2)}€</span>}
+   565→                      {fechaLimite && (
+   566→                        <span className={isExpired ? 'text-red-600 font-bold' : 'text-amber-600'}>
+   567→                          📅 {new Date(fechaLimite).toLocaleDateString('es-ES')}{isExpired && ' ⚠'}
+   568→                        </span>
+   569→                      )}
+   570→                    </div>
+   571→                  </div>
+   572→                );
+   573→              })}
+   574→            </div>
+   575→
+   576→            {/* Totals */}
+   577→            <div className="flex gap-6 text-xs mt-3 pt-3 border-t">
+   578→              <span className="text-gray-700">Total: <strong>{filteredJaulaItems.length}</strong> elementos</span>
+   579→              <span className="text-gray-700">Valor: <strong className="text-red-600">{totalJaulaValue.toFixed(2)} €</strong></span>
+   580→            </div>
+   581→          </div>
+   582→        )}
+   583→      </div>
+   584→
+   585→      {/* Photo lightbox */}
+   586→      {lightboxPhoto && (
+   587→        <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center" onClick={() => setLightboxPhoto(null)}>
+   588→          <button className="absolute top-4 right-4 text-white" onClick={() => setLightboxPhoto(null)}>
+   589→            <X className="h-6 w-6" />
+   590→          </button>
+   591→          <img src={lightboxPhoto} alt="Foto" className="max-w-[90vw] max-h-[85vh] object-contain rounded-lg" />
+   592→        </div>
+   593→      )}
+   594→    </div>
+   595→  );
+   596→}
+   597→

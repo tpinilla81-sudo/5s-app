@@ -1,0 +1,2002 @@
+     1→     1→'use client';
+     2→     2→
+     3→     3→import { useState, useEffect } from 'react';
+     4→     4→import {
+     5→     5→  Dialog,
+     6→     6→  DialogContent,
+     7→     7→  DialogHeader,
+     8→     8→  DialogTitle,
+     9→     9→} from '@/components/ui/dialog';
+    10→    10→import { Button } from '@/components/ui/button';
+    11→    11→import { Card, CardContent } from '@/components/ui/card';
+    12→    12→import { Badge } from '@/components/ui/badge';
+    13→    13→import { Input } from '@/components/ui/input';
+    14→    14→import {
+    15→    15→  Select,
+    16→    16→  SelectContent,
+    17→    17→  SelectItem,
+    18→    18→  SelectTrigger,
+    19→    19→  SelectValue,
+    20→    20→} from '@/components/ui/select';
+    21→    21→import {
+    22→    22→  Table,
+    23→    23→  TableBody,
+    24→    24→  TableCell,
+    25→    25→  TableHead,
+    26→    26→  TableHeader,
+    27→    27→  TableRow,
+    28→    28→} from '@/components/ui/table';
+    29→    29→import { ClipboardList, Plus, CheckCircle, Download, Upload, FileSpreadsheet, BookOpen, ArrowRight, AlertTriangle, FileUp, Maximize2, Minimize2, File, PenTool, Image as ImageIcon, Eye, Loader2, MapPin, Tag, Camera, Link2, Unlink, X, ZoomIn } from 'lucide-react';
+    30→    30→import { toast } from 'sonner';
+    31→    31→import { use5SStore } from '@/lib/store';
+    32→    32→import { S_STEPS, INVENTORY_CONFIGS, INVENTORY_CLASSIFY_THRESHOLD } from '@/lib/5s-constants';
+    33→    33→import type { InventoryConfig } from '@/lib/5s-constants';
+    34→    34→import LayoutEditor from '@/components/5s/LayoutEditor';
+    35→    35→import ColorCodeTable from '@/components/5s/ColorCodeTable';
+    36→    36→import TagPrinter from '@/components/5s/TagPrinter';
+    37→    37→import CleaningPlanPanel from '@/components/5s/CleaningPlanPanel';
+    38→    38→import BibliotecaEstandaresView from '@/components/5s/BibliotecaEstandaresView';
+    39→    39→import {
+    40→    40→  compressImage,
+    41→    41→  generatePhotoFilename,
+    42→    42→  base64toFile,
+    43→    43→} from '@/lib/image-utils';
+    44→    44→
+    45→    45→interface InventoryItemData {
+    46→    46→  id?: string;
+    47→    47→  name: string;
+    48→    48→  location: string;
+    49→    49→  category: string;
+    50→    50→  quantity: number;
+    51→    51→  quantityNeeded: number;
+    52→    52→  quantityUnneeded: number;
+    53→    53→  price: number | null;
+    54→    54→  action: string;
+    55→    55→  extra?: Record<string, string | number>;
+    56→    56→  jaulaStatus?: string;
+    57→    57→  jaulaFechaEntrada?: string | null;
+    58→    58→  jaulaOrigen?: string | null;
+    59→    59→  jaulaFechaSalida?: string | null;
+    60→    60→  jaulaDestino?: string | null;
+    61→    61→  zonaOrigen?: string | null;
+    62→    62→  zonaDestino?: string | null;
+    63→    63→  photos?: PhotoData[];
+    64→    64→}
+    65→    65→
+    66→    66→interface PhotoData {
+    67→    67→  id: string;
+    68→    68→  title: string;
+    69→    69→  description?: string | null;
+    70→    70→  photoUrl: string;
+    71→    71→  photoType: string; // "antes", "despues", "referencia", "hallazgo", "mejora"
+    72→    72→  category: string;
+    73→    73→  inventoryItemId?: string | null;
+    74→    74→  miniStep: number;
+    75→    75→  sStep: number;
+    76→    76→  createdAt: string;
+    77→    77→}
+    78→    78→
+    79→    79→interface InventarioModalProps {
+    80→    80→  open: boolean;
+    81→    81→  onClose: () => void;
+    82→    82→  sStep: number;
+    83→    83→  miniStep: number;
+    84→    84→}
+    85→    85→
+    86→    86→export default function InventarioModal({ open, onClose, sStep, miniStep }: InventarioModalProps) {
+    87→    87→  const { fetchProgress, currentUser, adminFreeNavigation, currentProject, currentZone, canPerform, canView, hasPermission } = use5SStore();
+    88→    88→  const sStepData = S_STEPS.find(s => s.id === sStep);
+    89→    89→  const defaultConfig: InventoryConfig = INVENTORY_CONFIGS[sStep] || INVENTORY_CONFIGS[1];
+    90→    90→  const [customConfig, setCustomConfig] = useState<InventoryConfig | null>(null);
+    91→    91→  const [hasTemplate, setHasTemplate] = useState<boolean | null>(null); // null = loading, false = no template, true = has template
+    92→    92→  const config: InventoryConfig = customConfig || defaultConfig;
+    93→    93→  const canSkipSteps = hasPermission('skip_steps');
+    94→    94→  const canPerformStep = canPerform(sStep, miniStep);
+    95→    95→  const canViewStep = canView(sStep, miniStep);
+    96→    96→  // Permission-driven: read-only if no execute perm OR if candado closed for skip_steps users
+    97→    97→  const isReadOnly = !canPerformStep || (canSkipSteps && !adminFreeNavigation);
+    98→    98→
+    99→    99→  const [items, setItems] = useState<InventoryItemData[]>([]);
+   100→   100→  const [isLoading, setIsLoading] = useState(true);
+   101→   101→  const [isCompleted, setIsCompleted] = useState(false);
+   102→   102→  const [csvPreview, setCsvPreview] = useState<InventoryItemData[] | null>(null);
+   103→   103→  const [isImporting, setIsImporting] = useState(false);
+   104→   104→  const [isFullscreen, setIsFullscreen] = useState(true);
+   105→   105→  const [showLayoutEditor, setShowLayoutEditor] = useState(false);
+   106→   106→  const [showColorCodeTable, setShowColorCodeTable] = useState(false);
+   107→   107→  const [savedLayouts, setSavedLayouts] = useState<{ id: string; title: string; photoUrl: string | null; createdAt: string }[]>([]);
+   108→   108→  const [layoutUploaded, setLayoutUploaded] = useState(false);
+   109→   109→
+   110→   110→  // Photo attachment state
+   111→   111→  const [itemPhotos, setItemPhotos] = useState<Record<string, PhotoData[]>>({});
+   112→   112→  const [step2Photos, setStep2Photos] = useState<PhotoData[]>([]);
+   113→   113→  const [showPhotoGallery, setShowPhotoGallery] = useState(false);
+   114→   114→  const [galleryTargetItemId, setGalleryTargetItemId] = useState<string | null>(null);
+   115→   115→  const [uploadingPhotoForItem, setUploadingPhotoForItem] = useState<string | null>(null);
+   116→   116→  const [uploadPhotoType, setUploadPhotoType] = useState<string>('antes');
+   117→   117→  const [showPhotoLightbox, setShowPhotoLightbox] = useState<PhotoData | null>(null);
+   118→   118→  const [pendingNewPhoto, setPendingNewPhoto] = useState<File | null>(null);
+   119→   119→  const [pendingNewPhotoType, setPendingNewPhotoType] = useState<string>('antes');
+   120→   120→
+   121→   121→  // S1: default category is 'innecesario' since this template is for unnecessary items
+   122→   122→  const defaultCategory = sStep === 1 ? 'innecesario' : undefined;
+   123→   123→
+   124→   124→  const [newItem, setNewItem] = useState<Partial<InventoryItemData> & { extra?: Record<string, string | number> }>({
+   125→   125→    name: '',
+   126→   126→    location: '',
+   127→   127→    category: defaultCategory as string | undefined,
+   128→   128→    quantity: 1,
+   129→   129→    quantityNeeded: 0,
+   130→   130→    quantityUnneeded: 0,
+   131→   131→    price: null,
+   132→   132→    action: '',
+   133→   133→    zonaOrigen: currentZone?.name || null,
+   134→   134→    jaulaFechaEntrada: new Date().toISOString(),
+   135→   135→    extra: {},
+   136→   136→  });
+   137→   137→
+   138→   138→  // Update zonaOrigen and default category when zone/step changes
+   139→   139→  useEffect(() => {
+   140→   140→    setNewItem(prev => ({
+   141→   141→      ...prev,
+   142→   142→      zonaOrigen: currentZone?.name || prev.zonaOrigen,
+   143→   143→      category: sStep === 1 ? 'innecesario' : prev.category,
+   144→   144→    }));
+   145→   145→  }, [currentZone?.name, sStep]);
+   146→   146→
+   147→   147→  useEffect(() => {
+   148→   148→    if (open) {
+   149→   149→      loadInventory();
+   150→   150→      // Load layouts for any S step that has layout support (S2 primarily, also S3/S4 for estandares)
+   151→   151→      if (sStep === 2 || sStep === 3 || sStep === 4) loadLayouts();
+   152→   152→      // Load custom inventory template if available
+   153→   153→      loadCustomInventoryConfig();
+   154→   154→      // Reset zonaOrigen to current zone when opening
+   155→   155→      setNewItem(prev => ({ ...prev, zonaOrigen: currentZone?.name || null }));
+   156→   156→      // Load Step 2 photos for this zone/project
+   157→   157→      loadStep2Photos();
+   158→   158→    }
+   159→   159→  }, [open, sStep]);
+   160→   160→
+   161→   161→  const loadCustomInventoryConfig = async () => {
+   162→   162→    try {
+   163→   163→      // If the zone has a board config, fetch inventory template from that config
+   164→   164→      if (currentZone?.boardConfigId) {
+   165→   165→        const slotsRes = await fetch(`/api/board-slots?boardConfigId=${currentZone.boardConfigId}&sStep=${sStep}&miniStep=3`);
+   166→   166→        const slotsJson = await slotsRes.json();
+   167→   167→        if (slotsJson.success && slotsJson.data.length > 0) {
+   168→   168→          const slot = slotsJson.data[0];
+   169→   169→          const inventarioTemplates = (slot.templates || []).filter(
+   170→   170→            (t: any) => t.template?.type === 'inventario'
+   171→   171→          );
+   172→   172→          if (inventarioTemplates.length > 0) {
+   173→   173→            const content = JSON.parse(inventarioTemplates[0].template.content);
+   174→   174→            if (content.categories && content.extraFields) {
+   175→   175→              setCustomConfig({
+   176→   176→                title: content.title || defaultConfig.title,
+   177→   177→                subtitle: content.subtitle || defaultConfig.subtitle,
+   178→   178→                templateName: content.templateName || defaultConfig.templateName,
+   179→   179→                categories: content.categories,
+   180→   180→                extraFields: content.extraFields,
+   181→   181→                ...(content.desplegables_jerarquicos ? { desplegables_jerarquicos: content.desplegables_jerarquicos } : {}),
+   182→   182→              });
+   183→   183→              setHasTemplate(true);
+   184→   184→              // Pre-load items from legacy {items: [...]} format if present
+   185→   185→              if (content.items && Array.isArray(content.items) && content.items.length > 0) {
+   186→   186→                setItems(content.items.map((item: any) => ({
+   187→   187→                  name: item.name || '',
+   188→   188→                  location: item.location || '',
+   189→   189→                  category: item.category || '',
+   190→   190→                  quantity: item.quantity || 1,
+   191→   191→                  quantityNeeded: item.quantityNeeded || 0,
+   192→   192→                  quantityUnneeded: item.quantityUnneeded || 0,
+   193→   193→                  price: item.price ?? null,
+   194→   194→                  action: item.action || '',
+   195→   195→                  extra: item.extra || {},
+   196→   196→                })));
+   197→   197→              }
+   198→   198→            } else if (content.items && Array.isArray(content.items)) {
+   199→   199→              // Legacy format: {items: [...]} — use default config but load items
+   200→   200→              setCustomConfig(null);
+   201→   201→              setHasTemplate(true);
+   202→   202→              if (content.items.length > 0) {
+   203→   203→                setItems(content.items.map((item: any) => ({
+   204→   204→                  name: item.name || '',
+   205→   205→                  location: item.location || '',
+   206→   206→                  category: item.category || '',
+   207→   207→                  quantity: item.quantity || 1,
+   208→   208→                  quantityNeeded: item.quantityNeeded || 0,
+   209→   209→                  quantityUnneeded: item.quantityUnneeded || 0,
+   210→   210→                  price: item.price ?? null,
+   211→   211→                  action: item.action || '',
+   212→   212→                  extra: item.extra || {},
+   213→   213→                })));
+   214→   214→              }
+   215→   215→            } else {
+   216→   216→              // Unknown format — use default config as fallback
+   217→   217→              setCustomConfig(null);
+   218→   218→              setHasTemplate(true);
+   219→   219→            }
+   220→   220→          } else {
+   221→   221→            // No inventario template assigned in this board slot — use default config
+   222→   222→            setCustomConfig(null);
+   223→   223→            setHasTemplate(true);
+   224→   224→          }
+   225→   225→        } else {
+   226→   226→          // No slot configured for this step — use default config
+   227→   227→          setCustomConfig(null);
+   228→   228→          setHasTemplate(true);
+   229→   229→        }
+   230→   230→      } else {
+   231→   231→        // Fallback: load global template
+   232→   232→        const res = await fetch(`/api/templates?type=inventario&sStep=${sStep}&miniStep=3`);
+   233→   233→        const json = await res.json();
+   234→   234→        if (json.success && json.data && json.data.length > 0) {
+   235→   235→          const content = JSON.parse(json.data[0].content);
+   236→   236→          if (content.categories && content.extraFields) {
+   237→   237→            setCustomConfig({
+   238→   238→              title: content.title || defaultConfig.title,
+   239→   239→              subtitle: content.subtitle || defaultConfig.subtitle,
+   240→   240→              templateName: content.templateName || defaultConfig.templateName,
+   241→   241→              categories: content.categories,
+   242→   242→              extraFields: content.extraFields,
+   243→   243→              ...(content.desplegables_jerarquicos ? { desplegables_jerarquicos: content.desplegables_jerarquicos } : {}),
+   244→   244→            });
+   245→   245→            setHasTemplate(true);
+   246→   246→            // Pre-load items from legacy {items: [...]} format if present
+   247→   247→            if (content.items && Array.isArray(content.items) && content.items.length > 0) {
+   248→   248→              setItems(content.items.map((item: any) => ({
+   249→   249→                name: item.name || '',
+   250→   250→                location: item.location || '',
+   251→   251→                category: item.category || '',
+   252→   252→                quantity: item.quantity || 1,
+   253→   253→                quantityNeeded: item.quantityNeeded || 0,
+   254→   254→                quantityUnneeded: item.quantityUnneeded || 0,
+   255→   255→                price: item.price ?? null,
+   256→   256→                action: item.action || '',
+   257→   257→                extra: item.extra || {},
+   258→   258→              })));
+   259→   259→            }
+   260→   260→          } else if (content.items && Array.isArray(content.items)) {
+   261→   261→            // Legacy format: {items: [...]} — use default config but load items
+   262→   262→            setCustomConfig(null);
+   263→   263→            setHasTemplate(true);
+   264→   264→            if (content.items.length > 0) {
+   265→   265→              setItems(content.items.map((item: any) => ({
+   266→   266→                name: item.name || '',
+   267→   267→                location: item.location || '',
+   268→   268→                category: item.category || '',
+   269→   269→                quantity: item.quantity || 1,
+   270→   270→                quantityNeeded: item.quantityNeeded || 0,
+   271→   271→                quantityUnneeded: item.quantityUnneeded || 0,
+   272→   272→                price: item.price ?? null,
+   273→   273→                action: item.action || '',
+   274→   274→                extra: item.extra || {},
+   275→   275→              })));
+   276→   276→            }
+   277→   277→          } else {
+   278→   278→            // Unknown format — use default config as fallback
+   279→   279→            setCustomConfig(null);
+   280→   280→            setHasTemplate(true);
+   281→   281→          }
+   282→   282→        } else {
+   283→   283→          // No global template — use default config (INVENTORY_CONFIGS has entries for all 5 S steps)
+   284→   284→          setCustomConfig(null);
+   285→   285→          setHasTemplate(true);
+   286→   286→        }
+   287→   287→      }
+   288→   288→    } catch (e) {
+   289→   289→      console.error('Error loading custom inventory config:', e);
+   290→   290→      // On error, use default config so the modal still works
+   291→   291→      setCustomConfig(null);
+   292→   292→      setHasTemplate(true);
+   293→   293→    }
+   294→   294→  };
+   295→   295→
+   296→   296→  const loadLayouts = async () => {
+   297→   297→    if (!currentProject) return
+   298→   298→    try {
+   299→   299→      const params = new URLSearchParams({ projectId: currentProject.id, category: 'layout', sStep: String(sStep) })
+   300→   300→      if (currentZone?.id) params.set('zoneId', currentZone.id)
+   301→   301→      const res = await fetch(`/api/standards?${params}`)
+   302→   302→      const json = await res.json()
+   303→   303→      if (json.success) {
+   304→   304→        setSavedLayouts(json.data.map((s: any) => ({
+   305→   305→          id: s.id,
+   306→   306→          title: s.title,
+   307→   307→          photoUrl: s.photoUrl,
+   308→   308→          createdAt: s.createdAt,
+   309→   309→        })))
+   310→   310→        setLayoutUploaded(json.data.length > 0)
+   311→   311→      }
+   312→   312→    } catch (e) {
+   313→   313→      console.error('Error loading layouts:', e)
+   314→   314→    }
+   315→   315→  }
+   316→   316→
+   317→   317→  const handleUploadLayoutImage = async (e: React.ChangeEvent<HTMLInputElement>) => {
+   318→   318→    const file = e.target.files?.[0]
+   319→   319→    if (!file || !currentProject) return
+   320→   320→    try {
+   321→   321→      const formData = new FormData()
+   322→   322→      formData.append('file', file)
+   323→   323→      formData.append('projectId', currentProject.id)
+   324→   324→      formData.append('filename', `${currentProject.id}_layout_${sStep}_${Date.now()}.png`)
+   325→   325→      console.log('[InventarioModal] Uploading layout image:', file.name, 'size:', (file.size / 1024).toFixed(1) + 'KB')
+   326→   326→      const res = await fetch('/api/upload', { method: 'POST', body: formData })
+   327→   327→      if (!res.ok) {
+   328→   328→        console.error('[InventarioModal] Upload HTTP error:', res.status)
+   329→   329→        toast.error(`Error al subir imagen (HTTP ${res.status})`)
+   330→   330→        e.target.value = ''
+   331→   331→        return
+   332→   332→      }
+   333→   333→      const json = await res.json()
+   334→   334→      if (json.success && json.url) {
+   335→   335→        const layoutDescriptions: Record<number, string> = {
+   336→   336→          2: 'Layout subido como imagen con marcado de suelo según estándar de colores',
+   337→   337→          3: 'Layout subido como imagen con puntos de suciedad y zonas de limpieza',
+   338→   338→          4: 'Layout subido como imagen con estándares implantados señalados',
+   339→   339→        }
+   340→   340→        // Save as a layout standard
+   341→   341→        const standardPayload = {
+   342→   342→          sStep,
+   343→   343→          title: `Layout ${currentZone?.name || 'zona'} ${sStepData?.japaneseName || ''} (subido)`,
+   344→   344→          description: layoutDescriptions[sStep] || 'Layout subido como imagen',
+   345→   345→          category: 'layout',
+   346→   346→          photoUrl: json.url,
+   347→   347→          status: 'activo',
+   348→   348→          version: 1,
+   349→   349→          projectId: currentProject.id,
+   350→   350→          zoneId: currentZone?.id || null,
+   351→   351→        }
+   352→   352→        console.log('[InventarioModal] Saving layout standard:', {
+   353→   353→          sStep, category: 'layout', hasPhotoUrl: true,
+   354→   354→          projectId: currentProject.id, zoneId: currentZone?.id,
+   355→   355→        })
+   356→   356→        const saveRes = await fetch('/api/standards', {
+   357→   357→          method: 'POST',
+   358→   358→          headers: { 'Content-Type': 'application/json' },
+   359→   359→          body: JSON.stringify(standardPayload),
+   360→   360→        })
+   361→   361→        if (!saveRes.ok) {
+   362→   362→          console.error('[InventarioModal] Standards API HTTP error:', saveRes.status)
+   363→   363→          toast.error(`Error al guardar estándar (HTTP ${saveRes.status})`)
+   364→   364→          e.target.value = ''
+   365→   365→          return
+   366→   366→        }
+   367→   367→        const saveJson = await saveRes.json()
+   368→   368→        if (saveJson.success) {
+   369→   369→          toast.success('Layout subido y guardado en Biblioteca de Estándares')
+   370→   370→          await loadLayouts()
+   371→   371→        } else {
+   372→   372→          console.error('[InventarioModal] Standards API error:', saveJson.error)
+   373→   373→          toast.error(`Error al guardar estándar: ${saveJson.error || 'Error desconocido'}`)
+   374→   374→        }
+   375→   375→      } else {
+   376→   376→        console.error('[InventarioModal] Upload failed:', json.error)
+   377→   377→        toast.error(`Error al subir imagen: ${json.error || 'Error desconocido'}`)
+   378→   378→      }
+   379→   379→    } catch (e) {
+   380→   380→      console.error('[InventarioModal] Upload error:', e)
+   381→   381→      toast.error('Error al subir la imagen del layout')
+   382→   382→    }
+   383→   383→    e.target.value = ''
+   384→   384→  }
+   385→   385→
+   386→   386→  const loadInventory = async () => {
+   387→   387→    setIsLoading(true);
+   388→   388→    try {
+   389→   389→      const projectIdParam = currentProject?.id ? `&projectId=${currentProject.id}` : '';
+   390→   390→      const zoneIdParam = currentZone?.id ? `&zoneId=${currentZone.id}` : '';
+   391→   391→      const res = await fetch(`/api/inventory?sStep=${sStep}${projectIdParam}${zoneIdParam}`);
+   392→   392→      const json = await res.json();
+   393→   393→      if (json.success) {
+   394→   394→        const photosMap: Record<string, PhotoData[]> = {};
+   395→   395→        const mappedItems = json.data.map((item: any) => {
+   396→   396→          // Map photos from the relation
+   397→   397→          const itemPhotosList: PhotoData[] = (item.photos || []).map((p: any) => ({
+   398→   398→            id: p.id,
+   399→   399→            title: p.title,
+   400→   400→            description: p.description,
+   401→   401→            photoUrl: p.photoUrl,
+   402→   402→            photoType: p.photoType,
+   403→   403→            category: p.category,
+   404→   404→            inventoryItemId: p.inventoryItemId,
+   405→   405→            miniStep: p.miniStep,
+   406→   406→            sStep: p.sStep,
+   407→   407→            createdAt: p.createdAt,
+   408→   408→          }));
+   409→   409→          if (item.id && itemPhotosList.length > 0) {
+   410→   410→            photosMap[item.id] = itemPhotosList;
+   411→   411→          }
+   412→   412→          return {
+   413→   413→            id: item.id,
+   414→   414→            name: item.name,
+   415→   415→            location: item.location || '',
+   416→   416→            category: item.category || '',
+   417→   417→            quantity: item.quantity || 1,
+   418→   418→            // S1: Set quantities based on category (innecesario or necesario)
+   419→   419→            quantityNeeded: sStep === 1
+   420→   420→              ? (item.category === 'necesario' ? (item.quantityNeeded || item.quantity || 1) : 0)
+   421→   421→              : (item.quantityNeeded || 0),
+   422→   422→            quantityUnneeded: sStep === 1
+   423→   423→              ? (item.category === 'innecesario' ? (item.quantityUnneeded || item.quantity || 1) : 0)
+   424→   424→              : (item.quantityUnneeded || 0),
+   425→   425→            price: item.price ?? null,
+   426→   426→            action: item.action || '',
+   427→   427→            extra: typeof item.extra === 'string' ? JSON.parse(item.extra) : (item.extra || {}),
+   428→   428→            jaulaStatus: item.jaulaStatus || '',
+   429→   429→            jaulaFechaEntrada: item.jaulaFechaEntrada || null,
+   430→   430→            jaulaOrigen: item.jaulaOrigen || null,
+   431→   431→            jaulaFechaSalida: item.jaulaFechaSalida || null,
+   432→   432→            jaulaDestino: item.jaulaDestino || null,
+   433→   433→            zonaOrigen: item.zonaOrigen || null,
+   434→   434→            zonaDestino: item.zonaDestino || null,
+   435→   435→            photos: itemPhotosList,
+   436→   436→          };
+   437→   437→        });
+   438→   438→        setItems(mappedItems);
+   439→   439→        setItemPhotos(photosMap);
+   440→   440→      } else {
+   441→   441→        console.error('Error loading inventory:', json.error);
+   442→   442→      }
+   443→   443→    } catch (error) {
+   444→   444→      console.error('Error loading inventory:', error);
+   445→   445→    } finally {
+   446→   446→      setIsLoading(false);
+   447→   447→    }
+   448→   448→  };
+   449→   449→
+   450→   450→  // ─── Photo functions ───
+   451→   451→
+   452→   452→  const loadStep2Photos = async () => {
+   453→   453→    if (!currentProject?.id) return;
+   454→   454→    try {
+   455→   455→      const params = new URLSearchParams({
+   456→   456→        projectId: currentProject.id,
+   457→   457→        sStep: String(sStep),
+   458→   458→        miniStep: '2',
+   459→   459→      });
+   460→   460→      if (currentZone?.id) params.set('zoneId', currentZone.id);
+   461→   461→      const res = await fetch(`/api/photo-library?${params}`);
+   462→   462→      const json = await res.json();
+   463→   463→      if (json.success) {
+   464→   464→        setStep2Photos(json.data.map((p: any) => ({
+   465→   465→          id: p.id,
+   466→   466→          title: p.title,
+   467→   467→          description: p.description,
+   468→   468→          photoUrl: p.photoUrl,
+   469→   469→          photoType: p.photoType,
+   470→   470→          category: p.category,
+   471→   471→          inventoryItemId: p.inventoryItemId,
+   472→   472→          miniStep: p.miniStep,
+   473→   473→          sStep: p.sStep,
+   474→   474→          createdAt: p.createdAt,
+   475→   475→        })));
+   476→   476→      }
+   477→   477→    } catch (e) {
+   478→   478→      console.error('Error loading Step 2 photos:', e);
+   479→   479→    }
+   480→   480→  };
+   481→   481→
+   482→   482→  const handleAttachPhoto = async (itemId: string, file: File, photoType: string) => {
+   483→   483→    if (!currentProject?.id) {
+   484→   484→      toast.error('No hay proyecto seleccionado');
+   485→   485→      return;
+   486→   486→    }
+   487→   487→    setUploadingPhotoForItem(itemId);
+   488→   488→    try {
+   489→   489→      // Read and compress the image
+   490→   490→      const reader = new FileReader();
+   491→   491→      const base64Promise = new Promise<string>((resolve) => {
+   492→   492→        reader.onloadend = () => resolve(reader.result as string);
+   493→   493→        reader.readAsDataURL(file);
+   494→   494→      });
+   495→   495→      const rawBase64 = await base64Promise;
+   496→   496→      const compressed = await compressImage(rawBase64);
+   497→   497→
+   498→   498→      // Upload to server
+   499→   499→      const filename = generatePhotoFilename(currentProject.id, sStep, miniStep, Date.now());
+   500→   500→      const uploadFile = base64toFile(compressed, filename);
+   501→   501→      const formData = new FormData();
+   502→   502→      formData.append('file', uploadFile);
+   503→   503→      formData.append('filename', filename);
+   504→   504→      formData.append('projectId', currentProject.id);
+   505→   505→
+   506→   506→      const uploadRes = await fetch('/api/upload', { method: 'POST', body: formData });
+   507→   507→      const uploadJson = await uploadRes.json();
+   508→   508→
+   509→   509→      if (!uploadJson.success || !uploadJson.url) {
+   510→   510→        toast.error(`Error al subir foto: ${uploadJson.error || 'Error desconocido'}`);
+   511→   511→        return;
+   512→   512→      }
+   513→   513→
+   514→   514→      // Save to PhotoLibrary with inventoryItemId
+   515→   515→      const sName = sStepData?.japaneseName || `S${sStep}`;
+   516→   516→      const zoneName = currentZone?.name || 'Zona';
+   517→   517→      const typeLabel = photoType === 'antes' ? 'ANTES' : photoType === 'despues' ? 'DESPUÉS' : 'Referencia';
+   518→   518→      const date = new Date().toLocaleDateString('es-ES');
+   519→   519→      const item = items.find(i => i.id === itemId);
+   520→   520→      const itemLabel = item?.name || 'Elemento';
+   521→   521→
+   522→   522→      const photoRes = await fetch('/api/photo-library', {
+   523→   523→        method: 'POST',
+   524→   524→        headers: { 'Content-Type': 'application/json' },
+   525→   525→        body: JSON.stringify({
+   526→   526→          sStep,
+   527→   527→          miniStep,
+   528→   528→          title: `S${sStep} ${sName} - ${zoneName} - ${itemLabel} - ${typeLabel} (${date})`,
+   529→   529→          description: `Foto adjunta al elemento de inventario: ${itemLabel}`,
+   530→   530→          photoUrl: uploadJson.url,
+   531→   531→          photoType,
+   532→   532→          category: `inventario_s${sStep}`,
+   533→   533→          tags: JSON.stringify([`S${sStep}`, sName, zoneName, `inventario`, photoType, itemLabel]),
+   534→   534→          projectId: currentProject.id,
+   535→   535→          zoneId: currentZone?.id || null,
+   536→   536→          uploadedBy: currentUser?.id || null,
+   537→   537→          inventoryItemId: itemId,
+   538→   538→        }),
+   539→   539→      });
+   540→   540→
+   541→   541→      const photoJson = await photoRes.json();
+   542→   542→      if (photoJson.success) {
+   543→   543→        const newPhoto: PhotoData = {
+   544→   544→          id: photoJson.data.id,
+   545→   545→          title: photoJson.data.title,
+   546→   546→          description: photoJson.data.description,
+   547→   547→          photoUrl: photoJson.data.photoUrl,
+   548→   548→          photoType: photoJson.data.photoType,
+   549→   549→          category: photoJson.data.category,
+   550→   550→          inventoryItemId: itemId,
+   551→   551→          miniStep: photoJson.data.miniStep,
+   552→   552→          sStep: photoJson.data.sStep,
+   553→   553→          createdAt: photoJson.data.createdAt,
+   554→   554→        };
+   555→   555→        // Update local state
+   556→   556→        setItemPhotos(prev => ({
+   557→   557→          ...prev,
+   558→   558→          [itemId]: [...(prev[itemId] || []), newPhoto],
+   559→   559→        }));
+   560→   560→        setItems(prev => prev.map(it => it.id === itemId
+   561→   561→          ? { ...it, photos: [...(it.photos || []), newPhoto] }
+   562→   562→          : it
+   563→   563→        ));
+   564→   564→        toast.success('Foto adjuntada correctamente');
+   565→   565→      } else {
+   566→   566→        toast.error(`Error al guardar foto: ${photoJson.error || 'Error desconocido'}`);
+   567→   567→      }
+   568→   568→    } catch (e) {
+   569→   569→      console.error('Error attaching photo:', e);
+   570→   570→      toast.error('Error al adjuntar la foto');
+   571→   571→    } finally {
+   572→   572→      setUploadingPhotoForItem(null);
+   573→   573→    }
+   574→   574→  };
+   575→   575→
+   576→   576→  const handleLinkStep2Photo = async (photoId: string, itemId: string) => {
+   577→   577→    try {
+   578→   578→      const res = await fetch('/api/photo-library', {
+   579→   579→        method: 'PUT',
+   580→   580→        headers: { 'Content-Type': 'application/json' },
+   581→   581→        body: JSON.stringify({ id: photoId, inventoryItemId: itemId }),
+   582→   582→      });
+   583→   583→      const json = await res.json();
+   584→   584→      if (json.success) {
+   585→   585→        // Update local state: move the photo to the item's photos
+   586→   586→        const photo = step2Photos.find(p => p.id === photoId);
+   587→   587→        if (photo) {
+   588→   588→          const linkedPhoto: PhotoData = { ...photo, inventoryItemId: itemId };
+   589→   589→          setItemPhotos(prev => ({
+   590→   590→            ...prev,
+   591→   591→            [itemId]: [...(prev[itemId] || []), linkedPhoto],
+   592→   592→          }));
+   593→   593→          setItems(prev => prev.map(it => it.id === itemId
+   594→   594→            ? { ...it, photos: [...(it.photos || []), linkedPhoto] }
+   595→   595→            : it
+   596→   596→          ));
+   597→   597→          // Remove from step2Photos since it's now linked
+   598→   598→          setStep2Photos(prev => prev.filter(p => p.id !== photoId));
+   599→   599→        }
+   600→   600→        toast.success('Foto vinculada al elemento');
+   601→   601→        setShowPhotoGallery(false);
+   602→   602→      } else {
+   603→   603→        toast.error(`Error al vincular foto: ${json.error || 'Error desconocido'}`);
+   604→   604→      }
+   605→   605→    } catch (e) {
+   606→   606→      console.error('Error linking photo:', e);
+   607→   607→      toast.error('Error al vincular la foto');
+   608→   608→    }
+   609→   609→  };
+   610→   610→
+   611→   611→  const handleUnlinkPhoto = async (photoId: string, itemId: string) => {
+   612→   612→    try {
+   613→   613→      const res = await fetch('/api/photo-library', {
+   614→   614→        method: 'PUT',
+   615→   615→        headers: { 'Content-Type': 'application/json' },
+   616→   616→        body: JSON.stringify({ id: photoId, inventoryItemId: null }),
+   617→   617→      });
+   618→   618→      const json = await res.json();
+   619→   619→      if (json.success) {
+   620→   620→        // Remove from item's photos locally
+   621→   621→        setItemPhotos(prev => ({
+   622→   622→          ...prev,
+   623→   623→          [itemId]: (prev[itemId] || []).filter(p => p.id !== photoId),
+   624→   624→        }));
+   625→   625→        setItems(prev => prev.map(it => it.id === itemId
+   626→   626→          ? { ...it, photos: (it.photos || []).filter(p => p.id !== photoId) }
+   627→   627→          : it
+   628→   628→        ));
+   629→   629→        toast.success('Foto desvinculada del elemento');
+   630→   630→      } else {
+   631→   631→        toast.error(`Error al desvincular foto: ${json.error || 'Error desconocido'}`);
+   632→   632→      }
+   633→   633→    } catch (e) {
+   634→   634→      console.error('Error unlinking photo:', e);
+   635→   635→      toast.error('Error al desvincular la foto');
+   636→   636→    }
+   637→   637→  };
+   638→   638→
+   639→   639→  const handleDeletePhoto = async (photoId: string, itemId: string) => {
+   640→   640→    try {
+   641→   641→      const res = await fetch(`/api/photo-library?id=${photoId}`, { method: 'DELETE' });
+   642→   642→      const json = await res.json();
+   643→   643→      if (json.success) {
+   644→   644→        setItemPhotos(prev => ({
+   645→   645→          ...prev,
+   646→   646→          [itemId]: (prev[itemId] || []).filter(p => p.id !== photoId),
+   647→   647→        }));
+   648→   648→        setItems(prev => prev.map(it => it.id === itemId
+   649→   649→          ? { ...it, photos: (it.photos || []).filter(p => p.id !== photoId) }
+   650→   650→          : it
+   651→   651→        ));
+   652→   652→        toast.success('Foto eliminada');
+   653→   653→      } else {
+   654→   654→        toast.error(`Error al eliminar foto: ${json.error || 'Error desconocido'}`);
+   655→   655→      }
+   656→   656→    } catch (e) {
+   657→   657→      console.error('Error deleting photo:', e);
+   658→   658→      toast.error('Error al eliminar la foto');
+   659→   659→    }
+   660→   660→  };
+   661→   661→
+   662→   662→  const openPhotoGallery = (itemId: string) => {
+   663→   663→    setGalleryTargetItemId(itemId);
+   664→   664→    setShowPhotoGallery(true);
+   665→   665→  };
+   666→   666→
+   667→   667→  const handleAddItem = async () => {
+   668→   668→    if (!newItem.name || !newItem.category) {
+   669→   669→      toast.error('Completa el nombre y la categoría del elemento');
+   670→   670→      return;
+   671→   671→    }
+   672→   672→
+   673→   673→    if (!currentProject?.id) {
+   674→   674→      toast.error('No hay proyecto seleccionado. Selecciona un proyecto antes de agregar elementos.');
+   675→   675→      return;
+   676→   676→    }
+   677→   677→
+   678→   678→    // Auto-calculate quantityUnneeded/Needed based on category for S1
+   679→   679→    const qty = newItem.quantity || 1;
+   680→   680→    const isInnecesario = sStep === 1 && newItem.category === 'innecesario';
+   681→   681→    const isNecesario = sStep === 1 && newItem.category === 'necesario';
+   682→   682→    const qtyNeeded = isNecesario ? qty : (newItem.quantityNeeded || 0);
+   683→   683→    const qtyUnneeded = isInnecesario ? qty : (newItem.quantityUnneeded || 0);
+   684→   684→
+   685→   685→    // S1: auto-set decision to extra field (only for innecesario)
+   686→   686→    const extra = { ...(newItem.extra || {}) };
+   687→   687→    if (sStep === 1 && isInnecesario && !extra.decision) {
+   688→   688→      extra.decision = 'Jaula';
+   689→   689→    }
+   690→   690→    // S1: Determine zona destino based on decision
+   691→   691→    const getZonaDestino = (decision: string | undefined): string => {
+   692→   692→      if (decision === 'Tirar' || decision === 'Eliminar') return 'Residuo';
+   693→   693→      return 'Jaula'; // Default for Jaula or no decision
+   694→   694→    };
+   695→   695→    // S1: Keep all fields — user can fill in both necesario and innecesario fields
+   696→   696→    // No field deletion since all fields are now visible and editable
+   697→   697→
+   698→   698→    try {
+   699→   699→      const res = await fetch('/api/inventory', {
+   700→   700→        method: 'POST',
+   701→   701→        headers: { 'Content-Type': 'application/json' },
+   702→   702→        body: JSON.stringify({
+   703→   703→          sStep,
+   704→   704→          projectId: currentProject.id,
+   705→   705→          zoneId: currentZone?.id || null,
+   706→   706→          name: newItem.name,
+   707→   707→          location: newItem.location,
+   708→   708→          category: newItem.category || '',
+   709→   709→          quantity: qty,
+   710→   710→          quantityNeeded: qtyNeeded,
+   711→   711→          quantityUnneeded: qtyUnneeded,
+   712→   712→          price: newItem.price || null,
+   713→   713→          action: newItem.action || (isInnecesario ? (extra.decision || 'Jaula') : ''),
+   714→   714→          extra,
+   715→   715→          // Only Jaula items get jaula entry/quarantine; Eliminar/Tirar items go directly to Residuo
+   716→   716→          jaulaStatus: isInnecesario && extra.decision !== 'Eliminar' && extra.decision !== 'Tirar' ? 'en_jaula' : '',
+   717→   717→          jaulaFechaEntrada: isInnecesario && extra.decision !== 'Eliminar' && extra.decision !== 'Tirar' ? (newItem.jaulaFechaEntrada || new Date().toISOString()) : null,
+   718→   718→          jaulaOrigen: isInnecesario ? newItem.zonaOrigen || currentZone?.name || currentProject.name || '' : null,
+   719→   719→          zonaOrigen: newItem.zonaOrigen || currentZone?.name || null,
+   720→   720→          zonaDestino: isInnecesario ? getZonaDestino(extra.decision as string | undefined) : (newItem.zonaOrigen || currentZone?.name || null),
+   721→   721→        }),
+   722→   722→      });
+   723→   723→
+   724→   724→      const json = await res.json();
+   725→   725→      if (json.success) {
+   726→   726→        toast.success('Elemento agregado correctamente');
+   727→   727→        // If there's a pending photo, attach it to the newly created item
+   728→   728→        const newItemId = json.data?.id;
+   729→   729→        if (pendingNewPhoto && newItemId) {
+   730→   730→          await handleAttachPhoto(newItemId, pendingNewPhoto, pendingNewPhotoType);
+   731→   731→          setPendingNewPhoto(null);
+   732→   732→        }
+   733→   733→        await loadInventory();
+   734→   734→        setNewItem({ name: '', location: '', category: defaultCategory as string | undefined, quantity: 1, quantityNeeded: 0, quantityUnneeded: 0, price: null, action: '', zonaOrigen: currentZone?.name || null, jaulaFechaEntrada: new Date().toISOString(), extra: {} });
+   735→   735→      } else {
+   736→   736→        toast.error(`Error al agregar: ${json.error || 'Error desconocido'}`);
+   737→   737→      }
+   738→   738→    } catch (error) {
+   739→   739→      console.error('Error adding item:', error);
+   740→   740→      toast.error('Error de conexión al agregar el elemento');
+   741→   741→    }
+   742→   742→  };
+   743→   743→
+   744→   744→  const handleImportTemplate = async () => {
+   745→   745→    if (!currentProject?.id) {
+   746→   746→      toast.error('No hay proyecto seleccionado.');
+   747→   747→      return;
+   748→   748→    }
+   749→   749→    try {
+   750→   750→      let templateItems: any[] = [];
+   751→   751→
+   752→   752→      if (currentZone?.boardConfigId) {
+   753→   753→        // Fetch from board config
+   754→   754→        const slotsRes = await fetch(`/api/board-slots?boardConfigId=${currentZone.boardConfigId}&sStep=${sStep}&miniStep=3`);
+   755→   755→        const slotsJson = await slotsRes.json();
+   756→   756→        if (slotsJson.success && slotsJson.data.length > 0) {
+   757→   757→          const slot = slotsJson.data[0];
+   758→   758→          const inventarioTemplates = (slot.templates || []).filter(
+   759→   759→            (t: any) => t.template?.type === 'inventario'
+   760→   760→          );
+   761→   761→          if (inventarioTemplates.length > 0) {
+   762→   762→            const content = JSON.parse(inventarioTemplates[0].template.content);
+   763→   763→            templateItems = content.items || [];
+   764→   764→          }
+   765→   765→        }
+   766→   766→      } else {
+   767→   767→        // Fallback: global template
+   768→   768→        const res = await fetch(`/api/templates?type=inventario&sStep=${sStep}`);
+   769→   769→        const json = await res.json();
+   770→   770→        if (json.success && json.data.length > 0) {
+   771→   771→          const content = JSON.parse(json.data[0].content);
+   772→   772→          templateItems = content.items || [];
+   773→   773→        }
+   774→   774→      }
+   775→   775→
+   776→   776→      if (templateItems.length === 0) {
+   777→   777→        toast.error('No se encontró plantilla para este paso');
+   778→   778→        return;
+   779→   779→      }
+   780→   780→
+   781→   781→      const importRes = await fetch('/api/inventory', {
+   782→   782→        method: 'POST',
+   783→   783→        headers: { 'Content-Type': 'application/json' },
+   784→   784→        body: JSON.stringify(
+   785→   785→          templateItems.map((item: any) => ({
+   786→   786→            sStep,
+   787→   787→            projectId: currentProject.id,
+   788→   788→            zoneId: currentZone?.id || null,
+   789→   789→            name: item.name,
+   790→   790→            location: item.location || '',
+   791→   791→            category: item.category,
+   792→   792→            quantity: item.quantity || 1,
+   793→   793→            quantityNeeded: item.quantityNeeded || 0,
+   794→   794→            quantityUnneeded: item.quantityUnneeded || 0,
+   795→   795→            price: item.price ?? null,
+   796→   796→            action: item.action || '',
+   797→   797→            extra: item.extra || {},
+   798→   798→          }))
+   799→   799→        ),
+   800→   800→      });
+   801→   801→
+   802→   802→      const importJson = await importRes.json();
+   803→   803→      if (importJson.success) {
+   804→   804→        toast.success('Plantilla importada correctamente');
+   805→   805→        await loadInventory();
+   806→   806→      } else {
+   807→   807→        toast.error(`Error al importar plantilla: ${importJson.error || 'Error desconocido'}`);
+   808→   808→      }
+   809→   809→    } catch (error) {
+   810→   810→      console.error('Error importing template:', error);
+   811→   811→      toast.error('Error de conexión al importar plantilla');
+   812→   812→    }
+   813→   813→  };
+   814→   814→
+   815→   815→  // Unified file import: supports both .csv and .xlsx files
+   816→   816→  const handleFileImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+   817→   817→    const file = e.target.files?.[0];
+   818→   818→    if (!file) return;
+   819→   819→
+   820→   820→    try {
+   821→   821→      const fileName = file.name.toLowerCase();
+   822→   822→      let dataRows: string[][] = [];
+   823→   823→      let headerRow: string[] = [];
+   824→   824→
+   825→   825→      if (fileName.endsWith('.xlsx') || fileName.endsWith('.xls')) {
+   826→   826→        // Parse Excel file using xlsx library
+   827→   827→        const XLSX = await import('xlsx');
+   828→   828→        const arrayBuffer = await file.arrayBuffer();
+   829→   829→        const workbook = XLSX.read(arrayBuffer, { type: 'array' });
+   830→   830→        const sheetName = workbook.SheetNames[0]; // Use first sheet
+   831→   831→        const sheet = workbook.Sheets[sheetName];
+   832→   832→        const rawData: string[][] = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
+   833→   833→        
+   834→   834→        if (rawData.length < 2) {
+   835→   835→          toast.error('El archivo está vacío o no tiene datos');
+   836→   836→          e.target.value = '';
+   837→   837→          return;
+   838→   838→        }
+   839→   839→
+   840→   840→        // Find the header row: look for a row that contains 'Nº' or 'Elemento' or 'Nombre'
+   841→   841→        let headerIdx = 0;
+   842→   842→        for (let i = 0; i < Math.min(10, rawData.length); i++) {
+   843→   843→          const rowStr = rawData[i].map(c => String(c).toLowerCase()).join('|');
+   844→   844→          if (rowStr.includes('elemento') || rowStr.includes('nombre') || rowStr.includes('nº') || rowStr.includes('punto')) {
+   845→   845→            headerIdx = i;
+   846→   846→            break;
+   847→   847→          }
+   848→   848→        }
+   849→   849→        headerRow = rawData[headerIdx].map((h: any) => String(h).trim().toLowerCase());
+   850→   850→        dataRows = rawData.slice(headerIdx + 1).filter(row => {
+   851→   851→          // Count non-empty, non-numeric-only cells
+   852→   852→          const meaningfulCells = row.filter(cell => {
+   853→   853→            const v = String(cell).trim();
+   854→   854→            return v !== '' && v !== '0';
+   855→   855→          });
+   856→   856→          // A row with data must have at least 2 meaningful cells (name + something)
+   857→   857→          // This filters out empty numbered rows and footer rows
+   858→   858→          if (meaningfulCells.length < 2) return false;
+   859→   859→          // Skip footer rows like "TOTAL ELEMENTOS", "Notas:", etc.
+   860→   860→          const firstMeaningful = meaningfulCells[0].toLowerCase();
+   861→   861→          if (firstMeaningful.includes('total') || firstMeaningful.includes('notas') || firstMeaningful.includes('clasificación')) return false;
+   862→   862→          return true;
+   863→   863→        });
+   864→   864→      } else if (fileName.endsWith('.csv')) {
+   865→   865→        // Parse CSV file
+   866→   866→        const text = await file.text();
+   867→   867→        const lines = text.split('\n').filter(l => l.trim());
+   868→   868→        if (lines.length < 2) {
+   869→   869→          toast.error('El archivo CSV está vacío o no tiene datos');
+   870→   870→          e.target.value = '';
+   871→   871→          return;
+   872→   872→        }
+   873→   873→        headerRow = lines[0].split(',').map(h => h.trim().toLowerCase().replace(/^\uFEFF/, '')); // Remove BOM
+   874→   874→        dataRows = lines.slice(1).filter(l => l.trim()).map(l => l.split(',').map(v => v.trim()));
+   875→   875→      } else {
+   876→   876→        toast.error('Formato no soportado. Usa .xlsx o .csv');
+   877→   877→        e.target.value = '';
+   878→   878→        return;
+   879→   879→      }
+   880→   880→
+   881→   881→      // Flexible column mapping: map various header names to standard fields
+   882→   882→      const findCol = (headers: string[], ...names: string[]): number => {
+   883→   883→        for (const name of names) {
+   884→   884→          const idx = headers.findIndex(h => h.includes(name));
+   885→   885→          if (idx >= 0) return idx;
+   886→   886→        }
+   887→   887→        return -1;
+   888→   888→      };
+   889→   889→
+   890→   890→      const colMap = {
+   891→   891→        name: findCol(headerRow, 'elemento', 'nombre', 'punto', 'estándar', 'práctica', 'estandar', 'practica'),
+   892→   892→        location: findCol(headerRow, 'ubicación', 'ubicacion', 'ámbito', 'ambito', 'proceso'),
+   893→   893→        zona: findCol(headerRow, 'zona', 'zona origen'),
+   894→   894→        category: findCol(headerRow, 'categoría', 'categoria', 'clasificación', 'clasificacion', 'tipo'),
+   895→   895→        quantity: findCol(headerRow, 'cantidad', 'total exist', 'total'),
+   896→   896→        quantityNeeded: findCol(headerRow, 'necesarios', 'nec.'),
+   897→   897→        quantityUnneeded: findCol(headerRow, 'innecesarios', 'innec.'),
+   898→   898→        price: findCol(headerRow, 'precio'),
+   899→   899→        action: findCol(headerRow, 'acción', 'accion', 'decisión', 'decision', 'método', 'metodo'),
+   900→   900→        estado: findCol(headerRow, 'estado'),
+   901→   901→        frecuenciaUso: findCol(headerRow, 'frecuencia'),
+   902→   902→        nivel: findCol(headerRow, 'nivel'),
+   903→   903→        fuente: findCol(headerRow, 'fuente'),
+   904→   904→        cercania: findCol(headerRow, 'cercanía', 'cercania'),
+   905→   905→        documentado: findCol(headerRow, 'documentado'),
+   906→   906→        cumplimiento: findCol(headerRow, 'cumplimiento'),
+   907→   907→        ubicacionAsignada: findCol(headerRow, 'ubicación asignada', 'asignada'),
+   908→   908→        metodoIdentificacion: findCol(headerRow, 'método identificación', 'identificación', 'identificacion'),
+   909→   909→        frecuenciaLimpieza: findCol(headerRow, 'frecuencia limpieza'),
+   910→   910→        metodoLimpieza: findCol(headerRow, 'método limpieza'),
+   911→   911→        responsable: findCol(headerRow, 'responsable'),
+   912→   912→        observaciones: findCol(headerRow, 'observacione'),
+   913→   913→      };
+   914→   914→
+   915→   915→      const parsedItems: InventoryItemData[] = [];
+   916→   916→      for (const values of dataRows) {
+   917→   917→        const strValues = values.map(v => String(v).trim());
+   918→   918→        // Skip rows that are just a number (empty data rows from template)
+   919→   919→        if (strValues.length < 2) continue;
+   920→   920→        const nonEmptyCount = strValues.filter(v => v !== '' && v !== '0').length;
+   921→   921→        if (nonEmptyCount < 1) continue;
+   922→   922→
+   923→   923→        const getVal = (idx: number, fallback?: string) => idx >= 0 && idx < strValues.length ? strValues[idx] : (fallback || '');
+   924→   924→
+   925→   925→        const item: InventoryItemData = {
+   926→   926→          name: getVal(colMap.name, strValues[1] || strValues[0] || ''),
+   927→   927→          location: getVal(colMap.location, strValues[2] || ''),
+   928→   928→          category: getVal(colMap.category) || config.categories[0]?.value || '',
+   929→   929→          quantity: parseInt(getVal(colMap.quantity, strValues[4] || '1')) || 1,
+   930→   930→          quantityNeeded: parseInt(getVal(colMap.quantityNeeded, '0')) || 0,
+   931→   931→          quantityUnneeded: parseInt(getVal(colMap.quantityUnneeded, '0')) || 0,
+   932→   932→          price: parseFloat(getVal(colMap.price, '0')) || null,
+   933→   933→          action: getVal(colMap.action, '') || getVal(colMap.observaciones, ''),
+   934→   934→          zonaOrigen: colMap.zona >= 0 ? getVal(colMap.zona) || null : null,
+   935→   935→          extra: {},
+   936→   936→        };
+   937→   937→
+   938→   938→        // S1: All items are innecesario by nature, set default decision
+   939→   939→        if (sStep === 1) {
+   940→   940→          item.quantityUnneeded = item.quantity;
+   941→   941→          item.quantityNeeded = 0;
+   942→   942→          if (colMap.estado >= 0) item.extra!['estado'] = getVal(colMap.estado);
+   943→   943→          if (colMap.frecuenciaUso >= 0) item.extra!['frecuenciaUso'] = getVal(colMap.frecuenciaUso);
+   944→   944→          // Map classification/decision columns
+   945→   945→          const decisionVal = getVal(colMap.category) || getVal(colMap.action, '');
+   946→   946→          if (decisionVal) {
+   947→   947→            const lower = decisionVal.toLowerCase();
+   948→   948→            if (lower.includes('jaula') || lower.includes('red') || lower.includes('etiqueta')) {
+   949→   949→              item.extra!['decision'] = 'Jaula';
+   950→   950→            } else if (lower.includes('tirar') || lower.includes('residuo') || lower.includes('basura')) {
+   951→   951→              item.extra!['decision'] = 'Tirar';
+   952→   952→            } else if (lower.includes('elimin')) {
+   953→   953→              item.extra!['decision'] = 'Eliminar';
+   954→   954→            } else {
+   955→   955→              item.extra!['decision'] = 'Jaula'; // Default for S1
+   956→   956→            }
+   957→   957→          }
+   958→   958→          if (!item.extra!['decision']) item.extra!['decision'] = 'Jaula';
+   959→   959→        } else if (sStep === 2) {
+   960→   960→          if (colMap.ubicacionAsignada >= 0) item.extra!['ubicacionAsignada'] = getVal(colMap.ubicacionAsignada);
+   961→   961→          if (colMap.metodoIdentificacion >= 0) item.extra!['metodoIdentificacion'] = getVal(colMap.metodoIdentificacion);
+   962→   962→          if (colMap.cercania >= 0) item.extra!['cercania'] = getVal(colMap.cercania);
+   963→   963→          if (colMap.frecuenciaUso >= 0) item.extra!['frecuenciaUso'] = getVal(colMap.frecuenciaUso);
+   964→   964→        } else if (sStep === 3) {
+   965→   965→          if (colMap.nivel >= 0) item.extra!['nivel'] = getVal(colMap.nivel);
+   966→   966→          if (colMap.fuente >= 0) item.extra!['fuente'] = getVal(colMap.fuente);
+   967→   967→          if (colMap.metodoLimpieza >= 0) item.extra!['metodoLimpieza'] = getVal(colMap.metodoLimpieza);
+   968→   968→          if (colMap.frecuenciaLimpieza >= 0) item.extra!['frecuenciaLimpieza'] = getVal(colMap.frecuenciaLimpieza);
+   969→   969→        } else if (sStep === 4) {
+   970→   970→          if (colMap.estado >= 0) item.extra!['estadoEstandar'] = getVal(colMap.estado);
+   971→   971→          if (colMap.documentado >= 0) item.extra!['documentado'] = getVal(colMap.documentado);
+   972→   972→          if (colMap.cumplimiento >= 0) item.extra!['cumplimiento'] = getVal(colMap.cumplimiento);
+   973→   973→        } else if (sStep === 5) {
+   974→   974→          if (colMap.frecuenciaUso >= 0) item.extra!['frecuencia'] = getVal(colMap.frecuenciaUso);
+   975→   975→          if (colMap.nivel >= 0) item.extra!['practica'] = getVal(colMap.nivel);
+   976→   976→        }
+   977→   977→
+   978→   978→        // Also check config.extraFields for any remaining fields
+   979→   979→        config.extraFields.forEach((field) => {
+   980→   980→          if (item.extra![field.key]) return; // Already mapped above
+   981→   981→          const val = getVal(findCol(headerRow, field.label.toLowerCase()), '');
+   982→   982→          if (val) {
+   983→   983→            item.extra![field.key] = val;
+   984→   984→          }
+   985→   985→        });
+   986→   986→
+   987→   987→        // Skip items with no name
+   988→   988→        if (!item.name) continue;
+   989→   989→        parsedItems.push(item);
+   990→   990→      }
+   991→   991→
+   992→   992→      if (parsedItems.length > 0) {
+   993→   993→        setCsvPreview(parsedItems);
+   994→   994→        toast.info(`${parsedItems.length} elementos encontrados. Revisa y confirma la importación.`);
+   995→   995→      } else {
+   996→   996→        toast.error('No se encontraron elementos válidos en el archivo. Asegúrate de rellenar las filas con datos.');
+   997→   997→      }
+   998→   998→    } catch (error) {
+   999→   999→      console.error('Error parsing file:', error);
+  1000→  1000→      toast.error('Error al procesar el archivo. Verifica el formato.');
+  1001→  1001→    }
+  1002→  1002→    // Reset file input
+  1003→  1003→    e.target.value = '';
+  1004→  1004→  };
+  1005→  1005→
+  1006→  1006→  const handleConfirmCsvImport = async () => {
+  1007→  1007→    if (!csvPreview || csvPreview.length === 0) return;
+  1008→  1008→    if (!currentProject?.id) {
+  1009→  1009→      toast.error('No hay proyecto seleccionado.');
+  1010→  1010→      return;
+  1011→  1011→    }
+  1012→  1012→    setIsImporting(true);
+  1013→  1013→    try {
+  1014→  1014→      const res = await fetch('/api/inventory', {
+  1015→  1015→        method: 'POST',
+  1016→  1016→        headers: { 'Content-Type': 'application/json' },
+  1017→  1017→        body: JSON.stringify(
+  1018→  1018→          csvPreview.map(item => ({
+  1019→  1019→            sStep,
+  1020→  1020→            projectId: currentProject!.id,
+  1021→  1021→            zoneId: currentZone?.id || null,
+  1022→  1022→            name: item.name,
+  1023→  1023→            location: item.location,
+  1024→  1024→            category: item.category || config.categories[0]?.value || '',
+  1025→  1025→            quantity: item.quantity || 1,
+  1026→  1026→            quantityNeeded: sStep === 1 ? (item.category === 'necesario' ? (item.quantityNeeded || item.quantity || 1) : 0) : (item.quantityNeeded || 0),
+  1027→  1027→            quantityUnneeded: sStep === 1 ? (item.category === 'innecesario' ? (item.quantityUnneeded || item.quantity || 1) : 0) : (item.quantityUnneeded || 0),
+  1028→  1028→            price: item.price || null,
+  1029→  1029→            action: item.action || '',
+  1030→  1030→            extra: item.extra || {},
+  1031→  1031→            // Only Jaula decision items get jaula entry/quarantine; Eliminar/Tirar go to Residuo directly
+  1032→  1032→            jaulaStatus: sStep === 1 && item.category === 'innecesario' && item.extra?.decision !== 'Eliminar' && item.extra?.decision !== 'Tirar' ? 'en_jaula' : '',
+  1033→  1033→            jaulaFechaEntrada: sStep === 1 && item.category === 'innecesario' && item.extra?.decision !== 'Eliminar' && item.extra?.decision !== 'Tirar' ? new Date().toISOString() : null,
+  1034→  1034→            jaulaOrigen: sStep === 1 && item.category === 'innecesario' && item.extra?.decision !== 'Eliminar' && item.extra?.decision !== 'Tirar' ? item.zonaOrigen || currentZone?.name || currentProject!.name || '' : null,
+  1035→  1035→            zonaOrigen: item.zonaOrigen || currentZone?.name || null,
+  1036→  1036→            zonaDestino: sStep === 1 && item.category === 'innecesario' ? (item.extra?.decision === 'Tirar' || item.extra?.decision === 'Eliminar' ? 'Residuo' : 'Jaula') : (item.zonaOrigen || currentZone?.name || null),
+  1037→  1037→          }))
+  1038→  1038→        ),
+  1039→  1039→      });
+  1040→  1040→
+  1041→  1041→      const json = await res.json();
+  1042→  1042→      if (json.success) {
+  1043→  1043→        toast.success(`${csvPreview.length} elementos importados correctamente`);
+  1044→  1044→        setCsvPreview(null);
+  1045→  1045→        await loadInventory();
+  1046→  1046→      } else {
+  1047→  1047→        toast.error(`Error al importar CSV: ${json.error || 'Error desconocido'}`);
+  1048→  1048→      }
+  1049→  1049→    } catch (error) {
+  1050→  1050→      console.error('Error importing CSV:', error);
+  1051→  1051→      toast.error('Error de conexión al importar CSV');
+  1052→  1052→    } finally {
+  1053→  1053→      setIsImporting(false);
+  1054→  1054→    }
+  1055→  1055→  };
+  1056→  1056→
+  1057→  1057→  const handleDeleteItem = async (id: string) => {
+  1058→  1058→    try {
+  1059→  1059→      const res = await fetch(`/api/inventory?id=${id}`, { method: 'DELETE' });
+  1060→  1060→      const json = await res.json();
+  1061→  1061→      if (json.success) {
+  1062→  1062→        setItems(prev => prev.filter(item => item.id !== id));
+  1063→  1063→        toast.success('Elemento eliminado');
+  1064→  1064→      } else {
+  1065→  1065→        toast.error(`Error al eliminar: ${json.error || 'Error desconocido'}`);
+  1066→  1066→      }
+  1067→  1067→    } catch (error) {
+  1068→  1068→      console.error('Error deleting item:', error);
+  1069→  1069→      toast.error('Error de conexión al eliminar');
+  1070→  1070→    }
+  1071→  1071→  };
+  1072→  1072→
+  1073→  1073→  const handleUpdateJaula = async (id: string, updates: Partial<InventoryItemData>) => {
+  1074→  1074→    try {
+  1075→  1075→      const res = await fetch(`/api/inventory?id=${id}`, {
+  1076→  1076→        method: 'PUT',
+  1077→  1077→        headers: { 'Content-Type': 'application/json' },
+  1078→  1078→        body: JSON.stringify(updates),
+  1079→  1079→      });
+  1080→  1080→      const json = await res.json();
+  1081→  1081→      if (json.success) {
+  1082→  1082→        await loadInventory();
+  1083→  1083→      } else {
+  1084→  1084→        toast.error(`Error al actualizar: ${json.error || 'Error desconocido'}`);
+  1085→  1085→      }
+  1086→  1086→    } catch (error) {
+  1087→  1087→      console.error('Error updating jaula:', error);
+  1088→  1088→      toast.error('Error de conexión al actualizar');
+  1089→  1089→    }
+  1090→  1090→  };
+  1091→  1091→
+  1092→  1092→  // Helper: update an extra field on an item and persist
+  1093→  1093→  const handleUpdateExtra = async (itemId: string, key: string, value: string | number) => {
+  1094→  1094→    const item = items.find(i => i.id === itemId);
+  1095→  1095→    if (!item) return;
+  1096→  1096→    const newExtra = { ...(item.extra || {}) };
+  1097→  1097→    if (value === '_clear_') {
+  1098→  1098→      delete newExtra[key];
+  1099→  1099→    } else {
+  1100→  1100→      newExtra[key] = value;
+  1101→  1101→    }
+  1102→  1102→    // Optimistic local update
+  1103→  1103→    setItems(prev => prev.map(it => it.id === itemId ? { ...it, extra: newExtra } : it));
+  1104→  1104→    try {
+  1105→  1105→      await fetch(`/api/inventory?id=${itemId}`, {
+  1106→  1106→        method: 'PUT',
+  1107→  1107→        headers: { 'Content-Type': 'application/json' },
+  1108→  1108→        body: JSON.stringify({ extra: newExtra }),
+  1109→  1109→      });
+  1110→  1110→    } catch (e) {
+  1111→  1111→      console.error('Error updating extra field:', e);
+  1112→  1112→    }
+  1113→  1113→  };
+  1114→  1114→
+  1115→  1115→  // Helper: update a simple field on an item and persist
+  1116→  1116→  const handleUpdateField = async (itemId: string, field: string, value: any) => {
+  1117→  1117→    const cleanValue = value === '_clear_' ? null : value;
+  1118→  1118→    setItems(prev => prev.map(it => it.id === itemId ? { ...it, [field]: cleanValue } : it));
+  1119→  1119→    try {
+  1120→  1120→      await fetch(`/api/inventory?id=${itemId}`, {
+  1121→  1121→        method: 'PUT',
+  1122→  1122→        headers: { 'Content-Type': 'application/json' },
+  1123→  1123→        body: JSON.stringify({ [field]: cleanValue }),
+  1124→  1124→      });
+  1125→  1125→    } catch (e) {
+  1126→  1126→      console.error('Error updating field:', e);
+  1127→  1127→    }
+  1128→  1128→  };
+  1129→  1129→
+  1130→  1130→  // Count classified items
+  1131→  1131→  const classifiedCount = items.filter(i => i.category && i.category !== '').length;
+  1132→  1132→  const classifyPercent = items.length > 0 ? Math.round((classifiedCount / items.length) * 100) : 0;
+  1133→  1133→  // For S2, S3, S4: layout must be uploaded AND classification threshold met
+  1134→  1134→  const needsLayout = sStep === 2 || sStep === 3 || sStep === 4;
+  1135→  1135→  // S1: No minimum percentage required — just need at least 1 item. If step 4 goes bad, it means not everything was eliminated.
+  1136→  1136→  // S2-S5: Must meet classification threshold (80%)
+  1137→  1137→  const canComplete = sStep === 1
+  1138→  1138→    ? items.length > 0 && classifiedCount > 0
+  1139→  1139→    : classifyPercent >= INVENTORY_CLASSIFY_THRESHOLD && items.length > 0 && (!needsLayout || layoutUploaded);
+  1140→  1140→
+  1141→  1141→  // S1 specific counts: split by category
+  1142→  1142→  const innecesarios = sStep === 1 ? items.filter(i => i.category === 'innecesario') : items.filter(i => i.category === 'innecesario');
+  1143→  1143→  const necesarios = sStep === 1 ? items.filter(i => i.category === 'necesario') : [];
+  1144→  1144→  const jaulaItems = items.filter(i => i.jaulaStatus === 'en_jaula');
+  1145→  1145→  const totalJaulaValue = jaulaItems.reduce((sum, i) => sum + (i.price || 0) * i.quantity, 0);
+  1146→  1146→
+  1147→  1147→  const handleComplete = async () => {
+  1148→  1148→    if (!canComplete) return;
+  1149→  1149→    // Extra guard: check layout for S2/S3/S4
+  1150→  1150→    if (needsLayout && !layoutUploaded) {
+  1151→  1151→      toast.error('Debes dibujar o subir un layout antes de completar este paso');
+  1152→  1152→      return;
+  1153→  1153→    }
+  1154→  1154→
+  1155→  1155→    try {
+  1156→  1156→      const res = await fetch(`/api/progress/step?sStep=${sStep}&miniStep=${miniStep}`, {
+  1157→  1157→        method: 'PUT',
+  1158→  1158→        headers: { 'Content-Type': 'application/json' },
+  1159→  1159→        body: JSON.stringify({
+  1160→  1160→          completed: true,
+  1161→  1161→          score: classifyPercent,
+  1162→  1162→          projectId: currentProject?.id,
+  1163→  1163→          zoneId: currentZone?.id || null,
+  1164→  1164→        }),
+  1165→  1165→      });
+  1166→  1166→
+  1167→  1167→      const json = await res.json();
+  1168→  1168→      if (json.success) {
+  1169→  1169→        setIsCompleted(true);
+  1170→  1170→        await fetchProgress();
+  1171→  1171→      }
+  1172→  1172→    } catch (error) {
+  1173→  1173→      console.error('Error completing inventory:', error);
+  1174→  1174→    }
+  1175→  1175→  };
+  1176→  1176→
+  1177→  1177→  const handleAdminSkip = async () => {
+  1178→  1178→    try {
+  1179→  1179→      const res = await fetch(`/api/progress/step?sStep=${sStep}&miniStep=${miniStep}`, {
+  1180→  1180→        method: 'PUT',
+  1181→  1181→        headers: { 'Content-Type': 'application/json' },
+  1182→  1182→        body: JSON.stringify({ completed: true, score: 100, notes: 'Completado por administrador (skip)', skipMissingTemplate: true, projectId: currentProject?.id, zoneId: currentZone?.id || null }),
+  1183→  1183→      });
+  1184→  1184→      const json = await res.json();
+  1185→  1185→      if (json.success) {
+  1186→  1186→        await fetchProgress();
+  1187→  1187→        onClose();
+  1188→  1188→      }
+  1189→  1189→    } catch (error) {
+  1190→  1190→      console.error('Error admin skip:', error);
+  1191→  1191→    }
+  1192→  1192→  };
+  1193→  1193→
+  1194→  1194→  const handleSkipMissingTemplate = async () => {
+  1195→  1195→    try {
+  1196→  1196→      const res = await fetch(`/api/progress/step?sStep=${sStep}&miniStep=${miniStep}`, {
+  1197→  1197→        method: 'PUT',
+  1198→  1198→        headers: { 'Content-Type': 'application/json' },
+  1199→  1199→        body: JSON.stringify({ completed: true, score: 100, notes: 'Paso sin plantilla - sin plantilla configurada', projectId: currentProject?.id, zoneId: currentZone?.id || null, skipMissingTemplate: true }),
+  1200→  1200→      });
+  1201→  1201→      const json = await res.json();
+  1202→  1202→      if (json.success) {
+  1203→  1203→        await fetchProgress();
+  1204→  1204→        onClose();
+  1205→  1205→      }
+  1206→  1206→    } catch (error) {
+  1207→  1207→      console.error('Error skip missing template:', error);
+  1208→  1208→    }
+  1209→  1209→  };
+  1210→  1210→
+  1211→  1211→  const handleExport = () => {
+  1212→  1212→    const extraHeaders = config.extraFields.map(f => f.label);
+  1213→  1213→    const headerRow = ['Nombre', 'Ubicación', 'Categoría', 'Total exist.', 'Necesarios', 'Innecesarios', 'Precio (€)', ...extraHeaders, 'Acción'].join(',');
+  1214→  1214→
+  1215→  1215→    const rows = items.map(item => {
+  1216→  1216→      const extraValues = config.extraFields.map(f => {
+  1217→  1217→        const val = item.extra?.[f.key] ?? '';
+  1218→  1218→        return String(val).replace(/,/g, ';');
+  1219→  1219→      });
+  1220→  1220→      const priceStr = item.price != null ? item.price.toFixed(2) : '';
+  1221→  1221→      return [item.name, item.location, item.category, item.quantity, item.quantityNeeded, item.quantityUnneeded, priceStr, ...extraValues, item.action].join(',');
+  1222→  1222→    });
+  1223→  1223→
+  1224→  1224→    const csvContent = [headerRow, ...rows].join('\n');
+  1225→  1225→    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  1226→  1226→    const url = URL.createObjectURL(blob);
+  1227→  1227→    const link = document.createElement('a');
+  1228→  1228→    link.href = url;
+  1229→  1229→    link.download = `inventario_s${sStep}_${sStepData?.japaneseName?.toLowerCase()}.csv`;
+  1230→  1230→    link.click();
+  1231→  1231→    URL.revokeObjectURL(url);
+  1232→  1232→  };
+  1233→  1233→
+  1234→  1234→  const getCategoryBadge = (category: string) => {
+  1235→  1235→    const cat = config.categories.find(c => c.value === category);
+  1236→  1236→    if (!cat) return <Badge variant="secondary">{category}</Badge>;
+  1237→  1237→    return <Badge className={cat.color}>{cat.label}</Badge>;
+  1238→  1238→  };
+  1239→  1239→
+  1240→  1240→  const getExtraValue = (item: InventoryItemData, fieldKey: string) => {
+  1241→  1241→    return item.extra?.[fieldKey] ?? '';
+  1242→  1242→  };
+  1243→  1243→
+  1244→  1244→  const getJaulaStatusBadge = (status: string) => {
+  1245→  1245→    const map: Record<string, { label: string; color: string }> = {
+  1246→  1246→      '': { label: '—', color: 'bg-gray-50 text-gray-400' },
+  1247→  1247→      en_jaula: { label: 'En Jaula', color: 'bg-red-100 text-red-800' },
+  1248→  1248→      reclamado: { label: 'Reclamado', color: 'bg-amber-100 text-amber-800' },
+  1249→  1249→      transferido: { label: 'Transferido', color: 'bg-green-100 text-green-800' },
+  1250→  1250→    };
+  1251→  1251→    const info = map[status] || map[''];
+  1252→  1252→    return <Badge className={info.color}>{info.label}</Badge>;
+  1253→  1253→  };
+  1254→  1254→
+  1255→  1255→  return (
+  1256→  1256→    <>
+  1257→  1257→    <Dialog open={open} onOpenChange={() => onClose()}>
+  1258→  1258→      <DialogContent size={isFullscreen ? "fullscreen" : "xl"} className="flex flex-col overflow-hidden p-0">
+  1259→  1259→        <DialogHeader className="px-6 pt-6 pb-2 flex-shrink-0">
+  1260→  1260→          <DialogTitle className="flex items-center gap-2">
+  1261→  1261→            <ClipboardList className="h-5 w-5" style={{ color: sStepData?.color }} />
+  1262→  1262→            <span>{config.title}</span>
+  1263→  1263→            <Badge variant="outline" style={{ borderColor: sStepData?.color, color: sStepData?.color }}>
+  1264→  1264→              {sStepData?.japaneseName}
+  1265→  1265→            </Badge>
+  1266→  1266→            <button
+  1267→  1267→              onClick={() => setIsFullscreen(!isFullscreen)}
+  1268→  1268→              className="ml-auto p-1 rounded hover:bg-muted transition-colors"
+  1269→  1269→              title={isFullscreen ? "Reducir ventana" : "Pantalla completa"}
+  1270→  1270→            >
+  1271→  1271→              {isFullscreen ? <Minimize2 className="h-4 w-4 text-muted-foreground" /> : <Maximize2 className="h-4 w-4 text-muted-foreground" />}
+  1272→  1272→            </button>
+  1273→  1273→          </DialogTitle>
+  1274→  1274→        </DialogHeader>
+  1275→  1275→
+  1276→  1276→        {canSkipSteps && !isCompleted && (
+  1277→  1277→          <div className="mx-6 flex items-center gap-2 p-2 bg-amber-50 border border-amber-200 rounded-lg flex-shrink-0">
+  1278→  1278→            <span className="text-xs text-amber-700 font-medium">Modo Admin:</span>
+  1279→  1279→            <Button
+  1280→  1280→              variant="outline"
+  1281→  1281→              size="sm"
+  1282→  1282→              className="text-xs border-amber-300 text-amber-700 hover:bg-amber-100"
+  1283→  1283→              onClick={handleAdminSkip}
+  1284→  1284→            >
+  1285→  1285→              Completar paso sin inventario
+  1286→  1286→            </Button>
+  1287→  1287→          </div>
+  1288→  1288→        )}
+  1289→  1289→
+  1290→  1290→        {isReadOnly && (
+  1291→  1291→          <div className="flex items-center gap-2 p-2 mx-6 flex-shrink-0 bg-blue-50 border border-blue-200 rounded-lg">
+  1292→  1292→            <span className="text-xs text-blue-700 font-medium">Solo lectura: {canSkipSteps ? 'Activa el candado para poder realizar pasos.' : 'Puedes ver pero no modificar.'}</span>
+  1293→  1293→          </div>
+  1294→  1294→        )}
+  1295→  1295→
+  1296→  1296→        <div className="flex-1 overflow-y-auto px-6 pb-6 min-h-0">
+  1297→  1297→        {hasTemplate === null ? (
+  1298→  1298→          <div className="flex items-center justify-center py-12">
+  1299→  1299→            <Loader2 className="h-8 w-8 text-green-500 animate-spin" />
+  1300→  1300→            <span className="ml-3 text-muted-foreground">Cargando plantilla...</span>
+  1301→  1301→          </div>
+  1302→  1302→        ) : hasTemplate === false ? (
+  1303→  1303→          <div className="text-center py-16">
+  1304→  1304→            <ClipboardList className="h-16 w-16 text-gray-300 mx-auto mb-4" />
+  1305→  1305→            <h3 className="text-xl font-bold text-gray-500 mb-2">Sin plantilla configurada</h3>
+  1306→  1306→            <p className="text-muted-foreground max-w-md mx-auto">
+  1307→  1307→              El administrador no ha configurado ninguna plantilla de inventario para S{sStep} ({sStepData?.japaneseName}) en el Paso 3.
+  1308→  1308→              Puedes pasar este paso y completarlo más tarde.
+  1309→  1309→            </p>
+  1310→  1310→            {!isReadOnly && (
+  1311→  1311→              <Button variant="outline" className="mt-4" onClick={handleSkipMissingTemplate}>
+  1312→  1312→                Pasar sin plantilla
+  1313→  1313→              </Button>
+  1314→  1314→            )}
+  1315→  1315→          </div>
+  1316→  1316→        ) : isCompleted ? (
+  1317→  1317→          <div className="text-center py-8">
+  1318→  1318→            <CheckCircle className="h-16 w-16 text-green-500 mx-auto mb-3" />
+  1319→  1319→            <h3 className="text-xl font-bold mb-2">¡Inventario Completado!</h3>
+  1320→  1320→            <p className="text-muted-foreground">
+  1321→  1321→              Se han clasificado {classifiedCount} de {items.length} elementos ({classifyPercent}%).
+  1322→  1322→            </p>
+  1323→  1323→            {sStep === 1 && (
+  1324→  1324→              <div className="mt-4 flex justify-center gap-4">
+  1325→  1325→                <span className="text-sm text-red-600">Innecesarios: {innecesarios.length}</span>
+  1326→  1326→                <span className="text-sm text-green-600">Necesarios: {necesarios.length}</span>
+  1327→  1327→              </div>
+  1328→  1328→            )}
+  1329→  1329→          </div>
+  1330→  1330→        ) : (
+  1331→  1331→          <div className="space-y-4">
+  1332→  1332→            {/* S-specific subtitle */}
+  1333→  1333→            <div className="p-3 rounded-lg border-l-4" style={{ borderColor: sStepData?.color, backgroundColor: `${sStepData?.color}08` }}>
+  1334→  1334→              <p className="text-sm font-medium" style={{ color: sStepData?.color }}>
+  1335→  1335→                {config.subtitle}
+  1336→  1336→              </p>
+  1337→  1337→            </div>
+  1338→  1338→
+  1339→  1339→            {/* ═══ FOTOS DEL PASO 2 (Fotos) ═══ */}
+  1340→  1340→            {step2Photos.length > 0 && (
+  1341→  1341→              <Card className="border-2 border-purple-200 bg-purple-50/30">
+  1342→  1342→                <CardContent className="p-4">
+  1343→  1343→                  <div className="flex items-center gap-2 mb-3">
+  1344→  1344→                    <ImageIcon className="h-5 w-5 text-purple-600" />
+  1345→  1345→                    <h4 className="font-semibold text-purple-800">Fotos del Paso 2 ({sStepData?.japaneseName})</h4>
+  1346→  1346→                    <Badge className="bg-purple-100 text-purple-800">{step2Photos.length} fotos</Badge>
+  1347→  1347→                  </div>
+  1348→  1348→                  <p className="text-xs text-muted-foreground mb-3">
+  1349→  1349→                    Estas fotos se tomaron en el paso de Fotos. Puedes vincularlas a elementos del inventario para mayor trazabilidad.
+  1350→  1350→                  </p>
+  1351→  1351→                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 max-h-48 overflow-y-auto">
+  1352→  1352→                    {step2Photos.map(photo => (
+  1353→  1353→                      <div key={photo.id} className="relative group border rounded-lg overflow-hidden bg-white">
+  1354→  1354→                        <img
+  1355→  1355→                          src={photo.photoUrl}
+  1356→  1356→                          alt={photo.title}
+  1357→  1357→                          className="w-full h-24 object-cover cursor-pointer hover:opacity-80 transition-opacity"
+  1358→  1358→                          onClick={() => setShowPhotoLightbox(photo)}
+  1359→  1359→                        />
+  1360→  1360→                        <div className="px-1.5 py-1 flex items-center justify-between">
+  1361→  1361→                          <Badge className={`text-[9px] px-1 py-0 ${photo.photoType === 'antes' ? 'bg-amber-100 text-amber-800' : 'bg-green-100 text-green-800'}`}>
+  1362→  1362→                            {photo.photoType === 'antes' ? 'Antes' : 'Después'}
+  1363→  1363→                          </Badge>
+  1364→  1364→                          <button
+  1365→  1365→                            className="text-[9px] text-purple-600 hover:text-purple-800 font-medium flex items-center gap-0.5"
+  1366→  1366→                            onClick={() => {
+  1367→  1367→                              // If there are items, open a quick selector
+  1368→  1368→                              if (items.length > 0 && items[0]?.id) {
+  1369→  1369→                                toast.info('Haz clic en el botón 📷 de un elemento del inventario para vincular esta foto');
+  1370→  1370→                              }
+  1371→  1371→                            }}
+  1372→  1372→                            title="Vincular a un elemento"
+  1373→  1373→                          >
+  1374→  1374→                            <Link2 className="h-2.5 w-2.5" /> Vincular
+  1375→  1375→                          </button>
+  1376→  1376→                        </div>
+  1377→  1377→                      </div>
+  1378→  1378→                    ))}
+  1379→  1379→                  </div>
+  1380→  1380→                </CardContent>
+  1381→  1381→              </Card>
+  1382→  1382→            )}
+  1383→  1383→
+  1384→  1384→            {/* ═══ LAYOUT DE LA ZONA — S2 (Marcado de Suelo), S3 (Limpieza), S4 (Estándares) ═══ */}
+  1385→  1385→            {(sStep === 2 || sStep === 3 || sStep === 4) && (
+  1386→  1386→              <Card className="border-2 border-blue-200 bg-blue-50/30">
+  1387→  1387→                <CardContent className="p-4">
+  1388→  1388→                  <div className="flex items-center gap-2 mb-3">
+  1389→  1389→                    <PenTool className="h-5 w-5 text-blue-600" />
+  1390→  1390→                    <h4 className="font-semibold text-blue-800">
+  1391→  1391→                      {sStep === 2 ? 'Layout de la Zona — Marcado de Suelo' 
+  1392→  1392→                        : sStep === 3 ? 'Layout de la Zona — Puntos de Limpieza' 
+  1393→  1393→                        : 'Layout de la Zona — Estándares Implantados'}
+  1394→  1394→                    </h4>
+  1395→  1395→                    <Badge className={layoutUploaded ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800'}>
+  1396→  1396→                      {layoutUploaded ? 'Layout adjuntado' : 'Pendiente'}
+  1397→  1397→                    </Badge>
+  1398→  1398→                  </div>
+  1399→  1399→                  <p className="text-xs text-muted-foreground mb-3">
+  1400→  1400→                    {sStep === 2
+  1401→  1401→                      ? 'Dibuja o sube el layout de la zona con el marcado de suelo según el estándar de colores. Esto es obligatorio para completar el paso 3 de S2 (Seiton).'
+  1402→  1402→                      : sStep === 3
+  1403→  1403→                      ? 'Dibuja o sube el layout de la zona indicando los puntos de suciedad y las zonas de limpieza. Esto forma parte del inventario de S3 (Seiso).'
+  1404→  1404→                      : 'Dibuja o sube el layout de la zona con los estándares implantados señalados. Esto forma parte del inventario de S4 (Seiketsu).'}
+  1405→  1405→                  </p>
+  1406→  1406→
+  1407→  1407→                  {/* Action buttons */}
+  1408→  1408→                  {!isReadOnly && (
+  1409→  1409→                    <div className="flex items-center gap-2 mb-4">
+  1410→  1410→                      <Button size="sm" onClick={() => setShowLayoutEditor(true)}
+  1411→  1411→                        className="gap-1 bg-blue-600 hover:bg-blue-700 text-white text-xs h-8">
+  1412→  1412→                        <PenTool className="h-3 w-3" /> Dibujar Layout
+  1413→  1413→                      </Button>
+  1414→  1414→                      {sStep === 2 && (
+  1415→  1415→                        <Button variant="outline" size="sm" onClick={() => setShowColorCodeTable(true)}
+  1416→  1416→                          className="gap-1 text-xs h-8 border-yellow-400 text-yellow-700 hover:bg-yellow-50">
+  1417→  1417→                          <Eye className="h-3 w-3" /> Ver Estándar Colores
+  1418→  1418→                        </Button>
+  1419→  1419→                      )}
+  1420→  1420→                      <div className="relative">
+  1421→  1421→                        <Button variant="outline" size="sm"
+  1422→  1422→                          className="gap-1 text-xs h-8 border-green-400 text-green-700 hover:bg-green-50"
+  1423→  1423→                          onClick={() => document.getElementById('layout-upload-s2')?.click()}>
+  1424→  1424→                          <Upload className="h-3 w-3" /> Subir Imagen/Croquis
+  1425→  1425→                        </Button>
+  1426→  1426→                        <input id="layout-upload-s2" type="file" accept="image/*" className="hidden"
+  1427→  1427→                          onChange={handleUploadLayoutImage} />
+  1428→  1428→                      </div>
+  1429→  1429→                    </div>
+  1430→  1430→                  )}
+  1431→  1431→
+  1432→  1432→                  {/* Saved layout previews */}
+  1433→  1433→                  {savedLayouts.length > 0 ? (
+  1434→  1434→                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+  1435→  1435→                      {savedLayouts.map(layout => (
+  1436→  1436→                        <div key={layout.id} className="border rounded-lg overflow-hidden bg-white">
+  1437→  1437→                          {layout.photoUrl ? (
+  1438→  1438→                            <img src={layout.photoUrl} alt={layout.title}
+  1439→  1439→                              className="w-full h-32 object-cover cursor-pointer hover:opacity-80 transition-opacity"
+  1440→  1440→                              onClick={() => window.open(layout.photoUrl!, '_blank')} />
+  1441→  1441→                          ) : (
+  1442→  1442→                            <div className="w-full h-32 bg-gray-100 flex items-center justify-center text-gray-400 text-xs">
+  1443→  1443→                              Sin imagen
+  1444→  1444→                            </div>
+  1445→  1445→                          )}
+  1446→  1446→                          <div className="px-2 py-1.5 flex items-center justify-between">
+  1447→  1447→                            <span className="text-[10px] font-medium truncate">{layout.title}</span>
+  1448→  1448→                            <span className="text-[9px] text-muted-foreground">
+  1449→  1449→                              {new Date(layout.createdAt).toLocaleDateString('es-ES')}
+  1450→  1450→                            </span>
+  1451→  1451→                          </div>
+  1452→  1452→                        </div>
+  1453→  1453→                      ))}
+  1454→  1454→                    </div>
+  1455→  1455→                  ) : (
+  1456→  1456→                    <div className="text-center py-6 bg-white rounded-lg border border-dashed border-blue-300">
+  1457→  1457→                      <PenTool className="h-8 w-8 text-blue-300 mx-auto mb-2" />
+  1458→  1458→                      <p className="text-xs text-muted-foreground">No hay layout adjuntado</p>
+  1459→  1459→                      <p className="text-[10px] text-muted-foreground mt-0.5">Dibuja o sube el layout de la zona</p>
+  1460→  1460→                    </div>
+  1461→  1461→                  )}
+  1462→  1462→                </CardContent>
+  1463→  1463→              </Card>
+  1464→  1464→            )}
+  1465→  1465→
+  1466→  1466→            {/* Classification progress */}
+  1467→  1467→            <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
+  1468→  1468→              <div>
+  1469→  1469→                <span className="text-sm font-medium">Clasificación</span>
+  1470→  1470→                <p className="text-xs text-muted-foreground">
+  1471→  1471→                  {classifiedCount}/{items.length} clasificados
+  1472→  1472→                </p>
+  1473→  1473→              </div>
+  1474→  1474→              <Badge variant={canComplete ? 'default' : 'secondary'}>
+  1475→  1475→                {classifyPercent}%{sStep !== 1 ? ` (mín. ${INVENTORY_CLASSIFY_THRESHOLD}%)` : ''}
+  1476→  1476→              </Badge>
+  1477→  1477→            </div>
+  1478→  1478→
+  1479→  1479→            {/* Action buttons */}
+  1480→  1480→            <div className="flex gap-2 flex-wrap items-center">
+  1481→  1481→              <Button variant="outline" size="sm" onClick={handleImportTemplate}>
+  1482→  1482→                <Upload className="h-4 w-4 mr-1" /> Importar Plantilla
+  1483→  1483→              </Button>
+  1484→  1484→              <Button variant="outline" size="sm" onClick={handleExport} disabled={items.length === 0}>
+  1485→  1485→                <Download className="h-4 w-4 mr-1" /> Exportar CSV
+  1486→  1486→              </Button>
+  1487→  1487→              {/* Unified file import: accepts .xlsx and .csv */}
+  1488→  1488→              <label className="inline-flex items-center justify-center rounded-md border border-input bg-background px-3 py-1.5 text-xs font-medium ring-offset-background hover:bg-accent hover:text-accent-foreground cursor-pointer">
+  1489→  1489→                <FileUp className="h-4 w-4 mr-1" /> Importar Archivo
+  1490→  1490→                <input
+  1491→  1491→                  type="file"
+  1492→  1492→                  accept=".csv,.xlsx,.xls"
+  1493→  1493→                  className="hidden"
+  1494→  1494→                  onChange={handleFileImport}
+  1495→  1495→                />
+  1496→  1496→              </label>
+  1497→  1497→              <a
+  1498→  1498→                href={`/templates/${config.templateName}`}
+  1499→  1499→                download
+  1500→  1500→                className="inline-flex items-center justify-center rounded-md border border-input bg-background px-3 py-1.5 text-xs font-medium ring-offset-background hover:bg-accent hover:text-accent-foreground"
+  1501→  1501→              >
+  1502→  1502→                <FileSpreadsheet className="h-4 w-4 mr-1" /> Descargar Plantilla Excel
+  1503→  1503→              </a>
+  1504→  1504→              {/* S1: Print red label button — only for Jaula decision items */}
+  1505→  1505→              {sStep === 1 && items.length > 0 && (() => {
+  1506→  1506→                // Helper: compute revision date = entry date + diasCuarentena (default 40)
+  1507→  1507→                const withRevision = (i: InventoryItemData) => {
+  1508→  1508→                  let fechaRevision: string | null = null;
+  1509→  1509→                  const dias = Number(i.extra?.diasCuarentena ?? 40);
+  1510→  1510→                  if (i.jaulaFechaEntrada) {
+  1511→  1511→                    try {
+  1512→  1512→                      const d = new Date(i.jaulaFechaEntrada);
+  1513→  1513→                      d.setDate(d.getDate() + dias);
+  1514→  1514→                      fechaRevision = d.toISOString();
+  1515→  1515→                    } catch {}
+  1516→  1516→                  }
+  1517→  1517→                  return fechaRevision;
+  1518→  1518→                };
+  1519→  1519→                // Only Jaula decision items get a red tag (Eliminar/Tirar go to Residuo directly, no tag)
+  1520→  1520→                const rojaItems = items
+  1521→  1521→                  .filter(i => i.category === 'innecesario' && (!i.extra?.decision || i.extra.decision === 'Jaula'))
+  1522→  1522→                  .map(i => ({
+  1523→  1523→                    nombre: i.name,
+  1524→  1524→                    ubicacion: i.location,
+  1525→  1525→                    cantidad: i.quantityUnneeded || i.quantity,
+  1526→  1526→                    estado: String(i.extra?.estado ?? ''),
+  1527→  1527→                    frecuenciaUso: String(i.extra?.frecuenciaUso ?? ''),
+  1528→  1528→                    decision: 'Jaula' as string,
+  1529→  1529→                    categoria: String(i.category ?? 'Innecesario'),
+  1530→  1530→                    fechaEntrada: i.jaulaFechaEntrada,
+  1531→  1531→                    fechaRevision: withRevision(i),
+  1532→  1532→                    diasCuarentena: Number(i.extra?.diasCuarentena ?? 40),
+  1533→  1533→                    zonaOrigen: i.zonaOrigen || i.jaulaOrigen,
+  1534→  1534→                  }));
+  1535→  1535→                return (
+  1536→  1536→                  <div className="flex items-center gap-2 ml-2 pl-2 border-l border-red-300">
+  1537→  1537→                    <span className="text-[10px] text-muted-foreground font-medium">Etiquetas:</span>
+  1538→  1538→                    {rojaItems.length > 0 && (
+  1539→  1539→                      <TagPrinter items={rojaItems} />
+  1540→  1540→                    )}
+  1541→  1541→                  </div>
+  1542→  1542→                );
+  1543→  1543→              })()}
+  1544→  1544→            </div>
+  1545→  1545→
+  1546→  1546→            {/* TASK 7: CSV Import Preview */}
+  1547→  1547→            {csvPreview && csvPreview.length > 0 && (
+  1548→  1548→              <Card className="border-2 border-blue-200 bg-blue-50/30">
+  1549→  1549→                <CardContent className="p-4">
+  1550→  1550→                  <div className="flex items-center justify-between mb-3">
+  1551→  1551→                    <div className="flex items-center gap-2">
+  1552→  1552→                      <FileUp className="h-5 w-5 text-blue-600" />
+  1553→  1553→                      <h4 className="font-semibold text-blue-800">Vista Previa de Importación</h4>
+  1554→  1554→                      <Badge className="bg-blue-200 text-blue-900">{csvPreview.length} elementos</Badge>
+  1555→  1555→                    </div>
+  1556→  1556→                    <div className="flex items-center gap-2">
+  1557→  1557→                      <Button
+  1558→  1558→                        variant="outline"
+  1559→  1559→                        size="sm"
+  1560→  1560→                        className="text-xs"
+  1561→  1561→                        onClick={() => setCsvPreview(null)}
+  1562→  1562→                      >
+  1563→  1563→                        Cancelar
+  1564→  1564→                      </Button>
+  1565→  1565→                      <Button
+  1566→  1566→                        size="sm"
+  1567→  1567→                        className="text-xs bg-blue-600 hover:bg-blue-700"
+  1568→  1568→                        onClick={handleConfirmCsvImport}
+  1569→  1569→                        disabled={isImporting}
+  1570→  1570→                      >
+  1571→  1571→                        {isImporting ? 'Importando...' : `Confirmar Importación (${csvPreview.length})`}
+  1572→  1572→                      </Button>
+  1573→  1573→                    </div>
+  1574→  1574→                  </div>
+  1575→  1575→                  <div className="max-h-48 overflow-y-auto rounded-lg border">
+  1576→  1576→                    <Table>
+  1577→  1577→                      <TableHeader>
+  1578→  1578→                        <TableRow>
+  1579→  1579→                          <TableHead className="text-xs">Elemento</TableHead>
+  1580→  1580→                          <TableHead className="text-xs">Ubicación</TableHead>
+  1581→  1581→                          <TableHead className="text-xs">Categoría</TableHead>
+  1582→  1582→                          <TableHead className="text-xs">Cant.</TableHead>
+  1583→  1583→                          <TableHead className="text-xs">Precio</TableHead>
+  1584→  1584→                        </TableRow>
+  1585→  1585→                      </TableHeader>
+  1586→  1586→                      <TableBody>
+  1587→  1587→                        {csvPreview.map((item, idx) => (
+  1588→  1588→                          <TableRow key={idx}>
+  1589→  1589→                            <TableCell className="text-xs font-medium">{item.name}</TableCell>
+  1590→  1590→                            <TableCell className="text-xs">{item.location}</TableCell>
+  1591→  1591→                            <TableCell className="text-xs">{item.category}</TableCell>
+  1592→  1592→                            <TableCell className="text-xs text-center">{item.quantity}</TableCell>
+  1593→  1593→                            <TableCell className="text-xs text-right">{item.price ? `${item.price.toFixed(2)} €` : '—'}</TableCell>
+  1594→  1594→                          </TableRow>
+  1595→  1595→                        ))}
+  1596→  1596→                      </TableBody>
+  1597→  1597→                    </Table>
+  1598→  1598→                  </div>
+  1599→  1599→                </CardContent>
+  1600→  1600→              </Card>
+  1601→  1601→            )}
+  1602→  1602→
+  1603→  1603→            {/* Add item form */}
+  1604→  1604→            <Card>
+  1605→  1605→              <CardContent className="p-4">
+  1606→  1606→                <div className="space-y-3">
+  1607→  1607→                  {/* Row 1: Name, Zona (read-only), Category (auto innecesario for S1), Quantity, Price */}
+  1608→  1608→                  <div className="grid grid-cols-1 gap-3 items-end sm:grid-cols-5">
+  1609→  1609→                    <div className="sm:col-span-2">
+  1610→  1610→                      <label className="text-xs font-medium">Elemento *</label>
+  1611→  1611→                      <Input
+  1612→  1612→                        placeholder="Nombre del elemento"
+  1613→  1613→                        value={newItem.name}
+  1614→  1614→                        onChange={e => setNewItem(prev => ({ ...prev, name: e.target.value }))}
+  1615→  1615→                      />
+  1616→  1616→                    </div>
+  1617→  1617→                    {sStep === 1 ? (
+  1618→  1618→                      /* S1: Zona is pre-filled from current zone, read-only */
+  1619→  1619→                      <div>
+  1620→  1620→                        <label className="text-xs font-medium flex items-center gap-1">
+  1621→  1621→                          <MapPin className="h-3 w-3" />
+  1622→  1622→                          Zona
+  1623→  1623→                        </label>
+  1624→  1624→                        <Input
+  1625→  1625→                          value={currentZone?.name || newItem.zonaOrigen || 'Sin zona'}
+  1626→  1626→                          readOnly
+  1627→  1627→                          className="bg-gray-50 text-gray-600"
+  1628→  1628→                        />
+  1629→  1629→                      </div>
+  1630→  1630→                    ) : (
+  1631→  1631→                      /* Non-S1: Zona selectable */
+  1632→  1632→                      <div>
+  1633→  1633→                        <label className="text-xs font-medium flex items-center gap-1">
+  1634→  1634→                          <MapPin className="h-3 w-3" />
+  1635→  1635→                          Zona
+  1636→  1636→                        </label>
+  1637→  1637→                        {currentProject?.zones && currentProject.zones.length > 0 ? (
+  1638→  1638→                          <Select
+  1639→  1639→                            value={newItem.zonaOrigen || currentZone?.name || undefined}
+  1640→  1640→                            onValueChange={val => setNewItem(prev => ({ ...prev, zonaOrigen: val }))}
+  1641→  1641→                          >
+  1642→  1642→                            <SelectTrigger>
+  1643→  1643→                              <SelectValue placeholder="Seleccionar zona" />
+  1644→  1644→                            </SelectTrigger>
+  1645→  1645→                            <SelectContent>
+  1646→  1646→                              {currentProject.zones.map(z => (
+  1647→  1647→                                <SelectItem key={z.id} value={z.name}>{z.name}</SelectItem>
+  1648→  1648→                              ))}
+  1649→  1649→                            </SelectContent>
+  1650→  1650→                          </Select>
+  1651→  1651→                        ) : (
+  1652→  1652→                          <Input
+  1653→  1653→                            placeholder="Zona"
+  1654→  1654→                            value={newItem.zonaOrigen || currentZone?.name || ''}
+  1655→  1655→                            onChange={e => setNewItem(prev => ({ ...prev, zonaOrigen: e.target.value }))}
+  1656→  1656→                          />
+  1657→  1657→                        )}
+  1658→  1658→                      </div>
+  1659→  1659→                    )}
+  1660→  1660→                    {sStep === 1 ? (
+  1661→  1661→                      /* S1: Category is innecesario by default, shown as read-only badge */
+  1662→  1662→                      <div>
+  1663→  1663→                        <label className="text-xs font-medium">Categoría</label>
+  1664→  1664→                        <div className="h-9 flex items-center px-3 rounded-md border bg-red-50 text-red-700 text-sm font-medium">
+  1665→  1665→                          Innecesario
+  1666→  1666→                        </div>
+  1667→  1667→                      </div>
+  1668→  1668→                    ) : (
+  1669→  1669→                      /* Non-S1: Category selectable */
+  1670→  1670→                      <div>
+  1671→  1671→                        <label className="text-xs font-medium">Categoría *</label>
+  1672→  1672→                        <Select
+  1673→  1673→                          value={newItem.category || undefined}
+  1674→  1674→                          onValueChange={val => setNewItem(prev => ({ ...prev, category: val, extra: { ...(prev.extra || {}), subcategoria: '' as string } }))}
+  1675→  1675→                        >
+  1676→  1676→                          <SelectTrigger>
+  1677→  1677→                            <SelectValue placeholder="Categoría" />
+  1678→  1678→                          </SelectTrigger>
+  1679→  1679→                          <SelectContent>
+  1680→  1680→                            {config.categories.filter(cat => cat.value && cat.value.trim() !== '').map(cat => (
+  1681→  1681→                              <SelectItem key={cat.value} value={cat.value}>
+  1682→  1682→                                {cat.label}
+  1683→  1683→                              </SelectItem>
+  1684→  1684→                            ))}
+  1685→  1685→                          </SelectContent>
+  1686→  1686→                        </Select>
+  1687→  1687→                      </div>
+  1688→  1688→                    )}
+  1689→  1689→                    <div>
+  1690→  1690→                      <label className="text-xs font-medium">{sStep === 1 ? 'Cantidad' : 'Total exist.'}</label>
+  1691→  1691→                      <Input
+  1692→  1692→                        type="number"
+  1693→  1693→                        min="1"
+  1694→  1694→                        value={newItem.quantity || 1}
+  1695→  1695→                        onChange={e => setNewItem(prev => ({ ...prev, quantity: parseInt(e.target.value) || 1 }))}
+  1696→  1696→                      />
+  1697→  1697→                    </div>
+  1698→  1698→                    <div>
+  1699→  1699→                      <label className="text-xs font-medium">Precio (€)</label>
+  1700→  1700→                      <Input
+  1701→  1701→                        type="number"
+  1702→  1702→                        min="0"
+  1703→  1703→                        step="0.01"
+  1704→  1704→                        placeholder="0.00"
+  1705→  1705→                        value={newItem.price ?? ''}
+  1706→  1706→                        onChange={e => setNewItem(prev => ({ ...prev, price: e.target.value ? parseFloat(e.target.value) : null }))}
+  1707→  1707→                      />
+  1708→  1708→                    </div>
+  1709→  1709→                  </div>
+  1710→  1710→
+  1711→  1711→                  {/* S1: All fields visible and editable — Innecesario + Necesario + Etiquetas */}
+  1712→  1712→                  {sStep === 1 ? (
+  1713→  1713→                    <>
+  1714→  1714→                      {/* S1: Section labels */}
+  1715→  1715→                      <div className="flex items-center gap-3 mt-1">
+  1716→  1716→                        <div className="flex items-center gap-1.5">
+  1717→  1717→                          <div className="h-2.5 w-2.5 rounded bg-red-500" />
+  1718→  1718→                          <span className="text-[10px] font-medium text-red-700">Campos de Innecesario</span>
+  1719→  1719→                        </div>
+  1720→  1720→                        <div className="flex items-center gap-1.5">
+  1721→  1721→                          <div className="h-2.5 w-2.5 rounded bg-orange-500" />
+  1722→  1722→                          <span className="text-[10px] font-medium text-orange-700">Datos de Etiqueta</span>
+  1723→  1723→                        </div>
+  1724→  1724→                      </div>
+  1725→  1725→
+  1726→  1726→                      {/* S1: Innecesario fields — always visible and editable */}
+  1727→  1727→                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 items-end p-2 rounded-lg border border-red-200 bg-red-50/30">
+  1728→  1728→                        {['estado', 'frecuenciaUso', 'decision'].map(key => {
+  1729→  1729→                          const field = config.extraFields.find(f => f.key === key);
+  1730→  1730→                          if (!field) return null;
+  1731→  1731→                          return (
+  1732→  1732→                            <div key={field.key}>
+  1733→  1733→                              <label className="text-xs font-medium text-red-700">{field.label}</label>
+  1734→  1734→                              {field.type === 'select' && field.options ? (
+  1735→  1735→                                <Select
+  1736→  1736→                                  value={newItem.extra?.[field.key] ? String(newItem.extra[field.key]) : undefined}
+  1737→  1737→                                  onValueChange={val =>
+  1738→  1738→                                    setNewItem(prev => {
+  1739→  1739→                                      const updated = { ...prev, extra: { ...(prev.extra || {}), [field.key]: val } };
+  1740→  1740→                                      // If decision is Eliminar/Tirar: clear quarantine/entry fields
+  1741→  1741→                                      if (field.key === 'decision' && (val === 'Eliminar' || val === 'Tirar')) {
+  1742→  1742→                                        updated.jaulaFechaEntrada = null;
+  1743→  1743→                                        delete updated.extra.diasCuarentena;
+  1744→  1744→                                      }
+  1745→  1745→                                      // If decision is Jaula: set default entry date and quarantine
+  1746→  1746→                                      if (field.key === 'decision' && val === 'Jaula') {
+  1747→  1747→                                        if (!updated.jaulaFechaEntrada) updated.jaulaFechaEntrada = new Date().toISOString();
+  1748→  1748→                                        if (!updated.extra.diasCuarentena) updated.extra.diasCuarentena = 40;
+  1749→  1749→                                      }
+  1750→  1750→                                      return updated;
+  1751→  1751→                                    })
+  1752→  1752→                                  }
+  1753→  1753→                                >
+  1754→  1754→                                  <SelectTrigger>
+  1755→  1755→                                    <SelectValue placeholder={field.label} />
+  1756→  1756→                                  </SelectTrigger>
+  1757→  1757→                                  <SelectContent>
+  1758→  1758→                                    {field.options.filter(opt => opt && opt.trim() !== '').map(opt => (
+  1759→  1759→                                      <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+  1760→  1760→                                    ))}
+  1761→  1761→                                  </SelectContent>
+  1762→  1762→                                </Select>
+  1763→  1763→                              ) : (
+  1764→  1764→                                <Input
+  1765→  1765→                                  placeholder={field.label}
+  1766→  1766→                                  value={String(newItem.extra?.[field.key] ?? '')}
+  1767→  1767→                                  onChange={e =>
+  1768→  1768→                                    setNewItem(prev => ({
+  1769→  1769→                                      ...prev,
+  1770→  1770→                                      extra: { ...(prev.extra || {}), [field.key]: e.target.value },
+  1771→  1771→                                    }))
+  1772→  1772→                                  }
+  1773→  1773→                                />
+  1774→  1774→                              )}
+  1775→  1775→                            </div>
+  1776→  1776→                          );
+  1777→  1777→                        })}
+  1778→  1778→                        <div className="col-span-full flex items-center gap-1">
+  1779→  1779→                          <div className="w-2 h-2 rounded-full bg-red-400" />
+  1780→  1780→                          <span className="text-[9px] text-red-600 font-medium">
+  1781→  1781→                            {newItem.extra?.decision === 'Eliminar' || newItem.extra?.decision === 'Tirar'
+  1782→  1782→                              ? `Decisión: ${newItem.extra.decision} → va a Residuo (sin etiqueta, sin cuarentena)`
+  1783→  1783→                              : 'Decisión: Jaula → etiqueta roja con cuarentena'}
+  1784→  1784→                          </span>
+  1785→  1785→                        </div>
+  1786→  1786→                      </div>
+  1787→  1787→
+  1788→  1788→                      {/* S1: Etiqueta fields — ONLY for Jaula decision (Eliminar/Tirar go to Residuo, no tag/quarantine) */}
+  1789→  1789→                      {(!newItem.extra?.decision || newItem.extra.decision === 'Jaula') && (
+  1790→  1790→                      <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 items-end p-2 rounded-lg border border-orange-200 bg-orange-50/30">
+  1791→  1791→                        <div>
+  1792→  1792→                          <label className="text-xs font-medium text-orange-700 flex items-center gap-1">
+  1793→  1793→                            <Tag className="h-3 w-3" />
+  1794→  1794→                            F. Entrada
+  1795→  1795→                          </label>
+  1796→  1796→                          <Input
+  1797→  1797→                            type="date"
+  1798→  1798→                            value={newItem.jaulaFechaEntrada ? new Date(newItem.jaulaFechaEntrada).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]}
+  1799→  1799→                            onChange={e => {
+  1800→  1800→                              const val = e.target.value ? new Date(e.target.value + 'T12:00:00').toISOString() : null;
+  1801→  1801→                              setNewItem(prev => ({ ...prev, jaulaFechaEntrada: val }));
+  1802→  1802→                            }}
+  1803→  1803→                          />
+  1804→  1804→                        </div>
+  1805→  1805→                        <div>
+  1806→  1806→                          <label className="text-xs font-medium text-orange-700 flex items-center gap-1">
+  1807→  1807→                            <Tag className="h-3 w-3" />
+  1808→  1808→                            Días cuarentena
+  1809→  1809→                          </label>
+  1810→  1810→                          <Select
+  1811→  1811→                            value={String(newItem.extra?.diasCuarentena ?? 40)}
+  1812→  1812→                            onValueChange={val =>
+  1813→  1813→                              setNewItem(prev => ({
+  1814→  1814→                                ...prev,
+  1815→  1815→                                extra: { ...(prev.extra || {}), diasCuarentena: parseInt(val) || 40 },
+  1816→  1816→                              }))
+  1817→  1817→                            }
+  1818→  1818→                          >
+  1819→  1819→                            <SelectTrigger>
+  1820→  1820→                              <SelectValue />
+  1821→  1821→                            </SelectTrigger>
+  1822→  1822→                            <SelectContent>
+  1823→  1823→                              {[7, 15, 20, 30, 40, 60, 90].map(d => (
+  1824→  1824→                                <SelectItem key={d} value={String(d)}>{d} días</SelectItem>
+  1825→  1825→                              ))}
+  1826→  1826→                            </SelectContent>
+  1827→  1827→                          </Select>
+  1828→  1828→                        </div>
+  1829→  1829→                        <div>
+  1830→  1830→                          <label className="text-xs font-medium text-orange-700 flex items-center gap-1">
+  1831→  1831→                            <Tag className="h-3 w-3" />
+  1832→  1832→                            F. Revisión
+  1833→  1833→                          </label>
+  1834→  1834→                          <Input
+  1835→  1835→                            type="date"
+  1836→  1836→                            value={(() => {
+  1837→  1837→                              const base = newItem.jaulaFechaEntrada || new Date().toISOString();
+  1838→  1838→                              const dias = Number(newItem.extra?.diasCuarentena ?? 40);
+  1839→  1839→                              try {
+  1840→  1840→                                const d = new Date(base);
+  1841→  1841→                                d.setDate(d.getDate() + dias);
+  1842→  1842→                                return d.toISOString().split('T')[0];
+  1843→  1843→                              } catch { return ''; }
+  1844→  1844→                            })()}
+  1845→  1845→                            readOnly
+  1846→  1846→                            className="bg-orange-50"
+  1847→  1847→                          />
+  1848→  1848→                        </div>
+  1849→  1849→                        <div className="flex items-end">
+  1850→  1850→                          <div className="flex items-center gap-1">
+  1851→  1851→                            <div className="w-2 h-2 rounded-full bg-orange-500" />
+  1852→  1852→                            <span className="text-[9px] text-orange-600 font-medium">Datos para etiqueta roja</span>
+  1853→  1853→                          </div>
+  1854→  1854→                        </div>
+  1855→  1855→                      </div>
+  1856→  1856→                      )}
+  1857→  1857→                    </>
+  1858→  1858→                  ) : (
+  1859→  1859→                  /* Non-S1: Original extra fields */
+  1860→  1860→                  config.extraFields.length > 0 && (
+  1861→  1861→                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 items-end">
+  1862→  1862→                      {config.extraFields.map(field => {
+  1863→  1863→                        // Dynamic subcategoria: filter options based on selected category
+  1864→  1864→                        let effectiveOptions = field.type === 'select' ? field.options : undefined;
+  1865→  1865→                        if (field.key === 'subcategoria' && config.desplegables_jerarquicos) {
+  1866→  1866→                          const selectedCat = newItem.category;
+  1867→  1867→                          if (selectedCat) {
+  1868→  1868→                            const catLabel = config.categories.find(c => c.value === selectedCat)?.label;
+  1869→  1869→                            const hierEntry = catLabel && config.desplegables_jerarquicos[catLabel]
+  1870→  1870→                              ? config.desplegables_jerarquicos[catLabel]
+  1871→  1871→                              : config.desplegables_jerarquicos[selectedCat];
+  1872→  1872→                            if (hierEntry) {
+  1873→  1873→                              effectiveOptions = hierEntry.subcategorias;
+  1874→  1874→                            } else {
+  1875→  1875→                              effectiveOptions = [];
+  1876→  1876→                            }
+  1877→  1877→                          } else {
+  1878→  1878→                            effectiveOptions = Object.values(config.desplegables_jerarquicos).flatMap(h => h.subcategorias);
+  1879→  1879→                          }
+  1880→  1880→                        }
+  1881→  1881→                        return (
+  1882→  1882→                        <div key={field.key}>
+  1883→  1883→                          <label className="text-xs font-medium">{field.label}</label>
+  1884→  1884→                          {field.type === 'select' && effectiveOptions ? (
+  1885→  1885→                            <Select
+  1886→  1886→                              value={newItem.extra?.[field.key] ? String(newItem.extra[field.key]) : undefined}
+  1887→  1887→                              onValueChange={val =>
+  1888→  1888→                                setNewItem(prev => ({
+  1889→  1889→                                  ...prev,
+  1890→  1890→                                  extra: { ...(prev.extra || {}), [field.key]: val },
+  1891→  1891→                                }))
+  1892→  1892→                              }
+  1893→  1893→                            >
+  1894→  1894→                              <SelectTrigger>
+  1895→  1895→                                <SelectValue placeholder={field.label} />
+  1896→  1896→                              </SelectTrigger>
+  1897→  1897→                              <SelectContent>
+  1898→  1898→                                {effectiveOptions.filter(opt => opt && opt.trim() !== '').map(opt => (
+  1899→  1899→                                  <SelectItem key={opt} value={opt}>
+  1900→  1900→                                    {opt}
+  1901→  1901→                                  </SelectItem>
+  1902→  1902→                                ))}
+  1903→  1903→                              </SelectContent>
+  1904→  1904→                            </Select>
+  1905→  1905→                          ) : field.type === 'number' ? (
+  1906→  1906→                            <Input
+  1907→  1907→                              type="number"
+  1908→  1908→                              min="0"
+  1909→  1909→                              max="100"
+  1910→  1910→                              placeholder={field.label}
+  1911→  1911→                              value={newItem.extra?.[field.key] ?? ''}
+  1912→  1912→                              onChange={e =>
+  1913→  1913→                                setNewItem(prev => ({
+  1914→  1914→                                  ...prev,
+  1915→  1915→                                  extra: { ...(prev.extra || {}), [field.key]: parseInt(e.target.value) || 0 },
+  1916→  1916→                                }))
+  1917→  1917→                              }
+  1918→  1918→                            />
+  1919→  1919→                          ) : (
+  1920→  1920→                            <Input
+  1921→  1921→                              placeholder={field.label}
+  1922→  1922→                              value={String(newItem.extra?.[field.key] ?? '')}
+  1923→  1923→                              onChange={e =>
+  1924→  1924→                                setNewItem(prev => ({
+  1925→  1925→                                  ...prev,
+  1926→  1926→                                  extra: { ...(prev.extra || {}), [field.key]: e.target.value },
+  1927→  1927→                                }))
+  1928→  1928→                              }
+  1929→  1929→                            />
+  1930→  1930→                          )}
+  1931→  1931→                        </div>
+  1932→  1932→                        );
+  1933→  1933→                      })}
+  1934→  1934→                    </div>
+  1935→  1935→                  )
+  1936→  1936→                  )}
+  1937→  1937→
+  1938→  1938→                  {/* Add button + Photo attach */}
+  1939→  1939→                  <div className="flex justify-end items-center gap-2">
+  1940→  1940→                    {pendingNewPhoto && (
+  1941→  1941→                      <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+  1942→  1942→                        <div className="w-6 h-6 rounded bg-muted flex items-center justify-center">
+  1943→  1943→                          <ImageIcon className="h-3 w-3" />
+  1944→  1944→                        </div>
+  1945→  1945→                        <span className="max-w-[120px] truncate">{pendingNewPhoto.name}</span>
+  1946→  1946→                        <button className="text-destructive hover:text-red-700" onClick={() => setPendingNewPhoto(null)}>
+  1947→  1947→                          <X className="h-3 w-3" />
+  1948→  1948→                        </button>
+  1949→  1949→                      </div>
+  1950→  1950→                    )}
+  1951→  1951→                    {!isReadOnly && (
+  1952→  1952→                      <div className="flex items-center gap-1">
+  1953→  1953→                        <Select value={pendingNewPhotoType} onValueChange={setPendingNewPhotoType}>
+  1954→  1954→                          <SelectTrigger className="h-7 w-20 text-[10px]">
+  1955→  1955→                            <SelectValue />
+  1956→  1956→                          </SelectTrigger>
+  1957→  1957→                          <SelectContent>
+  1958→  1958→                            <SelectItem value="antes">Antes</SelectItem>
+  1959→  1959→                            <SelectItem value="despues">Después</SelectItem>
+  1960→  1960→                          </SelectContent>
+  1961→  1961→                        </Select>
+  1962→  1962→                        <label className="inline-flex items-center justify-center h-7 px-2 rounded-md border border-input bg-background text-xs cursor-pointer hover:bg-accent transition-colors gap-1">
+  1963→  1963→                          <Camera className="h-3 w-3" />
+  1964→  1964→                          Adjuntar Foto
+  1965→  1965→                          <input
+  1966→  1966→                            type="file"
+  1967→  1967→                            accept="image/*"
+  1968→  1968→                            capture="environment"
+  1969→  1969→                            className="hidden"
+  1970→  1970→                            onChange={e => {
+  1971→  1971→                              const file = e.target.files?.[0];
+  1972→  1972→                              if (file) setPendingNewPhoto(file);
+  1973→  1973→                              e.target.value = '';
+  1974→  1974→                            }}
+  1975→  1975→                          />
+  1976→  1976→                        </label>
+  1977→  1977→                      </div>
+  1978→  1978→                    )}
+  1979→  1979→                    <Button
+  1980→  1980→                      onClick={handleAddItem}
+  1981→  1981→                      disabled={!newItem.name || !newItem.category}
+  1982→  1982→                      size="sm"
+  1983→  1983→                      style={{ backgroundColor: sStepData?.color }}
+  1984→  1984→                    >
+  1985→  1985→                      <Plus className="h-4 w-4 mr-1" /> Agregar
+  1986→  1986→                    </Button>
+  1987→  1987→                  </div>
+  1988→  1988→                </div>
+  1989→  1989→              </CardContent>
+  1990→  1990→            </Card>
+  1991→  1991→
+  1992→  1992→            {/* ═══ S3: Puntos de Suciedad — Before/After Photos ═══ */}
+  1993→  1993→            {sStep === 3 && items.some(i => (itemPhotos[i.id!] || i.photos || []).length > 0) && (
+  1994→  1994→              <Card className="border-2 border-orange-200 bg-orange-50/30">
+  1995→  1995→                <CardContent className="p-4">
+  1996→  1996→                  <div className="flex items-center gap-2 mb-3">
+  1997→  1997→                    <Camera className="h-5 w-5 text-orange-600" />
+  1998→  1998→                    <h4 className="font-semibold text-orange-800">Puntos de Suciedad — Fotos Antes/Después</h4>
+  1999→  1999→                  </div>
+  2000→  2000→                  <p className="text-xs text-muted-foreground mb-3">
+
+[showing lines 1-2000 of 2002; use offset=2001 with limit to continue reading]
