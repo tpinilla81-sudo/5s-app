@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
-const BUILD_VERSION = 'v2.1-jul2026';
+const BUILD_VERSION = 'v2.2-jul2026-registers';
 
 export function middleware(request: NextRequest) {
   const url = request.nextUrl;
@@ -74,6 +74,6 @@ export function middleware(request: NextRequest) {
 // Matcher: ignorar archivos estáticos y assets
 export const config = {
   matcher: [
-    '/((?!_next/static|_next/image|favicon.ico|5s-logo.png|manifest.json|robots.txt|sw.js|.*\\.png|.*\\.jpg|.*\\.svg|.*\\.ico|.*\\.woff2?).*)'
+    '/((?!_next/static|_next/image|favicon.ico|5s-logo.png|robots.txt|.*\\.png|.*\\.jpg|.*\\.svg|.*\\.ico|.*\\.woff2?).*)'
   ],
 };
