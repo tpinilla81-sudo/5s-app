@@ -2136,33 +2136,138 @@ export default function InventarioModal({ open, onClose, sStep, miniStep }: Inve
               </div>
             ) : (
               <div className="max-h-80 overflow-y-auto rounded-lg border">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Elemento</TableHead>
-                      <TableHead>Ubicación</TableHead>
-                      <TableHead>Categoría</TableHead>
-                      <TableHead className="text-center">{sStep === 1 ? 'Cantidad' : 'Total'}</TableHead>
-                      <TableHead className="text-right">Precio (€)</TableHead>
-                      {sStep === 1 ? (
-                        <>
-                          <TableHead className="text-red-700">Estado</TableHead>
-                          <TableHead className="text-red-700">Frec. uso</TableHead>
-                          <TableHead className="text-red-700">Decisión</TableHead>
-                          <TableHead className="text-orange-700">Días cuar.</TableHead>
-                        </>
-                      ) : (
-                        config.extraFields.slice(0, 2).map(f => (
-                          <TableHead key={f.key}>{f.label}</TableHead>
-                        ))
-                      )}
-                      <TableHead>Z. Origen</TableHead>
-                      <TableHead>Z. Destino</TableHead>
-                      <TableHead className="text-center">Fotos</TableHead>
-                      <TableHead className="w-10"></TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
+                <table className="w-full text-xs border-collapse">
+                  <thead className="sticky top-0 z-10">
+                    {/* ── Row 1: Group headers (colored bands like Plan de Acción) ── */}
+                    {sStep === 1 ? (
+                      <>
+                        <tr>
+                          <th colSpan={3} className="bg-sky-500 text-white px-2 py-1.5 text-center text-xs font-bold border border-sky-600">IDENTIFICACIÓN</th>
+                          <th colSpan={2} className="bg-emerald-500 text-white px-2 py-1.5 text-center text-xs font-bold border border-emerald-600">CANTIDAD / VALOR</th>
+                          <th colSpan={4} className="bg-red-500 text-white px-2 py-1.5 text-center text-xs font-bold border border-red-600">CLASIFICACIÓN INNECESARIO</th>
+                          <th colSpan={2} className="bg-amber-500 text-white px-2 py-1.5 text-center text-xs font-bold border border-amber-600">UBICACIÓN</th>
+                          <th colSpan={2} className="bg-gray-500 text-white px-2 py-1.5 text-center text-xs font-bold border border-gray-600"></th>
+                        </tr>
+                        <tr>
+                          {/* IDENTIFICACIÓN */}
+                          <th className="bg-sky-400 text-white px-1 py-1 text-center font-semibold border border-sky-400 whitespace-nowrap">Elemento</th>
+                          <th className="bg-sky-400 text-white px-1 py-1 text-center font-semibold border border-sky-400 whitespace-nowrap">Ubicación</th>
+                          <th className="bg-sky-400 text-white px-1 py-1 text-center font-semibold border border-sky-400 whitespace-nowrap">Categoría</th>
+                          {/* CANTIDAD / VALOR */}
+                          <th className="bg-emerald-400 text-white px-1 py-1 text-center font-semibold border border-emerald-400 whitespace-nowrap">Cantidad</th>
+                          <th className="bg-emerald-400 text-white px-1 py-1 text-center font-semibold border border-emerald-400 whitespace-nowrap">Precio (€)</th>
+                          {/* CLASIFICACIÓN INNECESARIO */}
+                          <th className="bg-red-400 text-white px-1 py-1 text-center font-semibold border border-red-400 whitespace-nowrap">Estado</th>
+                          <th className="bg-red-400 text-white px-1 py-1 text-center font-semibold border border-red-400 whitespace-nowrap">Frec. uso</th>
+                          <th className="bg-red-400 text-white px-1 py-1 text-center font-semibold border border-red-400 whitespace-nowrap">Decisión</th>
+                          <th className="bg-orange-400 text-white px-1 py-1 text-center font-semibold border border-orange-400 whitespace-nowrap">Días cuar.</th>
+                          {/* UBICACIÓN */}
+                          <th className="bg-amber-400 text-white px-1 py-1 text-center font-semibold border border-amber-400 whitespace-nowrap">Z. Origen</th>
+                          <th className="bg-amber-400 text-white px-1 py-1 text-center font-semibold border border-amber-400 whitespace-nowrap">Z. Destino</th>
+                          {/* ACCIONES */}
+                          <th className="bg-gray-400 text-white px-1 py-1 text-center font-semibold border border-gray-400 whitespace-nowrap">Fotos</th>
+                          <th className="bg-gray-400 text-white px-1 py-1 text-center font-semibold border border-gray-400 w-8"></th>
+                        </tr>
+                      </>
+                    ) : sStep === 2 ? (
+                      <>
+                        <tr>
+                          <th colSpan={3} className="bg-sky-500 text-white px-2 py-1.5 text-center text-xs font-bold border border-sky-600">IDENTIFICACIÓN</th>
+                          <th colSpan={2} className="bg-emerald-500 text-white px-2 py-1.5 text-center text-xs font-bold border border-emerald-600">CANTIDAD / VALOR</th>
+                          <th colSpan={2} className="bg-blue-500 text-white px-2 py-1.5 text-center text-xs font-bold border border-blue-600">ORGANIZACIÓN</th>
+                          <th colSpan={2} className="bg-amber-500 text-white px-2 py-1.5 text-center text-xs font-bold border border-amber-600">UBICACIÓN</th>
+                          <th colSpan={2} className="bg-gray-500 text-white px-2 py-1.5 text-center text-xs font-bold border border-gray-600"></th>
+                        </tr>
+                        <tr>
+                          <th className="bg-sky-400 text-white px-1 py-1 text-center font-semibold border border-sky-400 whitespace-nowrap">Elemento</th>
+                          <th className="bg-sky-400 text-white px-1 py-1 text-center font-semibold border border-sky-400 whitespace-nowrap">Ubicación</th>
+                          <th className="bg-sky-400 text-white px-1 py-1 text-center font-semibold border border-sky-400 whitespace-nowrap">Categoría</th>
+                          <th className="bg-emerald-400 text-white px-1 py-1 text-center font-semibold border border-emerald-400 whitespace-nowrap">Total</th>
+                          <th className="bg-emerald-400 text-white px-1 py-1 text-center font-semibold border border-emerald-400 whitespace-nowrap">Precio (€)</th>
+                          {config.extraFields.slice(0, 2).map(f => (
+                            <th key={f.key} className="bg-blue-400 text-white px-1 py-1 text-center font-semibold border border-blue-400 whitespace-nowrap">{f.label}</th>
+                          ))}
+                          <th className="bg-amber-400 text-white px-1 py-1 text-center font-semibold border border-amber-400 whitespace-nowrap">Z. Origen</th>
+                          <th className="bg-amber-400 text-white px-1 py-1 text-center font-semibold border border-amber-400 whitespace-nowrap">Z. Destino</th>
+                          <th className="bg-gray-400 text-white px-1 py-1 text-center font-semibold border border-gray-400 whitespace-nowrap">Fotos</th>
+                          <th className="bg-gray-400 text-white px-1 py-1 text-center font-semibold border border-gray-400 w-8"></th>
+                        </tr>
+                      </>
+                    ) : sStep === 3 ? (
+                      <>
+                        <tr>
+                          <th colSpan={3} className="bg-sky-500 text-white px-2 py-1.5 text-center text-xs font-bold border border-sky-600">IDENTIFICACIÓN</th>
+                          <th colSpan={2} className="bg-emerald-500 text-white px-2 py-1.5 text-center text-xs font-bold border border-emerald-600">CANTIDAD / VALOR</th>
+                          <th colSpan={2} className="bg-violet-500 text-white px-2 py-1.5 text-center text-xs font-bold border border-violet-600">ANÁLISIS DE SUCIEDAD</th>
+                          <th colSpan={2} className="bg-amber-500 text-white px-2 py-1.5 text-center text-xs font-bold border border-amber-600">UBICACIÓN</th>
+                          <th colSpan={2} className="bg-gray-500 text-white px-2 py-1.5 text-center text-xs font-bold border border-gray-600"></th>
+                        </tr>
+                        <tr>
+                          <th className="bg-sky-400 text-white px-1 py-1 text-center font-semibold border border-sky-400 whitespace-nowrap">Punto</th>
+                          <th className="bg-sky-400 text-white px-1 py-1 text-center font-semibold border border-sky-400 whitespace-nowrap">Ubicación</th>
+                          <th className="bg-sky-400 text-white px-1 py-1 text-center font-semibold border border-sky-400 whitespace-nowrap">Tipo suciedad</th>
+                          <th className="bg-emerald-400 text-white px-1 py-1 text-center font-semibold border border-emerald-400 whitespace-nowrap">Total</th>
+                          <th className="bg-emerald-400 text-white px-1 py-1 text-center font-semibold border border-emerald-400 whitespace-nowrap">Precio (€)</th>
+                          {config.extraFields.slice(0, 2).map(f => (
+                            <th key={f.key} className="bg-violet-400 text-white px-1 py-1 text-center font-semibold border border-violet-400 whitespace-nowrap">{f.label}</th>
+                          ))}
+                          <th className="bg-amber-400 text-white px-1 py-1 text-center font-semibold border border-amber-400 whitespace-nowrap">Z. Origen</th>
+                          <th className="bg-amber-400 text-white px-1 py-1 text-center font-semibold border border-amber-400 whitespace-nowrap">Z. Destino</th>
+                          <th className="bg-gray-400 text-white px-1 py-1 text-center font-semibold border border-gray-400 whitespace-nowrap">Fotos</th>
+                          <th className="bg-gray-400 text-white px-1 py-1 text-center font-semibold border border-gray-400 w-8"></th>
+                        </tr>
+                      </>
+                    ) : sStep === 4 ? (
+                      <>
+                        <tr>
+                          <th colSpan={3} className="bg-sky-500 text-white px-2 py-1.5 text-center text-xs font-bold border border-sky-600">IDENTIFICACIÓN</th>
+                          <th colSpan={2} className="bg-emerald-500 text-white px-2 py-1.5 text-center text-xs font-bold border border-emerald-600">CANTIDAD / VALOR</th>
+                          <th colSpan={2} className="bg-teal-500 text-white px-2 py-1.5 text-center text-xs font-bold border border-teal-600">ESTADO DEL ESTÁNDAR</th>
+                          <th colSpan={2} className="bg-amber-500 text-white px-2 py-1.5 text-center text-xs font-bold border border-amber-600">UBICACIÓN</th>
+                          <th colSpan={2} className="bg-gray-500 text-white px-2 py-1.5 text-center text-xs font-bold border border-gray-600"></th>
+                        </tr>
+                        <tr>
+                          <th className="bg-sky-400 text-white px-1 py-1 text-center font-semibold border border-sky-400 whitespace-nowrap">Estándar</th>
+                          <th className="bg-sky-400 text-white px-1 py-1 text-center font-semibold border border-sky-400 whitespace-nowrap">Ubicación</th>
+                          <th className="bg-sky-400 text-white px-1 py-1 text-center font-semibold border border-sky-400 whitespace-nowrap">Tipo</th>
+                          <th className="bg-emerald-400 text-white px-1 py-1 text-center font-semibold border border-emerald-400 whitespace-nowrap">Total</th>
+                          <th className="bg-emerald-400 text-white px-1 py-1 text-center font-semibold border border-emerald-400 whitespace-nowrap">Precio (€)</th>
+                          {config.extraFields.slice(0, 2).map(f => (
+                            <th key={f.key} className="bg-teal-400 text-white px-1 py-1 text-center font-semibold border border-teal-400 whitespace-nowrap">{f.label}</th>
+                          ))}
+                          <th className="bg-amber-400 text-white px-1 py-1 text-center font-semibold border border-amber-400 whitespace-nowrap">Z. Origen</th>
+                          <th className="bg-amber-400 text-white px-1 py-1 text-center font-semibold border border-amber-400 whitespace-nowrap">Z. Destino</th>
+                          <th className="bg-gray-400 text-white px-1 py-1 text-center font-semibold border border-gray-400 whitespace-nowrap">Fotos</th>
+                          <th className="bg-gray-400 text-white px-1 py-1 text-center font-semibold border border-gray-400 w-8"></th>
+                        </tr>
+                      </>
+                    ) : (
+                      <>
+                        <tr>
+                          <th colSpan={3} className="bg-sky-500 text-white px-2 py-1.5 text-center text-xs font-bold border border-sky-600">IDENTIFICACIÓN</th>
+                          <th colSpan={2} className="bg-emerald-500 text-white px-2 py-1.5 text-center text-xs font-bold border border-emerald-600">CANTIDAD / VALOR</th>
+                          <th colSpan={2} className="bg-indigo-500 text-white px-2 py-1.5 text-center text-xs font-bold border border-indigo-600">DISCIPLINA</th>
+                          <th colSpan={2} className="bg-amber-500 text-white px-2 py-1.5 text-center text-xs font-bold border border-amber-600">UBICACIÓN</th>
+                          <th colSpan={2} className="bg-gray-500 text-white px-2 py-1.5 text-center text-xs font-bold border border-gray-600"></th>
+                        </tr>
+                        <tr>
+                          <th className="bg-sky-400 text-white px-1 py-1 text-center font-semibold border border-sky-400 whitespace-nowrap">Práctica</th>
+                          <th className="bg-sky-400 text-white px-1 py-1 text-center font-semibold border border-sky-400 whitespace-nowrap">Ubicación</th>
+                          <th className="bg-sky-400 text-white px-1 py-1 text-center font-semibold border border-sky-400 whitespace-nowrap">Cumplimiento</th>
+                          <th className="bg-emerald-400 text-white px-1 py-1 text-center font-semibold border border-emerald-400 whitespace-nowrap">Total</th>
+                          <th className="bg-emerald-400 text-white px-1 py-1 text-center font-semibold border border-emerald-400 whitespace-nowrap">Precio (€)</th>
+                          {config.extraFields.slice(0, 2).map(f => (
+                            <th key={f.key} className="bg-indigo-400 text-white px-1 py-1 text-center font-semibold border border-indigo-400 whitespace-nowrap">{f.label}</th>
+                          ))}
+                          <th className="bg-amber-400 text-white px-1 py-1 text-center font-semibold border border-amber-400 whitespace-nowrap">Z. Origen</th>
+                          <th className="bg-amber-400 text-white px-1 py-1 text-center font-semibold border border-amber-400 whitespace-nowrap">Z. Destino</th>
+                          <th className="bg-gray-400 text-white px-1 py-1 text-center font-semibold border border-gray-400 whitespace-nowrap">Fotos</th>
+                          <th className="bg-gray-400 text-white px-1 py-1 text-center font-semibold border border-gray-400 w-8"></th>
+                        </tr>
+                      </>
+                    )}
+                  </thead>
+                  <tbody>
                     {items.map(item => {
                       const isInnecesario = item.category === 'innecesario';
                       const isNecesario = item.category === 'necesario';
@@ -2535,8 +2640,8 @@ export default function InventarioModal({ open, onClose, sStep, miniStep }: Inve
                       </TableRow>
                     );
                     })}
-                  </TableBody>
-                </Table>
+                  </tbody>
+                </table>
               </div>
             )}
 
