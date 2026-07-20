@@ -108,76 +108,109 @@ export default function RootLayout({
       >
         {children}
         <Toaster position="top-right" richColors closeButton />
-        {/* Service Worker registration + auto-update */}
+        {/* Service Worker registration + aggressive auto-update + cache busting */}
         <script
           dangerouslySetInnerHTML={{
             __html: `
               (function() {
-                // Register service worker
+                // STEP 1: Clear all caches immediately on page load
+                if ('caches' in window) {
+                  caches.keys().then(function(names) {
+                    names.forEach(function(name) { caches.delete(name); });
+                  });
+                }
+
+                // STEP 2: Register service worker with updateViaCache: 'none'
                 if ('serviceWorker' in navigator) {
-                  navigator.serviceWorker.register('/sw.js', { scope: '/' })
+                  // Unregister any existing SW first to force fresh registration
+                  navigator.serviceWorker.getRegistration().then(function(existingReg) {
+                    if (existingReg) {
+                      existingReg.unregister().then(function() {
+                        console.log('[App] Unregistered old Service Worker');
+                        registerFreshSW();
+                      });
+                    } else {
+                      registerFreshSW();
+                    }
+                  }).catch(function() {
+                    registerFreshSW();
+                  });
+                }
+
+                function registerFreshSW() {
+                  navigator.serviceWorker.register('/sw.js', { scope: '/', updateViaCache: 'none' })
                     .then(function(reg) {
                       console.log('[App] Service Worker registered:', reg.scope);
-                      
-                      // Check for updates every 5 minutes
+
+                      // Force update check immediately
+                      reg.update();
+
+                      // Check for updates every 60 seconds (aggressive)
                       setInterval(function() {
                         reg.update();
-                      }, 300000);
-                      
-                      // When a new SW is waiting, force it to activate
+                      }, 60000);
+
+                      // When a new SW is found, force it to activate
                       reg.addEventListener('updatefound', function() {
                         var newWorker = reg.installing;
                         newWorker.addEventListener('statechange', function() {
-                          if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                          if (newWorker.state === 'installed') {
                             // New version available - force activate
+                            console.log('[App] New SW installed, forcing activation...');
                             newWorker.postMessage({ type: 'SKIP_WAITING' });
                           }
                         });
                       });
-                      
-                      // When controller changes (new SW activated), reload page
+
+                      // When controller changes (new SW activated), hard reload
                       navigator.serviceWorker.addEventListener('controllerchange', function() {
-                        console.log('[App] New Service Worker activated, reloading...');
+                        console.log('[App] New Service Worker activated, hard reloading...');
                         window.location.reload();
                       });
                     })
                     .catch(function(err) {
                       console.warn('[App] Service Worker registration failed:', err);
                     });
-                  
-                  // Also: periodic version check via /version endpoint
-                  var currentVersion = null;
-                  function checkVersion() {
-                    fetch('/version', { cache: 'no-store' })
-                      .then(function(r) { return r.text(); })
-                      .then(function(v) {
-                        if (currentVersion === null) {
-                          currentVersion = v;
-                        } else if (currentVersion !== v) {
-                          // Version changed! Force reload
-                          console.log('[App] Version changed from', currentVersion, 'to', v);
-                          // Clear all caches
-                          if ('caches' in window) {
-                            caches.keys().then(function(names) {
-                              names.forEach(function(name) { caches.delete(name); });
-                            });
-                          }
-                          window.location.reload();
-                        }
-                      })
-                      .catch(function() {});
-                  }
-                  
-                  // Check version every 2 minutes
-                  checkVersion();
-                  setInterval(checkVersion, 120000);
                 }
-                
-                // Also: on page visibility change, check for updates
+
+                // STEP 3: Periodic version check via /version endpoint
+                var currentVersion = null;
+                function checkVersion() {
+                  fetch('/version', { cache: 'no-store' })
+                    .then(function(r) { return r.text(); })
+                    .then(function(v) {
+                      if (currentVersion === null) {
+                        currentVersion = v;
+                      } else if (currentVersion !== v) {
+                        console.log('[App] Version changed from', currentVersion, 'to', v);
+                        if ('caches' in window) {
+                          caches.keys().then(function(names) {
+                            names.forEach(function(name) { caches.delete(name); });
+                          });
+                        }
+                        window.location.reload();
+                      }
+                    })
+                    .catch(function() {});
+                }
+
+                // Check version every 60 seconds
+                checkVersion();
+                setInterval(checkVersion, 60000);
+
+                // STEP 4: On page visibility change, check for updates
                 document.addEventListener('visibilitychange', function() {
                   if (!document.hidden && 'serviceWorker' in navigator) {
                     navigator.serviceWorker.getRegistration().then(function(reg) {
-                      if (reg) reg.update();
+                      if (reg) {
+                        reg.update();
+                        // Also clear caches when tab becomes visible
+                        if ('caches' in window) {
+                          caches.keys().then(function(names) {
+                            names.forEach(function(name) { caches.delete(name); });
+                          });
+                        }
+                      }
                     });
                   }
                 });

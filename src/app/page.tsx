@@ -123,6 +123,15 @@ export default function HomePage() {
   const [showActivosModal, setShowActivosModal] = useState(false);
   const [showPuntoLimpioModal, setShowPuntoLimpioModal] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [appVersion, setAppVersion] = useState<string>('...');
+
+  // Fetch version on mount
+  useEffect(() => {
+    fetch('/version', { cache: 'no-store' })
+      .then(r => r.text())
+      .then(v => setAppVersion(v))
+      .catch(() => setAppVersion('unknown'));
+  }, []);
   const isMobile = useIsMobile();
 
   useEffect(() => {
@@ -513,7 +522,7 @@ export default function HomePage() {
                       <button className="flex items-center gap-3 w-full px-3 py-3 rounded-lg hover:bg-red-50 transition-colors text-left min-h-[44px]"
                         onClick={() => { setMobileMenuOpen(false); setShowJaulaModal(true); }}>
                         <Package className="h-5 w-5 text-red-500 shrink-0" />
-                        <span className="text-sm font-medium text-red-600">Inventario</span>
+                        <span className="text-sm font-medium text-red-600">Jaula</span>
                       </button>
                     )}
                     {/* ✅ Activos */}
@@ -639,9 +648,9 @@ export default function HomePage() {
               <Button variant="outline" size="sm"
                 className="gap-1 text-[10px] h-8 border-red-300 text-red-600 hover:bg-red-50"
                 onClick={() => setShowJaulaModal(true)}
-                title="Inventario de Innecesarios">
+                title="Jaula de Excedentes">
                 <Package className="h-3 w-3" />
-                <span className="hidden sm:inline">Inventario</span>
+                <span className="hidden sm:inline">Jaula</span>
               </Button>
             )}
             {/* ✅ Activos (Necesarios) */}
@@ -1343,6 +1352,13 @@ export default function HomePage() {
       <ActivosModal open={showActivosModal} onClose={() => setShowActivosModal(false)} />
       {/* Punto Limpio Modal */}
       <PuntoLimpioModal open={showPuntoLimpioModal} onClose={() => setShowPuntoLimpioModal(false)} />
+
+      {/* Version indicator — small badge to verify deployment freshness */}
+      {authView === 'board' && (
+        <div className="fixed bottom-1 right-2 z-50 pointer-events-none">
+          <span className="text-[8px] text-gray-300 font-mono select-none" title="Build version (refresh if stale)">v:{appVersion}</span>
+        </div>
+      )}
     </div>
   );
 }
