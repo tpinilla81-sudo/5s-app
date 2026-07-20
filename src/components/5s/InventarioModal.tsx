@@ -2272,189 +2272,117 @@ export default function InventarioModal({ open, onClose, sStep, miniStep }: Inve
                       const isInnecesario = item.category === 'innecesario';
                       const isNecesario = item.category === 'necesario';
                       const canEdit = !isReadOnly && item.id;
-                      // Inline editable input style
-                      const inlineInput = "h-6 text-xs border-0 p-1 focus:border focus:border-gray-300 bg-transparent hover:bg-gray-50";
-                      const inlineSelect = "h-6 text-[10px] border-0 p-0 bg-transparent hover:bg-gray-50";
+                      const inlineInput = "h-6 text-[10px] border-0 p-0 px-1 bg-transparent";
+                      const inlineSelect = "h-6 text-[10px] border-0 p-0 bg-transparent";
+                      // Section colors matching header groups
+                      const idBg = sStep === 1 ? 'bg-sky-50' : sStep === 3 ? 'bg-sky-50' : sStep === 4 ? 'bg-sky-50' : sStep === 5 ? 'bg-sky-50' : 'bg-sky-50';
+                      const qtyBg = 'bg-emerald-50';
+                      const specBg = sStep === 1 ? 'bg-red-50' : sStep === 2 ? 'bg-blue-50' : sStep === 3 ? 'bg-violet-50' : sStep === 4 ? 'bg-teal-50' : 'bg-indigo-50';
+                      const locBg = 'bg-amber-50';
                       return (
-                      <TableRow key={item.id} className={isInnecesario ? 'bg-red-50/50' : isNecesario ? 'bg-green-50/30' : ''}>
-                        {/* Elemento */}
-                        <TableCell className="text-sm font-medium">
+                      <tr key={item.id} className={`border-b hover:bg-gray-50 ${isInnecesario ? 'bg-red-50/30' : isNecesario ? 'bg-green-50/20' : ''}`}>
+                        {/* IDENTIFICACIÓN: Elemento */}
+                        <td className={`px-1 py-1 border ${idBg} font-medium`}>
                           {canEdit ? (
-                            <Input
-                              value={item.name}
-                              className={inlineInput}
+                            <Input value={item.name} className={inlineInput}
                               onChange={e => setItems(prev => prev.map(it => it.id === item.id ? { ...it, name: e.target.value } : it))}
-                              onBlur={e => handleUpdateField(item.id!, 'name', e.target.value)}
-                            />
-                          ) : (
-                            <span>{item.name}</span>
-                          )}
-                        </TableCell>
-                        {/* Ubicación */}
-                        <TableCell className="text-sm">
+                              onBlur={e => handleUpdateField(item.id!, 'name', e.target.value)} />
+                          ) : <span className="text-[11px]">{item.name}</span>}
+                        </td>
+                        {/* IDENTIFICACIÓN: Ubicación */}
+                        <td className={`px-1 py-1 border ${idBg}`}>
                           {canEdit ? (
-                            <Input
-                              value={item.location || ''}
-                              className={inlineInput}
+                            <Input value={item.location || ''} className={inlineInput}
                               onChange={e => setItems(prev => prev.map(it => it.id === item.id ? { ...it, location: e.target.value } : it))}
-                              onBlur={e => handleUpdateField(item.id!, 'location', e.target.value)}
-                            />
-                          ) : (
-                            <span>{item.location || '—'}</span>
-                          )}
-                        </TableCell>
-                        {/* Categoría */}
-                        <TableCell>
+                              onBlur={e => handleUpdateField(item.id!, 'location', e.target.value)} />
+                          ) : <span className="text-[11px]">{item.location || '—'}</span>}
+                        </td>
+                        {/* IDENTIFICACIÓN: Categoría */}
+                        <td className={`px-1 py-1 border ${idBg} text-center`}>
                           {canEdit && sStep === 1 ? (
-                            <Select
-                              value={item.category || undefined}
+                            <Select value={item.category || undefined}
                               onValueChange={val => {
                                 const isInn = val === 'innecesario';
                                 const isNec = val === 'necesario';
                                 const qty = item.quantity || 1;
-                                const updates: any = {
-                                  category: val,
-                                  quantityNeeded: isNec ? qty : 0,
-                                  quantityUnneeded: isInn ? qty : 0,
-                                  jaulaStatus: isInn ? 'en_jaula' : '',
-                                  jaulaFechaEntrada: isInn ? (item.jaulaFechaEntrada || new Date().toISOString()) : null,
-                                };
+                                const updates: any = { category: val, quantityNeeded: isNec ? qty : 0, quantityUnneeded: isInn ? qty : 0, jaulaStatus: isInn ? 'en_jaula' : '', jaulaFechaEntrada: isInn ? (item.jaulaFechaEntrada || new Date().toISOString()) : null };
                                 setItems(prev => prev.map(it => it.id === item.id ? { ...it, ...updates } : it));
-                                fetch(`/api/inventory?id=${item.id}`, {
-                                  method: 'PUT',
-                                  headers: { 'Content-Type': 'application/json' },
-                                  body: JSON.stringify(updates),
-                                });
-                              }}
-                            >
-                              <SelectTrigger className={inlineSelect}>
-                                <SelectValue />
-                              </SelectTrigger>
+                                fetch(`/api/inventory?id=${item.id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(updates) });
+                              }}>
+                              <SelectTrigger className={inlineSelect}><SelectValue /></SelectTrigger>
                               <SelectContent>
                                 {config.categories.filter(c => c.value && c.value.trim() !== '').map(c => (
                                   <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
                                 ))}
                               </SelectContent>
                             </Select>
-                          ) : (
-                            getCategoryBadge(item.category)
-                          )}
-                        </TableCell>
-                        {/* Cantidad */}
-                        <TableCell className="text-center text-sm">
+                          ) : getCategoryBadge(item.category)}
+                        </td>
+                        {/* CANTIDAD/VALOR: Cantidad */}
+                        <td className={`px-1 py-1 border ${qtyBg} text-center`}>
                           {canEdit ? (
-                            <Input
-                              type="number"
-                              min="1"
-                              value={item.quantity || 1}
-                              className={`${inlineInput} w-14 text-center`}
-                              onChange={e => {
-                                const val = parseInt(e.target.value) || 1;
-                                setItems(prev => prev.map(it => it.id === item.id ? { ...it, quantity: val } : it));
-                              }}
-                              onBlur={e => handleUpdateField(item.id!, 'quantity', parseInt(e.target.value) || 1)}
-                            />
-                          ) : (
-                            <span>{sStep === 1 ? (isInnecesario ? (item.quantityUnneeded || item.quantity) : isNecesario ? (item.quantityNeeded || item.quantity) : item.quantity) : item.quantity}</span>
-                          )}
-                        </TableCell>
-                        {/* Precio */}
-                        <TableCell className="text-right text-sm">
+                            <Input type="number" min="1" value={item.quantity || 1} className={`${inlineInput} w-12 text-center`}
+                              onChange={e => { const val = parseInt(e.target.value) || 1; setItems(prev => prev.map(it => it.id === item.id ? { ...it, quantity: val } : it)); }}
+                              onBlur={e => handleUpdateField(item.id!, 'quantity', parseInt(e.target.value) || 1)} />
+                          ) : <span className="text-[11px]">{sStep === 1 ? (isInnecesario ? (item.quantityUnneeded || item.quantity) : isNecesario ? (item.quantityNeeded || item.quantity) : item.quantity) : item.quantity}</span>}
+                        </td>
+                        {/* CANTIDAD/VALOR: Precio */}
+                        <td className={`px-1 py-1 border ${qtyBg} text-right`}>
                           {canEdit ? (
-                            <Input
-                              type="number"
-                              min="0"
-                              step="0.01"
-                              value={item.price ?? ''}
-                              className={`${inlineInput} w-20 text-right`}
-                              onChange={e => {
-                                const val = e.target.value ? parseFloat(e.target.value) : null;
-                                setItems(prev => prev.map(it => it.id === item.id ? { ...it, price: val } : it));
-                              }}
-                              onBlur={e => handleUpdateField(item.id!, 'price', e.target.value ? parseFloat(e.target.value) : null)}
-                            />
-                          ) : (
-                            <span>{item.price != null ? `${item.price.toFixed(2)} €` : '—'}</span>
-                          )}
-                        </TableCell>
+                            <Input type="number" min="0" step="0.01" value={item.price ?? ''} className={`${inlineInput} w-16 text-right`}
+                              onChange={e => { const val = e.target.value ? parseFloat(e.target.value) : null; setItems(prev => prev.map(it => it.id === item.id ? { ...it, price: val } : it)); }}
+                              onBlur={e => handleUpdateField(item.id!, 'price', e.target.value ? parseFloat(e.target.value) : null)} />
+                          ) : <span className="text-[11px]">{item.price != null ? `${item.price.toFixed(2)} €` : '—'}</span>}
+                        </td>
                         {sStep === 1 ? (
                           <>
-                            {/* Estado (innecesario) */}
-                            <TableCell className="text-sm">
+                            {/* CLASIFICACIÓN: Estado */}
+                            <td className={`px-1 py-1 border ${specBg} text-center`}>
                               {canEdit ? (
-                                <Select
-                                  value={item.extra?.estado ? String(item.extra.estado) : undefined}
-                                  onValueChange={val => handleUpdateExtra(item.id!, 'estado', val)}
-                                >
-                                  <SelectTrigger className={inlineSelect}>
-                                    <SelectValue placeholder="—" />
-                                  </SelectTrigger>
+                                <Select value={item.extra?.estado ? String(item.extra.estado) : undefined} onValueChange={val => handleUpdateExtra(item.id!, 'estado', val)}>
+                                  <SelectTrigger className={inlineSelect}><SelectValue placeholder="—" /></SelectTrigger>
                                   <SelectContent>
                                     <SelectItem value="_clear_">—</SelectItem>
-                                    {['Bueno', 'Regular', 'Malo'].map(opt => (
-                                      <SelectItem key={opt} value={opt}>{opt}</SelectItem>
-                                    ))}
+                                    {['Bueno', 'Regular', 'Malo'].map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
                                   </SelectContent>
                                 </Select>
-                              ) : (
-                                <span>{String(item.extra?.estado ?? '—')}</span>
-                              )}
-                            </TableCell>
-                            {/* Frecuencia uso (innecesario) */}
-                            <TableCell className="text-sm">
+                              ) : <span className="text-[11px]">{String(item.extra?.estado ?? '—')}</span>}
+                            </td>
+                            {/* CLASIFICACIÓN: Frecuencia uso */}
+                            <td className={`px-1 py-1 border ${specBg} text-center`}>
                               {canEdit ? (
-                                <Select
-                                  value={item.extra?.frecuenciaUso ? String(item.extra.frecuenciaUso) : undefined}
-                                  onValueChange={val => handleUpdateExtra(item.id!, 'frecuenciaUso', val)}
-                                >
-                                  <SelectTrigger className={inlineSelect}>
-                                    <SelectValue placeholder="—" />
-                                  </SelectTrigger>
+                                <Select value={item.extra?.frecuenciaUso ? String(item.extra.frecuenciaUso) : undefined} onValueChange={val => handleUpdateExtra(item.id!, 'frecuenciaUso', val)}>
+                                  <SelectTrigger className={inlineSelect}><SelectValue placeholder="—" /></SelectTrigger>
                                   <SelectContent>
                                     <SelectItem value="_clear_">—</SelectItem>
-                                    {['Diario', 'Semanal', 'Quincenal', 'Mensual', 'Trimestral', 'Anual', 'Nunca'].map(opt => (
-                                      <SelectItem key={opt} value={opt}>{opt}</SelectItem>
-                                    ))}
+                                    {['Diario', 'Semanal', 'Quincenal', 'Mensual', 'Trimestral', 'Anual', 'Nunca'].map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
                                   </SelectContent>
                                 </Select>
-                              ) : (
-                                <span>{String(item.extra?.frecuenciaUso ?? '—')}</span>
-                              )}
-                            </TableCell>
-                            {/* Decisión (innecesario) */}
-                            <TableCell className="text-sm">
+                              ) : <span className="text-[11px]">{String(item.extra?.frecuenciaUso ?? '—')}</span>}
+                            </td>
+                            {/* CLASIFICACIÓN: Decisión */}
+                            <td className={`px-1 py-1 border ${specBg} text-center`}>
                               {canEdit ? (
-                                <Select
-                                  value={item.extra?.decision ? String(item.extra.decision) : undefined}
+                                <Select value={item.extra?.decision ? String(item.extra.decision) : undefined}
                                   onValueChange={val => {
                                     handleUpdateExtra(item.id!, 'decision', val);
-                                    // Also update jaula status, zona destino, and quarantine based on decision
                                     const isInn = item.category === 'innecesario';
                                     if (isInn) {
                                       handleUpdateField(item.id!, 'action', val);
-                                      // Update zona destino: Eliminar/Tirar → Residuo, Jaula → Jaula
                                       const newDestino = (val === 'Tirar' || val === 'Eliminar') ? 'Residuo' : 'Jaula';
                                       handleUpdateField(item.id!, 'zonaDestino', newDestino);
-                                      // Eliminar/Tirar items: clear jaula entry/quarantine; Jaula items: set entry date
                                       if (val === 'Tirar' || val === 'Eliminar') {
                                         handleUpdateField(item.id!, 'jaulaStatus', '');
                                         handleUpdateField(item.id!, 'jaulaFechaEntrada', null);
                                         handleUpdateExtra(item.id!, 'diasCuarentena', '_clear_');
                                       } else if (val === 'Jaula') {
                                         handleUpdateField(item.id!, 'jaulaStatus', 'en_jaula');
-                                        if (!item.jaulaFechaEntrada) {
-                                          handleUpdateField(item.id!, 'jaulaFechaEntrada', new Date().toISOString());
-                                        }
-                                        if (!item.extra?.diasCuarentena) {
-                                          handleUpdateExtra(item.id!, 'diasCuarentena', 40);
-                                        }
+                                        if (!item.jaulaFechaEntrada) handleUpdateField(item.id!, 'jaulaFechaEntrada', new Date().toISOString());
+                                        if (!item.extra?.diasCuarentena) handleUpdateExtra(item.id!, 'diasCuarentena', 40);
                                       }
                                     }
-                                  }}
-                                >
-                                  <SelectTrigger className={inlineSelect}>
-                                    <SelectValue placeholder="—" />
-                                  </SelectTrigger>
+                                  }}>
+                                  <SelectTrigger className={inlineSelect}><SelectValue placeholder="—" /></SelectTrigger>
                                   <SelectContent>
                                     <SelectItem value="_clear_">—</SelectItem>
                                     <SelectItem value="Jaula">Jaula</SelectItem>
@@ -2462,182 +2390,109 @@ export default function InventarioModal({ open, onClose, sStep, miniStep }: Inve
                                     <SelectItem value="Eliminar">Eliminar</SelectItem>
                                   </SelectContent>
                                 </Select>
-                              ) : (
-                                item.extra?.decision ? (
-                                  <Badge className={item.extra.decision === 'Jaula' ? 'bg-orange-100 text-orange-800' : item.extra.decision === 'Tirar' ? 'bg-yellow-100 text-yellow-800' : item.extra.decision === 'Eliminar' ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-800'}>
-                                    {String(item.extra.decision)}
-                                  </Badge>
-                                ) : (
-                                  <span className="text-muted-foreground">—</span>
-                                )
-                              )}
-                            </TableCell>
-                            {/* Días cuarentena (etiqueta) — only for Jaula decision */}
-                            <TableCell className="text-sm">
+                              ) : item.extra?.decision ? (
+                                <Badge className={`text-[9px] px-1 ${item.extra.decision === 'Jaula' ? 'bg-orange-100 text-orange-800' : item.extra.decision === 'Tirar' ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800'}`}>{String(item.extra.decision)}</Badge>
+                              ) : <span className="text-[11px] text-muted-foreground">—</span>}
+                            </td>
+                            {/* ETIQUETA: Días cuarentena */}
+                            <td className="px-1 py-1 border bg-orange-50 text-center">
                               {item.extra?.decision === 'Eliminar' || item.extra?.decision === 'Tirar' ? (
                                 <span className="text-muted-foreground">—</span>
                               ) : canEdit ? (
-                                <Select
-                                  value={String(item.extra?.diasCuarentena ?? 40)}
-                                  onValueChange={val => handleUpdateExtra(item.id!, 'diasCuarentena', parseInt(val) || 40)}
-                                >
-                                  <SelectTrigger className={inlineSelect}>
-                                    <SelectValue />
-                                  </SelectTrigger>
+                                <Select value={String(item.extra?.diasCuarentena ?? 40)} onValueChange={val => handleUpdateExtra(item.id!, 'diasCuarentena', parseInt(val) || 40)}>
+                                  <SelectTrigger className={inlineSelect}><SelectValue /></SelectTrigger>
                                   <SelectContent>
-                                    {[7, 15, 20, 30, 40, 60, 90].map(d => (
-                                      <SelectItem key={d} value={String(d)}>{d}d</SelectItem>
-                                    ))}
+                                    {[7, 15, 20, 30, 40, 60, 90].map(d => <SelectItem key={d} value={String(d)}>{d}d</SelectItem>)}
                                   </SelectContent>
                                 </Select>
-                              ) : (
-                                <span>{item.extra?.diasCuarentena ?? 40}d</span>
-                              )}
-                            </TableCell>
+                              ) : <span className="text-[11px]">{item.extra?.diasCuarentena ?? 40}d</span>}
+                            </td>
                           </>
                         ) : (
                           config.extraFields.slice(0, 2).map(f => (
-                            <TableCell key={f.key} className="text-sm text-muted-foreground">
+                            <td key={f.key} className={`px-1 py-1 border ${specBg} text-center text-[11px]`}>
                               {getExtraValue(item, f.key)}
-                            </TableCell>
+                            </td>
                           ))
                         )}
-                        {/* Z. Origen */}
-                        <TableCell className="text-xs">
+                        {/* UBICACIÓN: Z. Origen */}
+                        <td className={`px-1 py-1 border ${locBg} text-center`}>
                           {canEdit ? (
                             currentProject?.zones && currentProject.zones.length > 0 ? (
-                              <Select
-                                value={item.zonaOrigen || undefined}
-                                onValueChange={val => handleUpdateField(item.id!, 'zonaOrigen', val)}
-                              >
-                                <SelectTrigger className={inlineSelect}>
-                                  <SelectValue placeholder="—" />
-                                </SelectTrigger>
+                              <Select value={item.zonaOrigen || undefined} onValueChange={val => handleUpdateField(item.id!, 'zonaOrigen', val)}>
+                                <SelectTrigger className={inlineSelect}><SelectValue placeholder="—" /></SelectTrigger>
                                 <SelectContent>
                                   <SelectItem value="_clear_">—</SelectItem>
-                                  {currentProject.zones.map(z => (
-                                    <SelectItem key={z.id} value={z.name}>{z.name}</SelectItem>
-                                  ))}
+                                  {currentProject.zones.map(z => <SelectItem key={z.id} value={z.name}>{z.name}</SelectItem>)}
                                 </SelectContent>
                               </Select>
                             ) : (
-                              <Input
-                                value={item.zonaOrigen || ''}
-                                className={inlineInput}
-                                placeholder="—"
-                                onBlur={e => handleUpdateField(item.id!, 'zonaOrigen', e.target.value)}
-                              />
+                              <Input value={item.zonaOrigen || ''} className={inlineInput} placeholder="—"
+                                onBlur={e => handleUpdateField(item.id!, 'zonaOrigen', e.target.value)} />
                             )
-                          ) : (
-                            <span className="text-muted-foreground">{item.zonaOrigen || '—'}</span>
-                          )}
-                        </TableCell>
-                        {/* Z. Destino */}
-                        <TableCell className="text-xs">
+                          ) : <span className="text-[11px] text-muted-foreground">{item.zonaOrigen || '—'}</span>}
+                        </td>
+                        {/* UBICACIÓN: Z. Destino */}
+                        <td className={`px-1 py-1 border ${locBg} text-center`}>
                           {sStep === 1 && item.category === 'innecesario' ? (
-                            <span className={(item.extra?.decision === 'Tirar' || item.extra?.decision === 'Eliminar') ? 'text-yellow-700 font-medium' : 'text-red-600 font-medium'}>{(item.extra?.decision === 'Tirar' || item.extra?.decision === 'Eliminar') ? 'Residuo' : 'Jaula'}</span>
+                            <span className={`text-[11px] font-medium ${(item.extra?.decision === 'Tirar' || item.extra?.decision === 'Eliminar') ? 'text-yellow-700' : 'text-red-600'}`}>{(item.extra?.decision === 'Tirar' || item.extra?.decision === 'Eliminar') ? 'Residuo' : 'Jaula'}</span>
                           ) : canEdit ? (
-                            <Select
-                              value={item.zonaDestino || undefined}
+                            <Select value={item.zonaDestino || undefined}
                               onValueChange={val => {
                                 const targetZone = currentProject?.zones?.find(z => z.name === val);
                                 const updates: any = { zonaDestino: val };
                                 if (targetZone) updates.zoneId = targetZone.id;
                                 handleUpdateJaula(item.id!, updates);
-                              }}
-                            >
-                              <SelectTrigger className={inlineSelect}>
-                                <SelectValue placeholder="—"/>
-                              </SelectTrigger>
+                              }}>
+                              <SelectTrigger className={inlineSelect}><SelectValue placeholder="—" /></SelectTrigger>
                               <SelectContent>
                                 <SelectItem value="_clear_">—</SelectItem>
-                                {currentProject?.zones?.map(z => (
-                                  <SelectItem key={z.id} value={z.name}>{z.name}</SelectItem>
-                                )) || []}
+                                {currentProject?.zones?.map(z => <SelectItem key={z.id} value={z.name}>{z.name}</SelectItem>) || []}
                               </SelectContent>
                             </Select>
-                          ) : (
-                            <span className="text-muted-foreground">{item.zonaDestino || '—'}</span>
-                          )}
-                        </TableCell>
+                          ) : <span className="text-[11px] text-muted-foreground">{item.zonaDestino || '—'}</span>}
+                        </td>
                         {/* Fotos */}
-                        <TableCell className="p-1">
+                        <td className="px-1 py-1 border bg-gray-50">
                           <div className="flex items-center gap-1 flex-wrap">
-                            {/* Inline thumbnail previews */}
                             {(itemPhotos[item.id!] || item.photos || []).map(photo => (
                               <div key={photo.id} className="relative group">
-                                <img
-                                  src={photo.photoUrl}
-                                  alt={photo.title}
+                                <img src={photo.photoUrl} alt={photo.title}
                                   className="w-8 h-8 object-cover rounded border cursor-pointer hover:opacity-80 transition-opacity"
                                   onClick={() => setShowPhotoLightbox(photo)}
-                                  title={`${photo.photoType === 'antes' ? 'Antes' : photo.photoType === 'despues' ? 'Después' : photo.photoType} — ${photo.title}`}
-                                />
+                                  title={`${photo.photoType === 'antes' ? 'Antes' : photo.photoType === 'despues' ? 'Después' : photo.photoType} — ${photo.title}`} />
                                 <Badge className={`absolute -top-1 -left-1 text-[7px] px-0.5 py-0 min-w-0 ${photo.photoType === 'antes' ? 'bg-amber-100 text-amber-800' : photo.photoType === 'despues' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>
                                   {photo.photoType === 'antes' ? 'A' : photo.photoType === 'despues' ? 'D' : 'R'}
                                 </Badge>
-                                {/* Unlink button on hover */}
                                 {!isReadOnly && (
-                                  <button
-                                    className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full w-3.5 h-3.5 flex items-center justify-center text-[8px] opacity-0 group-hover:opacity-100 transition-opacity"
-                                    onClick={(e) => { e.stopPropagation(); handleDeletePhoto(photo.id, item.id!); }}
-                                    title="Eliminar foto"
-                                  >
-                                    ×
-                                  </button>
+                                  <button className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full w-3.5 h-3.5 flex items-center justify-center text-[8px] opacity-0 group-hover:opacity-100 transition-opacity"
+                                    onClick={(e) => { e.stopPropagation(); handleDeletePhoto(photo.id, item.id!); }} title="Eliminar foto">×</button>
                                 )}
                               </div>
                             ))}
-                            {/* Camera / attach photo button */}
                             {!isReadOnly && item.id && (
                               <div className="flex items-center gap-0.5">
-                                <label
-                                  className="inline-flex items-center justify-center w-7 h-7 rounded border border-dashed border-gray-300 cursor-pointer hover:bg-gray-50 hover:border-gray-400 transition-colors"
-                                  title="Adjuntar foto ANTES"
-                                >
-                                  {uploadingPhotoForItem === item.id ? (
-                                    <Loader2 className="h-3 w-3 animate-spin text-gray-400" />
-                                  ) : (
-                                    <Camera className="h-3 w-3 text-gray-400" />
-                                  )}
-                                  <input
-                                    type="file"
-                                    accept="image/*"
-                                    capture="environment"
-                                    className="hidden"
-                                    onChange={e => {
-                                      const file = e.target.files?.[0];
-                                      if (file) handleAttachPhoto(item.id!, file, 'antes');
-                                      e.target.value = '';
-                                    }}
-                                  />
+                                <label className="inline-flex items-center justify-center w-7 h-7 rounded border border-dashed border-gray-300 cursor-pointer hover:bg-gray-50 hover:border-gray-400 transition-colors" title="Adjuntar foto ANTES">
+                                  {uploadingPhotoForItem === item.id ? <Loader2 className="h-3 w-3 animate-spin text-gray-400" /> : <Camera className="h-3 w-3 text-gray-400" />}
+                                  <input type="file" accept="image/*" capture="environment" className="hidden"
+                                    onChange={e => { const file = e.target.files?.[0]; if (file) handleAttachPhoto(item.id!, file, 'antes'); e.target.value = ''; }} />
                                 </label>
                                 {step2Photos.length > 0 && (
-                                  <button
-                                    className="inline-flex items-center justify-center w-7 h-7 rounded border border-dashed border-purple-300 cursor-pointer hover:bg-purple-50 hover:border-purple-400 transition-colors"
-                                    onClick={() => openPhotoGallery(item.id!)}
-                                    title="Vincular foto del Paso 2"
-                                  >
+                                  <button className="inline-flex items-center justify-center w-7 h-7 rounded border border-dashed border-purple-300 cursor-pointer hover:bg-purple-50 hover:border-purple-400 transition-colors"
+                                    onClick={() => openPhotoGallery(item.id!)} title="Vincular foto del Paso 2">
                                     <Link2 className="h-3 w-3 text-purple-400" />
                                   </button>
                                 )}
                               </div>
                             )}
                           </div>
-                        </TableCell>
+                        </td>
                         {/* Delete */}
-                        <TableCell>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-7 text-destructive"
-                            onClick={() => item.id && handleDeleteItem(item.id)}
-                            disabled={isReadOnly}
-                          >
-                            ×
-                          </Button>
-                        </TableCell>
-                      </TableRow>
+                        <td className="px-1 py-1 border bg-gray-50">
+                          <Button variant="ghost" size="sm" className="h-7 text-destructive"
+                            onClick={() => item.id && handleDeleteItem(item.id)} disabled={isReadOnly}>×</Button>
+                        </td>
+                      </tr>
                     );
                     })}
                   </tbody>
