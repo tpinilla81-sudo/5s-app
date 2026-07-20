@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -9,6 +9,7 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
 import {
   Select,
   SelectContent,
@@ -17,18 +18,17 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
-import { Card, CardContent } from '@/components/ui/card';
-import { Package, Building2, Printer, Tag, Camera, ZoomIn, X } from 'lucide-react';
+  Package, Plus, Trash2, Loader2, ChevronDown,
+  Camera, X, Printer, AlertCircle, Clock, CheckCircle2,
+} from 'lucide-react';
+import { toast } from 'sonner';
 import { use5SStore } from '@/lib/store';
+import { INVENTORY_CONFIGS } from '@/lib/5s-constants';
 import TagPrinter from '@/components/5s/TagPrinter';
 
+// ═══════════════════════════════════════════════════════
+// Types
+// ═══════════════════════════════════════════════════════
 interface JaulaPhoto {
   id: string;
   photoUrl: string;
@@ -64,6 +64,17 @@ interface JaulaModalProps {
   onClose: () => void;
 }
 
+const S1_CONFIG = INVENTORY_CONFIGS[1];
+
+const JAULA_STATUS = [
+  { value: 'en_jaula', label: 'En Jaula', color: 'bg-red-100 text-red-800' },
+  { value: 'reclamado', label: 'Reclamado', color: 'bg-amber-100 text-amber-800' },
+  { value: 'transferido', label: 'Transferido', color: 'bg-green-100 text-green-800' },
+];
+
+// ═══════════════════════════════════════════════════════
+// Component
+// ═══════════════════════════════════════════════════════
 export default function JaulaModal({ open, onClose }: JaulaModalProps) {
   const { currentProject, currentZone } = use5SStore();
   const [jaulaItems, setJaulaItems] = useState<JaulaItem[]>([]);
@@ -88,8 +99,45 @@ export default function JaulaModal({ open, onClose }: JaulaModalProps) {
       }
     } catch (error) {
       console.error('Error loading jaula items:', error);
+      toast.error('Error al cargar la jaula');
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleUpdateField = async (itemId: string, field: string, value: any) => {
+    setJaulaItems(prev => prev.map(item => {
+      if (item.id !== itemId) return item;
+      if (field.startsWith('extra.')) {
+        const extraKey = field.replace('extra.', '');
+        return { ...item, extra: { ...item.extra, [extraKey]: value } };
+      }
+      return { ...item, [field]: value };
+    }));
+
+    try {
+      let body: any;
+      if (field.startsWith('extra.')) {
+        const extraKey = field.replace('extra.', '');
+        const item = jaulaItems.find(i => i.id === itemId);
+        const updatedExtra = { ...(item?.extra || {}), [extraKey]: value };
+        body = { extra: JSON.stringify(updatedExtra) };
+      } else {
+        body = { [field]: value };
+      }
+      const res = await fetch(`/api/inventory?id=${itemId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      const json = await res.json();
+      if (!json.success) {
+        toast.error(`Error al actualizar: ${json.error || 'Error'}`);
+        await loadJaulaItems();
+      }
+    } catch (e) {
+      console.error('Error updating:', e);
+      await loadJaulaItems();
     }
   };
 
@@ -101,18 +149,18 @@ export default function JaulaModal({ open, onClose }: JaulaModalProps) {
     (sum, i) => sum + (i.price || 0) * (i.quantityUnneeded || i.quantity), 0
   );
 
-  const getJaulaStatusBadge = (status: string) => {
-    const map: Record<string, { label: string; color: string }> = {
-      '': { label: '—', color: 'bg-gray-50 text-gray-400' },
-      en_jaula: { label: 'En Jaula', color: 'bg-red-100 text-red-800' },
-      reclamado: { label: 'Reclamado', color: 'bg-amber-100 text-amber-800' },
-      transferido: { label: 'Transferido', color: 'bg-green-100 text-green-800' },
-    };
-    const info = map[status] || map[''];
-    return <Badge className={info.color}>{info.label}</Badge>;
+  // Stats
+  const enJaula = jaulaItems.filter(i => i.jaulaStatus === 'en_jaula').length;
+  const reclamados = jaulaItems.filter(i => i.jaulaStatus === 'reclamado').length;
+  const transferidos = jaulaItems.filter(i => i.jaulaStatus === 'transferido').length;
+
+  const getStatusBadge = (status: string) => {
+    const opt = JAULA_STATUS.find(s => s.value === status);
+    if (!opt) return <Badge className="bg-gray-100 text-gray-400 text-[10px]">—</Badge>;
+    return <Badge className={`text-[10px] px-1.5 py-0 ${opt.color}`}>{opt.label}</Badge>;
   };
 
-  // Prepare tag data for TagPrinter — all Jaula items get red tag with QR
+  // Tag data for printing
   const tagItems = filteredJaulaItems
     .filter(i => !i.extra?.decision || i.extra.decision === 'Jaula')
     .map(i => {
@@ -142,8 +190,8 @@ export default function JaulaModal({ open, onClose }: JaulaModalProps) {
   return (
     <Dialog open={open} onOpenChange={() => onClose()}>
       <DialogContent size="xl" className="flex flex-col overflow-hidden p-0 max-h-[90vh]">
-        <DialogHeader className="px-6 pt-6 pb-2 flex-shrink-0">
-          <DialogTitle className="flex items-center gap-2">
+        <DialogHeader className="px-4 sm:px-6 pt-4 sm:pt-6 pb-2 flex-shrink-0">
+          <DialogTitle className="flex items-center gap-2 text-base">
             <Package className="h-5 w-5 text-red-600" />
             <span>Jaula de Excedentes</span>
             {currentZone && (
@@ -151,95 +199,93 @@ export default function JaulaModal({ open, onClose }: JaulaModalProps) {
                 {currentZone.name}
               </Badge>
             )}
-            {jaulaItems.length > 0 && (
-              <Badge className="bg-red-100 text-red-800 ml-1">
-                {jaulaItems.length} elementos
-              </Badge>
-            )}
+            <Badge className="bg-red-100 text-red-800 ml-1">
+              {jaulaItems.length} elemento{jaulaItems.length !== 1 ? 's' : ''}
+            </Badge>
           </DialogTitle>
         </DialogHeader>
 
-        <div className="flex-1 overflow-y-auto px-6 pb-6 min-h-0">
+        <div className="flex-1 overflow-hidden flex flex-col px-4 sm:px-6 pb-4 sm:pb-6 min-h-0">
           {/* Info panel */}
-          <div className="p-3 rounded-lg border-l-4 border-red-500 bg-red-50/30 mb-4">
-            <div className="flex items-center gap-2 mb-1">
+          <div className="p-2.5 rounded-lg border-l-4 border-red-500 bg-red-50/30 mb-3">
+            <div className="flex items-center gap-2 mb-0.5">
               <div className="w-3 h-3 rounded bg-red-500" />
-              <span className="text-sm font-medium text-red-800">Etiqueta ROJA — Innecesario</span>
+              <span className="text-xs font-medium text-red-800">Etiqueta ROJA — Innecesario</span>
             </div>
-            <p className="text-xs text-muted-foreground">
-              Todos los elementos de este inventario son INNECESARIOS. Se envían a la JAULA o se ELIMINAN directamente.
+            <p className="text-[11px] text-muted-foreground">
+              Elementos innecesarios clasificados en S1. Se envían a la JAULA o se ELIMINAN.
             </p>
           </div>
 
-          {/* Filters & actions */}
-          <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
-            <div className="flex items-center gap-2">
-              <span className="text-xs text-muted-foreground">Filtrar por estado:</span>
-              <Select value={jaulaFilter} onValueChange={setJaulaFilter}>
-                <SelectTrigger className="w-40 h-8 text-xs">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos</SelectItem>
-                  <SelectItem value="en_jaula">En Jaula</SelectItem>
-                  <SelectItem value="reclamado">Reclamado</SelectItem>
-                  <SelectItem value="transferido">Transferido</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            {/* Print label button */}
-            <div className="flex items-center gap-2">
-              {tagItems.length > 0 && (
-                <TagPrinter items={tagItems} />
-              )}
-            </div>
+          {/* Filters + actions */}
+          <div className="flex items-center gap-1.5 mb-3 overflow-x-auto pb-1">
+            {tagItems.length > 0 && <TagPrinter items={tagItems} />}
+            <div className="h-4 w-px bg-gray-200 mx-1 shrink-0" />
+            {/* Status filters */}
+            {[
+              { key: 'all', label: 'Todos', count: jaulaItems.length, active: jaulaFilter === 'all' },
+              { key: 'en_jaula', label: 'En Jaula', count: enJaula, active: jaulaFilter === 'en_jaula' },
+              { key: 'reclamado', label: 'Reclamado', count: reclamados, active: jaulaFilter === 'reclamado' },
+              { key: 'transferido', label: 'Transferido', count: transferidos, active: jaulaFilter === 'transferido' },
+            ].map(f => (
+              <button
+                key={f.key}
+                onClick={() => setJaulaFilter(f.key)}
+                className={`px-2 py-1 rounded-full text-[10px] font-medium border transition-colors whitespace-nowrap ${
+                  f.active ? 'bg-gray-900 text-white border-gray-900' : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
+                }`}
+              >
+                {f.label} {f.count}
+              </button>
+            ))}
+            {jaulaFilter !== 'all' && (
+              <button onClick={() => setJaulaFilter('all')}
+                className="flex items-center gap-0.5 px-2 py-1 rounded-full text-[10px] text-gray-500 hover:bg-gray-100">
+                <X className="h-3 w-3" /> Limpiar
+              </button>
+            )}
           </div>
 
           {/* Content */}
           {isLoading ? (
-            <div className="flex justify-center py-10">
-              <div className="animate-spin h-8 w-8 border-4 border-red-500 border-t-transparent rounded-full" />
+            <div className="flex-1 flex items-center justify-center">
+              <Loader2 className="h-8 w-8 text-red-500 animate-spin" />
             </div>
           ) : filteredJaulaItems.length === 0 ? (
-            <Card className="border-dashed">
-              <CardContent className="py-10 text-center">
-                <Package className="h-10 w-10 text-gray-300 mx-auto mb-3" />
-                <p className="text-sm text-muted-foreground">
-                  {jaulaItems.length === 0
-                    ? 'No hay elementos en la jaula de excedentes'
-                    : 'No hay elementos con el filtro seleccionado'}
-                </p>
-              </CardContent>
-            </Card>
+            <div className="flex-1 flex flex-col items-center justify-center text-center">
+              <Package className="h-10 w-10 text-gray-300 mb-2" />
+              <p className="text-sm text-muted-foreground">
+                {jaulaItems.length === 0 ? 'No hay elementos en la jaula' : 'No hay elementos con este filtro'}
+              </p>
+            </div>
           ) : (
-            <>
-              <div className="overflow-x-auto rounded-lg border">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="text-xs">Foto</TableHead>
-                      <TableHead className="text-xs">Elemento</TableHead>
-                      <TableHead className="text-xs">Cantidad</TableHead>
-                      <TableHead className="text-xs">Precio</TableHead>
-                      <TableHead className="text-xs">Proyecto/Origen</TableHead>
-                      <TableHead className="text-xs">F. Entrada</TableHead>
-                      <TableHead className="text-xs">F. Límite</TableHead>
-                      <TableHead className="text-xs">Estado</TableHead>
-                      <TableHead className="text-xs">Decisión</TableHead>
-                      <TableHead className="text-xs">F. Salida</TableHead>
-                      <TableHead className="text-xs">Destino</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
+            <div className="flex-1 overflow-auto">
+              {/* Desktop table */}
+              <div className="overflow-x-auto border rounded-lg hidden md:block">
+                <table className="w-full text-xs border-collapse min-w-[1000px]">
+                  <thead className="sticky top-0 z-10">
+                    <tr>
+                      <th className="bg-red-500 text-white px-2 py-1.5 text-center font-bold border border-red-600">ELEMENTO</th>
+                      <th className="bg-amber-400 text-white px-2 py-1.5 text-center font-bold border border-amber-500" colSpan={4}>CLASIFICACIÓN</th>
+                      <th className="bg-sky-400 text-white px-2 py-1.5 text-center font-bold border border-sky-500" colSpan={3}>JAULA</th>
+                      <th className="bg-green-500 text-white px-2 py-1.5 text-center font-bold border border-green-600" colSpan={2}>SEGUIMIENTO</th>
+                      <th className="bg-gray-400 text-white px-1 py-1.5 text-center font-bold border border-gray-500 w-8">🗑</th>
+                    </tr>
+                    <tr>
+                      <th className="bg-red-400 text-white px-1 py-1 font-semibold border border-red-300 whitespace-nowrap">Nombre</th>
+                      <th className="bg-amber-300 text-white px-1 py-1 font-semibold border border-amber-300 whitespace-nowrap">Ubicación</th>
+                      <th className="bg-amber-300 text-white px-1 py-1 font-semibold border border-amber-300 whitespace-nowrap">Cant.</th>
+                      <th className="bg-amber-300 text-white px-1 py-1 font-semibold border border-amber-300 whitespace-nowrap">Estado</th>
+                      <th className="bg-amber-300 text-white px-1 py-1 font-semibold border border-amber-300 whitespace-nowrap">Decisión</th>
+                      <th className="bg-sky-300 text-white px-1 py-1 font-semibold border border-sky-300 whitespace-nowrap">F. Entrada</th>
+                      <th className="bg-sky-300 text-white px-1 py-1 font-semibold border border-sky-300 whitespace-nowrap">Días cuar.</th>
+                      <th className="bg-sky-300 text-white px-1 py-1 font-semibold border border-sky-300 whitespace-nowrap">F. Límite</th>
+                      <th className="bg-green-400 text-white px-1 py-1 font-semibold border border-green-400 whitespace-nowrap">Estado Jaula</th>
+                      <th className="bg-green-400 text-white px-1 py-1 font-semibold border border-green-400 whitespace-nowrap">F. Salida / Destino</th>
+                    </tr>
+                  </thead>
+                  <tbody>
                     {filteredJaulaItems.map(item => {
-                      // Get photos from either photos relation or photoUrls JSON
-                      const itemPhotos: JaulaPhoto[] = item.photos || [];
-                      let parsedPhotoUrls: {url?: string, type?: string}[] = [];
-                      if (item.photoUrls) {
-                        try { parsedPhotoUrls = JSON.parse(item.photoUrls); } catch {}
-                      }
-                      const mainPhoto = itemPhotos[0]?.photoUrl || parsedPhotoUrls[0]?.url || item.photoUrl;
-                      // Compute fecha limite
                       const diasCuarentena = Number(item.extra?.diasCuarentena ?? 40);
                       let fechaLimite: string | null = item.jaulaFechaLimite || null;
                       if (!fechaLimite && item.jaulaFechaEntrada) {
@@ -252,74 +298,162 @@ export default function JaulaModal({ open, onClose }: JaulaModalProps) {
                       const isExpired = fechaLimite && new Date(fechaLimite) < new Date();
 
                       return (
-                      <TableRow key={item.id}>
-                        <TableCell className="text-xs">
-                          {mainPhoto ? (
-                            <div className="relative group">
-                              <img
-                                src={mainPhoto}
-                                alt={item.name}
-                                className="w-10 h-10 object-cover rounded border cursor-pointer"
-                                onClick={() => setLightboxPhoto(mainPhoto!)}
-                              />
-                              {itemPhotos.length > 1 && (
-                                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[8px] rounded-full w-3.5 h-3.5 flex items-center justify-center">+{itemPhotos.length - 1}</span>
-                              )}
+                        <tr key={item.id} className={`border-b hover:bg-gray-50 ${
+                          item.jaulaStatus === 'transferido' ? 'bg-green-50/30' : ''
+                        }`}>
+                          {/* Elemento */}
+                          <td className="px-1 py-1 border bg-red-50 font-medium">
+                            <Input value={item.name} onChange={e => handleUpdateField(item.id, 'name', e.target.value)}
+                              className="h-6 text-[10px] p-0 px-1 border-0 bg-transparent font-medium" placeholder="Elemento" />
+                          </td>
+                          {/* Clasificación */}
+                          <td className="px-1 py-1 border bg-amber-50">
+                            <Input value={item.location} onChange={e => handleUpdateField(item.id, 'location', e.target.value)}
+                              className="h-6 text-[10px] p-0 px-1 border-0 bg-transparent" placeholder="Ubicación" />
+                          </td>
+                          <td className="px-1 py-1 border bg-amber-50 text-center">
+                            <Input type="number" min={1} value={item.quantityUnneeded || item.quantity}
+                              onChange={e => handleUpdateField(item.id, 'quantityUnneeded', Number(e.target.value))}
+                              className="h-6 text-[10px] p-0 px-1 border-0 bg-transparent w-10 text-center" />
+                          </td>
+                          <td className="px-1 py-1 border bg-amber-50 text-center">
+                            <Select value={String(item.extra?.estado || '')} onValueChange={v => handleUpdateField(item.id, 'extra.estado', v)}>
+                              <SelectTrigger className="h-6 text-[10px] p-0 px-1 border-0 bg-transparent w-16">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {['Bueno', 'Regular', 'Malo'].map(o => (
+                                  <SelectItem key={o} value={o} className="text-xs">{o}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </td>
+                          <td className="px-1 py-1 border bg-amber-50 text-center">
+                            <Select value={String(item.extra?.decision || 'Jaula')} onValueChange={v => handleUpdateField(item.id, 'extra.decision', v)}>
+                              <SelectTrigger className="h-6 text-[10px] p-0 px-1 border-0 bg-transparent w-16">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {['Jaula', 'Tirar', 'Eliminar', 'Reubicar'].map(o => (
+                                  <SelectItem key={o} value={o} className="text-xs">{o}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </td>
+                          {/* Jaula */}
+                          <td className="px-1 py-1 border bg-sky-50 text-center">
+                            <Input type="date" value={item.jaulaFechaEntrada ? new Date(item.jaulaFechaEntrada).toISOString().split('T')[0] : ''}
+                              onChange={e => handleUpdateField(item.id, 'jaulaFechaEntrada', e.target.value ? new Date(e.target.value).toISOString() : null)}
+                              className="h-6 text-[10px] p-0 px-1 border-0 bg-transparent" />
+                          </td>
+                          <td className="px-1 py-1 border bg-sky-50 text-center">
+                            <Select value={String(item.extra?.diasCuarentena || '40')} onValueChange={v => handleUpdateField(item.id, 'extra.diasCuarentena', v)}>
+                              <SelectTrigger className="h-6 text-[10px] p-0 px-1 border-0 bg-transparent w-12">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {['7', '15', '20', '30', '40', '60', '90'].map(o => (
+                                  <SelectItem key={o} value={o} className="text-xs">{o}d</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </td>
+                          <td className="px-1 py-1 border bg-sky-50 text-center">
+                            {fechaLimite ? (
+                              <span className={`text-[10px] ${isExpired ? 'text-red-600 font-bold' : 'text-amber-600'}`}>
+                                {new Date(fechaLimite).toLocaleDateString('es-ES')}
+                                {isExpired && ' ⚠'}
+                              </span>
+                            ) : <span className="text-[10px] text-muted-foreground">—</span>}
+                          </td>
+                          {/* Seguimiento */}
+                          <td className="px-1 py-1 border bg-green-50 text-center">
+                            <Select value={item.jaulaStatus} onValueChange={v => handleUpdateField(item.id, 'jaulaStatus', v)}>
+                              <SelectTrigger className="h-6 text-[10px] p-0 px-1 border-0 bg-transparent w-20">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {JAULA_STATUS.map(opt => (
+                                  <SelectItem key={opt.value} value={opt.value} className="text-xs">{opt.label}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </td>
+                          <td className="px-1 py-1 border bg-green-50">
+                            <div className="flex items-center gap-1">
+                              <Input type="date" value={item.jaulaFechaSalida ? new Date(item.jaulaFechaSalida).toISOString().split('T')[0] : ''}
+                                onChange={e => handleUpdateField(item.id, 'jaulaFechaSalida', e.target.value ? new Date(e.target.value).toISOString() : null)}
+                                className="h-6 text-[10px] p-0 px-1 border-0 bg-transparent w-20" />
+                              <Input value={item.jaulaDestino || ''} onChange={e => handleUpdateField(item.id, 'jaulaDestino', e.target.value)}
+                                className="h-6 text-[10px] p-0 px-1 border-0 bg-transparent w-16" placeholder="Dest." />
                             </div>
-                          ) : (
-                            <div className="w-10 h-10 bg-gray-100 rounded border flex items-center justify-center">
-                              <Camera className="h-4 w-4 text-gray-300" />
-                            </div>
-                          )}
-                        </TableCell>
-                        <TableCell className="text-xs font-medium">{item.name}</TableCell>
-                        <TableCell className="text-xs text-center">{item.quantityUnneeded || item.quantity}</TableCell>
-                        <TableCell className="text-xs text-right">
-                          {item.price ? `${(item.price * (item.quantityUnneeded || item.quantity)).toFixed(2)} €` : '—'}
-                        </TableCell>
-                        <TableCell className="text-xs">
-                          <div className="flex items-center gap-1">
-                            <Building2 className="h-3 w-3 text-gray-400" />
-                            {item.project?.name || item.jaulaOrigen || '—'}
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-xs">
-                          {item.jaulaFechaEntrada ? new Date(item.jaulaFechaEntrada).toLocaleDateString('es-ES') : '—'}
-                        </TableCell>
-                        <TableCell className="text-xs">
-                          {fechaLimite ? (
-                            <span className={isExpired ? 'text-red-600 font-bold' : 'text-amber-600'}>
-                              {new Date(fechaLimite).toLocaleDateString('es-ES')}
-                              {isExpired && ' ⚠'}
-                            </span>
-                          ) : '—'}
-                        </TableCell>
-                        <TableCell>{getJaulaStatusBadge(item.jaulaStatus)}</TableCell>
-                        <TableCell className="text-xs">
-                          <Badge className={
-                            item.extra?.decision === 'Jaula' ? 'bg-orange-100 text-orange-800'
-                            : item.extra?.decision === 'Eliminar' ? 'bg-red-100 text-red-800'
-                            : item.extra?.decision === 'Reubicar' ? 'bg-blue-100 text-blue-800'
-                            : 'bg-gray-100 text-gray-800'
-                          }>
-                            {String(item.extra?.decision || 'Jaula')}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-xs">
-                          {item.jaulaFechaSalida ? new Date(item.jaulaFechaSalida).toLocaleDateString('es-ES') : '—'}
-                        </TableCell>
-                        <TableCell className="text-xs">{item.jaulaDestino || item.zonaDestino || '—'}</TableCell>
-                      </TableRow>
-                    );
+                          </td>
+                          {/* Delete */}
+                          <td className="px-1 py-1 border text-center bg-gray-50">
+                            <button onClick={() => {
+                              if (!confirm('¿Eliminar este elemento?')) return;
+                              fetch(`/api/inventory?id=${item.id}`, { method: 'DELETE' })
+                                .then(r => r.json())
+                                .then(j => { if (j.success) { setJaulaItems(p => p.filter(i => i.id !== item.id)); toast.success('Eliminado'); } })
+                                .catch(() => toast.error('Error'));
+                            }} className="text-red-400 hover:text-red-600">
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </button>
+                          </td>
+                        </tr>
+                      );
                     })}
-                  </TableBody>
-                </Table>
+                  </tbody>
+                </table>
               </div>
-              <div className="flex gap-6 text-sm mt-4">
-                <span className="text-gray-700">Total elementos: <strong>{filteredJaulaItems.length}</strong></span>
-                <span className="text-gray-700">Valor total: <strong className="text-red-600">{totalJaulaValue.toFixed(2)} €</strong></span>
+
+              {/* Mobile cards */}
+              <div className="space-y-2 md:hidden">
+                {filteredJaulaItems.map(item => {
+                  const diasCuarentena = Number(item.extra?.diasCuarentena ?? 40);
+                  let fechaLimite: string | null = item.jaulaFechaLimite || null;
+                  if (!fechaLimite && item.jaulaFechaEntrada) {
+                    try {
+                      const d = new Date(item.jaulaFechaEntrada);
+                      d.setDate(d.getDate() + diasCuarentena);
+                      fechaLimite = d.toISOString();
+                    } catch {}
+                  }
+                  const isExpired = fechaLimite && new Date(fechaLimite) < new Date();
+
+                  return (
+                    <div key={item.id} className="rounded-xl border bg-white shadow-sm overflow-hidden">
+                      <div className="flex items-center gap-2 px-3 py-2.5">
+                        <span className="text-xs font-medium truncate flex-1">{item.name || 'Sin nombre'}</span>
+                        {getStatusBadge(item.jaulaStatus)}
+                        <Badge className={`text-[10px] px-1.5 py-0 ${
+                          item.extra?.decision === 'Jaula' ? 'bg-orange-100 text-orange-800'
+                          : item.extra?.decision === 'Eliminar' ? 'bg-red-100 text-red-800'
+                          : 'bg-gray-100 text-gray-800'
+                        }`}>
+                          {String(item.extra?.decision || 'Jaula')}
+                        </Badge>
+                      </div>
+                      <div className="px-3 pb-2 text-[11px] text-muted-foreground flex items-center gap-3">
+                        <span>📦 {item.quantityUnneeded || item.quantity} uds</span>
+                        {item.price && <span>💰 {(item.price * (item.quantityUnneeded || item.quantity)).toFixed(2)}€</span>}
+                        {fechaLimite && (
+                          <span className={isExpired ? 'text-red-600 font-bold' : 'text-amber-600'}>
+                            📅 {new Date(fechaLimite).toLocaleDateString('es-ES')}{isExpired && ' ⚠'}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
-            </>
+
+              {/* Totals */}
+              <div className="flex gap-6 text-xs mt-3 pt-3 border-t">
+                <span className="text-gray-700">Total: <strong>{filteredJaulaItems.length}</strong> elementos</span>
+                <span className="text-gray-700">Valor: <strong className="text-red-600">{totalJaulaValue.toFixed(2)} €</strong></span>
+              </div>
+            </div>
           )}
         </div>
 

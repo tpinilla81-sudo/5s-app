@@ -26,6 +26,7 @@ import GerentePanel from '@/components/auth/GerentePanel';
 import PlanDeAccionView from '@/components/5s/PlanDeAccionView';
 import JaulaModal from '@/components/5s/JaulaModal';
 import ActivosModal from '@/components/5s/ActivosModal';
+import PuntoLimpioModal from '@/components/5s/PuntoLimpioModal';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
@@ -43,7 +44,7 @@ import {
   Crown,
   ClipboardList, GraduationCap, Camera, CheckSquare, Trophy, ChevronRight,
   Lock as LockIcon, AlertTriangle, Building2, Zap, Bell, BellRing, BookOpen, Image as ImageIcon,
-  Package, BoxSelect, Menu
+  Package, BoxSelect, Menu, Droplets
 } from 'lucide-react';
 
 const MODAL_MAP: Record<string, React.ComponentType<{
@@ -120,6 +121,7 @@ export default function HomePage() {
   const [notifs, setNotifs] = useState<any[]>([]);
   const [showJaulaModal, setShowJaulaModal] = useState(false);
   const [showActivosModal, setShowActivosModal] = useState(false);
+  const [showPuntoLimpioModal, setShowPuntoLimpioModal] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const isMobile = useIsMobile();
 
@@ -522,6 +524,14 @@ export default function HomePage() {
                         <span className="text-sm font-medium text-green-600">Activos</span>
                       </button>
                     )}
+                    {/* 💧 Punto Limpio */}
+                    {canSeeNotifications && (
+                      <button className="flex items-center gap-3 w-full px-3 py-3 rounded-lg hover:bg-blue-50 transition-colors text-left min-h-[44px]"
+                        onClick={() => { setMobileMenuOpen(false); setShowPuntoLimpioModal(true); }}>
+                        <Droplets className="h-5 w-5 text-blue-500 shrink-0" />
+                        <span className="text-sm font-medium text-blue-600">Punto Limpio</span>
+                      </button>
+                    )}
                     {/* 📸 Fotos */}
                     {canSeeNotifications && (
                       <button className="flex items-center gap-3 w-full px-3 py-3 rounded-lg hover:bg-purple-50 transition-colors text-left min-h-[44px]"
@@ -642,6 +652,16 @@ export default function HomePage() {
                 title="Activos (Necesarios)">
                 <BoxSelect className="h-3 w-3" />
                 <span className="hidden sm:inline">Activos</span>
+              </Button>
+            )}
+            {/* 💧 Punto Limpio */}
+            {canSeeNotifications && (
+              <Button variant="outline" size="sm"
+                className="gap-1 text-[10px] h-8 border-blue-300 text-blue-600 hover:bg-blue-50"
+                onClick={() => setShowPuntoLimpioModal(true)}
+                title="Punto Limpio (Suciedad)">
+                <Droplets className="h-3 w-3" />
+                <span className="hidden sm:inline">P. Limpio</span>
               </Button>
             )}
             {/* 📸 Biblioteca de Fotos */}
@@ -1321,6 +1341,8 @@ export default function HomePage() {
       <JaulaModal open={showJaulaModal} onClose={() => setShowJaulaModal(false)} />
       {/* Activos (Necesarios) Modal */}
       <ActivosModal open={showActivosModal} onClose={() => setShowActivosModal(false)} />
+      {/* Punto Limpio Modal */}
+      <PuntoLimpioModal open={showPuntoLimpioModal} onClose={() => setShowPuntoLimpioModal(false)} />
     </div>
   );
 }
