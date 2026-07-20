@@ -235,6 +235,39 @@ export default function InventarioModal({ open, onClose, sStep, miniStep }: Inve
     }
   };
 
+  // Helper: parse template content and apply it, falling back to INVENTORY_CONFIGS if empty
+  const applyTemplateContent = async (content: any) => {
+    const hasCategories = Array.isArray(content.categories) && content.categories.length > 0;
+    const hasExtraFields = Array.isArray(content.extraFields) && content.extraFields.length > 0;
+    const hasItems = Array.isArray(content.items) && content.items.length > 0;
+
+    if (hasCategories || hasExtraFields) {
+      // Template has real structure — use it (fill missing parts from defaults)
+      setCustomConfig({
+        title: content.title || defaultConfig.title,
+        subtitle: content.subtitle || defaultConfig.subtitle,
+        templateName: content.templateName || defaultConfig.templateName,
+        categories: hasCategories ? content.categories : defaultConfig.categories,
+        extraFields: hasExtraFields ? content.extraFields : defaultConfig.extraFields,
+        ...(content.desplegables_jerarquicos ? { desplegables_jerarquicos: content.desplegables_jerarquicos } : {}),
+      });
+      setHasTemplate(true);
+      // Auto-import template items into DB so they get IDs and become editable
+      if (hasItems) {
+        await importTemplateItems(content.items);
+      }
+    } else if (hasItems) {
+      // Legacy format: only items, no structure — use default config
+      setCustomConfig(null);
+      setHasTemplate(true);
+      await importTemplateItems(content.items);
+    } else {
+      // Empty or unknown format — fall back to INVENTORY_CONFIGS defaults
+      setCustomConfig(null);
+      setHasTemplate(true);
+    }
+  };
+
   const loadCustomInventoryConfig = async () => {
     try {
       // If the zone has a board config, fetch inventory template from that config
@@ -248,32 +281,7 @@ export default function InventarioModal({ open, onClose, sStep, miniStep }: Inve
           );
           if (inventarioTemplates.length > 0) {
             const content = JSON.parse(inventarioTemplates[0].template.content);
-            if (content.categories && content.extraFields) {
-              setCustomConfig({
-                title: content.title || defaultConfig.title,
-                subtitle: content.subtitle || defaultConfig.subtitle,
-                templateName: content.templateName || defaultConfig.templateName,
-                categories: content.categories,
-                extraFields: content.extraFields,
-                ...(content.desplegables_jerarquicos ? { desplegables_jerarquicos: content.desplegables_jerarquicos } : {}),
-              });
-              setHasTemplate(true);
-              // Auto-import template items into DB so they get IDs and become editable
-              if (content.items && Array.isArray(content.items) && content.items.length > 0) {
-                await importTemplateItems(content.items);
-              }
-            } else if (content.items && Array.isArray(content.items)) {
-              // Legacy format: {items: [...]} — use default config but load items
-              setCustomConfig(null);
-              setHasTemplate(true);
-              if (content.items.length > 0) {
-                await importTemplateItems(content.items);
-              }
-            } else {
-              // Unknown format — use default config as fallback
-              setCustomConfig(null);
-              setHasTemplate(true);
-            }
+            await applyTemplateContent(content);
           } else {
             // No inventario template assigned in this board slot — use default config
             setCustomConfig(null);
@@ -290,32 +298,7 @@ export default function InventarioModal({ open, onClose, sStep, miniStep }: Inve
         const json = await res.json();
         if (json.success && json.data && json.data.length > 0) {
           const content = JSON.parse(json.data[0].content);
-          if (content.categories && content.extraFields) {
-            setCustomConfig({
-              title: content.title || defaultConfig.title,
-              subtitle: content.subtitle || defaultConfig.subtitle,
-              templateName: content.templateName || defaultConfig.templateName,
-              categories: content.categories,
-              extraFields: content.extraFields,
-              ...(content.desplegables_jerarquicos ? { desplegables_jerarquicos: content.desplegables_jerarquicos } : {}),
-            });
-            setHasTemplate(true);
-            // Auto-import template items into DB so they get IDs and become editable
-            if (content.items && Array.isArray(content.items) && content.items.length > 0) {
-              await importTemplateItems(content.items);
-            }
-          } else if (content.items && Array.isArray(content.items)) {
-            // Legacy format: {items: [...]} — use default config but load items
-            setCustomConfig(null);
-            setHasTemplate(true);
-            if (content.items.length > 0) {
-              await importTemplateItems(content.items);
-            }
-          } else {
-            // Unknown format — use default config as fallback
-            setCustomConfig(null);
-            setHasTemplate(true);
-          }
+          await applyTemplateContent(content);
         } else {
           // No global template — use default config (INVENTORY_CONFIGS has entries for all 5 S steps)
           setCustomConfig(null);
@@ -811,38 +794,13 @@ export default function InventarioModal({ open, onClose, sStep, miniStep }: Inve
       }
 
       if (templateItems.length === 0) {
-        toast.error('No se encontró plantilla para este paso');
+        toast.info('Esta plantilla define el formato (categorías y campos) pero no contiene elementos predefinidos. Agrega elementos manualmente con el botón "Agregar".');
         return;
       }
 
-      const importRes = await fetch('/api/inventory', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(
-          templateItems.map((item: any) => ({
-            sStep,
-            projectId: currentProject.id,
-            zoneId: currentZone?.id || null,
-            name: item.name,
-            location: item.location || '',
-            category: item.category,
-            quantity: item.quantity || 1,
-            quantityNeeded: item.quantityNeeded || 0,
-            quantityUnneeded: item.quantityUnneeded || 0,
-            price: item.price ?? null,
-            action: item.action || '',
-            extra: item.extra || {},
-          }))
-        ),
-      });
-
-      const importJson = await importRes.json();
-      if (importJson.success) {
-        toast.success('Plantilla importada correctamente');
-        await loadInventory();
-      } else {
-        toast.error(`Error al importar plantilla: ${importJson.error || 'Error desconocido'}`);
-      }
+      // Use importTemplateItems to save items to DB and reload with proper IDs
+      await importTemplateItems(templateItems);
+      toast.success('Elementos de plantilla importados correctamente');
     } catch (error) {
       console.error('Error importing template:', error);
       toast.error('Error de conexión al importar plantilla');

@@ -1,0 +1,2002 @@
+     1→'use client'
+     2→
+     3→import { useState, useEffect, useCallback } from 'react'
+     4→import { motion, AnimatePresence } from 'framer-motion'
+     5→import { use5SStore } from '@/lib/store'
+     6→import { Button } from '@/components/ui/button'
+     7→import { Input } from '@/components/ui/input'
+     8→import { Label } from '@/components/ui/label'
+     9→import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+    10→import { Badge } from '@/components/ui/badge'
+    11→import { Textarea } from '@/components/ui/textarea'
+    12→import {
+    13→  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+    14→} from '@/components/ui/select'
+    15→import {
+    16→  Plus, Trash2, Edit3, Save, Loader2, BookOpen, FileCheck, ClipboardCheck, Camera,
+    17→  ChevronDown, ChevronUp, AlertTriangle, Copy, RotateCcw, X,
+    18→  Eye, Code, GripVertical, Download, Upload, ClipboardList, Award,
+    19→  ClipboardPaste, ClipboardCopy, Check, ArrowRightLeft,
+    20→  Play, SearchCheck, Rocket, Target, Sparkles,
+    21→} from 'lucide-react'
+    22→import { S_STEPS, AUDIT_CHECKLISTS, EXAM_PASS_THRESHOLD, SELF_EVAL_THRESHOLD, AUDIT_PASS_THRESHOLD, INVENTORY_CONFIGS, MC_STEP_CONFIG, MC_PASO_CONFIG, PDCA_STEPS } from '@/lib/5s-constants'
+    23→
+    24→// ═══════════════════════════════════════════════════════
+    25→// TYPES
+    26→// ═══════════════════════════════════════════════════════
+    27→interface TemplateData {
+    28→  id: string
+    29→  type: string
+    30→  sStep: number
+    31→  miniStep: number
+    32→  title: string
+    33→  description: string | null
+    34→  content: string
+    35→  notaMinima: number | null
+    36→  active: boolean
+    37→  createdAt: string
+    38→  updatedAt: string
+    39→}
+    40→
+    41→// TemplateTab and TEMPLATE_TABS removed — now organized by S-step → Paso
+    42→
+    43→const S_COLORS: Record<number, string> = { 1: '#8B5CF6', 2: '#EAB308', 3: '#3B82F6', 4: '#F43F5E', 5: '#F97316', 6: '#16A34A' }
+    44→
+    45→// MC Paso icon mapping
+    46→const MC_PASO_ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
+    47→  Play, ClipboardList, SearchCheck, Rocket, Target,
+    48→}
+    49→
+    50→const MINI_STEPS_LABELS: Record<number, string> = {
+    51→  1: 'Formación y Exámenes',
+    52→  2: 'Fotografías (Antes/Después)',
+    53→  3: 'Inventario / Estándar / Layout / Plan Limpieza',
+    54→  4: 'Autoevaluación / Plan de Acción',
+    55→  5: 'Auditoría Externa / PDCA',
+    56→}
+    57→
+    58→// ═══════════════════════════════════════════════════════
+    59→// DEFAULT CONTENT GENERATORS
+    60→// ═══════════════════════════════════════════════════════
+    61→function getDefaultFormationContent(sStep: number) {
+    62→  const formations: Record<number, { sections: { title: string; content: string }[] }> = {
+    63→    1: {
+    64→      sections: [
+    65→        { title: '¿Qué es Seiri (Clasificar)?', content: 'Seiri es la primera de las 5S y significa "clasificar" o "separar". Consiste en identificar y separar los elementos necesarios de los innecesarios en el lugar de trabajo, eliminando todo aquello que no se utiliza o que no aporta valor al proceso. El objetivo es crear un entorno de trabajo más limpio, seguro y eficiente, donde solo permanezcan los elementos esenciales para realizar las tareas diarias.' },
+    66→        { title: 'Objetivos de Seiri', content: '1. Eliminar del área de trabajo los elementos innecesarios que ocupan espacio y generan desorden.\n2. Liberar espacio útil para mejorar la organización y el flujo de trabajo.\n3. Reducir el tiempo de búsqueda de herramientas, materiales y documentos.\n4. Prevenir accidentes y errores causados por la acumulación de objetos innecesarios.\n5. Facilitar la identificación visual de los recursos realmente necesarios.' },
+    67→        { title: 'Metodología de implementación', content: '1. Recorrer el área de trabajo y clasificar todos los elementos en necesarios e innecesarios.\n2. Utilizar tarjetas de color rojo (Tarjetas Rojas) para marcar los elementos innecesarios.\n3. Colocar los elementos marcados en una "jaula de innecesarios" o zona temporal.\n4. Decidir el destino de cada elemento: eliminar, trasladar, donar o almacenar fuera del área.\n5. Documentar todas las decisiones y mantener un registro de los elementos retirados.\n6. Revisar periódicamente para evitar la acumulación de nuevos innecesarios.' },
+    68→        { title: 'Beneficios esperados', content: 'Al aplicar correctamente Seiri se obtienen beneficios como: mayor espacio disponible en el lugar de trabajo, reducción del tiempo perdido buscando elementos, disminución de accidentes por acumulación, mejora de la productividad al eliminar distracciones, y una cultura de orden y limpieza que se extiende a todas las áreas de la organización.' },
+    69→      ]
+    70→    },
+    71→    2: {
+    72→      sections: [
+    73→        { title: '¿Qué es Seiton (Organizar)?', content: 'Seiton es la segunda de las 5S y significa "organizar" o "ordenar". Consiste en establecer una ubicación definida para cada elemento necesario, de forma que sea fácil de encontrar, usar y devolver a su lugar. Seiton aplica el principio de "un lugar para cada cosa y cada cosa en su lugar", utilizando señalización visual, códigos de color y etiquetas para garantizar que cualquier persona pueda localizar y devolver los objetos de forma intuitiva.' },
+    74→        { title: 'Objetivos de Seiton', content: '1. Asignar una ubicación fija y lógica a cada elemento necesario del lugar de trabajo.\n2. Facilitar la localización rápida de herramientas, materiales y documentos.\n3. Garantizar que cualquier persona pueda encontrar y devolver los objetos sin necesidad de preguntar.\n4. Reducir el tiempo de preparación y cambio de herramientas.\n5. Implementar señalización visual y códigos de color para una identificación inmediata.' },
+    75→        { title: 'Metodología de implementación', content: '1. Analizar la frecuencia de uso de cada elemento: muy frecuente (cerca del puesto), frecuente (zona accesible), ocasional (almacén cercano) y raro (almacén lejano).\n2. Definir la ubicación óptima según la cercanía al punto de uso y la ergonomía.\n3. Implementar métodos de identificación: etiquetas, códigos de color, señales visuales, sombras, soportes.\n4. Crear un layout o distribución visual del área de trabajo.\n5. Señalizar pasillos, zonas de almacenamiento y ubicaciones específicas.\n6. Establecer reglas claras para la devolución de elementos a su ubicación.' },
+    76→        { title: 'Beneficios esperados', content: 'Los beneficios de aplicar Seiton incluyen: eliminación del tiempo perdido buscando herramientas o materiales, reducción de errores por confusión de elementos, mejora de la seguridad al tener pasillos despejados y zonas señalizadas, aumento de la eficiencia operativa, y una comunicación visual que permite detectar anomalías de forma inmediata.' },
+    77→      ]
+    78→    },
+    79→    3: {
+    80→      sections: [
+    81→        { title: '¿Qué es Seiso (Limpiar)?', content: 'Seiso es la tercera de las 5S y significa "limpiar" o "brillar". Va más allá de la simple limpieza: consiste en inspeccionar el lugar de trabajo mientras se limpia, identificando las fuentes de suciedad, las anomalías y los defectos. Seiso convierte la limpieza en una actividad de mantenimiento preventivo, donde cada persona es responsable de mantener su zona limpia y en condiciones óptimas.' },
+    82→        { title: 'Objetivos de Seiso', content: '1. Mantener el lugar de trabajo limpio y en condiciones óptimas de funcionamiento.\n2. Identificar y eliminar las fuentes de suciedad en su origen.\n3. Detectar anomalías, fugas, desgastes y defectos durante la limpieza.\n4. Establecer un plan de limpieza regular con responsables y frecuencias definidas.\n5. Crear el hábito de limpieza como parte de la rutina diaria de trabajo.' },
+    83→        { title: 'Metodología de implementación', content: '1. Realizar un inventario de puntos de suciedad: polvo, grasa, manchas, residuos, humedad, oxidación.\n2. Clasificar cada punto por nivel (leve, moderado, grave) y fuente (proceso, medio ambiente, falta de limpieza, escape, desgaste, derrame).\n3. Definir el método de limpieza adecuado para cada tipo de suciedad: aspirado, fregado, pulido, desinfección, reparación.\n4. Asignar frecuencias de limpieza: diaria, 3 veces por semana, semanal, quincenal, mensual.\n5. Crear un mapa de puntos de suciedad con responsables y plan de limpieza.\n6. Establecer un kit de limpieza accesible en cada zona.' },
+    84→        { title: 'Beneficios esperados', content: 'Aplicar Seiso aporta beneficios como: detección temprana de fallos y fugas, reducción de accidentes por suciedad, mejora de la calidad del producto al evitar contaminación, aumento de la vida útil de los equipos, y un entorno de trabajo más agradable y motivador para los empleados.' },
+    85→      ]
+    86→    },
+    87→    4: {
+    88→      sections: [
+    89→        { title: '¿Qué es Seiketsu (Estandarizar)?', content: 'Seiketsu es la cuarta de las 5S y significa "estandarizar" o "mantener el estado". Consiste en crear estándares, normas y procedimientos que mantengan los logros obtenidos con las 3S anteriores (Seiri, Seiton, Seiso). Seiketsu asegura que las mejoras no se pierdan con el tiempo y que todos los empleados sigan los mismos criterios de orden, organización y limpieza.' },
+    90→        { title: 'Objetivos de Seiketsu', content: '1. Crear estándares visuales y documentados para mantener los logros de las 3S.\n2. Establecer procedimientos claros que cualquier persona pueda seguir.\n3. Prevenir la reaparición de problemas ya resueltos.\n4. Implantar instrucciones visuales, diagramas y señalización permanente.\n5. Definir indicadores visuales que permitan detectar desviaciones de forma inmediata.' },
+    91→        { title: 'Metodología de implementación', content: '1. Documentar las mejores prácticas identificadas en las 3S anteriores.\n2. Crear estándares visuales: fotografías del estado correcto, diagramas de ubicación, etiquetas de identificación.\n3. Establecer procedimientos de inspección y mantenimiento con frecuencia y responsable.\n4. Implantar checklist de verificación diaria o semanal.\n5. Definir indicadores visuales de estado (semáforos, marcas de nivel, contornos).\n6. Revisar y actualizar los estándares periódicamente.' },
+    92→        { title: 'Beneficios esperados', content: 'Los beneficios de Seiketsu incluyen: consolidación de las mejoras de las 3S anteriores, reducción de la variabilidad en los procesos, facilitación de la formación de nuevos empleados, detección rápida de desviaciones, y creación de una base sólida para la mejora continua.' },
+    93→      ]
+    94→    },
+    95→    5: {
+    96→      sections: [
+    97→        { title: '¿Qué es Shitsuke (Disciplina)?', content: 'Shitsuke es la quinta y última de las 5S y significa "disciplina" o "sostener". Consiste en crear el hábito de respetar y cumplir los estándares establecidos en las 4S anteriores, de forma voluntaria y constante. Shitsuke transforma las normas en costumbres, asegurando que el orden, la organización, la limpieza y la estandarización se mantengan en el tiempo sin necesidad de supervisión constante.' },
+    98→        { title: 'Objetivos de Shitsuke', content: '1. Convertir el cumplimiento de los estándares en un hábito diario.\n2. Fomentar la autodisciplina y el compromiso personal con las 5S.\n3. Establecer mecanismos de seguimiento: auditorías internas y externas.\n4. Gestionar las anomalías detectadas y resolverlas de forma sistemática.\n5. Promover la mejora continua como filosofía de trabajo.' },
+    99→        { title: 'Metodología de implementación', content: '1. Realizar auditorías internas (autoevaluación) periódicas para verificar el cumplimiento de los estándares.\n2. Realizar auditorías externas con evaluadores independientes para objetividad.\n3. Registrar y gestionar las anomalías detectadas durante las auditorías.\n4. Establecer planes de acción correctiva con responsable y fecha límite.\n5. Comunicar los resultados de las auditorías a todo el equipo.\n6. Reconocer y premiar a los equipos que mantienen altos niveles de cumplimiento.' },
+   100→        { title: 'Beneficios esperados', content: 'Aplicar Shitsuke genera beneficios como: mantenimiento sostenido de las 5S en el tiempo, mejora continua de los procesos, mayor compromiso y motivación del personal, reducción de recaídas y problemas recurrentes, y una cultura de calidad que se extiende a todos los niveles de la organización.' },
+   101→      ]
+   102→    },
+   103→  }
+   104→  return formations[sStep] || formations[1]
+   105→}
+   106→
+   107→function getDefaultExamContent(sStep: number) {
+   108→  const exams: Record<number, { questions: { question: string; options: string[]; correctIndex: number }[] }> = {
+   109→    1: {
+   110→      questions: [
+   111→        { question: '¿Cuál es el objetivo principal de Seiri (Clasificar)?', options: ['Separar lo necesario de lo innecesario', 'Organizar los elementos por tamaño', 'Limpiar las máquinas', 'Crear estándares visuales'], correctIndex: 0 },
+   112→        { question: '¿Qué herramienta se utiliza en Seiri para marcar los elementos innecesarios?', options: ['Etiqueta verde', 'Tarjeta roja', 'Código de barras', 'Señal de tráfico'], correctIndex: 1 },
+   113→        { question: '¿Dónde se colocan temporalmente los elementos marcados como innecesarios?', options: ['En el almacén principal', 'En la jaula de innecesarios', 'En la mesa del responsable', 'En el pasillo'], correctIndex: 1 },
+   114→        { question: '¿Cuál es un beneficio de aplicar Seiri correctamente?', options: ['Aumentar el número de herramientas', 'Liberar espacio útil en el área de trabajo', 'Crear más documentos', 'Añadir más pasos al proceso'], correctIndex: 1 },
+   115→        { question: '¿Qué decisión NO se puede tomar sobre un elemento innecesario?', options: ['Eliminarlo', 'Trasladarlo a otra zona', 'Dejarlo donde está sin más', 'Donarlo o almacenarlo fuera del área'], correctIndex: 2 },
+   116→        { question: '¿Cada cuánto se debe revisar el área para evitar acumulación de innecesarios?', options: ['Solo al inicio del proyecto', 'Una vez al año', 'Periódicamente de forma regular', 'Nunca, solo una vez'], correctIndex: 2 },
+   117→        { question: '¿Qué tipo de elementos se deben eliminar en Seiri?', options: ['Los que se usan diariamente', 'Los que no se utilizan o no aportan valor', 'Los más caros', 'Los que tienen etiqueta'], correctIndex: 1 },
+   118→        { question: '¿Quién debe participar en el proceso de clasificación de Seiri?', options: ['Solo el responsable del área', 'Solo el jefe de producción', 'Todas las personas que trabajan en el área', 'Solo el equipo de mantenimiento'], correctIndex: 2 },
+   119→      ]
+   120→    },
+   121→    2: {
+   122→      questions: [
+   123→        { question: '¿Cuál es el objetivo principal de Seiton (Organizar)?', options: ['Eliminar innecesarios', 'Asignar una ubicación definida a cada elemento necesario', 'Limpiar los equipos', 'Auditar el proceso'], correctIndex: 1 },
+   124→        { question: '¿Qué principio fundamental aplica Seiton?', options: ['Más es mejor', 'Un lugar para cada cosa y cada cosa en su lugar', 'Todo en una sola estantería', 'Guardar todo en cajas cerradas'], correctIndex: 1 },
+   125→        { question: '¿Dónde se deben ubicar los elementos de uso muy frecuente?', options: ['En el almacén lejano', 'Cerca del puesto de trabajo', 'En el suelo del pasillo', 'En la oficina del jefe'], correctIndex: 1 },
+   126→        { question: '¿Cuál de estos NO es un método de identificación visual en Seiton?', options: ['Etiquetas', 'Código de colores', 'Memorizar la ubicación', 'Sombras y siluetas'], correctIndex: 2 },
+   127→        { question: '¿Qué es un layout en el contexto de Seiton?', options: ['Un tipo de herramienta', 'Una distribución visual del área de trabajo', 'Un informe de auditoría', 'Un código de barras'], correctIndex: 1 },
+   128→        { question: '¿Qué se debe hacer después de usar una herramienta según Seiton?', options: ['Dejarla donde se usó', 'Devolverla a su ubicación asignada', 'Pasarla al compañero', 'Guardarla en un cajón cualquiera'], correctIndex: 1 },
+   129→        { question: '¿Cómo se clasifica la frecuencia de uso en Seiton?', options: ['Barato y caro', 'Muy frecuente, frecuente, ocasional y raro', 'Grande y pequeño', 'Nuevo y viejo'], correctIndex: 1 },
+   130→        { question: '¿Qué beneficio aporta la señalización visual en Seiton?', options: ['Decorar el lugar de trabajo', 'Permitir detectar anomalías de forma inmediata', 'Aumentar el presupuesto', 'Reducir el número de herramientas'], correctIndex: 1 },
+   131→      ]
+   132→    },
+   133→    3: {
+   134→      questions: [
+   135→        { question: '¿Cuál es el objetivo principal de Seiso (Limpiar)?', options: ['Hacer que todo brille', 'Inspeccionar mientras se limpia, identificando anomalías y fuentes de suciedad', 'Pintar las paredes', 'Comprar productos de limpieza'], correctIndex: 1 },
+   136→        { question: '¿En qué se diferencia Seiso de una limpieza normal?', options: ['En que se usa más agua', 'En que convierte la limpieza en mantenimiento preventivo', 'En que solo la hace el equipo de limpieza', 'En que se hace una vez al año'], correctIndex: 1 },
+   137→        { question: '¿Qué tipos de suciedad se deben inventariar en Seiso?', options: ['Solo polvo', 'Polvo, grasa, manchas, residuos, humedad y oxidación', 'Solo grasa', 'Solo restos de comida'], correctIndex: 1 },
+   138→        { question: '¿Quién es responsable de la limpieza en Seiso?', options: ['Solo el equipo de limpieza', 'Solo el encargado', 'Cada persona en su zona de trabajo', 'El departamento de calidad'], correctIndex: 2 },
+   139→        { question: '¿Qué se debe hacer al detectar una fuga durante la limpieza?', options: ['Ignorarla y seguir limpiando', 'Identificarla como fuente de suciedad y reportarla', 'Taparla con cinta', 'Esperar a que se seque sola'], correctIndex: 1 },
+   140→        { question: '¿Qué es un mapa de puntos de suciedad?', options: ['Un mapa del mundo', 'Una representación visual de las zonas con suciedad y sus características', 'Un plano del edificio', 'Un calendario de limpieza'], correctIndex: 1 },
+   141→        { question: '¿Qué frecuencia de limpieza se recomienda para zonas de alto tráfico?', options: ['Mensual', 'Diaria o varias veces por semana', 'Anual', 'Solo cuando está muy sucio'], correctIndex: 1 },
+   142→        { question: '¿Qué debe contener un kit de limpieza según Seiso?', options: ['Solo una escoba', 'Los productos y herramientas necesarios para la limpieza de la zona', 'Documentos de calidad', 'Herramientas de producción'], correctIndex: 1 },
+   143→      ]
+   144→    },
+   145→    4: {
+   146→      questions: [
+   147→        { question: '¿Cuál es el objetivo principal de Seiketsu (Estandarizar)?', options: ['Limpiar más rápido', 'Crear estándares que mantengan los logros de las 3S anteriores', 'Eliminar más innecesarios', 'Organizar mejor las herramientas'], correctIndex: 1 },
+   148→        { question: '¿Qué tipo de estándares se crean en Seiketsu?', options: ['Solo escritos en papel', 'Visuales y documentados: fotos, diagramas, señalización, procedimientos', 'Solo verbales', 'Solo para directivos'], correctIndex: 1 },
+   149→        { question: '¿Para qué sirven los indicadores visuales en Seiketsu?', options: ['Para decorar', 'Para detectar desviaciones del estándar de forma inmediata', 'Para contar herramientas', 'Para medir la temperatura'], correctIndex: 1 },
+   150→        { question: '¿Cuál es un ejemplo de estándar visual?', options: ['Un correo electrónico', 'Una fotografía del estado correcto de una zona', 'Una reunión verbal', 'Un memorándum interno'], correctIndex: 1 },
+   151→        { question: '¿Qué es un checklist de verificación en Seiketsu?', options: ['Una lista de compras', 'Una lista de comprobación diaria o semanal del cumplimiento de estándares', 'Un inventario de herramientas', 'Un parte de trabajo'], correctIndex: 1 },
+   152→        { question: '¿Con qué frecuencia se deben revisar los estándares?', options: ['Nunca, una vez creados son fijos', 'Periódicamente para actualizarlos y mejorarlos', 'Solo cuando hay auditoría', 'Solo si hay queja del cliente'], correctIndex: 1 },
+   153→        { question: '¿Qué S anteriores sostiene Seiketsu?', options: ['Solo Seiri', 'Solo Seiton', 'Seiri, Seiton y Seiso (las 3S anteriores)', 'Ninguna'], correctIndex: 2 },
+   154→        { question: '¿Por qué es importante documentar las mejores prácticas?', options: ['Por requisito legal', 'Para que los nuevos empleados puedan seguirlas y no se pierdan las mejoras', 'Para tener más papeleo', 'Porque lo dice el jefe'], correctIndex: 1 },
+   155→      ]
+   156→    },
+   157→    5: {
+   158→      questions: [
+   159→        { question: '¿Cuál es el objetivo principal de Shitsuke (Disciplina)?', options: ['Crear más normas', 'Crear el hábito de respetar los estándares de forma voluntaria y constante', 'Poner multas a los empleados', 'Hacer auditorías puntuales'], correctIndex: 1 },
+   160→        { question: '¿Qué tipo de auditorías se realizan en Shitsuke?', options: ['Solo financieras', 'Internas (autoevaluación) y externas (evaluadores independientes)', 'Solo de producto', 'Solo de seguridad'], correctIndex: 1 },
+   161→        { question: '¿Qué se debe hacer al detectar una anomalía en una auditoría?', options: ['Ignorarla', 'Registrarla y crear un plan de acción correctiva con responsable y fecha', 'Esperar a la próxima auditoría', 'Solo informar verbalmente'], correctIndex: 1 },
+   162→        { question: '¿Qué convierte Shitsuke en hábito?', options: ['La supervisión constante', 'El cumplimiento voluntario y constante de los estándares', 'Las sanciones económicas', 'Los castigos'], correctIndex: 1 },
+   163→        { question: '¿Por qué es importante comunicar los resultados de las auditorías?', options: ['Para señalar culpables', 'Para que todo el equipo conozca el estado y participe en la mejora', 'Para archivarlos', 'Porque es obligatorio legalmente'], correctIndex: 1 },
+   164→        { question: '¿Cuál es la última etapa del ciclo de mejora continua en 5S?', options: ['Seiri', 'Shitsuke (que a su vez reinicia el ciclo)', 'Seiton', 'Seiso'], correctIndex: 1 },
+   165→        { question: '¿Qué papel tiene el reconocimiento en Shitsuke?', options: ['No tiene ningún papel', 'Motiva al equipo a mantener altos niveles de cumplimiento', 'Genera competencia negativa', 'Solo es para directivos'], correctIndex: 1 },
+   166→        { question: '¿Qué sucede si no se aplica Shitsuke correctamente?', options: ['Nada, las 4S se mantienen solas', 'Las mejoras de las 4S anteriores se pierden con el tiempo', 'Se ahorra tiempo', 'Se reducen costes'], correctIndex: 1 },
+   167→      ]
+   168→    },
+   169→  }
+   170→  return exams[sStep] || exams[1]
+   171→}
+   172→
+   173→function getDefaultChecklistContent(sStep: number) {
+   174→  const checklist = AUDIT_CHECKLISTS[sStep]
+   175→  if (!checklist) return { sections: [] }
+   176→  return {
+   177→    sections: checklist.map(section => ({
+   178→      id: section.id,
+   179→      title: section.title,
+   180→      items: section.items.map(item => ({
+   181→        id: item.id,
+   182→        description: item.description,
+   183→        hasOther: item.hasOther || false,
+   184→      }))
+   185→    }))
+   186→  }
+   187→}
+   188→
+   189→function getDefaultInventoryContent(sStep: number) {
+   190→  const cfg = INVENTORY_CONFIGS[sStep]
+   191→  if (!cfg) return { categories: [], extraFields: [] }
+   192→
+   193→  // S2: Use the comprehensive Seiton template matching the user's Excel structure
+   194→  // (categories by element type with hierarchical subcategories + traceability codes)
+   195→  if (sStep === 2) {
+   196→    return {
+   197→      title: 'Inventario de Necesarios',
+   198→      subtitle: 'SEITON — Organiza los elementos necesarios en su ubicación correcta',
+   199→      templateName: 'S2_Inventario_Necesarios_Seiton.xlsx',
+   200→      categories: [
+   201→        { value: 'materiales', label: 'MATERIALES', color: 'bg-blue-100 text-blue-800' },
+   202→        { value: 'maquinas_equipos', label: 'MÁQUINAS Y EQUIPOS', color: 'bg-purple-100 text-purple-800' },
+   203→        { value: 'mobiliario', label: 'MOBILIARIO', color: 'bg-amber-100 text-amber-800' },
+   204→        { value: 'informacion', label: 'INFORMACIÓN', color: 'bg-teal-100 text-teal-800' },
+   205→        { value: 'transporte_almacenaje', label: 'TRANSPORTE Y ALMACENAJE', color: 'bg-orange-100 text-orange-800' },
+   206→      ],
+   207→      extraFields: [
+   208→        { key: 'codigo', label: 'Código de Trazabilidad', type: 'text' },
+   209→        { key: 'subcategoria', label: 'Subcategoría', type: 'select', options: [
+   210→          'Consumibles', 'Materia Prima', 'Producto en proceso', 'Producto acabado',
+   211→          'Máquinas de trabajo', 'Utillajes de trabajo', 'Equipos y accesorios de Elevación',
+   212→          'Equipos de ensayo y verificación', 'Herramientas de ensamblaje', 'Equipos informáticos', 'Equipos de limpieza',
+   213→          'Bancos de trabajo', 'Paneles herramienta', 'Armarios o taquillas', 'Sillas, mesas', 'Paneles u otros soportes para información',
+   214→          'Planos, instrucciones, boletines de trabajo', 'Posters u otra información divulgativa', 'Información referente a indicadores', 'Carpeta o bandejas con documentación', 'Información de seguridad',
+   215→          'Máquinas de transporte', 'Utillajes de transporte, Pallets, embalajes de madera, cajas', 'Estanterías, gavetas, contenedores', 'Bolsas, plásticos, protecciones, elementos de flejado', 'Carros de transporte',
+   216→        ]},
+   217→        { key: 'zona_destino', label: 'Zona Actual / Destino', type: 'text' },
+   218→        { key: 'responsable', label: 'Responsable / Área', type: 'text' },
+   219→        { key: 'estado', label: 'Estado de Conservación', type: 'select', options: ['Excelente', 'Bueno', 'Regular', 'Requiere Mantenimiento'] },
+   220→      ],
+   221→      desplegables_jerarquicos: {
+   222→        'MATERIALES': { prefijo_codigo: 'MAT', subcategorias: ['Consumibles', 'Materia Prima', 'Producto en proceso', 'Producto acabado'] },
+   223→        'MÁQUINAS Y EQUIPOS': { prefijo_codigo: 'MAQ', subcategorias: ['Máquinas de trabajo', 'Utillajes de trabajo', 'Equipos y accesorios de Elevación', 'Equipos de ensayo y verificación', 'Herramientas de ensamblaje', 'Equipos informáticos', 'Equipos de limpieza'] },
+   224→        'MOBILIARIO': { prefijo_codigo: 'MOB', subcategorias: ['Bancos de trabajo', 'Paneles herramienta', 'Armarios o taquillas', 'Sillas, mesas', 'Paneles u otros soportes para información'] },
+   225→        'INFORMACIÓN': { prefijo_codigo: 'INF', subcategorias: ['Planos, instrucciones, boletines de trabajo', 'Posters u otra información divulgativa', 'Información referente a indicadores', 'Carpeta o bandejas con documentación', 'Información de seguridad'] },
+   226→        'TRANSPORTE Y ALMACENAJE': { prefijo_codigo: 'TRA', subcategorias: ['Máquinas de transporte', 'Utillajes de transporte, Pallets, embalajes de madera, cajas', 'Estanterías, gavetas, contenedores', 'Bolsas, plásticos, protecciones, elementos de flejado', 'Carros de transporte'] },
+   227→      },
+   228→    }
+   229→  }
+   230→
+   231→  return {
+   232→    categories: cfg.categories.map(c => ({ value: c.value, label: c.label, color: c.color })),
+   233→    extraFields: cfg.extraFields.map(f => ({
+   234→      key: f.key, label: f.label, type: f.type,
+   235→      ...(f.options ? { options: f.options } : {}),
+   236→    })),
+   237→  }
+   238→}
+   239→
+   240→function getDefaultStandardContent() {
+   241→  return {
+   242→    fields: [
+   243→      { key: 'beforePhotoUrl', label: 'Foto Antes', type: 'photo', required: true },
+   244→      { key: 'afterPhotoUrl', label: 'Foto Después', type: 'photo', required: true },
+   245→      { key: 'responsable', label: 'Quién lo ha hecho', type: 'text', required: true },
+   246→      { key: 'contacto', label: 'Contacto', type: 'text', required: true },
+   247→      { key: 'mejoraTipo', label: 'Tipo de Mejora', type: 'select', options: ['Seguridad', 'Calidad', 'Proceso', 'Logística'], required: true },
+   248→    ],
+   249→  }
+   250→}
+   251→
+   252→function getDefaultPlanAccionContent(sStep: number) {
+   253→  const S_JAPANESE = ['Seiri', 'Seiton', 'Seiso', 'Seiketsu', 'Shitsuke']
+   254→  const S_NAMES = ['Revisar', 'Ordenar', 'Limpiar', 'Estandarizar', 'Mantener']
+   255→  return {
+   256→    tableType: 'plan_accion',
+   257→    description: `Plan de Acción para ${S_JAPANESE[sStep - 1]} (${S_NAMES[sStep - 1]}). Registro de deficiencias encontradas en las autoevaluaciones y auditorías, con las acciones correctivas y preventivas propuestas, responsables y fechas de realización.`,
+   258→    columns: [
+   259→      { key: 'numeroEntrada', label: 'Nº Entrada', type: 'text', width: '100px', description: 'Zona + S de origen + número correlativo', required: true, placeholder: 'Ej: A-S1-001' },
+   260→      { key: 'fechaInicial', label: 'Fecha Inicial', type: 'date', width: '110px', description: 'Fecha en la que entra la deficiencia', required: true },
+   261→      { key: 'auditor', label: 'Auditor', type: 'text', width: '120px', description: 'Quién ha hecho la auditoría o la autoevaluación', required: true },
+   262→      { key: 'semana', label: 'Semana', type: 'text', width: '80px', description: 'La semana de la fecha inicial' },
+   263→      { key: 'zona', label: 'Zona', type: 'text', width: '100px', description: 'Qué zona es la afectada', required: true },
+   264→      { key: 'descripcion', label: 'Descripción', type: 'textarea', width: '200px', description: 'Descripción de la deficiencia encontrada', required: true },
+   265→      { key: 'accionCorrectiva', label: 'Acción Correctiva', type: 'textarea', width: '180px', description: 'Lo que se va a hacer ahora para corregir', required: true },
+   266→      { key: 'accionesPreventivas', label: 'Acciones Preventivas', type: 'textarea', width: '180px', description: 'Lo que se va a hacer para que no ocurra otra vez' },
+   267→      { key: 'semanaPrevista', label: 'Semana Prevista', type: 'text', width: '100px', description: 'La semana prevista para llevar las acciones preventivas' },
+   268→      { key: 'personaResponsable', label: 'Persona Responsable', type: 'text', width: '130px', description: 'Quién es el responsable', required: true },
+   269→      { key: 'estado', label: 'Estado', type: 'select', width: '110px', description: 'Progreso: Empezado (25%), Medio (50%), Casi Hecho (75%), Finalizado (100%)', options: ['Empezado (25%)', 'Medio (50%)', 'Casi Hecho (75%)', 'Finalizado (100%)'] },
+   270→      { key: 'progreso', label: 'Progreso %', type: 'number', width: '80px', description: 'Progreso en %: 25, 50, 75 o 100', min: 0, max: 100 },
+   271→      { key: 'semanaReal', label: 'Semana Real', type: 'text', width: '100px', description: 'Semana real de la finalización' },
+   272→    ],
+   273→    sourceTypes: ['autoevaluacion', 'auditoria'],
+   274→    sStep: sStep,
+   275→  }
+   276→}
+   277→
+   278→function getDefaultLayoutContent(sStep: number) {
+   279→  return {
+   280→    layoutType: 'zone_layout',
+   281→    description: `Layout de la zona para S${sStep}. Dibuja o sube un plano de la zona indicando las áreas de trabajo, pasillos, ubicación de equipos y elementos estáticos.`,
+   282→    floorColors: [
+   283→      { color: '#0E6BA8', label: 'Azul RAL 5017 — Entrada de material', ral: 'RAL 5017' },
+   284→      { color: '#2D8C3C', label: 'Verde RAL 6032 — Salida de material premontado', ral: 'RAL 6032' },
+   285→      { color: '#E8E8E8', label: 'Blanco RAL 9003 — Elementos estáticos', ral: 'RAL 9003' },
+   286→      { color: '#F5E649', label: 'Amarillo RAL 1016 — Área de trabajo', ral: 'RAL 1016' },
+   287→      { color: '#CC0000', label: 'Rojo RAL 3000 — Equipos contra incendios', ral: 'RAL 3000' },
+   288→      { color: '#F5A623', label: 'Amarillo anaranjado RAL 1003 — Elementos de seguridad', ral: 'RAL 1003' },
+   289→    ],
+   290→    drawTools: ['select', 'rect', 'circle', 'line', 'arrow', 'text'],
+   291→    sStep: sStep,
+   292→    targetStandardCategory: 'layout',
+   293→    targetS4Library: true,
+   294→  }
+   295→}
+   296→
+   297→function getDefaultPlanLimpiezaContent(sStep: number) {
+   298→  return {
+   299→    planType: 'inspection_cleaning',
+   300→    description: `Plan de Inspección y Limpieza para S${sStep}. Define la ruta de inspección, los puntos de suciedad que no se pueden eliminar y las acciones de limpieza para la zona.`,
+   301→    sections: [
+   302→      { key: 'ruta_inspeccion', label: 'Ruta de Inspección', type: 'route', description: 'Define el recorrido de inspección paso a paso' },
+   303→      { key: 'puntos_suciedad', label: 'Puntos de Suciedad No Eliminables', type: 'checklist', description: 'Lista de puntos de suciedad que no se pueden eliminar, con acciones preventivas' },
+   304→      { key: 'acciones_limpieza', label: 'Acciones de Limpieza', type: 'list', description: 'Acciones de limpieza a realizar en cada punto' },
+   305→      { key: 'frecuencia', label: 'Frecuencia', type: 'select', options: ['Diaria', 'Semanal', 'Quincenal', 'Mensual'], description: 'Frecuencia de inspección' },
+   306→      { key: 'responsable', label: 'Responsable', type: 'text', description: 'Persona responsable de la inspección' },
+   307→    ],
+   308→    sStep: sStep,
+   309→    targetStandardCategory: 'plan_limpieza',
+   310→    targetS4Library: true,
+   311→  }
+   312→}
+   313→
+   314→function getDefaultPDCAContent(sStep: number) {
+   315→  return {
+   316→    pdcaType: 'continuous_improvement_board',
+   317→    description: `Tablero PDCA para S${sStep}. Herramienta de mejora continua después de acabar las 5S en la que se registra y se dirige las 5S. Incluye el Plan de Acción y KPIs referentes que indican progreso y trabajo realizado y por realizar.`,
+   318→    phases: [
+   319→      { key: 'plan', label: 'PLAN', labelEs: 'Planificar', description: 'Identificar problemas, establecer objetivos y definir planes de acción', color: '#3B82F6' },
+   320→      { key: 'do', label: 'DO', labelEs: 'Ejecutar', description: 'Implementar las acciones planificadas y recopilar datos', color: '#22C55E' },
+   321→      { key: 'check', label: 'CHECK', labelEs: 'Verificar', description: 'Analizar los resultados y comparar con los objetivos', color: '#EAB308' },
+   322→      { key: 'act', label: 'ACT', labelEs: 'Actuar', description: 'Estandarizar lo que funciona y corregir lo que no', color: '#F97316' },
+   323→    ],
+   324→    kpis: [
+   325→      { key: 'completion_rate', label: 'Tasa de Completado', description: 'Porcentaje de elementos PDCA completados' },
+   326→      { key: 'action_progress', label: 'Progreso del Plan de Acción', description: 'Progreso medio del Plan de Acción' },
+   327→      { key: 'open_actions', label: 'Acciones Abiertas', description: 'Acciones del plan de acción en estado abierta' },
+   328→      { key: 'overdue_items', label: 'Elementos Vencidos', description: 'Elementos PDCA con fecha límite pasada' },
+   329→    ],
+   330→    links: ['plan_accion', 'standards_library'],
+   331→    sStep: sStep,
+   332→  }
+   333→}
+   334→
+   335→function getDefaultFotosContent(sStep: number) {
+   336→  const descriptions: Record<number, string> = {
+   337→    1: 'Fotografía la zona para ver qué elementos innecesarios hay antes de clasificar',
+   338→    2: 'Fotografía la zona para ver cómo está organizada antes de reordenar',
+   339→    3: 'Fotografía la zona para documentar los puntos de suciedad antes de limpiar',
+   340→    4: 'Fotografía la zona para documentar el estado actual antes de estandarizar',
+   341→    5: 'Fotografía la zona para documentar el nivel de cumplimiento de los estándares',
+   342→  }
+   343→  return {
+   344→    sections: [
+   345→      {
+   346→        title: 'Fotografías Antes',
+   347→        description: descriptions[sStep] || 'Documenta el estado actual con fotografías',
+   348→        minPhotos: 3,
+   349→        photoTypes: ['antes'],
+   350→        instructions: 'Toma un mínimo de 3 fotografías del estado actual de la zona. Incluye vistas generales y detalles de los problemas detectados.',
+   351→      },
+   352→      {
+   353→        title: 'Fotografías Después',
+   354→        description: 'Fotografía el resultado tras aplicar las mejoras',
+   355→        minPhotos: 3,
+   356→        photoTypes: ['despues'],
+   357→        instructions: 'Toma fotografías desde los mismos ángulos que las fotos "antes" para poder comparar el antes y el después.',
+   358→      },
+   359→    ],
+   360→  }
+   361→}
+   362→
+   363→// ═══════════════════════════════════════════════════════
+   364→// VISUAL EDITOR: ChecklistEditor (autoevaluacion / auditoria)
+   365→// ═══════════════════════════════════════════════════════
+   366→interface ChecklistSection {
+   367→  id: string
+   368→  title: string
+   369→  items: { id: string; description: string; hasOther: boolean }[]
+   370→}
+   371→
+   372→function ChecklistEditor({ content, onChange }: { content: string; onChange: (v: string) => void }) {
+   373→  let parsed: { sections: ChecklistSection[] }
+   374→  try {
+   375→    parsed = JSON.parse(content)
+   376→  } catch {
+   377→    return (
+   378→      <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-sm text-red-600">
+   379→        El JSON no es válido. Corrígelo en modo JSON o carga el contenido por defecto.
+   380→      </div>
+   381→    )
+   382→  }
+   383→
+   384→  const sections = parsed.sections || []
+   385→  const sPrefix = String(content.match(/"id"\s*:\s*"(\d+)\./)?.[1] || '1')
+   386→
+   387→  const update = (newSections: ChecklistSection[]) => {
+   388→    onChange(JSON.stringify({ ...parsed, sections: newSections }, null, 2))
+   389→  }
+   390→
+   391→  const addSection = () => {
+   392→    const newId = `${sPrefix}.${sections.length + 1}`
+   393→    update([...sections, { id: newId, title: 'Nueva Sección', items: [] }])
+   394→  }
+   395→
+   396→  const removeSection = (idx: number) => {
+   397→    update(sections.filter((_, i) => i !== idx))
+   398→  }
+   399→
+   400→  const updateSection = (idx: number, field: 'id' | 'title', value: string) => {
+   401→    const updated = [...sections]
+   402→    updated[idx] = { ...updated[idx], [field]: value }
+   403→    update(updated)
+   404→  }
+   405→
+   406→  const moveSection = (idx: number, dir: -1 | 1) => {
+   407→    const target = idx + dir
+   408→    if (target < 0 || target >= sections.length) return
+   409→    const updated = [...sections]
+   410→    ;[updated[idx], updated[target]] = [updated[target], updated[idx]]
+   411→    update(updated)
+   412→  }
+   413→
+   414→  const addItem = (sectionIdx: number) => {
+   415→    const sec = sections[sectionIdx]
+   416→    const newItemId = `${sec.id}.${sec.items.length + 1}`
+   417→    const updated = [...sections]
+   418→    updated[sectionIdx] = {
+   419→      ...updated[sectionIdx],
+   420→      items: [...updated[sectionIdx].items, { id: newItemId, description: '', hasOther: false }]
+   421→    }
+   422→    update(updated)
+   423→  }
+   424→
+   425→  const removeItem = (sectionIdx: number, itemIdx: number) => {
+   426→    const updated = [...sections]
+   427→    updated[sectionIdx] = {
+   428→      ...updated[sectionIdx],
+   429→      items: updated[sectionIdx].items.filter((_, i) => i !== itemIdx)
+   430→    }
+   431→    update(updated)
+   432→  }
+   433→
+   434→  const updateItem = (sectionIdx: number, itemIdx: number, field: string, value: string | boolean) => {
+   435→    const updated = [...sections]
+   436→    updated[sectionIdx] = {
+   437→      ...updated[sectionIdx],
+   438→      items: updated[sectionIdx].items.map((item, i) =>
+   439→        i === itemIdx ? { ...item, [field]: value } : item
+   440→      )
+   441→    }
+   442→    update(updated)
+   443→  }
+   444→
+   445→  const moveItem = (sectionIdx: number, itemIdx: number, dir: -1 | 1) => {
+   446→    const items = sections[sectionIdx].items
+   447→    const target = itemIdx + dir
+   448→    if (target < 0 || target >= items.length) return
+   449→    const updated = [...sections]
+   450→    const newItems = [...updated[sectionIdx].items]
+   451→    ;[newItems[itemIdx], newItems[target]] = [newItems[target], newItems[itemIdx]]
+   452→    updated[sectionIdx] = { ...updated[sectionIdx], items: newItems }
+   453→    update(updated)
+   454→  }
+   455→
+   456→  return (
+   457→    <div className="space-y-4">
+   458→      {sections.map((section, sIdx) => (
+   459→        <div key={sIdx} className="border-2 rounded-lg overflow-hidden bg-white shadow-sm">
+   460→          {/* Section header */}
+   461→          <div className="flex items-center gap-3 px-4 py-3 bg-gray-50 border-b">
+   462→            <div className="flex flex-col gap-0.5">
+   463→              <button onClick={() => moveSection(sIdx, -1)} className="text-gray-400 hover:text-gray-600 leading-none" title="Subir sección">
+   464→                <ChevronUp className="h-4 w-4" />
+   465→              </button>
+   466→              <button onClick={() => moveSection(sIdx, 1)} className="text-gray-400 hover:text-gray-600 leading-none" title="Bajar sección">
+   467→                <ChevronDown className="h-4 w-4" />
+   468→              </button>
+   469→            </div>
+   470→            <Input
+   471→              value={section.id}
+   472→              onChange={(e) => updateSection(sIdx, 'id', e.target.value)}
+   473→              className="w-20 h-9 text-sm font-mono"
+   474→              placeholder="ID"
+   475→            />
+   476→            <Input
+   477→              value={section.title}
+   478→              onChange={(e) => updateSection(sIdx, 'title', e.target.value)}
+   479→              className="flex-1 h-9 text-base font-semibold"
+   480→              placeholder="Título de sección"
+   481→            />
+   482→            <Button variant="ghost" size="sm" onClick={() => addItem(sIdx)}
+   483→              className="h-9 w-9 p-0 text-green-600 hover:text-green-700 hover:bg-green-50" title="Añadir item">
+   484→              <Plus className="h-5 w-5" />
+   485→            </Button>
+   486→            <Button variant="ghost" size="sm" onClick={() => removeSection(sIdx)}
+   487→              className="h-9 w-9 p-0 text-red-500 hover:text-red-600 hover:bg-red-50" title="Eliminar sección">
+   488→              <Trash2 className="h-4 w-4" />
+   489→            </Button>
+   490→          </div>
+   491→
+   492→          {/* Items */}
+   493→          <div className="p-3 space-y-2">
+   494→            {section.items.length === 0 && (
+   495→              <p className="text-sm text-muted-foreground italic px-2 py-2">Sin items. Pulsa + para añadir.</p>
+   496→            )}
+   497→            {section.items.map((item, iIdx) => (
+   498→              <div key={iIdx} className="flex items-center gap-3 group">
+   499→                <div className="flex flex-col gap-0.5">
+   500→                  <button onClick={() => moveItem(sIdx, iIdx, -1)} className="text-gray-300 hover:text-gray-500 leading-none" title="Subir">
+   501→                    <ChevronUp className="h-3.5 w-3.5" />
+   502→                  </button>
+   503→                  <button onClick={() => moveItem(sIdx, iIdx, 1)} className="text-gray-300 hover:text-gray-500 leading-none" title="Bajar">
+   504→                    <ChevronDown className="h-3.5 w-3.5" />
+   505→                  </button>
+   506→                </div>
+   507→                <Input
+   508→                  value={item.id}
+   509→                  onChange={(e) => updateItem(sIdx, iIdx, 'id', e.target.value)}
+   510→                  className="w-20 h-8 text-xs font-mono"
+   511→                  placeholder="ID"
+   512→                />
+   513→                <Input
+   514→                  value={item.description}
+   515→                  onChange={(e) => updateItem(sIdx, iIdx, 'description', e.target.value)}
+   516→                  className="flex-1 h-8 text-sm"
+   517→                  placeholder="Descripción del item"
+   518→                />
+   519→                <label className="flex items-center gap-1.5 text-xs text-muted-foreground whitespace-nowrap cursor-pointer shrink-0">
+   520→                  <input
+   521→                    type="checkbox"
+   522→                    checked={item.hasOther}
+   523→                    onChange={(e) => updateItem(sIdx, iIdx, 'hasOther', e.target.checked)}
+   524→                    className="rounded border-gray-300 h-4 w-4"
+   525→                  />
+   526→                  Otros
+   527→                </label>
+   528→                <Button variant="ghost" size="sm"
+   529→                  onClick={() => removeItem(sIdx, iIdx)}
+   530→                  className="h-8 w-8 p-0 text-red-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity" title="Eliminar">
+   531→                  <Trash2 className="h-4 w-4" />
+   532→                </Button>
+   533→              </div>
+   534→            ))}
+   535→          </div>
+   536→        </div>
+   537→      ))}
+   538→
+   539→      <Button variant="outline" onClick={addSection}
+   540→        className="w-full border-dashed border-2 text-green-600 hover:bg-green-50 hover:border-green-400 gap-1 h-10">
+   541→        <Plus className="h-5 w-5" />
+   542→        Añadir sección
+   543→      </Button>
+   544→
+   545→      <div className="text-sm text-muted-foreground text-center">
+   546→        {sections.length} sección(es) · {sections.reduce((s, sec) => s + sec.items.length, 0)} item(s) en total
+   547→      </div>
+   548→    </div>
+   549→  )
+   550→}
+   551→
+   552→// ═══════════════════════════════════════════════════════
+   553→// VISUAL EDITOR: ExamEditor (examen)
+   554→// ═══════════════════════════════════════════════════════
+   555→function ExamEditor({ content, onChange }: { content: string; onChange: (v: string) => void }) {
+   556→  let parsed: { questions: { question: string; options: string[]; correctIndex: number }[] }
+   557→  try {
+   558→    parsed = JSON.parse(content)
+   559→  } catch {
+   560→    return (
+   561→      <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-sm text-red-600">
+   562→        El JSON no es válido. Corrígelo en modo JSON o carga el contenido por defecto.
+   563→      </div>
+   564→    )
+   565→  }
+   566→
+   567→  const questions = parsed.questions || []
+   568→
+   569→  const update = (newQuestions: typeof questions) => {
+   570→    onChange(JSON.stringify({ ...parsed, questions: newQuestions }, null, 2))
+   571→  }
+   572→
+   573→  const addQuestion = () => {
+   574→    update([...questions, { question: '', options: ['Opción A', 'Opción B', 'Opción C', 'Opción D'], correctIndex: 0 }])
+   575→  }
+   576→
+   577→  const removeQuestion = (idx: number) => {
+   578→    update(questions.filter((_, i) => i !== idx))
+   579→  }
+   580→
+   581→  const updateQuestion = (idx: number, field: string, value: any) => {
+   582→    const updated = [...questions]
+   583→    updated[idx] = { ...updated[idx], [field]: value }
+   584→    update(updated)
+   585→  }
+   586→
+   587→  const updateOption = (qIdx: number, oIdx: number, value: string) => {
+   588→    const updated = [...questions]
+   589→    updated[qIdx] = { ...updated[qIdx], options: updated[qIdx].options.map((o, i) => i === oIdx ? value : o) }
+   590→    update(updated)
+   591→  }
+   592→
+   593→  const addOption = (qIdx: number) => {
+   594→    const updated = [...questions]
+   595→    const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+   596→    const newIdx = updated[qIdx].options.length
+   597→    updated[qIdx] = { ...updated[qIdx], options: [...updated[qIdx].options, `Opción ${letters[newIdx] || newIdx + 1}`] }
+   598→    update(updated)
+   599→  }
+   600→
+   601→  const removeOption = (qIdx: number, oIdx: number) => {
+   602→    const updated = [...questions]
+   603→    const newOptions = updated[qIdx].options.filter((_, i) => i !== oIdx)
+   604→    let newCorrect = updated[qIdx].correctIndex
+   605→    if (newCorrect >= newOptions.length) newCorrect = 0
+   606→    else if (newCorrect > oIdx) newCorrect--
+   607→    updated[qIdx] = { ...updated[qIdx], options: newOptions, correctIndex: newCorrect }
+   608→    update(updated)
+   609→  }
+   610→
+   611→  const moveQuestion = (idx: number, dir: -1 | 1) => {
+   612→    const target = idx + dir
+   613→    if (target < 0 || target >= questions.length) return
+   614→    const updated = [...questions]
+   615→    ;[updated[idx], updated[target]] = [updated[target], updated[idx]]
+   616→    update(updated)
+   617→  }
+   618→
+   619→  return (
+   620→    <div className="space-y-4">
+   621→      {questions.map((q, qIdx) => (
+   622→        <div key={qIdx} className="border-2 rounded-lg overflow-hidden bg-white shadow-sm">
+   623→          <div className="flex items-center gap-3 px-4 py-3 bg-amber-50 border-b border-amber-200">
+   624→            <div className="flex flex-col gap-0.5">
+   625→              <button onClick={() => moveQuestion(qIdx, -1)} className="text-gray-400 hover:text-gray-600 leading-none">
+   626→                <ChevronUp className="h-4 w-4" />
+   627→              </button>
+   628→              <button onClick={() => moveQuestion(qIdx, 1)} className="text-gray-400 hover:text-gray-600 leading-none">
+   629→                <ChevronDown className="h-4 w-4" />
+   630→              </button>
+   631→            </div>
+   632→            <Badge className="bg-amber-200 text-amber-800 shrink-0 text-sm px-2 py-0.5">P{qIdx + 1}</Badge>
+   633→            <Input
+   634→              value={q.question}
+   635→              onChange={(e) => updateQuestion(qIdx, 'question', e.target.value)}
+   636→              className="flex-1 h-9 text-base"
+   637→              placeholder="Pregunta"
+   638→            />
+   639→            <Button variant="ghost" size="sm" onClick={() => removeQuestion(qIdx)}
+   640→              className="h-9 w-9 p-0 text-red-500 hover:text-red-600 hover:bg-red-50" title="Eliminar pregunta">
+   641→              <Trash2 className="h-4 w-4" />
+   642→            </Button>
+   643→          </div>
+   644→
+   645→          <div className="p-4 space-y-2">
+   646→            {q.options.map((opt, oIdx) => (
+   647→              <div key={oIdx} className="flex items-center gap-3 group">
+   648→                <label className="flex items-center gap-1.5 cursor-pointer shrink-0">
+   649→                  <input
+   650→                    type="radio"
+   651→                    name={`correct-${qIdx}`}
+   652→                    checked={q.correctIndex === oIdx}
+   653→                    onChange={() => updateQuestion(qIdx, 'correctIndex', oIdx)}
+   654→                    className="h-4 w-4 text-green-600"
+   655→                  />
+   656→                  <span className="text-xs text-muted-foreground w-5 font-semibold">{String.fromCharCode(65 + oIdx)}</span>
+   657→                </label>
+   658→                <Input
+   659→                  value={opt}
+   660→                  onChange={(e) => updateOption(qIdx, oIdx, e.target.value)}
+   661→                  className={`flex-1 h-8 text-sm ${q.correctIndex === oIdx ? 'border-green-400 bg-green-50' : ''}`}
+   662→                />
+   663→                <Button variant="ghost" size="sm"
+   664→                  onClick={() => removeOption(qIdx, oIdx)}
+   665→                  className="h-8 w-8 p-0 text-red-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
+   666→                  title="Eliminar opción">
+   667→                  <Trash2 className="h-4 w-4" />
+   668→                </Button>
+   669→              </div>
+   670→            ))}
+   671→            <Button variant="ghost" size="sm" onClick={() => addOption(qIdx)}
+   672→              className="h-8 text-sm text-blue-500 hover:text-blue-600 gap-1 px-3">
+   673→              <Plus className="h-4 w-4" /> Añadir opción
+   674→            </Button>
+   675→          </div>
+   676→        </div>
+   677→      ))}
+   678→
+   679→      <Button variant="outline" onClick={addQuestion}
+   680→        className="w-full border-dashed border-2 text-amber-600 hover:bg-amber-50 hover:border-amber-400 gap-1 h-10">
+   681→        <Plus className="h-5 w-5" />
+   682→        Añadir pregunta
+   683→      </Button>
+   684→
+   685→      <div className="text-sm text-muted-foreground text-center">
+   686→        {questions.length} pregunta(s)
+   687→      </div>
+   688→    </div>
+   689→  )
+   690→}
+   691→
+   692→// ═══════════════════════════════════════════════════════
+   693→// VISUAL EDITOR: FormationEditor (formacion)
+   694→// ═══════════════════════════════════════════════════════
+   695→function FormationEditor({ content, onChange }: { content: string; onChange: (v: string) => void }) {
+   696→  let parsed: { sections: { title: string; content: string }[] }
+   697→  try {
+   698→    parsed = JSON.parse(content)
+   699→  } catch {
+   700→    return (
+   701→      <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-sm text-red-600">
+   702→        El JSON no es válido. Corrígelo en modo JSON o carga el contenido por defecto.
+   703→      </div>
+   704→    )
+   705→  }
+   706→
+   707→  const sections = parsed.sections || []
+   708→
+   709→  const update = (newSections: typeof sections) => {
+   710→    onChange(JSON.stringify({ ...parsed, sections: newSections }, null, 2))
+   711→  }
+   712→
+   713→  const addSection = () => {
+   714→    update([...sections, { title: '', content: '' }])
+   715→  }
+   716→
+   717→  const removeSection = (idx: number) => {
+   718→    update(sections.filter((_, i) => i !== idx))
+   719→  }
+   720→
+   721→  const updateSection = (idx: number, field: 'title' | 'content', value: string) => {
+   722→    const updated = [...sections]
+   723→    updated[idx] = { ...updated[idx], [field]: value }
+   724→    update(updated)
+   725→  }
+   726→
+   727→  const moveSection = (idx: number, dir: -1 | 1) => {
+   728→    const target = idx + dir
+   729→    if (target < 0 || target >= sections.length) return
+   730→    const updated = [...sections]
+   731→    ;[updated[idx], updated[target]] = [updated[target], updated[idx]]
+   732→    update(updated)
+   733→  }
+   734→
+   735→  return (
+   736→    <div className="space-y-4">
+   737→      {sections.map((sec, idx) => (
+   738→        <div key={idx} className="border-2 rounded-lg overflow-hidden bg-white shadow-sm">
+   739→          <div className="flex items-center gap-3 px-4 py-3 bg-blue-50 border-b border-blue-200">
+   740→            <div className="flex flex-col gap-0.5">
+   741→              <button onClick={() => moveSection(idx, -1)} className="text-gray-400 hover:text-gray-600 leading-none">
+   742→                <ChevronUp className="h-4 w-4" />
+   743→              </button>
+   744→              <button onClick={() => moveSection(idx, 1)} className="text-gray-400 hover:text-gray-600 leading-none">
+   745→                <ChevronDown className="h-4 w-4" />
+   746→              </button>
+   747→            </div>
+   748→            <Badge className="bg-blue-200 text-blue-800 shrink-0 text-sm px-2 py-0.5">Sección {idx + 1}</Badge>
+   749→            <Input
+   750→              value={sec.title}
+   751→              onChange={(e) => updateSection(idx, 'title', e.target.value)}
+   752→              className="flex-1 h-9 text-base font-semibold"
+   753→              placeholder="Título de la sección"
+   754→            />
+   755→            <Button variant="ghost" size="sm" onClick={() => removeSection(idx)}
+   756→              className="h-9 w-9 p-0 text-red-500 hover:text-red-600 hover:bg-red-50" title="Eliminar sección">
+   757→              <Trash2 className="h-4 w-4" />
+   758→            </Button>
+   759→          </div>
+   760→          <div className="p-4">
+   761→            <textarea
+   762→              value={sec.content}
+   763→              onChange={(e) => updateSection(idx, 'content', e.target.value)}
+   764→              className="w-full h-28 p-3 border rounded-lg text-sm resize-y focus:ring-2 focus:ring-blue-300 focus:border-blue-400"
+   765→              placeholder="Contenido de la sección..."
+   766→            />
+   767→          </div>
+   768→        </div>
+   769→      ))}
+   770→
+   771→      <Button variant="outline" onClick={addSection}
+   772→        className="w-full border-dashed border-2 text-blue-600 hover:bg-blue-50 hover:border-blue-400 gap-1 h-10">
+   773→        <Plus className="h-5 w-5" />
+   774→        Añadir sección
+   775→      </Button>
+   776→
+   777→      <div className="text-sm text-muted-foreground text-center">
+   778→        {sections.length} sección(es) de formación
+   779→      </div>
+   780→    </div>
+   781→  )
+   782→}
+   783→
+   784→// ═══════════════════════════════════════════════════════
+   785→// VISUAL EDITOR: InventoryConfigEditor (inventario)
+   786→// ═══════════════════════════════════════════════════════
+   787→interface InvCategory { value: string; label: string; color: string }
+   788→interface InvField { key: string; label: string; type: 'select' | 'text' | 'number'; options?: string[] }
+   789→
+   790→function InventoryConfigEditor({ content, onChange, sStep }: { content: string; onChange: (v: string) => void; sStep: number }) {
+   791→  let parsed: { categories: InvCategory[]; extraFields: InvField[]; fixedFields?: InvFixedField[]; title?: string; subtitle?: string; templateName?: string }
+   792→  try {
+   793→    parsed = JSON.parse(content)
+   794→  } catch {
+   795→    return (
+   796→      <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-sm text-red-600">
+   797→        El JSON no es válido. Corrígelo en modo JSON o carga el contenido por defecto.
+   798→      </div>
+   799→    )
+   800→  }
+   801→
+   802→  const categories = parsed.categories || []
+   803→  const extraFields = parsed.extraFields || []
+   804→
+   805→  const update = (newData: Partial<typeof parsed>) => {
+   806→    onChange(JSON.stringify({ ...parsed, ...newData }, null, 2))
+   807→  }
+   808→
+   809→  const addCategory = () => {
+   810→    update({ categories: [...categories, { value: '', label: '', color: 'bg-gray-100 text-gray-800' }] })
+   811→  }
+   812→
+   813→  const removeCategory = (idx: number) => {
+   814→    update({ categories: categories.filter((_, i) => i !== idx) })
+   815→  }
+   816→
+   817→  const updateCategory = (idx: number, field: keyof InvCategory, value: string) => {
+   818→    const updated = [...categories]
+   819→    updated[idx] = { ...updated[idx], [field]: value }
+   820→    update({ categories: updated })
+   821→  }
+   822→
+   823→  const moveCategory = (idx: number, dir: -1 | 1) => {
+   824→    const target = idx + dir
+   825→    if (target < 0 || target >= categories.length) return
+   826→    const updated = [...categories]
+   827→    ;[updated[idx], updated[target]] = [updated[target], updated[idx]]
+   828→    update({ categories: updated })
+   829→  }
+   830→
+   831→  const addField = () => {
+   832→    update({ extraFields: [...extraFields, { key: '', label: '', type: 'text' }] })
+   833→  }
+   834→
+   835→  const removeField = (idx: number) => {
+   836→    update({ extraFields: extraFields.filter((_, i) => i !== idx) })
+   837→  }
+   838→
+   839→  const updateField = (idx: number, field: string, value: string | boolean) => {
+   840→    const updated = [...extraFields]
+   841→    updated[idx] = { ...updated[idx], [field]: value }
+   842→    // Remove options if type is not select
+   843→    if (field === 'type' && value !== 'select') {
+   844→      const { options, ...rest } = updated[idx]
+   845→      updated[idx] = rest as InvField
+   846→    }
+   847→    update({ extraFields: updated })
+   848→  }
+   849→
+   850→  const moveField = (idx: number, dir: -1 | 1) => {
+   851→    const target = idx + dir
+   852→    if (target < 0 || target >= extraFields.length) return
+   853→    const updated = [...extraFields]
+   854→    ;[updated[idx], updated[target]] = [updated[target], updated[idx]]
+   855→    update({ extraFields: updated })
+   856→  }
+   857→
+   858→  const addOption = (fIdx: number) => {
+   859→    const updated = [...extraFields]
+   860→    const opts = [...(updated[fIdx].options || []), '']
+   861→    updated[fIdx] = { ...updated[fIdx], options: opts }
+   862→    update({ extraFields: updated })
+   863→  }
+   864→
+   865→  const removeOption = (fIdx: number, oIdx: number) => {
+   866→    const updated = [...extraFields]
+   867→    const opts = (updated[fIdx].options || []).filter((_, i) => i !== oIdx)
+   868→    updated[fIdx] = { ...updated[fIdx], options: opts }
+   869→    update({ extraFields: updated })
+   870→  }
+   871→
+   872→  const updateOption = (fIdx: number, oIdx: number, value: string) => {
+   873→    const updated = [...extraFields]
+   874→    const opts = [...(updated[fIdx].options || [])]
+   875→    opts[oIdx] = value
+   876→    updated[fIdx] = { ...updated[fIdx], options: opts }
+   877→    update({ extraFields: updated })
+   878→  }
+   879→
+   880→  const COLOR_PRESETS = [
+   881→    'bg-green-100 text-green-800', 'bg-blue-100 text-blue-800', 'bg-yellow-100 text-yellow-800',
+   882→    'bg-red-100 text-red-800', 'bg-purple-100 text-purple-800', 'bg-orange-100 text-orange-800',
+   883→    'bg-gray-100 text-gray-800', 'bg-cyan-100 text-cyan-800', 'bg-amber-100 text-amber-800',
+   884→    'bg-teal-100 text-teal-800', 'bg-pink-100 text-pink-800',
+   885→  ]
+   886→
+   887→  // Built-in fields that always appear in the inventory form (not editable in template, shown for reference)
+   888→  const builtInFields: { label: string; section: string; note?: string }[] = sStep === 1
+   889→    ? [
+   890→        { label: 'Elemento', section: 'Datos básicos', note: 'Nombre del elemento (obligatorio)' },
+   891→        { label: 'Zona', section: 'Datos básicos', note: 'Se rellena automáticamente con la zona actual' },
+   892→        { label: 'Categoría', section: 'Datos básicos', note: 'Innecesario (fijo)' },
+   893→        { label: 'Cantidad', section: 'Datos básicos' },
+   894→        { label: 'Precio (€)', section: 'Datos básicos' },
+   895→        { label: 'F. Entrada', section: 'Etiqueta', note: 'Fecha de entrada a la Jaula' },
+   896→        { label: 'F. Revisión', section: 'Etiqueta', note: 'Calculada automáticamente (F. Entrada + Días cuarentena)' },
+   897→        { label: 'Z. Origen', section: 'Zonas', note: 'Zona donde se encontró el elemento' },
+   898→        { label: 'Z. Destino', section: 'Zonas', note: 'Siempre "Jaula" para innecesarios' },
+   899→      ]
+   900→    : sStep === 2
+   901→    ? [
+   902→        { label: 'Elemento', section: 'Datos básicos' },
+   903→        { label: 'Ubicación', section: 'Datos básicos' },
+   904→        { label: 'Zona', section: 'Datos básicos' },
+   905→        { label: 'Categoría', section: 'Datos básicos' },
+   906→        { label: 'Total exist.', section: 'Datos básicos' },
+   907→        { label: 'Precio (€)', section: 'Datos básicos' },
+   908→      ]
+   909→    : [
+   910→        { label: 'Elemento', section: 'Datos básicos' },
+   911→        { label: 'Ubicación', section: 'Datos básicos' },
+   912→        { label: 'Zona', section: 'Datos básicos' },
+   913→        { label: 'Categoría', section: 'Datos básicos' },
+   914→        { label: 'Total exist.', section: 'Datos básicos' },
+   915→        { label: 'Precio (€)', section: 'Datos básicos' },
+   916→      ]
+   917→
+   918→  return (
+   919→    <div className="space-y-6">
+   920→      {/* BUILT-IN FIELDS (read-only reference) */}
+   921→      <div>
+   922→        <h4 className="text-sm font-bold text-blue-700 mb-2 flex items-center gap-2">
+   923→          <Badge className="bg-blue-100 text-blue-800">Campos fijos del formulario</Badge>
+   924→          {builtInFields.length} campo(s) — no editables
+   925→        </h4>
+   926→        <div className="border rounded-lg p-3 bg-blue-50/30 space-y-1">
+   927→          <p className="text-[10px] text-blue-600 mb-2">Estos campos siempre aparecen en el inventario y no se pueden quitar de la plantilla.</p>
+   928→          <div className="grid grid-cols-1 sm:grid-cols-2 gap-1">
+   929→            {builtInFields.map((f, i) => (
+   930→              <div key={i} className="flex items-center gap-2 text-xs px-2 py-1 rounded bg-white/60">
+   931→                <span className="font-medium text-blue-800">{f.label}</span>
+   932→                <span className="text-blue-400">—</span>
+   933→                <span className="text-blue-500 text-[10px]">{f.section}</span>
+   934→                {f.note && <span className="text-[9px] text-blue-400 italic">({f.note})</span>}
+   935→              </div>
+   936→            ))}
+   937→          </div>
+   938→        </div>
+   939→      </div>
+   940→
+   941→      {/* CATEGORIES */}
+   942→      <div>
+   943→        <h4 className="text-sm font-bold text-orange-700 mb-2 flex items-center gap-2">
+   944→          <Badge className="bg-orange-100 text-orange-800">Categorías</Badge>
+   945→          {categories.length} categoría(s)
+   946→        </h4>
+   947→        <div className="space-y-2">
+   948→          {categories.map((cat, idx) => (
+   949→            <div key={idx} className="flex items-center gap-2 group border rounded-lg p-2 bg-white">
+   950→              <div className="flex flex-col gap-0.5">
+   951→                <button onClick={() => moveCategory(idx, -1)} className="text-gray-300 hover:text-gray-500 leading-none">
+   952→                  <ChevronUp className="h-3.5 w-3.5" />
+   953→                </button>
+   954→                <button onClick={() => moveCategory(idx, 1)} className="text-gray-300 hover:text-gray-500 leading-none">
+   955→                  <ChevronDown className="h-3.5 w-3.5" />
+   956→                </button>
+   957→              </div>
+   958→              <Input value={cat.value} onChange={e => updateCategory(idx, 'value', e.target.value)}
+   959→                className="w-32 h-8 text-xs" placeholder="Valor (ej: muy_frecuente)" />
+   960→              <Input value={cat.label} onChange={e => updateCategory(idx, 'label', e.target.value)}
+   961→                className="flex-1 h-8 text-xs" placeholder="Etiqueta (ej: Muy frecuente)" />
+   962→              <select value={cat.color} onChange={e => updateCategory(idx, 'color', e.target.value)}
+   963→                className="h-8 text-xs border rounded px-1 max-w-[180px]">
+   964→                {COLOR_PRESETS.map(c => <option key={c} value={c}>{c}</option>)}
+   965→              </select>
+   966→              <Badge className={cat.color}>{cat.label || 'Preview'}</Badge>
+   967→              <Button variant="ghost" size="sm" onClick={() => removeCategory(idx)}
+   968→                className="h-8 w-8 p-0 text-red-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity">
+   969→                <Trash2 className="h-4 w-4" />
+   970→              </Button>
+   971→            </div>
+   972→          ))}
+   973→          <Button variant="outline" onClick={addCategory} size="sm"
+   974→            className="w-full border-dashed border-2 text-orange-600 hover:bg-orange-50 hover:border-orange-400 gap-1">
+   975→            <Plus className="h-4 w-4" /> Añadir categoría
+   976→          </Button>
+   977→        </div>
+   978→      </div>
+   979→
+   980→      {/* EXTRA FIELDS */}
+   981→      <div>
+   982→        <h4 className="text-sm font-bold text-teal-700 mb-2 flex items-center gap-2">
+   983→          <Badge className="bg-teal-100 text-teal-800">Campos extra</Badge>
+   984→          {extraFields.length} campo(s)
+   985→        </h4>
+   986→        <div className="space-y-2">
+   987→          {extraFields.map((field, fIdx) => (
+   988→            <div key={fIdx} className="border-2 rounded-lg overflow-hidden bg-white shadow-sm">
+   989→              <div className="flex items-center gap-2 px-3 py-2 bg-teal-50 border-b border-teal-200">
+   990→                <div className="flex flex-col gap-0.5">
+   991→                  <button onClick={() => moveField(fIdx, -1)} className="text-gray-300 hover:text-gray-500 leading-none">
+   992→                    <ChevronUp className="h-3.5 w-3.5" />
+   993→                  </button>
+   994→                  <button onClick={() => moveField(fIdx, 1)} className="text-gray-300 hover:text-gray-500 leading-none">
+   995→                    <ChevronDown className="h-3.5 w-3.5" />
+   996→                  </button>
+   997→                </div>
+   998→                <Badge className="bg-teal-200 text-teal-800 shrink-0 text-[10px] px-1.5 py-0.5">Campo {fIdx + 1}</Badge>
+   999→                <Input value={field.key} onChange={e => updateField(fIdx, 'key', e.target.value)}
+  1000→                  className="w-36 h-7 text-xs font-mono" placeholder="key (ej: ubicacion)" />
+  1001→                <Input value={field.label} onChange={e => updateField(fIdx, 'label', e.target.value)}
+  1002→                  className="flex-1 h-7 text-xs" placeholder="Etiqueta (ej: Ubicación asignada)" />
+  1003→                <select value={field.type} onChange={e => updateField(fIdx, 'type', e.target.value)}
+  1004→                  className="h-7 text-xs border rounded px-2">
+  1005→                  <option value="text">Texto</option>
+  1006→                  <option value="number">Número</option>
+  1007→                  <option value="select">Selección</option>
+  1008→                </select>
+  1009→                <Button variant="ghost" size="sm" onClick={() => removeField(fIdx)}
+  1010→                  className="h-7 w-7 p-0 text-red-400 hover:text-red-500">
+  1011→                  <Trash2 className="h-3.5 w-3.5" />
+  1012→                </Button>
+  1013→              </div>
+  1014→              {field.type === 'select' && (
+  1015→                <div className="px-3 py-2 space-y-1">
+  1016→                  <Label className="text-[10px] text-muted-foreground">Opciones:</Label>
+  1017→                  {(field.options || []).map((opt, oIdx) => (
+  1018→                    <div key={oIdx} className="flex items-center gap-1">
+  1019→                      <Input value={opt} onChange={e => updateOption(fIdx, oIdx, e.target.value)}
+  1020→                        className="flex-1 h-7 text-xs" placeholder={`Opción ${oIdx + 1}`} />
+  1021→                      <Button variant="ghost" size="sm" onClick={() => removeOption(fIdx, oIdx)}
+  1022→                        className="h-7 w-7 p-0 text-red-300 hover:text-red-500">
+  1023→                        <Trash2 className="h-3 w-3" />
+  1024→                      </Button>
+  1025→                    </div>
+  1026→                  ))}
+  1027→                  <Button variant="ghost" size="sm" onClick={() => addOption(fIdx)}
+  1028→                    className="h-7 text-xs text-teal-600 hover:text-teal-700 gap-1 px-2">
+  1029→                    <Plus className="h-3 w-3" /> Añadir opción
+  1030→                  </Button>
+  1031→                </div>
+  1032→              )}
+  1033→            </div>
+  1034→          ))}
+  1035→          <Button variant="outline" onClick={addField} size="sm"
+  1036→            className="w-full border-dashed border-2 text-teal-600 hover:bg-teal-50 hover:border-teal-400 gap-1">
+  1037→            <Plus className="h-4 w-4" /> Añadir campo extra
+  1038→          </Button>
+  1039→        </div>
+  1040→      </div>
+  1041→    </div>
+  1042→  )
+  1043→}
+  1044→
+  1045→// ═══════════════════════════════════════════════════════
+  1046→// VISUAL EDITOR: StandardTemplateEditor (estandar)
+  1047→// ═══════════════════════════════════════════════════════
+  1048→interface StdField { key: string; label: string; type: 'photo' | 'text' | 'number' | 'select'; options?: string[]; required?: boolean }
+  1049→
+  1050→function StandardTemplateEditor({ content, onChange }: { content: string; onChange: (v: string) => void }) {
+  1051→  let parsed: { fields: StdField[] }
+  1052→  try {
+  1053→    parsed = JSON.parse(content)
+  1054→  } catch {
+  1055→    return (
+  1056→      <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-sm text-red-600">
+  1057→        El JSON no es válido. Corrígelo en modo JSON o carga el contenido por defecto.
+  1058→      </div>
+  1059→    )
+  1060→  }
+  1061→
+  1062→  const fields = parsed.fields || []
+  1063→
+  1064→  const update = (newFields: StdField[]) => {
+  1065→    onChange(JSON.stringify({ ...parsed, fields: newFields }, null, 2))
+  1066→  }
+  1067→
+  1068→  const addField = () => {
+  1069→    update([...fields, { key: '', label: '', type: 'text', required: false }])
+  1070→  }
+  1071→
+  1072→  const removeField = (idx: number) => {
+  1073→    update(fields.filter((_, i) => i !== idx))
+  1074→  }
+  1075→
+  1076→  const updateField = (idx: number, field: string, value: string | boolean) => {
+  1077→    const updated = [...fields]
+  1078→    updated[idx] = { ...updated[idx], [field]: value }
+  1079→    // Remove options if type is not select
+  1080→    if (field === 'type' && value !== 'select') {
+  1081→      const { options, ...rest } = updated[idx]
+  1082→      updated[idx] = rest as StdField
+  1083→    }
+  1084→    update(updated)
+  1085→  }
+  1086→
+  1087→  const moveField = (idx: number, dir: -1 | 1) => {
+  1088→    const target = idx + dir
+  1089→    if (target < 0 || target >= fields.length) return
+  1090→    const updated = [...fields]
+  1091→    ;[updated[idx], updated[target]] = [updated[target], updated[idx]]
+  1092→    update(updated)
+  1093→  }
+  1094→
+  1095→  const addOption = (fIdx: number) => {
+  1096→    const updated = [...fields]
+  1097→    const opts = [...(updated[fIdx].options || []), '']
+  1098→    updated[fIdx] = { ...updated[fIdx], options: opts }
+  1099→    update(updated)
+  1100→  }
+  1101→
+  1102→  const removeOption = (fIdx: number, oIdx: number) => {
+  1103→    const updated = [...fields]
+  1104→    const opts = (updated[fIdx].options || []).filter((_, i) => i !== oIdx)
+  1105→    updated[fIdx] = { ...updated[fIdx], options: opts }
+  1106→    update(updated)
+  1107→  }
+  1108→
+  1109→  const updateOption = (fIdx: number, oIdx: number, value: string) => {
+  1110→    const updated = [...fields]
+  1111→    const opts = [...(updated[fIdx].options || [])]
+  1112→    opts[oIdx] = value
+  1113→    updated[fIdx] = { ...updated[fIdx], options: opts }
+  1114→    update(updated)
+  1115→  }
+  1116→
+  1117→  const TYPE_LABELS: Record<string, string> = { photo: 'Foto', text: 'Texto', number: 'Número', select: 'Selección' }
+  1118→
+  1119→  return (
+  1120→    <div className="space-y-3">
+  1121→      {fields.map((field, fIdx) => (
+  1122→        <div key={fIdx} className="border-2 rounded-lg overflow-hidden bg-white shadow-sm">
+  1123→          <div className="flex items-center gap-2 px-3 py-2 bg-violet-50 border-b border-violet-200">
+  1124→            <div className="flex flex-col gap-0.5">
+  1125→              <button onClick={() => moveField(fIdx, -1)} className="text-gray-300 hover:text-gray-500 leading-none">
+  1126→                <ChevronUp className="h-3.5 w-3.5" />
+  1127→              </button>
+  1128→              <button onClick={() => moveField(fIdx, 1)} className="text-gray-300 hover:text-gray-500 leading-none">
+  1129→                <ChevronDown className="h-3.5 w-3.5" />
+  1130→              </button>
+  1131→            </div>
+  1132→            <Badge className="bg-violet-200 text-violet-800 shrink-0 text-[10px] px-1.5 py-0.5">Campo {fIdx + 1}</Badge>
+  1133→            <Input value={field.key} onChange={e => updateField(fIdx, 'key', e.target.value)}
+  1134→              className="w-36 h-7 text-xs font-mono" placeholder="key (ej: beforePhotoUrl)" />
+  1135→            <Input value={field.label} onChange={e => updateField(fIdx, 'label', e.target.value)}
+  1136→              className="flex-1 h-7 text-xs" placeholder="Etiqueta (ej: Foto Antes)" />
+  1137→            <select value={field.type} onChange={e => updateField(fIdx, 'type', e.target.value)}
+  1138→              className="h-7 text-xs border rounded px-2">
+  1139→              <option value="text">Texto</option>
+  1140→              <option value="number">Número</option>
+  1141→              <option value="select">Selección</option>
+  1142→              <option value="photo">Foto</option>
+  1143→            </select>
+  1144→            <label className="flex items-center gap-1 text-[10px] text-muted-foreground whitespace-nowrap cursor-pointer">
+  1145→              <input type="checkbox" checked={field.required || false}
+  1146→                onChange={e => updateField(fIdx, 'required', e.target.checked)}
+  1147→                className="rounded border-gray-300 h-3.5 w-3.5" />
+  1148→              Oblig.
+  1149→            </label>
+  1150→            <Button variant="ghost" size="sm" onClick={() => removeField(fIdx)}
+  1151→              className="h-7 w-7 p-0 text-red-400 hover:text-red-500">
+  1152→              <Trash2 className="h-3.5 w-3.5" />
+  1153→            </Button>
+  1154→          </div>
+  1155→          {field.type === 'select' && (
+  1156→            <div className="px-3 py-2 space-y-1">
+  1157→              <Label className="text-[10px] text-muted-foreground">Opciones:</Label>
+  1158→              {(field.options || []).map((opt, oIdx) => (
+  1159→                <div key={oIdx} className="flex items-center gap-1">
+  1160→                  <Input value={opt} onChange={e => updateOption(fIdx, oIdx, e.target.value)}
+  1161→                    className="flex-1 h-7 text-xs" placeholder={`Opción ${oIdx + 1}`} />
+  1162→                  <Button variant="ghost" size="sm" onClick={() => removeOption(fIdx, oIdx)}
+  1163→                    className="h-7 w-7 p-0 text-red-300 hover:text-red-500">
+  1164→                    <Trash2 className="h-3 w-3" />
+  1165→                  </Button>
+  1166→                </div>
+  1167→              ))}
+  1168→              <Button variant="ghost" size="sm" onClick={() => addOption(fIdx)}
+  1169→                className="h-7 text-xs text-violet-600 hover:text-violet-700 gap-1 px-2">
+  1170→                <Plus className="h-3 w-3" /> Añadir opción
+  1171→              </Button>
+  1172→            </div>
+  1173→          )}
+  1174→        </div>
+  1175→      ))}
+  1176→
+  1177→      <Button variant="outline" onClick={addField} size="sm"
+  1178→        className="w-full border-dashed border-2 text-violet-600 hover:bg-violet-50 hover:border-violet-400 gap-1">
+  1179→        <Plus className="h-4 w-4" /> Añadir campo
+  1180→      </Button>
+  1181→
+  1182→      <div className="text-sm text-muted-foreground text-center">
+  1183→        {fields.length} campo(s) · {fields.filter(f => f.required).length} obligatorio(s)
+  1184→      </div>
+  1185→    </div>
+  1186→  )
+  1187→}
+  1188→
+  1189→// ═══════════════════════════════════════════════════════
+  1190→// VISUAL EDITOR: PlanAccionEditor (plan_accion)
+  1191→// ═══════════════════════════════════════════════════════
+  1192→interface PlanAccionColumn {
+  1193→  key: string; label: string; type: string; width?: string; description?: string;
+  1194→  required?: boolean; placeholder?: string; options?: string[]; min?: number; max?: number;
+  1195→}
+  1196→
+  1197→function PlanAccionEditor({ content, onChange }: { content: string; onChange: (v: string) => void }) {
+  1198→  let parsed: { tableType: string; description?: string; columns: PlanAccionColumn[]; sourceTypes?: string[] }
+  1199→  try {
+  1200→    parsed = JSON.parse(content)
+  1201→  } catch {
+  1202→    return (
+  1203→      <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-sm text-red-600">
+  1204→        El JSON no es válido. Corrígelo en modo JSON o carga el contenido por defecto.
+  1205→      </div>
+  1206→    )
+  1207→  }
+  1208→
+  1209→  const columns = parsed.columns || []
+  1210→
+  1211→  const update = (newData: Partial<typeof parsed>) => {
+  1212→    onChange(JSON.stringify({ ...parsed, ...newData }, null, 2))
+  1213→  }
+  1214→
+  1215→  const addColumn = () => {
+  1216→    update({ columns: [...columns, { key: '', label: '', type: 'text' }] })
+  1217→  }
+  1218→
+  1219→  const removeColumn = (idx: number) => {
+  1220→    update({ columns: columns.filter((_, i) => i !== idx) })
+  1221→  }
+  1222→
+  1223→  const updateColumn = (idx: number, field: string, value: string | boolean | number) => {
+  1224→    const updated = [...columns]
+  1225→    updated[idx] = { ...updated[idx], [field]: value }
+  1226→    // Remove options if type is not select
+  1227→    if (field === 'type' && value !== 'select') {
+  1228→      const { options, ...rest } = updated[idx]
+  1229→      updated[idx] = rest as PlanAccionColumn
+  1230→    }
+  1231→    update({ columns: updated })
+  1232→  }
+  1233→
+  1234→  const moveColumn = (idx: number, dir: -1 | 1) => {
+  1235→    const target = idx + dir
+  1236→    if (target < 0 || target >= columns.length) return
+  1237→    const updated = [...columns]
+  1238→    ;[updated[idx], updated[target]] = [updated[target], updated[idx]]
+  1239→    update({ columns: updated })
+  1240→  }
+  1241→
+  1242→  const addOption = (cIdx: number) => {
+  1243→    const updated = [...columns]
+  1244→    const opts = [...(updated[cIdx].options || []), '']
+  1245→    updated[cIdx] = { ...updated[cIdx], options: opts }
+  1246→    update({ columns: updated })
+  1247→  }
+  1248→
+  1249→  const removeOption = (cIdx: number, oIdx: number) => {
+  1250→    const updated = [...columns]
+  1251→    const opts = (updated[cIdx].options || []).filter((_, i) => i !== oIdx)
+  1252→    updated[cIdx] = { ...updated[cIdx], options: opts }
+  1253→    update({ columns: updated })
+  1254→  }
+  1255→
+  1256→  const updateOption = (cIdx: number, oIdx: number, value: string) => {
+  1257→    const updated = [...columns]
+  1258→    const opts = [...(updated[cIdx].options || [])]
+  1259→    opts[oIdx] = value
+  1260→    updated[cIdx] = { ...updated[cIdx], options: opts }
+  1261→    update({ columns: updated })
+  1262→  }
+  1263→
+  1264→  const TYPE_LABELS: Record<string, string> = { text: 'Texto', textarea: 'Texto largo', number: 'Número', date: 'Fecha', select: 'Selección' }
+  1265→
+  1266→  return (
+  1267→    <div className="space-y-4">
+  1268→      {/* Description */}
+  1269→      <div>
+  1270→        <Label className="text-sm font-semibold text-rose-700">Descripción del Plan de Acción</Label>
+  1271→        <textarea
+  1272→          value={parsed.description || ''}
+  1273→          onChange={(e) => update({ description: e.target.value })}
+  1274→          className="w-full h-20 p-3 border rounded-lg text-sm mt-1 resize-y focus:ring-2 focus:ring-rose-300 focus:border-rose-400"
+  1275→          placeholder="Descripción del plan de acción..."
+  1276→        />
+  1277→      </div>
+  1278→
+  1279→      {/* Info banner */}
+  1280→      <div className="bg-rose-50 border border-rose-200 rounded-lg p-3">
+  1281→        <p className="text-xs text-rose-700">
+  1282→          <strong>Plan de Acción:</strong> Registro de deficiencias detectadas en las autoevaluaciones y auditorías.
+  1283→          Cada columna define un campo de la tabla donde se registrarán las acciones correctivas/preventivas, responsables y seguimiento del progreso.
+  1284→        </p>
+  1285→      </div>
+  1286→
+  1287→      {/* Columns */}
+  1288→      <div>
+  1289→        <h4 className="text-sm font-bold text-rose-700 mb-2 flex items-center gap-2">
+  1290→          <Badge className="bg-rose-100 text-rose-800">Columnas de la tabla</Badge>
+  1291→          {columns.length} columna(s)
+  1292→        </h4>
+  1293→        <div className="space-y-2">
+  1294→          {columns.map((col, cIdx) => (
+  1295→            <div key={cIdx} className="border-2 rounded-lg overflow-hidden bg-white shadow-sm">
+  1296→              <div className="flex items-center gap-2 px-3 py-2 bg-rose-50 border-b border-rose-200">
+  1297→                <div className="flex flex-col gap-0.5">
+  1298→                  <button onClick={() => moveColumn(cIdx, -1)} className="text-gray-300 hover:text-gray-500 leading-none">
+  1299→                    <ChevronUp className="h-3.5 w-3.5" />
+  1300→                  </button>
+  1301→                  <button onClick={() => moveColumn(cIdx, 1)} className="text-gray-300 hover:text-gray-500 leading-none">
+  1302→                    <ChevronDown className="h-3.5 w-3.5" />
+  1303→                  </button>
+  1304→                </div>
+  1305→                <Badge className="bg-rose-200 text-rose-800 shrink-0 text-[10px] px-1.5 py-0.5">Col {cIdx + 1}</Badge>
+  1306→                <Input value={col.key} onChange={e => updateColumn(cIdx, 'key', e.target.value)}
+  1307→                  className="w-32 h-7 text-xs font-mono" placeholder="key (ej: zona)" />
+  1308→                <Input value={col.label} onChange={e => updateColumn(cIdx, 'label', e.target.value)}
+  1309→                  className="flex-1 h-7 text-xs" placeholder="Etiqueta (ej: Zona)" />
+  1310→                <select value={col.type} onChange={e => updateColumn(cIdx, 'type', e.target.value)}
+  1311→                  className="h-7 text-xs border rounded px-2">
+  1312→                  <option value="text">Texto</option>
+  1313→                  <option value="textarea">Texto largo</option>
+  1314→                  <option value="number">Número</option>
+  1315→                  <option value="date">Fecha</option>
+  1316→                  <option value="select">Selección</option>
+  1317→                </select>
+  1318→                <label className="flex items-center gap-1 text-[10px] text-muted-foreground whitespace-nowrap cursor-pointer">
+  1319→                  <input type="checkbox" checked={col.required || false}
+  1320→                    onChange={e => updateColumn(cIdx, 'required', e.target.checked)}
+  1321→                    className="rounded border-gray-300 h-3.5 w-3.5" />
+  1322→                  Oblig.
+  1323→                </label>
+  1324→                <Button variant="ghost" size="sm" onClick={() => removeColumn(cIdx)}
+  1325→                  className="h-7 w-7 p-0 text-red-400 hover:text-red-500">
+  1326→                  <Trash2 className="h-3.5 w-3.5" />
+  1327→                </Button>
+  1328→              </div>
+  1329→              <div className="px-3 py-2 space-y-1.5">
+  1330→                <div className="flex gap-2">
+  1331→                  <div className="flex-1">
+  1332→                    <Label className="text-[10px] text-muted-foreground">Descripción / Ayuda</Label>
+  1333→                    <Input value={col.description || ''} onChange={e => updateColumn(cIdx, 'description', e.target.value)}
+  1334→                      className="h-7 text-xs mt-0.5" placeholder="Texto de ayuda para este campo" />
+  1335→                  </div>
+  1336→                  <div className="w-28">
+  1337→                    <Label className="text-[10px] text-muted-foreground">Ancho</Label>
+  1338→                    <Input value={col.width || ''} onChange={e => updateColumn(cIdx, 'width', e.target.value)}
+  1339→                      className="h-7 text-xs mt-0.5" placeholder="100px" />
+  1340→                  </div>
+  1341→                  {col.type === 'text' && (
+  1342→                    <div className="w-32">
+  1343→                      <Label className="text-[10px] text-muted-foreground">Placeholder</Label>
+  1344→                      <Input value={col.placeholder || ''} onChange={e => updateColumn(cIdx, 'placeholder', e.target.value)}
+  1345→                        className="h-7 text-xs mt-0.5" placeholder="Ej: A-S1-001" />
+  1346→                    </div>
+  1347→                  )}
+  1348→                </div>
+  1349→                {col.type === 'select' && (
+  1350→                  <div>
+  1351→                    <Label className="text-[10px] text-muted-foreground">Opciones:</Label>
+  1352→                    <div className="flex flex-wrap gap-1 mt-1">
+  1353→                      {(col.options || []).map((opt, oIdx) => (
+  1354→                        <div key={oIdx} className="flex items-center gap-1">
+  1355→                          <Input value={opt} onChange={e => updateOption(cIdx, oIdx, e.target.value)}
+  1356→                            className="h-7 text-xs w-32" placeholder={`Opción ${oIdx + 1}`} />
+  1357→                          <Button variant="ghost" size="sm" onClick={() => removeOption(cIdx, oIdx)}
+  1358→                            className="h-7 w-7 p-0 text-red-300 hover:text-red-500">
+  1359→                            <Trash2 className="h-3 w-3" />
+  1360→                          </Button>
+  1361→                        </div>
+  1362→                      ))}
+  1363→                      <Button variant="ghost" size="sm" onClick={() => addOption(cIdx)}
+  1364→                        className="h-7 text-xs text-rose-600 hover:text-rose-700 gap-1 px-2">
+  1365→                        <Plus className="h-3 w-3" /> Añadir
+  1366→                      </Button>
+  1367→                    </div>
+  1368→                  </div>
+  1369→                )}
+  1370→              </div>
+  1371→            </div>
+  1372→          ))}
+  1373→          <Button variant="outline" onClick={addColumn} size="sm"
+  1374→            className="w-full border-dashed border-2 text-rose-600 hover:bg-rose-50 hover:border-rose-400 gap-1">
+  1375→            <Plus className="h-4 w-4" /> Añadir columna
+  1376→          </Button>
+  1377→        </div>
+  1378→      </div>
+  1379→
+  1380→      {/* Source types info */}
+  1381→      <div className="bg-gray-50 border rounded-lg p-3">
+  1382→        <p className="text-xs text-gray-500">
+  1383→          <strong>Tipos de origen:</strong> {(parsed.sourceTypes || []).join(', ') || 'autoevaluacion, auditoria'}
+  1384→        </p>
+  1385→        <p className="text-xs text-gray-400 mt-1">
+  1386→          Las deficiencias se alimentan automáticamente desde las autoevaluaciones y auditorías de este mismo paso S.
+  1387→        </p>
+  1388→      </div>
+  1389→
+  1390→      <div className="text-sm text-muted-foreground text-center">
+  1391→        {columns.length} columna(s) · {columns.filter(c => c.required).length} obligatoria(s)
+  1392→      </div>
+  1393→    </div>
+  1394→  )
+  1395→}
+  1396→
+  1397→// ═══════════════════════════════════════════════════════
+  1398→// VISUAL EDITOR: LayoutTemplateEditor (layout)
+  1399→// ═══════════════════════════════════════════════════════
+  1400→function LayoutTemplateEditor({ content, onChange }: { content: string; onChange: (v: string) => void }) {
+  1401→  let parsed: any = {}
+  1402→  try { parsed = JSON.parse(content) } catch { /* empty */ }
+  1403→
+  1404→  const updateField = (key: string, value: any) => {
+  1405→    const updated = { ...parsed, [key]: value }
+  1406→    onChange(JSON.stringify(updated, null, 2))
+  1407→  }
+  1408→
+  1409→  return (
+  1410→    <div className="space-y-4">
+  1411→      <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+  1412→        <p className="text-xs text-blue-700 font-semibold">Layout de Zona</p>
+  1413→        <p className="text-xs text-blue-600 mt-1">
+  1414→          Esta plantilla configura la herramienta de dibujo/subida de layout de zona.
+  1415→          Los layouts creados se guardarán como estándares en la Biblioteca de S4.
+  1416→        </p>
+  1417→      </div>
+  1418→
+  1419→      <div>
+  1420→        <Label className="text-xs font-semibold">Descripción</Label>
+  1421→        <Textarea
+  1422→          value={parsed.description || ''}
+  1423→          onChange={e => updateField('description', e.target.value)}
+  1424→          placeholder="Describe el propósito del layout de zona..."
+  1425→          className="text-xs min-h-[60px]"
+  1426→        />
+  1427→      </div>
+  1428→
+  1429→      <div>
+  1430→        <Label className="text-xs font-semibold">Tipo de Layout</Label>
+  1431→        <Input
+  1432→          value={parsed.layoutType || 'zone_layout'}
+  1433→          onChange={e => updateField('layoutType', e.target.value)}
+  1434→          className="h-8 text-xs"
+  1435→        />
+  1436→      </div>
+  1437→
+  1438→      <div className="flex items-center gap-2">
+  1439→        <input type="checkbox" checked={parsed.targetS4Library === true}
+  1440→          onChange={e => updateField('targetS4Library', e.target.checked)} />
+  1441→        <Label className="text-xs">Enviar a Biblioteca de Estándares de S4</Label>
+  1442→      </div>
+  1443→
+  1444→      <div className="bg-gray-50 border rounded-lg p-3">
+  1445→        <p className="text-xs font-semibold text-gray-700 mb-2">Colores de Suelo (RAL)</p>
+  1446→        {(parsed.floorColors || []).map((fc: any, i: number) => (
+  1447→          <div key={i} className="flex items-center gap-2 mb-1">
+  1448→            <div className="w-4 h-4 rounded border" style={{ backgroundColor: fc.color }} />
+  1449→            <span className="text-[10px]">{fc.label} ({fc.ral})</span>
+  1450→          </div>
+  1451→        ))}
+  1452→        <p className="text-[10px] text-muted-foreground mt-1">Los colores RAL se configuran desde el editor de layout.</p>
+  1453→      </div>
+  1454→
+  1455→      <div className="text-sm text-muted-foreground text-center">
+  1456→        Layout de Zona · Herramienta de dibujo/subida integrada
+  1457→      </div>
+  1458→    </div>
+  1459→  )
+  1460→}
+  1461→
+  1462→// ═══════════════════════════════════════════════════════
+  1463→// VISUAL EDITOR: PlanLimpiezaTemplateEditor (plan_limpieza)
+  1464→// ═══════════════════════════════════════════════════════
+  1465→interface PlanLimpiezaSection {
+  1466→  key: string; label: string; type: string; description: string; options?: string[];
+  1467→}
+  1468→
+  1469→function PlanLimpiezaTemplateEditor({ content, onChange }: { content: string; onChange: (v: string) => void }) {
+  1470→  let parsed: any = {}
+  1471→  try { parsed = JSON.parse(content) } catch { /* empty */ }
+  1472→
+  1473→  const sections: PlanLimpiezaSection[] = parsed.sections || []
+  1474→
+  1475→  const updateField = (key: string, value: any) => {
+  1476→    const updated = { ...parsed, [key]: value }
+  1477→    onChange(JSON.stringify(updated, null, 2))
+  1478→  }
+  1479→
+  1480→  const updateSection = (index: number, field: string, value: any) => {
+  1481→    const newSections = [...sections]
+  1482→    newSections[index] = { ...newSections[index], [field]: value }
+  1483→    updateField('sections', newSections)
+  1484→  }
+  1485→
+  1486→  const addSection = () => {
+  1487→    const newSections = [...sections, { key: `seccion_${sections.length + 1}`, label: 'Nueva Sección', type: 'text', description: '' }]
+  1488→    updateField('sections', newSections)
+  1489→  }
+  1490→
+  1491→  const removeSection = (index: number) => {
+  1492→    const newSections = sections.filter((_: any, i: number) => i !== index)
+  1493→    updateField('sections', newSections)
+  1494→  }
+  1495→
+  1496→  return (
+  1497→    <div className="space-y-4">
+  1498→      <div className="bg-cyan-50 border border-cyan-200 rounded-lg p-3">
+  1499→        <p className="text-xs text-cyan-700 font-semibold">Plan de Inspección y Limpieza</p>
+  1500→        <p className="text-xs text-cyan-600 mt-1">
+  1501→          Define la ruta de inspección, los puntos de suciedad no eliminables y las acciones de limpieza.
+  1502→          Los planes creados se guardarán como estándares en la Biblioteca de S4.
+  1503→        </p>
+  1504→      </div>
+  1505→
+  1506→      <div>
+  1507→        <Label className="text-xs font-semibold">Descripción</Label>
+  1508→        <Textarea
+  1509→          value={parsed.description || ''}
+  1510→          onChange={e => updateField('description', e.target.value)}
+  1511→          placeholder="Describe el plan de inspección y limpieza..."
+  1512→          className="text-xs min-h-[60px]"
+  1513→        />
+  1514→      </div>
+  1515→
+  1516→      <div className="flex items-center gap-2">
+  1517→        <input type="checkbox" checked={parsed.targetS4Library === true}
+  1518→          onChange={e => updateField('targetS4Library', e.target.checked)} />
+  1519→        <Label className="text-xs">Enviar a Biblioteca de Estándares de S4</Label>
+  1520→      </div>
+  1521→
+  1522→      <div>
+  1523→        <div className="flex items-center justify-between mb-2">
+  1524→          <Label className="text-xs font-semibold">Secciones del Plan</Label>
+  1525→          <Button variant="outline" size="sm" onClick={addSection} className="h-6 text-[10px] gap-1">
+  1526→            <Plus className="h-3 w-3" /> Añadir Sección
+  1527→          </Button>
+  1528→        </div>
+  1529→        {sections.map((sec, i) => (
+  1530→          <div key={i} className="bg-white border rounded-lg p-3 mb-2">
+  1531→            <div className="flex items-center gap-2 mb-2">
+  1532→              <Input value={sec.key} onChange={e => updateSection(i, 'key', e.target.value)}
+  1533→                className="h-7 text-xs flex-1" placeholder="key" />
+  1534→              <Input value={sec.label} onChange={e => updateSection(i, 'label', e.target.value)}
+  1535→                className="h-7 text-xs flex-1" placeholder="Etiqueta" />
+  1536→              <Select value={sec.type} onValueChange={v => updateSection(i, 'type', v)}>
+  1537→                <SelectTrigger className="h-7 text-xs w-28"><SelectValue /></SelectTrigger>
+  1538→                <SelectContent>
+  1539→                  <SelectItem value="route">Ruta</SelectItem>
+  1540→                  <SelectItem value="checklist">Checklist</SelectItem>
+  1541→                  <SelectItem value="list">Lista</SelectItem>
+  1542→                  <SelectItem value="select">Selección</SelectItem>
+  1543→                  <SelectItem value="text">Texto</SelectItem>
+  1544→                </SelectContent>
+  1545→              </Select>
+  1546→              <Button variant="ghost" size="sm" onClick={() => removeSection(i)} className="h-7 w-7 p-0 text-red-500">
+  1547→                <Trash2 className="h-3 w-3" />
+  1548→              </Button>
+  1549→            </div>
+  1550→            <Input value={sec.description || ''} onChange={e => updateSection(i, 'description', e.target.value)}
+  1551→              className="h-7 text-xs" placeholder="Descripción de la sección" />
+  1552→            {sec.type === 'select' && (
+  1553→              <Input
+  1554→                value={(sec.options || []).join(', ')}
+  1555→                onChange={e => updateSection(i, 'options', e.target.value.split(',').map(s => s.trim()).filter(Boolean))}
+  1556→                className="h-7 text-xs mt-1" placeholder="Opciones separadas por coma"
+  1557→              />
+  1558→            )}
+  1559→          </div>
+  1560→        ))}
+  1561→      </div>
+  1562→
+  1563→      <div className="text-sm text-muted-foreground text-center">
+  1564→        {sections.length} sección(es) · Plan de Inspección y Limpieza
+  1565→      </div>
+  1566→    </div>
+  1567→  )
+  1568→}
+  1569→
+  1570→// ═══════════════════════════════════════════════════════
+  1571→// VISUAL EDITOR: PDCATemplateEditor (pdca)
+  1572→// ═══════════════════════════════════════════════════════
+  1573→function PDCATemplateEditor({ content, onChange }: { content: string; onChange: (v: string) => void }) {
+  1574→  let parsed: any = {}
+  1575→  try { parsed = JSON.parse(content) } catch { /* empty */ }
+  1576→
+  1577→  const updateField = (key: string, value: any) => {
+  1578→    const updated = { ...parsed, [key]: value }
+  1579→    onChange(JSON.stringify(updated, null, 2))
+  1580→  }
+  1581→
+  1582→  return (
+  1583→    <div className="space-y-4">
+  1584→      <div className="bg-orange-50 border border-orange-200 rounded-lg p-3">
+  1585→        <p className="text-xs text-orange-700 font-semibold">Tablero PDCA — Mejora Continua</p>
+  1586→        <p className="text-xs text-orange-600 mt-1">
+  1587→          Configuración del tablero PDCA (Plan-Do-Check-Act) como herramienta de mejora continua.
+  1588→          Incluye KPIs de progreso y enlace al Plan de Acción y Biblioteca de Estándares.
+  1589→        </p>
+  1590→      </div>
+  1591→
+  1592→      <div>
+  1593→        <Label className="text-xs font-semibold">Descripción</Label>
+  1594→        <Textarea
+  1595→          value={parsed.description || ''}
+  1596→          onChange={e => updateField('description', e.target.value)}
+  1597→          placeholder="Describe el tablero PDCA..."
+  1598→          className="text-xs min-h-[60px]"
+  1599→        />
+  1600→      </div>
+  1601→
+  1602→      <div>
+  1603→        <Label className="text-xs font-semibold mb-2 block">Fases PDCA</Label>
+  1604→        {(parsed.phases || []).map((phase: any, i: number) => (
+  1605→          <div key={i} className="flex items-center gap-2 mb-2 bg-white border rounded-lg p-2">
+  1606→            <div className="w-6 h-6 rounded flex items-center justify-center text-white text-[10px] font-bold"
+  1607→              style={{ backgroundColor: phase.color }}>
+  1608→              {phase.label?.charAt(0)}
+  1609→            </div>
+  1610→            <div className="flex-1">
+  1611→              <div className="flex items-center gap-2">
+  1612→                <span className="text-xs font-bold">{phase.label}</span>
+  1613→                <span className="text-[10px] text-muted-foreground">({phase.labelEs})</span>
+  1614→              </div>
+  1615→              <p className="text-[10px] text-muted-foreground">{phase.description}</p>
+  1616→            </div>
+  1617→          </div>
+  1618→        ))}
+  1619→        <p className="text-[10px] text-muted-foreground mt-1">Las fases PDCA son fijas (Plan-Do-Check-Act) y no se pueden modificar.</p>
+  1620→      </div>
+  1621→
+  1622→      <div>
+  1623→        <Label className="text-xs font-semibold mb-2 block">KPIs del Tablero</Label>
+  1624→        {(parsed.kpis || []).map((kpi: any, i: number) => (
+  1625→          <div key={i} className="bg-white border rounded-lg p-2 mb-1">
+  1626→            <div className="flex items-center gap-2">
+  1627→              <Badge className="bg-orange-100 text-orange-800 text-[9px]">{kpi.key}</Badge>
+  1628→              <span className="text-xs font-semibold">{kpi.label}</span>
+  1629→            </div>
+  1630→            <p className="text-[10px] text-muted-foreground ml-2">{kpi.description}</p>
+  1631→          </div>
+  1632→        ))}
+  1633→      </div>
+  1634→
+  1635→      <div>
+  1636→        <Label className="text-xs font-semibold mb-2 block">Enlaces Integrados</Label>
+  1637→        <div className="flex gap-2">
+  1638→          {(parsed.links || []).map((link: string, i: number) => (
+  1639→            <Badge key={i} className="bg-teal-100 text-teal-800 text-[10px]">
+  1640→              {link === 'plan_accion' ? '📋 Plan de Acción' : link === 'standards_library' ? '📚 Biblioteca' : link}
+  1641→            </Badge>
+  1642→          ))}
+  1643→        </div>
+  1644→        <p className="text-[10px] text-muted-foreground mt-1">
+  1645→          El tablero PDCA se enlaza automáticamente con el Plan de Acción y la Biblioteca de Estándares.
+  1646→        </p>
+  1647→      </div>
+  1648→
+  1649→      <div className="text-sm text-muted-foreground text-center">
+  1650→        Tablero PDCA · Mejora Continua · {(parsed.phases || []).length} fases · {(parsed.kpis || []).length} KPIs
+  1651→      </div>
+  1652→    </div>
+  1653→  )
+  1654→}
+  1655→
+  1656→// ═══════════════════════════════════════════════════════
+  1657→// PASO DEFINITIONS — which template types belong to each paso
+  1658→// ═══════════════════════════════════════════════════════
+  1659→const PASO_CONFIG: { paso: number; label: string; icon: React.ComponentType<{ className?: string }>; types: string[] }[] = [
+  1660→  { paso: 1, label: 'Formación y Exámenes', icon: BookOpen, types: ['formacion', 'examen'] },
+  1661→  { paso: 2, label: 'Fotografías (Antes/Después)', icon: Camera, types: ['fotos'] },
+  1662→  { paso: 3, label: 'Inventario / Estándar / Layout / Plan Limpieza', icon: ClipboardList, types: ['inventario', 'estandar', 'layout', 'plan_limpieza'] },
+  1663→  { paso: 4, label: 'Autoevaluación / Plan de Acción', icon: ClipboardCheck, types: ['autoevaluacion', 'plan_accion'] },
+  1664→  { paso: 5, label: 'Auditoría Externa / PDCA', icon: FileCheck, types: ['auditoria', 'pdca'] },
+  1665→]
+  1666→
+  1667→// ═══════════════════════════════════════════════════════
+  1668→// COMPONENT
+  1669→// ═══════════════════════════════════════════════════════
+  1670→export default function TemplateManager() {
+  1671→  const { currentProject } = use5SStore()
+  1672→  const [templates, setTemplates] = useState<TemplateData[]>([])
+  1673→  const [isLoading, setIsLoading] = useState(false)
+  1674→  const [editingTemplate, setEditingTemplate] = useState<TemplateData | null>(null)
+  1675→  const [isCreating, setIsCreating] = useState(false)
+  1676→  const [isSaving, setIsSaving] = useState(false)
+  1677→  const [expandedS, setExpandedS] = useState<number | null>(null)
+  1678→  const [expandedPaso, setExpandedPaso] = useState<string | null>(null) // 'S2-P3' format
+  1679→  const [editorMode, setEditorMode] = useState<'visual' | 'json'>('visual')
+  1680→
+  1681→  // Form state
+  1682→  const [formType, setFormType] = useState<string>('formacion')
+  1683→  const [formSStep, setFormSStep] = useState<number>(1)
+  1684→  const [formMiniStep, setFormMiniStep] = useState<number>(3)
+  1685→  const [formTitle, setFormTitle] = useState('')
+  1686→  const [formDescription, setFormDescription] = useState('')
+  1687→  const [formContent, setFormContent] = useState('')
+  1688→  const [formNotaMinima, setFormNotaMinima] = useState<number | null>(null)
+  1689→  const [notaMinimaAplica, setNotaMinimaAplica] = useState(true)
+  1690→  const [formActive, setFormActive] = useState(true)
+  1691→
+  1692→  // Save feedback
+  1693→  const [saveMessage, setSaveMessage] = useState<string | null>(null)
+  1694→
+  1695→  // Fetch ALL templates at once (all types)
+  1696→  const ALL_TYPES = ['formacion', 'examen', 'fotos', 'inventario', 'estandar', 'layout', 'plan_limpieza', 'autoevaluacion', 'plan_accion', 'auditoria', 'pdca'] as const
+  1697→
+  1698→  const fetchTemplates = useCallback(async (withSeed = false) => {
+  1699→    setIsLoading(true)
+  1700→    try {
+  1701→      // Run seed on first load to ensure miniStep values are correct.
+  1702→      // The seed now fixes miniStep and creates missing templates.
+  1703→      if (withSeed) {
+  1704→        try {
+  1705→          await fetch('/api/seed/templates', { method: 'POST' })
+  1706→        } catch (e) {
+  1707→          console.error('Auto-seed error:', e)
+  1708→        }
+  1709→      }
+  1710→
+  1711→      // Fetch all templates
+  1712→      const allTemplates: TemplateData[] = []
+  1713→      for (const type of ALL_TYPES) {
+  1714→        const res = await fetch(`/api/templates?type=${type}&includeInactive=true`)
+  1715→        const data = await res.json()
+  1716→        if (data.success && data.data) allTemplates.push(...data.data)
+  1717→      }
+  1718→      setTemplates(allTemplates)
+  1719→    } catch (e) { console.error('Error fetching templates:', e) }
+  1720→    finally { setIsLoading(false) }
+  1721→  }, [])
+  1722→
+  1723→  useEffect(() => { fetchTemplates(true) }, [fetchTemplates])
+  1724→
+  1725→  const resetForm = () => {
+  1726→    setFormType('formacion')
+  1727→    setFormSStep(1)
+  1728→    setFormMiniStep(1)
+  1729→    setFormTitle('')
+  1730→    setFormDescription('')
+  1731→    setFormContent('')
+  1732→    setFormNotaMinima(EXAM_PASS_THRESHOLD)
+  1733→    setFormActive(true)
+  1734→    setEditingTemplate(null)
+  1735→    setIsCreating(false)
+  1736→    setEditorMode('visual')
+  1737→  }
+  1738→
+  1739→  const startCreate = (sStep: number, type: string, miniStep: number = 3) => {
+  1740→    setIsCreating(true)
+  1741→    setFormType(type)
+  1742→    setFormSStep(sStep)
+  1743→    setFormMiniStep(miniStep)
+  1744→    // MC templates use sStep=0, title shows MC instead of S0
+  1745→    if (sStep === 0) {
+  1746→      const mcPasoLabel = MC_PASO_CONFIG.find(p => p.paso === miniStep)?.label || ''
+  1747→      setFormTitle(`MC - ${mcPasoLabel}`)
+  1748→    } else {
+  1749→      setFormTitle(`S${sStep} - ${S_STEPS.find(s => s.id === sStep)?.japaneseName || ''}`)
+  1750→    }
+  1751→    setFormDescription('')
+  1752→    const aplicaNota = type === 'examen' || type === 'autoevaluacion' || type === 'auditoria'
+  1753→    setNotaMinimaAplica(aplicaNota)
+  1754→    setFormNotaMinima(aplicaNota ? (type === 'examen' ? EXAM_PASS_THRESHOLD : type === 'autoevaluacion' ? SELF_EVAL_THRESHOLD : AUDIT_PASS_THRESHOLD) : null)
+  1755→    setFormActive(true)
+  1756→    setEditorMode('visual')
+  1757→
+  1758→    // Auto-set miniStep based on type
+  1759→    const autoMiniStep = type === 'formacion' || type === 'examen' ? 1 : type === 'fotos' ? 2 : type === 'inventario' || type === 'estandar' || type === 'layout' || type === 'plan_limpieza' ? 3 : type === 'autoevaluacion' || type === 'plan_accion' ? 4 : type === 'auditoria' || type === 'pdca' ? 5 : miniStep
+  1760→    setFormMiniStep(autoMiniStep)
+  1761→
+  1762→    if (type === 'formacion') {
+  1763→      setFormContent(JSON.stringify(getDefaultFormationContent(sStep), null, 2))
+  1764→    } else if (type === 'examen') {
+  1765→      setFormContent(JSON.stringify(getDefaultExamContent(sStep), null, 2))
+  1766→    } else if (type === 'fotos') {
+  1767→      setFormContent(JSON.stringify(getDefaultFotosContent(sStep), null, 2))
+  1768→    } else if (type === 'inventario') {
+  1769→      setFormContent(JSON.stringify(getDefaultInventoryContent(sStep), null, 2))
+  1770→    } else if (type === 'estandar') {
+  1771→      setFormContent(JSON.stringify(getDefaultStandardContent(), null, 2))
+  1772→    } else if (type === 'layout') {
+  1773→      setFormContent(JSON.stringify(getDefaultLayoutContent(sStep), null, 2))
+  1774→    } else if (type === 'plan_limpieza') {
+  1775→      setFormContent(JSON.stringify(getDefaultPlanLimpiezaContent(sStep), null, 2))
+  1776→    } else if (type === 'pdca') {
+  1777→      setFormContent(JSON.stringify(getDefaultPDCAContent(sStep), null, 2))
+  1778→    } else if (type === 'plan_accion') {
+  1779→      setFormContent(JSON.stringify(getDefaultPlanAccionContent(sStep), null, 2))
+  1780→    } else {
+  1781→      setFormContent(JSON.stringify(getDefaultChecklistContent(sStep), null, 2))
+  1782→    }
+  1783→  }
+  1784→
+  1785→  const startEdit = (template: TemplateData) => {
+  1786→    setEditingTemplate(template)
+  1787→    setFormType(template.type)
+  1788→    setFormSStep(template.sStep)
+  1789→    setFormMiniStep(template.miniStep || 3)
+  1790→    setFormTitle(template.title)
+  1791→    setFormDescription(template.description || '')
+  1792→    setFormContent(typeof template.content === 'string' ? template.content : JSON.stringify(template.content, null, 2))
+  1793→    const aplicaNota = template.type === 'examen' || template.type === 'autoevaluacion' || template.type === 'auditoria'
+  1794→    setNotaMinimaAplica(aplicaNota)
+  1795→    setFormNotaMinima(template.notaMinima != null ? template.notaMinima : (aplicaNota ? (template.type === 'examen' ? EXAM_PASS_THRESHOLD : template.type === 'autoevaluacion' ? SELF_EVAL_THRESHOLD : AUDIT_PASS_THRESHOLD) : null))
+  1796→    setFormActive(template.active)
+  1797→    setIsCreating(true)
+  1798→    setEditorMode('visual')
+  1799→  }
+  1800→
+  1801→  const handleSave = async () => {
+  1802→    setIsSaving(true)
+  1803→    try {
+  1804→      // Validate JSON
+  1805→      try { JSON.parse(formContent) } catch { alert('El contenido JSON no es válido. Revísalo.'); setIsSaving(false); return }
+  1806→
+  1807→      const payload = {
+  1808→        type: formType,
+  1809→        sStep: formSStep,
+  1810→        miniStep: formMiniStep,
+  1811→        title: formTitle,
+  1812→        description: formDescription || null,
+  1813→        content: formContent,
+  1814→        notaMinima: notaMinimaAplica ? formNotaMinima : null,
+  1815→        active: formActive,
+  1816→      }
+  1817→
+  1818→      if (editingTemplate) {
+  1819→        const res = await fetch('/api/templates', {
+  1820→          method: 'PUT',
+  1821→          headers: { 'Content-Type': 'application/json' },
+  1822→          body: JSON.stringify({ id: editingTemplate.id, ...payload }),
+  1823→        })
+  1824→        const data = await res.json()
+  1825→        if (!data.success) { alert('Error: ' + data.error); return }
+  1826→      } else {
+  1827→        const res = await fetch('/api/templates', {
+  1828→          method: 'POST',
+  1829→          headers: { 'Content-Type': 'application/json' },
+  1830→          body: JSON.stringify(payload),
+  1831→        })
+  1832→        const data = await res.json()
+  1833→        if (!data.success) { alert('Error: ' + data.error); return }
+  1834→      }
+  1835→
+  1836→      resetForm()
+  1837→      fetchTemplates()
+  1838→      setSaveMessage('Plantilla guardada correctamente')
+  1839→      setTimeout(() => setSaveMessage(null), 3000)
+  1840→    } catch (e) { console.error('Error saving:', e); alert('Error al guardar') }
+  1841→    finally { setIsSaving(false) }
+  1842→  }
+  1843→
+  1844→  const handleDelete = async (id: string) => {
+  1845→    if (!confirm('¿Eliminar esta plantilla?')) return
+  1846→    try {
+  1847→      await fetch(`/api/templates?id=${id}`, { method: 'DELETE' })
+  1848→      fetchTemplates()
+  1849→    } catch (e) { console.error(e) }
+  1850→  }
+  1851→
+  1852→  const handleMovePaso = async (templateId: string, newMiniStep: number) => {
+  1853→    try {
+  1854→      const res = await fetch('/api/templates', {
+  1855→        method: 'PUT',
+  1856→        headers: { 'Content-Type': 'application/json' },
+  1857→        body: JSON.stringify({ id: templateId, miniStep: newMiniStep }),
+  1858→      })
+  1859→      const data = await res.json()
+  1860→      if (data.success) {
+  1861→        fetchTemplates()
+  1862→        setSaveMessage(`Plantilla movida a Paso ${newMiniStep}`)
+  1863→        setTimeout(() => setSaveMessage(null), 3000)
+  1864→      } else {
+  1865→        alert('Error al mover la plantilla: ' + data.error)
+  1866→      }
+  1867→    } catch (e) {
+  1868→      console.error(e)
+  1869→      alert('Error al mover la plantilla')
+  1870→    }
+  1871→  }
+  1872→
+  1873→  // Full template export format (includes metadata + content)
+  1874→  const exportTemplateData = (template: TemplateData) => ({
+  1875→    _5sTemplateExport: true,
+  1876→    version: 1,
+  1877→    type: template.type,
+  1878→    sStep: template.sStep,
+  1879→    miniStep: template.miniStep,
+  1880→    title: template.title,
+  1881→    description: template.description,
+  1882→    content: typeof template.content === 'string' ? JSON.parse(template.content) : template.content,
+  1883→    notaMinima: template.notaMinima,
+  1884→    active: template.active,
+  1885→  })
+  1886→
+  1887→  const handleDownload = (template: TemplateData) => {
+  1888→    try {
+  1889→      const data = exportTemplateData(template)
+  1890→      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
+  1891→      const url = URL.createObjectURL(blob)
+  1892→      const a = document.createElement('a')
+  1893→      a.href = url
+  1894→      a.download = `${template.type}_S${template.sStep}_${template.title.replace(/[^a-zA-Z0-9]/g, '_')}.json`
+  1895→      a.click()
+  1896→      URL.revokeObjectURL(url)
+  1897→    } catch {
+  1898→      alert('Error al descargar la plantilla')
+  1899→    }
+  1900→  }
+  1901→
+  1902→  const [copiedId, setCopiedId] = useState<string | null>(null)
+  1903→
+  1904→  const handleCopyTemplate = async (template: TemplateData) => {
+  1905→    try {
+  1906→      const data = exportTemplateData(template)
+  1907→      await navigator.clipboard.writeText(JSON.stringify(data, null, 2))
+  1908→      setCopiedId(template.id)
+  1909→      setTimeout(() => setCopiedId(null), 2000)
+  1910→    } catch {
+  1911→      // Fallback: create temporary textarea
+  1912→      try {
+  1913→        const data = exportTemplateData(template)
+  1914→        const text = JSON.stringify(data, null, 2)
+  1915→        const textarea = document.createElement('textarea')
+  1916→        textarea.value = text
+  1917→        textarea.style.position = 'fixed'
+  1918→        textarea.style.left = '-9999px'
+  1919→        document.body.appendChild(textarea)
+  1920→        textarea.select()
+  1921→        document.execCommand('copy')
+  1922→        document.body.removeChild(textarea)
+  1923→        setCopiedId(template.id)
+  1924→        setTimeout(() => setCopiedId(null), 2000)
+  1925→      } catch {
+  1926→        alert('No se pudo copiar al portapapeles')
+  1927→      }
+  1928→    }
+  1929→  }
+  1930→
+  1931→  const importTemplateData = (data: any) => {
+  1932→    // Check if it's a full export with metadata
+  1933→    if (data && data._5sTemplateExport) {
+  1934→      setFormType(data.type || 'formacion')
+  1935→      setFormSStep(data.sStep || 1)
+  1936→      setFormMiniStep(data.miniStep || 3)
+  1937→      setFormTitle(data.title ? `${data.title} (copia)` : '')
+  1938→      setFormDescription(data.description || '')
+  1939→      setFormContent(JSON.stringify(data.content, null, 2))
+  1940→      const aplicaNota = data.type === 'examen' || data.type === 'autoevaluacion' || data.type === 'auditoria'
+  1941→      setNotaMinimaAplica(aplicaNota)
+  1942→      setFormNotaMinima(data.notaMinima != null ? data.notaMinima : (aplicaNota ? (data.type === 'examen' ? EXAM_PASS_THRESHOLD : data.type === 'autoevaluacion' ? SELF_EVAL_THRESHOLD : AUDIT_PASS_THRESHOLD) : null))
+  1943→      setFormActive(data.active !== false)
+  1944→      setIsCreating(true)
+  1945→      setEditorMode('visual')
+  1946→    } else {
+  1947→      // Legacy: just content, only set formContent
+  1948→      setFormContent(JSON.stringify(data, null, 2))
+  1949→    }
+  1950→  }
+  1951→
+  1952→  const handlePasteTemplate = async () => {
+  1953→    try {
+  1954→      const text = await navigator.clipboard.readText()
+  1955→      const data = JSON.parse(text)
+  1956→      importTemplateData(data)
+  1957→    } catch {
+  1958→      alert('No se pudo leer del portapapeles. Asegúrate de que hay una plantilla copiada (formato JSON válido).')
+  1959→    }
+  1960→  }
+  1961→
+  1962→  const handleDuplicateTemplate = async (template: TemplateData) => {
+  1963→    try {
+  1964→      const payload = {
+  1965→        type: template.type,
+  1966→        sStep: template.sStep,
+  1967→        miniStep: template.miniStep,
+  1968→        title: `${template.title} (copia)`,
+  1969→        description: template.description,
+  1970→        content: template.content,
+  1971→        notaMinima: template.notaMinima,
+  1972→        active: template.active,
+  1973→      }
+  1974→      const res = await fetch('/api/templates', {
+  1975→        method: 'POST',
+  1976→        headers: { 'Content-Type': 'application/json' },
+  1977→        body: JSON.stringify(payload),
+  1978→      })
+  1979→      const data = await res.json()
+  1980→      if (!data.success) { alert('Error: ' + data.error); return }
+  1981→      fetchTemplates()
+  1982→    } catch {
+  1983→      alert('Error al duplicar la plantilla')
+  1984→    }
+  1985→  }
+  1986→
+  1987→  const handleUploadJson = () => {
+  1988→    const input = document.createElement('input')
+  1989→    input.type = 'file'
+  1990→    input.accept = '.json'
+  1991→    input.onchange = (e: any) => {
+  1992→      const file = e.target.files?.[0]
+  1993→      if (!file) return
+  1994→      const reader = new FileReader()
+  1995→      reader.onload = (ev) => {
+  1996→        try {
+  1997→          const data = JSON.parse(ev.target?.result as string)
+  1998→          importTemplateData(data)
+  1999→        } catch {
+  2000→          alert('El archivo JSON no es válido')
+
+[showing lines 1-2000 of 2716; use offset=2001 with limit to continue reading]

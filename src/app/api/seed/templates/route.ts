@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db, ensureSystemConfigTable } from '@/lib/db'
-import { AUDIT_CHECKLISTS } from '@/lib/5s-constants'
+import { AUDIT_CHECKLISTS, INVENTORY_CONFIGS } from '@/lib/5s-constants'
 
 /**
  * POST /api/seed/templates
@@ -76,6 +76,29 @@ export async function POST(request: NextRequest) {
             const builtIn = AUDIT_CHECKLISTS[tpl.sStep as keyof typeof AUDIT_CHECKLISTS]
             if (builtIn && builtIn.length > 0) {
               updates.content = JSON.stringify({ sections: builtIn })
+            }
+          }
+        } catch (e) {
+          // If content can't be parsed, leave it as is
+        }
+      }
+      // Fix empty inventario templates: seed previously created {categories:[], extraFields:[]}
+      // for S1/S3/S4/S5 — replace with proper content from INVENTORY_CONFIGS
+      if (tpl.type === 'inventario' && tpl.sStep >= 1 && tpl.sStep <= 5) {
+        try {
+          const parsed = typeof tpl.content === 'string' ? JSON.parse(tpl.content) : tpl.content
+          const hasCategories = Array.isArray(parsed.categories) && parsed.categories.length > 0
+          const hasExtraFields = Array.isArray(parsed.extraFields) && parsed.extraFields.length > 0
+          if (!hasCategories && !hasExtraFields) {
+            const defaultInvConfig = INVENTORY_CONFIGS[tpl.sStep]
+            if (defaultInvConfig) {
+              updates.content = JSON.stringify({
+                title: defaultInvConfig.title,
+                subtitle: defaultInvConfig.subtitle,
+                templateName: defaultInvConfig.templateName,
+                categories: defaultInvConfig.categories,
+                extraFields: defaultInvConfig.extraFields,
+              })
             }
           }
         } catch (e) {
@@ -197,41 +220,47 @@ export async function POST(request: NextRequest) {
 
       // ─── Inventario (Paso 3) ───
       if (!exists(s, 'inventario')) {
-        const inventoryContent = s === 2
-          ? {
-              title: 'Inventario de Necesarios',
-              subtitle: 'SEITEN — Organiza los elementos necesarios en su ubicación correcta',
-              templateName: 'S2_Inventario_Necesarios_Seiton.xlsx',
-              categories: [
-                { value: 'materiales', label: 'MATERIALES', color: 'bg-blue-100 text-blue-800' },
-                { value: 'maquinas_equipos', label: 'MÁQUINAS Y EQUIPOS', color: 'bg-purple-100 text-purple-800' },
-                { value: 'mobiliario', label: 'MOBILIARIO', color: 'bg-amber-100 text-amber-800' },
-                { value: 'informacion', label: 'INFORMACIÓN', color: 'bg-teal-100 text-teal-800' },
-                { value: 'transporte_almacenaje', label: 'TRANSPORTE Y ALMACENAJE', color: 'bg-orange-100 text-orange-800' },
-              ],
-              extraFields: [
-                { key: 'codigo', label: 'Código de Trazabilidad', type: 'text' },
-                { key: 'subcategoria', label: 'Subcategoría', type: 'select', options: [
-                  'Consumibles', 'Materia Prima', 'Producto en proceso', 'Producto acabado',
-                  'Máquinas de trabajo', 'Utillajes de trabajo', 'Equipos y accesorios de Elevación',
-                  'Equipos de ensayo y verificación', 'Herramientas de ensamblaje', 'Equipos informáticos', 'Equipos de limpieza',
-                  'Bancos de trabajo', 'Paneles herramienta', 'Armarios o taquillas', 'Sillas, mesas', 'Paneles u otros soportes para información',
-                  'Planos, instrucciones, boletines de trabajo', 'Posters u otra información divulgativa', 'Información referente a indicadores', 'Carpeta o bandejas con documentación', 'Información de seguridad',
-                  'Máquinas de transporte', 'Utillajes de transporte, Pallets, embalajes de madera, cajas', 'Estanterías, gavetas, contenedores', 'Bolsas, plásticos, protecciones, elementos de flejado', 'Carros de transporte',
-                ]},
-                { key: 'zona_destino', label: 'Zona Actual / Destino', type: 'text' },
-                { key: 'responsable', label: 'Responsable / Área', type: 'text' },
-                { key: 'estado', label: 'Estado de Conservación', type: 'select', options: ['Excelente', 'Bueno', 'Regular', 'Requiere Mantenimiento'] },
-              ],
-              desplegables_jerarquicos: {
-                'MATERIALES': { prefijo_codigo: 'MAT', subcategorias: ['Consumibles', 'Materia Prima', 'Producto en proceso', 'Producto acabado'] },
-                'MÁQUINAS Y EQUIPOS': { prefijo_codigo: 'MAQ', subcategorias: ['Máquinas de trabajo', 'Utillajes de trabajo', 'Equipos y accesorios de Elevación', 'Equipos de ensayo y verificación', 'Herramientas de ensamblaje', 'Equipos informáticos', 'Equipos de limpieza'] },
-                'MOBILIARIO': { prefijo_codigo: 'MOB', subcategorias: ['Bancos de trabajo', 'Paneles herramienta', 'Armarios o taquillas', 'Sillas, mesas', 'Paneles u otros soportes para información'] },
-                'INFORMACIÓN': { prefijo_codigo: 'INF', subcategorias: ['Planos, instrucciones, boletines de trabajo', 'Posters u otra información divulgativa', 'Información referente a indicadores', 'Carpeta o bandejas con documentación', 'Información de seguridad'] },
-                'TRANSPORTE Y ALMACENAJE': { prefijo_codigo: 'TRA', subcategorias: ['Máquinas de transporte', 'Utillajes de transporte, Pallets, embalajes de madera, cajas', 'Estanterías, gavetas, contenedores', 'Bolsas, plásticos, protecciones, elementos de flejado', 'Carros de transporte'] },
-              },
-            }
-          : { categories: [], extraFields: [] }
+        // Use INVENTORY_CONFIGS as the base for all S steps — provides categories, extraFields, etc.
+        const defaultInvConfig = INVENTORY_CONFIGS[s]
+        const inventoryContent: any = {
+          title: defaultInvConfig?.title || `Inventario S${s}`,
+          subtitle: defaultInvConfig?.subtitle || '',
+          templateName: defaultInvConfig?.templateName || `S${s}_Inventario.xlsx`,
+          categories: defaultInvConfig?.categories || [],
+          extraFields: defaultInvConfig?.extraFields || [],
+        }
+        // S2 gets additional hierarchical dropdowns
+        if (s === 2) {
+          inventoryContent.desplegables_jerarquicos = {
+            'MATERIALES': { prefijo_codigo: 'MAT', subcategorias: ['Consumibles', 'Materia Prima', 'Producto en proceso', 'Producto acabado'] },
+            'MÁQUINAS Y EQUIPOS': { prefijo_codigo: 'MAQ', subcategorias: ['Máquinas de trabajo', 'Utillajes de trabajo', 'Equipos y accesorios de Elevación', 'Equipos de ensayo y verificación', 'Herramientas de ensamblaje', 'Equipos informáticos', 'Equipos de limpieza'] },
+            'MOBILIARIO': { prefijo_codigo: 'MOB', subcategorias: ['Bancos de trabajo', 'Paneles herramienta', 'Armarios o taquillas', 'Sillas, mesas', 'Paneles u otros soportes para información'] },
+            'INFORMACIÓN': { prefijo_codigo: 'INF', subcategorias: ['Planos, instrucciones, boletines de trabajo', 'Posters u otra información divulgativa', 'Información referente a indicadores', 'Carpeta o bandejas con documentación', 'Información de seguridad'] },
+            'TRANSPORTE Y ALMACENAJE': { prefijo_codigo: 'TRA', subcategorias: ['Máquinas de transporte', 'Utillajes de transporte, Pallets, embalajes de madera, cajas', 'Estanterías, gavetas, contenedores', 'Bolsas, plásticos, protecciones, elementos de flejado', 'Carros de transporte'] },
+          }
+          // Override with richer S2 categories when using the seed's extended version
+          inventoryContent.categories = [
+            { value: 'materiales', label: 'MATERIALES', color: 'bg-blue-100 text-blue-800' },
+            { value: 'maquinas_equipos', label: 'MÁQUINAS Y EQUIPOS', color: 'bg-purple-100 text-purple-800' },
+            { value: 'mobiliario', label: 'MOBILIARIO', color: 'bg-amber-100 text-amber-800' },
+            { value: 'informacion', label: 'INFORMACIÓN', color: 'bg-teal-100 text-teal-800' },
+            { value: 'transporte_almacenaje', label: 'TRANSPORTE Y ALMACENAJE', color: 'bg-orange-100 text-orange-800' },
+          ]
+          inventoryContent.extraFields = [
+            { key: 'codigo', label: 'Código de Trazabilidad', type: 'text' },
+            { key: 'subcategoria', label: 'Subcategoría', type: 'select', options: [
+              'Consumibles', 'Materia Prima', 'Producto en proceso', 'Producto acabado',
+              'Máquinas de trabajo', 'Utillajes de trabajo', 'Equipos y accesorios de Elevación',
+              'Equipos de ensayo y verificación', 'Herramientas de ensamblaje', 'Equipos informáticos', 'Equipos de limpieza',
+              'Bancos de trabajo', 'Paneles herramienta', 'Armarios o taquillas', 'Sillas, mesas', 'Paneles u otros soportes para información',
+              'Planos, instrucciones, boletines de trabajo', 'Posters u otra información divulgativa', 'Información referente a indicadores', 'Carpeta o bandejas con documentación', 'Información de seguridad',
+              'Máquinas de transporte', 'Utillajes de transporte, Pallets, embalajes de madera, cajas', 'Estanterías, gavetas, contenedores', 'Bolsas, plásticos, protecciones, elementos de flejado', 'Carros de transporte',
+            ]},
+            { key: 'zona_destino', label: 'Zona Actual / Destino', type: 'text' },
+            { key: 'responsable', label: 'Responsable / Área', type: 'text' },
+            { key: 'estado', label: 'Estado de Conservación', type: 'select', options: ['Excelente', 'Bueno', 'Regular', 'Requiere Mantenimiento'] },
+          ]
+        }
 
         await db.template.create({
           data: {
