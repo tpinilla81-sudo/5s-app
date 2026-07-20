@@ -3,14 +3,117 @@
 import { motion } from 'framer-motion';
 import { S_STEPS, MINI_STEPS } from '@/lib/5s-constants';
 import { use5SStore } from '@/lib/store';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface Board5SProps {
   onSStepClick: (sStep: number) => void;
 }
 
-export default function Board5S({ onSStepClick }: Board5SProps) {
+function MobileCardList({ onSStepClick }: Board5SProps) {
   const { getMiniStepStatus, isQuesitoEarned } = use5SStore();
 
+  return (
+    <div className="w-full px-3 py-2 space-y-2">
+      {S_STEPS.map(s => {
+        const earned = isQuesitoEarned(s.id);
+        let completedMiniSteps = 0;
+        for (let ms = 1; ms <= 5; ms++) {
+          const st = getMiniStepStatus(s.id, ms);
+          if (st === 'completed' || st === 'completed_viewonly') completedMiniSteps++;
+        }
+        const pct = Math.min(Math.round((completedMiniSteps / 5) * 100), 100);
+
+        return (
+          <motion.div
+            key={s.id}
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.3, delay: s.id * 0.05 }}
+            className={`rounded-xl border-2 overflow-hidden transition-all cursor-pointer active:scale-[0.98] ${
+              earned
+                ? 'border-green-500 bg-gradient-to-r from-green-50 to-emerald-50 shadow-md shadow-green-100'
+                : 'border-gray-200 bg-white shadow-sm'
+            }`}
+            style={{ borderLeftWidth: '6px', borderLeftColor: earned ? '#22c55e' : s.color }}
+            onClick={() => onSStepClick(s.id)}
+          >
+            <div className="flex items-center justify-between px-3 py-2.5">
+              {/* Left: S-step info */}
+              <div className="flex items-center gap-2.5">
+                <div
+                  className={`w-10 h-10 rounded-xl flex items-center justify-center text-white text-sm font-black ${
+                    earned ? 'bg-green-600 ring-2 ring-yellow-400' : ''
+                  }`}
+                  style={!earned ? { backgroundColor: s.color } : undefined}
+                >
+                  {earned ? '★' : `S${s.id}`}
+                </div>
+                <div>
+                  <div className="flex items-center gap-1.5">
+                    <span className={`text-sm font-bold ${earned ? 'text-green-700' : ''}`} style={!earned ? { color: s.color } : undefined}>
+                      {s.japaneseName}
+                    </span>
+                    {earned && <span className="text-green-600 text-xs">✓</span>}
+                  </div>
+                  <span className="text-xs text-muted-foreground">{s.spanishName}</span>
+                </div>
+              </div>
+
+              {/* Right: mini-step dots + percentage */}
+              <div className="flex flex-col items-end gap-1">
+                <div className="flex items-center gap-1.5">
+                  {MINI_STEPS.map(ms => {
+                    const status = getMiniStepStatus(s.id, ms.id);
+                    const isCompleted = status === 'completed' || status === 'completed_viewonly';
+                    const isAvailable = status === 'available';
+                    return (
+                      <div
+                        key={ms.id}
+                        className={`w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold transition-all ${
+                          isCompleted
+                            ? 'bg-green-500 text-white shadow-sm shadow-green-200 ring-1 ring-green-400'
+                            : isAvailable
+                              ? 'text-white hover:scale-110'
+                              : 'bg-gray-100 text-gray-300'
+                        }`}
+                        style={isAvailable && !isCompleted ? { backgroundColor: s.color } : undefined}
+                        title={ms.name}
+                      >
+                        {isCompleted ? '✓' : ms.id}
+                      </div>
+                    );
+                  })}
+                </div>
+                <div className="flex items-center gap-1.5 w-full">
+                  <div className="flex-1 h-2 rounded-full overflow-hidden bg-gray-100">
+                    <div
+                      className="h-full rounded-full transition-all duration-500"
+                      style={{ width: `${pct}%`, backgroundColor: earned ? '#22c55e' : s.color }}
+                    />
+                  </div>
+                  <span className={`text-xs font-bold min-w-[32px] text-right ${earned ? 'text-green-600' : 'text-muted-foreground'}`}>
+                    {pct}%
+                  </span>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        );
+      })}
+    </div>
+  );
+}
+
+export default function Board5S({ onSStepClick }: Board5SProps) {
+  const { getMiniStepStatus, isQuesitoEarned } = use5SStore();
+  const isMobile = useIsMobile();
+
+  // Mobile: show card list instead of SVG pentagon
+  if (isMobile) {
+    return <MobileCardList onSStepClick={onSStepClick} />;
+  }
+
+  // Desktop: SVG pentagon
   const cx = 400;
   const cy = 400;
   const outerR = 320;

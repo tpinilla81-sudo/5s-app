@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useCallback } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { use5SStore } from '@/lib/store';
 import { S_STEPS, MINI_STEPS } from '@/lib/5s-constants';
@@ -28,6 +28,8 @@ import JaulaModal from '@/components/5s/JaulaModal';
 import ActivosModal from '@/components/5s/ActivosModal';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
+import { useIsMobile } from '@/hooks/use-mobile';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -41,7 +43,7 @@ import {
   Crown,
   ClipboardList, GraduationCap, Camera, CheckSquare, Trophy, ChevronRight,
   Lock as LockIcon, AlertTriangle, Building2, Zap, Bell, BellRing, BookOpen, Image as ImageIcon,
-  Package, BoxSelect
+  Package, BoxSelect, Menu
 } from 'lucide-react';
 
 const MODAL_MAP: Record<string, React.ComponentType<{
@@ -118,6 +120,8 @@ export default function HomePage() {
   const [notifs, setNotifs] = useState<any[]>([]);
   const [showJaulaModal, setShowJaulaModal] = useState(false);
   const [showActivosModal, setShowActivosModal] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const isMobile = useIsMobile();
 
   useEffect(() => {
     checkSession();
@@ -442,7 +446,162 @@ export default function HomePage() {
               )}
             </div>
           ) : (
-          /* ── NON-GESTOR HEADER: full controls ── */
+          /* ── NON-GESTOR HEADER: mobile vs desktop ── */
+          isMobile ? (
+            <div className="flex items-center gap-1">
+              {/* 🔔 Notification bell - always visible */}
+              {canSeeNotifications && (
+                <Button variant={unreadNotifs > 0 ? 'default' : 'outline'} size="sm"
+                  className={`relative w-11 h-11 ${unreadNotifs > 0 ? 'bg-orange-500 hover:bg-orange-600 text-white border-orange-500' : 'border-orange-300 text-orange-600 hover:bg-orange-50'}`}
+                  onClick={async () => {
+                    if (currentUser?.id && currentProject?.id) {
+                      try {
+                        const res = await fetch(`/api/notifications?userId=${currentUser.id}&projectId=${currentProject.id}`);
+                        const data = await res.json();
+                        if (data.success) setNotifs(data.data || []);
+                      } catch (e) { console.error(e); }
+                    }
+                    setShowNotifs(!showNotifs);
+                  }}>
+                  {unreadNotifs > 0 ? <BellRing className="h-5 w-5" /> : <Bell className="h-5 w-5" />}
+                  {unreadNotifs > 0 && (
+                    <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center animate-pulse">{unreadNotifs > 9 ? '9+' : unreadNotifs}</span>
+                  )}
+                </Button>
+              )}
+              {/* 👤 User avatar - always visible */}
+              {currentUser && (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" size="sm" className="w-11 h-11 p-0">
+                      <div className="w-7 h-7 rounded-full bg-green-100 flex items-center justify-center text-green-700 text-xs font-bold">
+                        {currentUser.name.charAt(0).toUpperCase()}
+                      </div>
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-48">
+                    <div className="px-2 py-1.5">
+                      <p className="text-xs font-medium">{currentUser.name}</p>
+                      <p className="text-[10px] text-muted-foreground">{currentUser.email}</p>
+                      <Badge className={`${getRoleBadgeColor(currentUser.role)} border mt-1 text-[10px]`}>
+                        {getRoleLabel(currentUser.role)}
+                      </Badge>
+                    </div>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={handleLogout} className="text-red-600 cursor-pointer text-xs">
+                      <LogOut className="h-3 w-3 mr-1" /> Cerrar Sesión
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
+              {/* ☰ Hamburger menu - opens Sheet with all actions */}
+              <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
+                <SheetTrigger asChild>
+                  <Button variant="outline" size="sm" className="w-11 h-11 p-0">
+                    <Menu className="h-5 w-5" />
+                  </Button>
+                </SheetTrigger>
+                <SheetContent side="right" className="w-72 p-0">
+                  <SheetHeader className="p-4 border-b">
+                    <SheetTitle className="text-left">Menú</SheetTitle>
+                  </SheetHeader>
+                  <div className="flex flex-col p-2 gap-1 overflow-y-auto">
+                    {/* 📦 Inventario */}
+                    {canSeeNotifications && (
+                      <button className="flex items-center gap-3 w-full px-3 py-3 rounded-lg hover:bg-red-50 transition-colors text-left min-h-[44px]"
+                        onClick={() => { setMobileMenuOpen(false); setShowJaulaModal(true); }}>
+                        <Package className="h-5 w-5 text-red-500 shrink-0" />
+                        <span className="text-sm font-medium text-red-600">Inventario</span>
+                      </button>
+                    )}
+                    {/* ✅ Activos */}
+                    {canSeeNotifications && (
+                      <button className="flex items-center gap-3 w-full px-3 py-3 rounded-lg hover:bg-green-50 transition-colors text-left min-h-[44px]"
+                        onClick={() => { setMobileMenuOpen(false); setShowActivosModal(true); }}>
+                        <BoxSelect className="h-5 w-5 text-green-500 shrink-0" />
+                        <span className="text-sm font-medium text-green-600">Activos</span>
+                      </button>
+                    )}
+                    {/* 📸 Fotos */}
+                    {canSeeNotifications && (
+                      <button className="flex items-center gap-3 w-full px-3 py-3 rounded-lg hover:bg-purple-50 transition-colors text-left min-h-[44px]"
+                        onClick={() => { setMobileMenuOpen(false); openModal('photoLibrary', 2); }}>
+                        <Camera className="h-5 w-5 text-purple-500 shrink-0" />
+                        <span className="text-sm font-medium text-purple-600">Fotos</span>
+                      </button>
+                    )}
+                    {/* 📚 Estándares */}
+                    {canSeeNotifications && (
+                      <button className="flex items-center gap-3 w-full px-3 py-3 rounded-lg hover:bg-indigo-50 transition-colors text-left min-h-[44px]"
+                        onClick={() => { setMobileMenuOpen(false); openModal('standards', 3); }}>
+                        <BookOpen className="h-5 w-5 text-indigo-500 shrink-0" />
+                        <span className="text-sm font-medium text-indigo-600">Estándares</span>
+                      </button>
+                    )}
+                    {/* 📋 Plan de Acción */}
+                    {canSeeNotifications && (
+                      <button className="flex items-center gap-3 w-full px-3 py-3 rounded-lg hover:bg-orange-50 transition-colors text-left min-h-[44px]"
+                        onClick={() => { setMobileMenuOpen(false); setActiveTab('actionplan'); }}>
+                        <ListChecks className="h-5 w-5 text-orange-500 shrink-0" />
+                        <span className="text-sm font-medium text-orange-600">Plan de Acción</span>
+                      </button>
+                    )}
+                    {/* 🔓 Lock/Unlock */}
+                    {(isAdmin || canSkipSteps) && (
+                      <button className="flex items-center gap-3 w-full px-3 py-3 rounded-lg hover:bg-amber-50 transition-colors text-left min-h-[44px]"
+                        onClick={() => { setMobileMenuOpen(false); setAdminFreeNavigation(!adminFreeNavigation); }}>
+                        {adminFreeNavigation ? <Unlock className="h-5 w-5 text-amber-500 shrink-0" /> : <Lock className="h-5 w-5 text-amber-500 shrink-0" />}
+                        <span className="text-sm font-medium text-amber-600">{adminFreeNavigation ? 'Navegación libre' : 'Navegación secuencial'}</span>
+                      </button>
+                    )}
+                    <div className="border-t my-1" />
+                    {/* ⚙️ Settings */}
+                    {canManageTeam && (
+                      <button className="flex items-center gap-3 w-full px-3 py-3 rounded-lg hover:bg-green-50 transition-colors text-left min-h-[44px]"
+                        onClick={() => { setMobileMenuOpen(false); setShowTeamManagement(true); }}>
+                        <Settings className="h-5 w-5 text-green-500 shrink-0" />
+                        <span className="text-sm font-medium text-green-600">Equipo</span>
+                      </button>
+                    )}
+                    {/* 🛡️ Shield */}
+                    <button className="flex items-center gap-3 w-full px-3 py-3 rounded-lg hover:bg-green-50 transition-colors text-left min-h-[44px]"
+                      onClick={() => { setMobileMenuOpen(false); setShowRolePermissions(true); }}>
+                      <Shield className="h-5 w-5 text-green-500 shrink-0" />
+                      <span className="text-sm font-medium text-green-600">Permisos</span>
+                    </button>
+                    {/* 📄 Manual */}
+                    <button className="flex items-center gap-3 w-full px-3 py-3 rounded-lg hover:bg-purple-50 transition-colors text-left min-h-[44px]"
+                      onClick={() => {
+                        setMobileMenuOpen(false);
+                        (async () => {
+                          try {
+                            const res = await fetch('/api/manual');
+                            if (!res.ok) throw new Error('Download failed');
+                            const blob = await res.blob();
+                            const url = window.URL.createObjectURL(blob);
+                            const link = document.createElement('a');
+                            link.href = url; link.download = 'Manual_Usuario_5S.pdf';
+                            document.body.appendChild(link); link.click();
+                            document.body.removeChild(link);
+                            window.URL.revokeObjectURL(url);
+                          } catch { window.open('/Manual_Usuario_5S.pdf', '_blank'); }
+                        })();
+                      }}>
+                      <FileText className="h-5 w-5 text-purple-500 shrink-0" />
+                      <span className="text-sm font-medium text-purple-600">Manual</span>
+                    </button>
+                    {/* 🔄 Refresh */}
+                    <button className="flex items-center gap-3 w-full px-3 py-3 rounded-lg hover:bg-gray-50 transition-colors text-left min-h-[44px]"
+                      onClick={() => { setMobileMenuOpen(false); handleReseed(); }}
+                      disabled={isSeeding}>
+                      <RefreshCw className={`h-5 w-5 text-gray-500 shrink-0 ${isSeeding ? 'animate-spin' : ''}`} />
+                      <span className="text-sm font-medium text-gray-600">Actualizar</span>
+                    </button>
+                  </div>
+                </SheetContent>
+              </Sheet>
+            </div>
+          ) : (
           <div className="flex items-center gap-1 sm:gap-1.5 overflow-x-auto">
             {/* 🔔 Notification bell */}
             {canSeeNotifications && (
@@ -578,10 +737,12 @@ export default function HomePage() {
               </DropdownMenu>
             )}
           </div>
+          )
           )}
         </div>
 
-        {/* Tab Navigation Bar */}
+        {/* Tab Navigation Bar — desktop: top tabs, mobile: hidden (bottom nav instead) */}
+        {!isMobile && (
         <div className="border-t bg-white flex items-center gap-0 px-2 sm:px-4 overflow-x-auto">
           {availableTabs.map(tab => (
             <button
@@ -598,6 +759,7 @@ export default function HomePage() {
             </button>
           ))}
         </div>
+        )}
       </header>
 
       {/* Notification dropdown */}
@@ -689,7 +851,7 @@ export default function HomePage() {
       )}
 
       {/* Main content - SINGLE SCREEN */}
-      <main className="flex-1 overflow-hidden flex flex-col">
+      <main className={`flex-1 overflow-hidden flex flex-col ${isMobile ? 'pb-14' : ''}`}>
         {!isInitialized || isSeeding ? (
           <div className="flex-1 flex items-center justify-center gap-4">
             <Loader2 className="h-10 w-10 text-green-500 animate-spin" />
@@ -776,7 +938,7 @@ export default function HomePage() {
                   {/* BOTTOM: S-Step Cards — Compact horizontal row (only when zone selected) */}
                   {currentZone && (
                   <div className="shrink-0 border-t bg-white/80 backdrop-blur-sm px-2 py-2 z-10">
-                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2 max-w-5xl mx-auto">
+                    <div className={`grid gap-2 max-w-5xl mx-auto ${isMobile ? 'grid-cols-1' : 'grid-cols-2 sm:grid-cols-3 md:grid-cols-5'}`}>
                       {S_STEPS.map(s => {
                         const earned = isQuesitoEarned(s.id);
                         const zoneId = currentZone?.id;
@@ -802,20 +964,20 @@ export default function HomePage() {
                           >
                             {/* S Label header */}
                             <div
-                              className={`flex items-center justify-center gap-1.5 py-1.5 ${earned ? 'bg-green-500' : ''}`}
+                              className={`flex items-center justify-center gap-1.5 ${isMobile ? 'py-2.5' : 'py-1.5'} ${earned ? 'bg-green-500' : ''}`}
                               style={!earned ? { backgroundColor: `${s.color}20` } : undefined}
                             >
-                              <div className={`w-6 h-6 rounded-lg flex items-center justify-center text-white text-xs font-black ${earned ? 'bg-green-600 ring-1 ring-yellow-400' : ''}`}
+                              <div className={`${isMobile ? 'w-8 h-8' : 'w-6 h-6'} rounded-lg flex items-center justify-center text-white ${isMobile ? 'text-sm' : 'text-xs'} font-black ${earned ? 'bg-green-600 ring-1 ring-yellow-400' : ''}`}
                                 style={!earned ? { backgroundColor: s.color } : undefined}>
                                 {earned ? '★' : s.id}
                               </div>
-                              <span className={`text-[10px] font-bold ${earned ? 'text-white' : ''}`} style={!earned ? { color: s.color } : undefined}>
+                              <span className={`${isMobile ? 'text-sm' : 'text-[10px]'} font-bold ${earned ? 'text-white' : ''}`} style={!earned ? { color: s.color } : undefined}>
                                 {s.name}
                               </span>
                             </div>
 
                             {/* Mini-step dots */}
-                            <div className="flex items-center justify-center gap-1 py-1.5 px-1">
+                            <div className={isMobile ? 'flex items-center justify-center gap-2 py-2.5 px-1' : 'flex items-center justify-center gap-1 py-1.5 px-1'}>
                               {MINI_STEPS.map(ms => {
                                 const status = getMiniStepStatus(s.id, ms.id);
                                 const effectiveStatus = status;
@@ -973,6 +1135,7 @@ export default function HomePage() {
                                       <button
                                         className={`
                                           w-8 h-8 rounded-full flex items-center justify-center text-[10px] font-bold transition-all
+                                          ${isMobile ? '!w-11 !h-11 !text-xs' : ''}
                                           ${effectiveStatus === 'completed'
                                             ? 'bg-green-500 text-white shadow-sm shadow-green-200 ring-2 ring-green-300'
                                             : effectiveStatus === 'completed_viewonly'
@@ -1090,6 +1253,28 @@ export default function HomePage() {
           </div>
         )}
       </main>
+
+      {/* Mobile Bottom Navigation Bar */}
+      {isMobile && (
+        <nav className="fixed bottom-0 left-0 right-0 z-30 bg-white border-t shadow-lg safe-area-bottom">
+          <div className="flex items-center justify-around h-14">
+            {availableTabs.map(tab => (
+              <button
+                key={tab.key}
+                onClick={() => setActiveTab(tab.key)}
+                className={`flex flex-col items-center justify-center gap-0.5 flex-1 h-full transition-colors min-w-[44px] ${
+                  activeTab === tab.key
+                    ? 'text-green-700 bg-green-50/80'
+                    : 'text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                {tab.icon}
+                <span className="text-[9px] font-medium leading-none truncate max-w-[64px]">{tab.label}</span>
+              </button>
+            ))}
+          </div>
+        </nav>
+      )}
 
       {/* Modals */}
       {ActiveModalComponent && selectedSStep && activeMiniStep && (
