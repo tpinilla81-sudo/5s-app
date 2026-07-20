@@ -108,110 +108,69 @@ export default function RootLayout({
       >
         {children}
         <Toaster position="top-right" richColors closeButton />
-        {/* Service Worker registration + aggressive auto-update + cache busting */}
+        {/*
+          NO Service Worker registration.
+          Instead: aggressively UNREGISTER any existing SW and clear ALL caches.
+          This is the only reliable way to break out of a stale SW cache loop.
+          We keep /sw.js as a self-unregistering passthrough so old SWs get replaced.
+        */}
         <script
           dangerouslySetInnerHTML={{
             __html: `
               (function() {
-                // STEP 1: Clear all caches immediately on page load
+                // STEP 1: Immediately clear ALL browser caches
                 if ('caches' in window) {
                   caches.keys().then(function(names) {
+                    console.log('[App] Clearing caches:', names);
                     names.forEach(function(name) { caches.delete(name); });
                   });
                 }
 
-                // STEP 2: Register service worker with updateViaCache: 'none'
+                // STEP 2: Unregister ALL service workers immediately
                 if ('serviceWorker' in navigator) {
-                  // Unregister any existing SW first to force fresh registration
-                  navigator.serviceWorker.getRegistration().then(function(existingReg) {
-                    if (existingReg) {
-                      existingReg.unregister().then(function() {
-                        console.log('[App] Unregistered old Service Worker');
-                        registerFreshSW();
-                      });
-                    } else {
-                      registerFreshSW();
+                  navigator.serviceWorker.getRegistrations().then(function(registrations) {
+                    console.log('[App] Found ' + registrations.length + ' service worker(s), unregistering...');
+                    registrations.forEach(function(reg) {
+                      reg.unregister();
+                    });
+                    // If we just unregistered a controlling SW, we need a hard reload
+                    if (registrations.length > 0 && navigator.serviceWorker.controller) {
+                      console.log('[App] Had active SW — hard reload needed');
+                      // Small delay to let unregister complete, then reload
+                      setTimeout(function() {
+                        window.location.href = window.location.pathname + '?_nocache=' + Date.now();
+                      }, 500);
                     }
-                  }).catch(function() {
-                    registerFreshSW();
                   });
                 }
 
-                function registerFreshSW() {
-                  navigator.serviceWorker.register('/sw.js', { scope: '/', updateViaCache: 'none' })
-                    .then(function(reg) {
-                      console.log('[App] Service Worker registered:', reg.scope);
-
-                      // Force update check immediately
-                      reg.update();
-
-                      // Check for updates every 60 seconds (aggressive)
-                      setInterval(function() {
-                        reg.update();
-                      }, 60000);
-
-                      // When a new SW is found, force it to activate
-                      reg.addEventListener('updatefound', function() {
-                        var newWorker = reg.installing;
-                        newWorker.addEventListener('statechange', function() {
-                          if (newWorker.state === 'installed') {
-                            // New version available - force activate
-                            console.log('[App] New SW installed, forcing activation...');
-                            newWorker.postMessage({ type: 'SKIP_WAITING' });
-                          }
-                        });
-                      });
-
-                      // When controller changes (new SW activated), hard reload
-                      navigator.serviceWorker.addEventListener('controllerchange', function() {
-                        console.log('[App] New Service Worker activated, hard reloading...');
-                        window.location.reload();
-                      });
-                    })
-                    .catch(function(err) {
-                      console.warn('[App] Service Worker registration failed:', err);
-                    });
-                }
-
-                // STEP 3: Periodic version check via /version endpoint
+                // STEP 3: Version check — auto-reload when new deployment detected
                 var currentVersion = null;
                 function checkVersion() {
-                  fetch('/version', { cache: 'no-store' })
+                  fetch('/version?t=' + Date.now(), { cache: 'no-store' })
                     .then(function(r) { return r.text(); })
                     .then(function(v) {
                       if (currentVersion === null) {
                         currentVersion = v;
                       } else if (currentVersion !== v) {
                         console.log('[App] Version changed from', currentVersion, 'to', v);
-                        if ('caches' in window) {
-                          caches.keys().then(function(names) {
-                            names.forEach(function(name) { caches.delete(name); });
-                          });
-                        }
-                        window.location.reload();
+                        window.location.href = window.location.pathname + '?_nocache=' + Date.now();
                       }
                     })
                     .catch(function() {});
                 }
-
-                // Check version every 60 seconds
                 checkVersion();
                 setInterval(checkVersion, 60000);
 
-                // STEP 4: On page visibility change, check for updates
+                // STEP 4: On visibility change, clear caches and check version
                 document.addEventListener('visibilitychange', function() {
-                  if (!document.hidden && 'serviceWorker' in navigator) {
-                    navigator.serviceWorker.getRegistration().then(function(reg) {
-                      if (reg) {
-                        reg.update();
-                        // Also clear caches when tab becomes visible
-                        if ('caches' in window) {
-                          caches.keys().then(function(names) {
-                            names.forEach(function(name) { caches.delete(name); });
-                          });
-                        }
-                      }
-                    });
+                  if (!document.hidden) {
+                    if ('caches' in window) {
+                      caches.keys().then(function(names) {
+                        names.forEach(function(name) { caches.delete(name); });
+                      });
+                    }
+                    checkVersion();
                   }
                 });
               })();
