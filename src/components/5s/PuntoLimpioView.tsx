@@ -19,6 +19,7 @@ import {
 import { toast } from 'sonner';
 import { use5SStore } from '@/lib/store';
 import { INVENTORY_CONFIGS } from '@/lib/5s-constants';
+import type { InventoryConfig } from '@/lib/5s-constants';
 
 // ═══════════════════════════════════════════════════════
 // Types
@@ -39,6 +40,7 @@ interface PuntoLimpioItem {
 }
 
 const S3_CONFIG = INVENTORY_CONFIGS[3];
+const defaultConfig = INVENTORY_CONFIGS[3];
 
 const ESTADO_LIMPIEZA = [
   { value: 'pendiente', label: 'Pendiente', color: 'bg-red-100 text-red-800' },
@@ -56,10 +58,82 @@ export default function PuntoLimpioView() {
   const [isLoading, setIsLoading] = useState(true);
   const [filterCategory, setFilterCategory] = useState<string>('all');
   const [filterEstado, setFilterEstado] = useState<string>('all');
+  const [customConfig, setCustomConfig] = useState<InventoryConfig | null>(null);
+  const [hasTemplate, setHasTemplate] = useState<boolean | null>(null);
+
+  const config: InventoryConfig = customConfig || INVENTORY_CONFIGS[3];
+
+  const loadCustomInventoryConfig = async () => {
+    try {
+      // If the zone has a board config, fetch inventory template from that config
+      if (currentZone?.boardConfigId) {
+        const slotsRes = await fetch(`/api/board-slots?boardConfigId=${currentZone.boardConfigId}&sStep=3&miniStep=3`);
+        const slotsJson = await slotsRes.json();
+        if (slotsJson.success && slotsJson.data.length > 0) {
+          const slot = slotsJson.data[0];
+          const inventarioTemplates = (slot.templates || []).filter(
+            (t: any) => t.template?.type === 'inventario'
+          );
+          if (inventarioTemplates.length > 0) {
+            const content = JSON.parse(inventarioTemplates[0].template.content);
+            if (content.categories && content.extraFields) {
+              setCustomConfig({
+                title: content.title || defaultConfig.title,
+                subtitle: content.subtitle || defaultConfig.subtitle,
+                templateName: content.templateName || defaultConfig.templateName,
+                categories: content.categories,
+                extraFields: content.extraFields,
+                ...(content.desplegables_jerarquicos ? { desplegables_jerarquicos: content.desplegables_jerarquicos } : {}),
+              });
+              setHasTemplate(true);
+            } else {
+              setCustomConfig(null);
+              setHasTemplate(true);
+            }
+          } else {
+            setCustomConfig(null);
+            setHasTemplate(true);
+          }
+        } else {
+          setCustomConfig(null);
+          setHasTemplate(true);
+        }
+      } else {
+        // Fallback: load global template
+        const res = await fetch(`/api/templates?type=inventario&sStep=3&miniStep=3`);
+        const json = await res.json();
+        if (json.success && json.data && json.data.length > 0) {
+          const content = JSON.parse(json.data[0].content);
+          if (content.categories && content.extraFields) {
+            setCustomConfig({
+              title: content.title || defaultConfig.title,
+              subtitle: content.subtitle || defaultConfig.subtitle,
+              templateName: content.templateName || defaultConfig.templateName,
+              categories: content.categories,
+              extraFields: content.extraFields,
+              ...(content.desplegables_jerarquicos ? { desplegables_jerarquicos: content.desplegables_jerarquicos } : {}),
+            });
+            setHasTemplate(true);
+          } else {
+            setCustomConfig(null);
+            setHasTemplate(true);
+          }
+        } else {
+          setCustomConfig(null);
+          setHasTemplate(true);
+        }
+      }
+    } catch (e) {
+      console.error('Error loading custom inventory config:', e);
+      setCustomConfig(null);
+      setHasTemplate(true);
+    }
+  };
 
   // Load data on mount
   useEffect(() => {
     loadItems();
+    loadCustomInventoryConfig();
   }, [currentProject, currentZone]);
 
   const loadItems = async () => {
@@ -190,13 +264,26 @@ export default function PuntoLimpioView() {
   const limpios = items.filter(i => (i.extra?.estadoLimpieza || 'pendiente') === 'limpio').length;
   const verificados = items.filter(i => (i.extra?.estadoLimpieza || 'pendiente') === 'verificado').length;
 
+  // Derive ESTADO_LIMPIEZA from config if available, otherwise use hardcoded fallback
+  const estadoLimpiezaOptions = (() => {
+    const configField = config.extraFields.find(f => f.key === 'estadoLimpieza');
+    if (configField?.options && configField.options.length > 0) {
+      return configField.options.map((opt, idx) => ({
+        value: opt.toLowerCase().replace(/\s+/g, '_'),
+        label: opt,
+        color: ESTADO_LIMPIEZA[idx]?.color || 'bg-gray-100 text-gray-800',
+      }));
+    }
+    return ESTADO_LIMPIEZA;
+  })();
+
   const getEstadoBadge = (estado: string) => {
-    const opt = ESTADO_LIMPIEZA.find(e => e.value === estado) || ESTADO_LIMPIEZA[0];
+    const opt = estadoLimpiezaOptions.find(e => e.value === estado) || estadoLimpiezaOptions[0];
     return <Badge className={`text-[10px] px-1.5 py-0 ${opt.color}`}>{opt.label}</Badge>;
   };
 
   const getCategoryLabel = (cat: string) => {
-    const catObj = S3_CONFIG.categories.find(c => c.value === cat);
+    const catObj = config.categories.find(c => c.value === cat);
     return catObj?.label || cat;
   };
 
@@ -263,7 +350,7 @@ export default function PuntoLimpioView() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all" className="text-xs">Todos los tipos</SelectItem>
-              {S3_CONFIG.categories.map(c => (
+              {config.categories.map(c => (
                 <SelectItem key={c.value} value={c.value} className="text-xs">{c.label}</SelectItem>
               ))}
             </SelectContent>
@@ -330,7 +417,7 @@ export default function PuntoLimpioView() {
                       {/* Type */}
                       <td className="px-1 py-1 border text-center bg-blue-50">
                         <Badge className={`text-[10px] px-1.5 py-0 ${
-                          S3_CONFIG.categories.find(c => c.value === item.category)?.color || 'bg-gray-100 text-gray-800'
+                          config.categories.find(c => c.value === item.category)?.color || 'bg-gray-100 text-gray-800'
                         }`}>
                           {getCategoryLabel(item.category)}
                         </Badge>
@@ -350,7 +437,7 @@ export default function PuntoLimpioView() {
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
-                            {['Leve', 'Moderado', 'Grave'].map(o => (
+                            {(config.extraFields.find(f => f.key === 'nivel')?.options || ['Leve', 'Moderado', 'Grave']).map(o => (
                               <SelectItem key={o} value={o} className="text-xs">{o}</SelectItem>
                             ))}
                           </SelectContent>
@@ -363,7 +450,7 @@ export default function PuntoLimpioView() {
                             <SelectValue placeholder="Fuente" />
                           </SelectTrigger>
                           <SelectContent>
-                            {['Proceso productivo', 'Medio ambiente', 'Falta de limpieza', 'Escape/Fuga', 'Desgaste', 'Derrame', 'Otro'].map(o => (
+                            {(config.extraFields.find(f => f.key === 'fuente')?.options || ['Proceso productivo', 'Medio ambiente', 'Falta de limpieza', 'Escape/Fuga', 'Desgaste', 'Derrame', 'Otro']).map(o => (
                               <SelectItem key={o} value={o} className="text-xs">{o}</SelectItem>
                             ))}
                           </SelectContent>
@@ -375,7 +462,7 @@ export default function PuntoLimpioView() {
                             <SelectValue placeholder="Método" />
                           </SelectTrigger>
                           <SelectContent>
-                            {['Aspirado', 'Fregado', 'Pulido', 'Desinfección', 'Reparación', 'Otro'].map(o => (
+                            {(config.extraFields.find(f => f.key === 'metodoLimpieza')?.options || ['Aspirado', 'Fregado', 'Pulido', 'Desinfección', 'Reparación', 'Otro']).map(o => (
                               <SelectItem key={o} value={o} className="text-xs">{o}</SelectItem>
                             ))}
                           </SelectContent>
@@ -387,7 +474,7 @@ export default function PuntoLimpioView() {
                             <SelectValue placeholder="Frec." />
                           </SelectTrigger>
                           <SelectContent>
-                            {['Diaria', '3 veces/semana', 'Semanal', 'Quincenal', 'Mensual'].map(o => (
+                            {(config.extraFields.find(f => f.key === 'frecuenciaLimpieza')?.options || ['Diaria', '3 veces/semana', 'Semanal', 'Quincenal', 'Mensual']).map(o => (
                               <SelectItem key={o} value={o} className="text-xs">{o}</SelectItem>
                             ))}
                           </SelectContent>
@@ -400,7 +487,7 @@ export default function PuntoLimpioView() {
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
-                            {ESTADO_LIMPIEZA.map(opt => (
+                            {estadoLimpiezaOptions.map(opt => (
                               <SelectItem key={opt.value} value={opt.value} className="text-xs">{opt.label}</SelectItem>
                             ))}
                           </SelectContent>
@@ -428,8 +515,9 @@ export default function PuntoLimpioView() {
                 <div key={item.id} className="rounded-xl border bg-white shadow-sm overflow-hidden">
                   <div className="flex items-center gap-2 px-3 py-2.5">
                     <Badge className={`text-[10px] px-1.5 py-0 shrink-0 ${
-                      S3_CONFIG.categories.find(c => c.value === item.category)?.color || 'bg-gray-100'
+                      config.categories.find(c => c.value === item.category)?.color || 'bg-gray-100'
                     }`}>
+
                       {getCategoryLabel(item.category)}
                     </Badge>
                     <span className="text-xs font-medium truncate flex-1">{item.name || 'Sin descripción'}</span>

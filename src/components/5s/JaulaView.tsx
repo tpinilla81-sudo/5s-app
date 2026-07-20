@@ -18,6 +18,7 @@ import {
 import { toast } from 'sonner';
 import { use5SStore } from '@/lib/store';
 import { INVENTORY_CONFIGS } from '@/lib/5s-constants';
+import type { InventoryConfig } from '@/lib/5s-constants';
 import TagPrinter from '@/components/5s/TagPrinter';
 
 // ═══════════════════════════════════════════════════════
@@ -54,6 +55,7 @@ interface JaulaItem {
 }
 
 const S1_CONFIG = INVENTORY_CONFIGS[1];
+const defaultConfig = INVENTORY_CONFIGS[1];
 
 const JAULA_STATUS = [
   { value: 'en_jaula', label: 'En Jaula', color: 'bg-red-100 text-red-800' },
@@ -70,10 +72,88 @@ export default function JaulaView() {
   const [jaulaFilter, setJaulaFilter] = useState<string>('all');
   const [isLoading, setIsLoading] = useState(true);
   const [lightboxPhoto, setLightboxPhoto] = useState<string | null>(null);
+  const [customConfig, setCustomConfig] = useState<InventoryConfig | null>(null);
+  const [hasTemplate, setHasTemplate] = useState<boolean | null>(null);
+
+  const config: InventoryConfig = customConfig || INVENTORY_CONFIGS[1];
+
+  const loadCustomInventoryConfig = async () => {
+    try {
+      // If the zone has a board config, fetch inventory template from that config
+      if (currentZone?.boardConfigId) {
+        const slotsRes = await fetch(`/api/board-slots?boardConfigId=${currentZone.boardConfigId}&sStep=1&miniStep=3`);
+        const slotsJson = await slotsRes.json();
+        if (slotsJson.success && slotsJson.data.length > 0) {
+          const slot = slotsJson.data[0];
+          const inventarioTemplates = (slot.templates || []).filter(
+            (t: any) => t.template?.type === 'inventario'
+          );
+          if (inventarioTemplates.length > 0) {
+            const content = JSON.parse(inventarioTemplates[0].template.content);
+            if (content.categories && content.extraFields) {
+              setCustomConfig({
+                title: content.title || defaultConfig.title,
+                subtitle: content.subtitle || defaultConfig.subtitle,
+                templateName: content.templateName || defaultConfig.templateName,
+                categories: content.categories,
+                extraFields: content.extraFields,
+                ...(content.desplegables_jerarquicos ? { desplegables_jerarquicos: content.desplegables_jerarquicos } : {}),
+              });
+              setHasTemplate(true);
+            } else {
+              // Unknown format — use default config as fallback
+              setCustomConfig(null);
+              setHasTemplate(true);
+            }
+          } else {
+            // No inventario template assigned in this board slot — use default config
+            setCustomConfig(null);
+            setHasTemplate(true);
+          }
+        } else {
+          // No slot configured for this step — use default config
+          setCustomConfig(null);
+          setHasTemplate(true);
+        }
+      } else {
+        // Fallback: load global template
+        const res = await fetch(`/api/templates?type=inventario&sStep=1&miniStep=3`);
+        const json = await res.json();
+        if (json.success && json.data && json.data.length > 0) {
+          const content = JSON.parse(json.data[0].content);
+          if (content.categories && content.extraFields) {
+            setCustomConfig({
+              title: content.title || defaultConfig.title,
+              subtitle: content.subtitle || defaultConfig.subtitle,
+              templateName: content.templateName || defaultConfig.templateName,
+              categories: content.categories,
+              extraFields: content.extraFields,
+              ...(content.desplegables_jerarquicos ? { desplegables_jerarquicos: content.desplegables_jerarquicos } : {}),
+            });
+            setHasTemplate(true);
+          } else {
+            // Unknown format — use default config as fallback
+            setCustomConfig(null);
+            setHasTemplate(true);
+          }
+        } else {
+          // No global template — use default config (INVENTORY_CONFIGS has entries for all 5 S steps)
+          setCustomConfig(null);
+          setHasTemplate(true);
+        }
+      }
+    } catch (e) {
+      console.error('Error loading custom inventory config:', e);
+      // On error, use default config so the view still works
+      setCustomConfig(null);
+      setHasTemplate(true);
+    }
+  };
 
   // Load data on mount
   useEffect(() => {
     loadJaulaItems();
+    loadCustomInventoryConfig();
   }, [currentProject, currentZone]);
 
   const loadJaulaItems = async () => {
@@ -367,7 +447,7 @@ export default function JaulaView() {
                               <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
-                              {['Bueno', 'Regular', 'Malo'].map(o => (
+                              {(config.extraFields.find(f => f.key === 'estado')?.options || ['Bueno', 'Regular', 'Malo']).map(o => (
                                 <SelectItem key={o} value={o} className="text-xs">{o}</SelectItem>
                               ))}
                             </SelectContent>
@@ -379,7 +459,7 @@ export default function JaulaView() {
                               <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
-                              {['Jaula', 'Tirar', 'Eliminar', 'Reubicar'].map(o => (
+                              {(config.extraFields.find(f => f.key === 'decision')?.options || ['Jaula', 'Tirar', 'Eliminar', 'Reubicar']).map(o => (
                                 <SelectItem key={o} value={o} className="text-xs">{o}</SelectItem>
                               ))}
                             </SelectContent>
@@ -397,7 +477,7 @@ export default function JaulaView() {
                               <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
-                              {['7', '15', '20', '30', '40', '60', '90'].map(o => (
+                              {(config.extraFields.find(f => f.key === 'diasCuarentena')?.options || ['7', '15', '20', '30', '40', '60', '90']).map(o => (
                                 <SelectItem key={o} value={o} className="text-xs">{o}d</SelectItem>
                               ))}
                             </SelectContent>

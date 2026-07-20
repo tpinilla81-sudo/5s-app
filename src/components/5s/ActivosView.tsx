@@ -17,6 +17,7 @@ import {
 import { toast } from 'sonner';
 import { use5SStore } from '@/lib/store';
 import { INVENTORY_CONFIGS } from '@/lib/5s-constants';
+import type { InventoryConfig } from '@/lib/5s-constants';
 
 // ═══════════════════════════════════════════════════════
 // Types
@@ -36,13 +37,7 @@ interface ActivoItem {
 }
 
 const S2_CONFIG = INVENTORY_CONFIGS[2];
-
-const CATEGORIA_OPTIONS = [
-  { value: 'muy_frecuente', label: 'Muy frecuente', color: 'bg-green-100 text-green-800' },
-  { value: 'frecuente', label: 'Frecuente', color: 'bg-blue-100 text-blue-800' },
-  { value: 'ocasional', label: 'Ocasional', color: 'bg-yellow-100 text-yellow-800' },
-  { value: 'raro', label: 'Raro', color: 'bg-red-100 text-red-800' },
-];
+const defaultConfig = INVENTORY_CONFIGS[2];
 
 // ═══════════════════════════════════════════════════════
 // Component
@@ -52,10 +47,89 @@ export default function ActivosView() {
   const [activosItems, setActivosItems] = useState<ActivoItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [filterCat, setFilterCat] = useState<string>('all');
+  const [customConfig, setCustomConfig] = useState<InventoryConfig | null>(null);
+  const [hasTemplate, setHasTemplate] = useState<boolean | null>(null);
+
+  const config: InventoryConfig = customConfig || INVENTORY_CONFIGS[2];
+
+  // Derive CATEGORIA_OPTIONS from config
+  const CATEGORIA_OPTIONS = config.categories.map(c => ({
+    value: c.value,
+    label: c.label,
+    color: c.color,
+  }));
+
+  const loadCustomInventoryConfig = async () => {
+    try {
+      // If the zone has a board config, fetch inventory template from that config
+      if (currentZone?.boardConfigId) {
+        const slotsRes = await fetch(`/api/board-slots?boardConfigId=${currentZone.boardConfigId}&sStep=2&miniStep=3`);
+        const slotsJson = await slotsRes.json();
+        if (slotsJson.success && slotsJson.data.length > 0) {
+          const slot = slotsJson.data[0];
+          const inventarioTemplates = (slot.templates || []).filter(
+            (t: any) => t.template?.type === 'inventario'
+          );
+          if (inventarioTemplates.length > 0) {
+            const content = JSON.parse(inventarioTemplates[0].template.content);
+            if (content.categories && content.extraFields) {
+              setCustomConfig({
+                title: content.title || defaultConfig.title,
+                subtitle: content.subtitle || defaultConfig.subtitle,
+                templateName: content.templateName || defaultConfig.templateName,
+                categories: content.categories,
+                extraFields: content.extraFields,
+                ...(content.desplegables_jerarquicos ? { desplegables_jerarquicos: content.desplegables_jerarquicos } : {}),
+              });
+              setHasTemplate(true);
+            } else {
+              setCustomConfig(null);
+              setHasTemplate(true);
+            }
+          } else {
+            setCustomConfig(null);
+            setHasTemplate(true);
+          }
+        } else {
+          setCustomConfig(null);
+          setHasTemplate(true);
+        }
+      } else {
+        // Fallback: load global template
+        const res = await fetch(`/api/templates?type=inventario&sStep=2&miniStep=3`);
+        const json = await res.json();
+        if (json.success && json.data && json.data.length > 0) {
+          const content = JSON.parse(json.data[0].content);
+          if (content.categories && content.extraFields) {
+            setCustomConfig({
+              title: content.title || defaultConfig.title,
+              subtitle: content.subtitle || defaultConfig.subtitle,
+              templateName: content.templateName || defaultConfig.templateName,
+              categories: content.categories,
+              extraFields: content.extraFields,
+              ...(content.desplegables_jerarquicos ? { desplegables_jerarquicos: content.desplegables_jerarquicos } : {}),
+            });
+            setHasTemplate(true);
+          } else {
+            setCustomConfig(null);
+            setHasTemplate(true);
+          }
+        } else {
+          setCustomConfig(null);
+          setHasTemplate(true);
+        }
+      }
+    } catch (e) {
+      console.error('Error loading custom inventory config:', e);
+      setCustomConfig(null);
+      setHasTemplate(true);
+    }
+  };
 
   // Load data on mount
   useEffect(() => {
     loadActivosItems();
+    loadCustomInventoryConfig();
   }, [currentProject, currentZone]);
 
   const loadActivosItems = async () => {
@@ -273,7 +347,7 @@ export default function ActivosView() {
                             <SelectValue placeholder="Método" />
                           </SelectTrigger>
                           <SelectContent>
-                            {['Etiqueta', 'Código color', 'Señal visual', 'Sombra/Contorno', 'Código numérico', 'Otro'].map(o => (
+                            {(config.extraFields.find(f => f.key === 'metodoIdentificacion')?.options || ['Etiqueta', 'Código color', 'Señal visual', 'Sombra/Contorno', 'Código numérico', 'Otro']).map(o => (
                               <SelectItem key={o} value={o} className="text-xs">{o}</SelectItem>
                             ))}
                           </SelectContent>
@@ -285,7 +359,7 @@ export default function ActivosView() {
                             <SelectValue placeholder="Cercanía" />
                           </SelectTrigger>
                           <SelectContent>
-                            {['Muy cerca (brazo)', 'Cerca (1-3 pasos)', 'Media distancia', 'Poco accesible'].map(o => (
+                            {(config.extraFields.find(f => f.key === 'cercania')?.options || ['Muy cerca (brazo)', 'Cerca (1-3 pasos)', 'Media distancia', 'Poco accesible']).map(o => (
                               <SelectItem key={o} value={o} className="text-xs">{o}</SelectItem>
                             ))}
                           </SelectContent>
