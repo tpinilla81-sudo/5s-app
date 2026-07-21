@@ -152,9 +152,7 @@ export async function PUT(
 }
 
 // DELETE /api/companies/[companyId] - Delete company (gestor only)
-// Query params:
-//   force=true — Eliminar en cascada (borra proyectos y todos sus datos asociados)
-//   Si no se pasa force, y la empresa tiene proyectos, se desactiva (soft delete)
+// Siempre elimina completamente la empresa y todos sus datos asociados
 export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ companyId: string }> }
@@ -169,9 +167,6 @@ export async function DELETE(
       return NextResponse.json({ success: false, error: 'Solo el gestor (dueño de la app) puede eliminar empresas' }, { status: 403 })
     }
 
-    const { searchParams } = new URL(request.url)
-    const force = searchParams.get('force') === 'true'
-
     // Get company members before deletion to handle orphan admins
     const companyMembers = await db.companyMember.findMany({
       where: { companyId },
@@ -182,65 +177,27 @@ export async function DELETE(
       },
     })
 
-    // Check company has projects
-    const projectCount = await db.project.count({ where: { companyId } })
-    if (projectCount > 0 && !force) {
-      // Soft delete — deactivate company instead of deleting
-      await db.company.update({
-        where: { id: companyId },
-        data: { active: false },
-      })
+    // HARD DELETE — always delete everything completely
 
-      // Also deactivate admin users that only belong to this company
-      for (const member of companyMembers) {
-        if (member.user.role === 'admin') {
-          const otherMemberships = await db.companyMember.count({
-            where: {
-              userId: member.userId,
-              NOT: { companyId },
-            },
-          })
-          // If this admin only belongs to this company, deactivate them too
-          if (otherMemberships === 0) {
-            await db.user.update({
-              where: { id: member.userId },
-              data: { active: false },
-            })
-          }
-        }
-      }
-
-      return NextResponse.json({
-        success: true,
-        softDelete: true,
-        projectCount,
-        message: `Empresa desactivada (tiene ${projectCount} proyecto(s) asociado(s)). Usa force=true para eliminar todo en cascada.`,
-      })
-    }
-
-    // FORCE DELETE or NO PROJECTS — hard delete everything
-
-    // If force and has projects, delete all projects first (cascade will handle project children)
+    // Delete all projects first (cascade will handle project children)
     let deletedProjectCount = 0
-    if (projectCount > 0 && force) {
-      const projects = await db.project.findMany({
-        where: { companyId },
-        select: { id: true },
-      })
+    const projects = await db.project.findMany({
+      where: { companyId },
+      select: { id: true },
+    })
 
-      for (const project of projects) {
-        try {
-          // Delete project — Prisma cascade will handle:
-          // zones → memberZones, progress, inventoryItems, auditTargets, standards, photos, pdcaItems
-          // members (ProjectMember) → memberZones
-          // progress, employeeProgress, inventoryItems, examAnswers, auditResults,
-          // checklistResponses, actionItems, auditTargets, standards, photoLibrary, pdcaItems
-          await db.project.delete({ where: { id: project.id } })
-          deletedProjectCount++
-        } catch (projectDeleteError) {
-          console.error(`Error deleting project ${project.id}:`, projectDeleteError)
-          // Try to continue with other projects
-        }
+    for (const project of projects) {
+      try {
+        // Delete project — Prisma cascade will handle:
+        // zones → memberZones, progress, inventoryItems, auditTargets, standards, photos, pdcaItems
+        // members (ProjectMember) → memberZones
+        // progress, employeeProgress, inventoryItems, examAnswers, auditResults,
+        // checklistResponses, actionItems, auditTargets, standards, photoLibrary, pdcaItems
+        await db.project.delete({ where: { id: project.id } })
+        deletedProjectCount++
+      } catch (projectDeleteError) {
+        console.error(`Error deleting project ${project.id}:`, projectDeleteError)
+        // Try to continue with other projects
       }
     }
 
@@ -288,7 +245,6 @@ export async function DELETE(
 
     return NextResponse.json({
       success: true,
-      softDelete: false,
       deletedProjectCount,
       deletedAdminCount,
       message: parts.join(' — '),

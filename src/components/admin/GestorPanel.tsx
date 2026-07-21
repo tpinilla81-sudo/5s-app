@@ -243,17 +243,12 @@ export default function GestorPanel() {
     })
   }
 
-  const confirmDeleteCompany = async (force: boolean) => {
+  const confirmDeleteCompany = async () => {
     const { companyId } = deleteCompanyDialog
     setDeleteCompanyDialog(d => ({ ...d, open: false }))
     try {
-      const url = force ? `/api/companies/${companyId}?force=true` : `/api/companies/${companyId}`
-      const res = await fetch(url, { method: 'DELETE' })
+      const res = await fetch(`/api/companies/${companyId}`, { method: 'DELETE' })
       if (res.ok) {
-        const data = await res.json()
-        if (data.softDelete) {
-          alert(data.message)
-        }
         await loadStats()
         await fetchCompanies()
       } else {
@@ -990,35 +985,25 @@ export default function GestorPanel() {
               Eliminar Empresa
             </DialogTitle>
             <DialogDescription className="text-violet-400">
-              Elige cómo quieres eliminar esta empresa
+              Esta acción es irreversible
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <p className="text-sm text-violet-300">
-              ¿Qué deseas hacer con <strong className="text-white">{deleteCompanyDialog.companyName}</strong>?
+              ¿Estás seguro de eliminar <strong className="text-white">{deleteCompanyDialog.companyName}</strong> permanentemente?
             </p>
             {deleteCompanyDialog.projectCount > 0 && (
-              <div className="bg-amber-900/30 border border-amber-700/30 rounded-lg p-3">
-                <p className="text-sm text-amber-300">
-                  Esta empresa tiene <strong>{deleteCompanyDialog.projectCount} proyecto(s)</strong> asociado(s) con todos sus datos (zonas, auditorías, inventarios, etc.).
+              <div className="bg-red-900/30 border border-red-700/30 rounded-lg p-3">
+                <p className="text-sm text-red-300">
+                  Se eliminarán <strong>{deleteCompanyDialog.projectCount} proyecto(s)</strong> con todos sus datos (zonas, auditorías, inventarios, miembros, etc.).
                 </p>
               </div>
             )}
             <div className="space-y-2">
-              {deleteCompanyDialog.projectCount > 0 && (
-                <Button
-                  variant="outline"
-                  className="w-full justify-start text-amber-400 border-amber-700/30 hover:bg-amber-900/30 bg-transparent"
-                  onClick={() => confirmDeleteCompany(false)}
-                >
-                  <AlertTriangle className="h-4 w-4 mr-2" />
-                  Solo desactivar (conserva los proyectos)
-                </Button>
-              )}
               <Button
                 variant="outline"
                 className="w-full justify-start text-red-400 border-red-700/30 hover:bg-red-900/30 bg-transparent"
-                onClick={() => confirmDeleteCompany(true)}
+                onClick={() => confirmDeleteCompany()}
               >
                 <Trash2 className="h-4 w-4 mr-2" />
                 {deleteCompanyDialog.projectCount > 0
