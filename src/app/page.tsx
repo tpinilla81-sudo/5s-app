@@ -23,10 +23,6 @@ import AdminPanel from '@/components/admin/AdminPanel';
 import ConstructorPanel from '@/components/admin/ConstructorPanel';
 import MaintenanceView from '@/components/5s/MaintenanceView';
 import GerentePanel from '@/components/auth/GerentePanel';
-import PlanDeAccionView from '@/components/5s/PlanDeAccionView';
-import JaulaView from '@/components/5s/JaulaView';
-import ActivosView from '@/components/5s/ActivosView';
-import PuntoLimpioView from '@/components/5s/PuntoLimpioView';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
@@ -121,6 +117,7 @@ export default function HomePage() {
   const [notifs, setNotifs] = useState<any[]>([]);
 
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [showGerencia, setShowGerencia] = useState(false);
   const [appVersion, setAppVersion] = useState<string>('...');
 
   // Fetch version on mount
@@ -276,23 +273,17 @@ export default function HomePage() {
 
   // Available tabs based on role
   // GESTOR (dueño de la app): ONLY sees "Gestión" tab (company management platform)
-  // ADMIN (admin de empresa): sees operational tabs (board, gerencia, admin, mejora continua)
-  const availableTabs: { key: 'board' | 'gerente' | 'admin' | 'maintenance' | 'gestion'; label: string; icon: React.ReactNode }[] = [];
+  // ALL OTHER ROLES: Tablero (fixed, always) + Mejora Continua (only when 5S cycle complete)
+  // Admin panel is accessed from header, not main tab bar
+  const availableTabs: { key: 'board' | 'maintenance' | 'gestion'; label: string; icon: React.ReactNode }[] = [];
 
   if (isGestor) {
     // Gestor ONLY sees the platform management tab
     availableTabs.push({ key: 'gestion', label: 'Gestión', icon: <Crown className="h-3.5 w-3.5" /> });
   } else {
-    // Tablero 5S — visible for all roles (includes Jaula, Activos, P.Limpio, Plan de Acción)
+    // Tablero 5S — fixed, always visible, the main tool for everyone
     availableTabs.push({ key: 'board', label: 'Tablero', icon: <LayoutDashboard className="h-3.5 w-3.5" /> });
-    // Gerencia — only for roles with view_progress or edit_project permission
-    if (canSeeGerentePanel) {
-      availableTabs.push({ key: 'gerente', label: 'Gerencia', icon: <BarChart3 className="h-3.5 w-3.5" /> });
-    }
-    if (isAdmin) {
-      availableTabs.push({ key: 'admin', label: 'Admin', icon: <Shield className="h-3.5 w-3.5" /> });
-    }
-    // Mejora Continua — solo visible cuando se completa el ciclo completo del tablero (las 5S)
+    // Mejora Continua (PDCA) — solo visible cuando se completa el ciclo completo del tablero (las 5S)
     if (is5SCompleted()) {
       availableTabs.push({ key: 'maintenance', label: 'Mejora Continua', icon: <Sparkles className="h-3.5 w-3.5" /> });
     }
@@ -529,6 +520,22 @@ export default function HomePage() {
                         <span className="text-sm font-medium text-indigo-600">Estándares</span>
                       </button>
                     )}
+                    {/* 📊 Gerencia */}
+                    {canSeeGerentePanel && (
+                      <button className="flex items-center gap-3 w-full px-3 py-3 rounded-lg hover:bg-blue-50 transition-colors text-left min-h-[44px]"
+                        onClick={() => { setMobileMenuOpen(false); setShowGerencia(true); }}>
+                        <BarChart3 className="h-5 w-5 text-blue-500 shrink-0" />
+                        <span className="text-sm font-medium text-blue-600">Gerencia</span>
+                      </button>
+                    )}
+                    {/* 🛡️ Admin */}
+                    {isAdmin && (
+                      <button className="flex items-center gap-3 w-full px-3 py-3 rounded-lg hover:bg-slate-50 transition-colors text-left min-h-[44px]"
+                        onClick={() => { setMobileMenuOpen(false); setActiveTab('admin'); }}>
+                        <Shield className="h-5 w-5 text-slate-500 shrink-0" />
+                        <span className="text-sm font-medium text-slate-600">Admin</span>
+                      </button>
+                    )}
                     {/* 🔓 Lock/Unlock */}
                     {(isAdmin || canSkipSteps) && (
                       <button className="flex items-center gap-3 w-full px-3 py-3 rounded-lg hover:bg-amber-50 transition-colors text-left min-h-[44px]"
@@ -625,6 +632,26 @@ export default function HomePage() {
                 title="Biblioteca de Estándares">
                 <BookOpen className="h-3 w-3" />
                 <span className="hidden sm:inline">Estándares</span>
+              </Button>
+            )}
+            {/* 📊 Gerencia — accessible from header for roles with view_progress */}
+            {canSeeGerentePanel && (
+              <Button variant="outline" size="sm"
+                className="gap-1 text-[10px] h-8 border-blue-300 text-blue-600 hover:bg-blue-50"
+                onClick={() => setShowGerencia(true)}
+                title="Panel de Gerencia">
+                <BarChart3 className="h-3 w-3" />
+                <span className="hidden sm:inline">Gerencia</span>
+              </Button>
+            )}
+            {/* 🛡️ Admin — accessible from header for admin role */}
+            {isAdmin && (
+              <Button variant="outline" size="sm"
+                className="gap-1 text-[10px] h-8 border-slate-300 text-slate-600 hover:bg-slate-50"
+                onClick={() => setActiveTab('admin')}
+                title="Panel de Administración">
+                <Shield className="h-3 w-3" />
+                <span className="hidden sm:inline">Admin</span>
               </Button>
             )}
             {/* Free navigation lock */}
@@ -1175,21 +1202,14 @@ export default function HomePage() {
                 </motion.div>
               )}
 
-              {/* ═══ TAB: GERENTE ═══ */}
-              {activeTab === 'gerente' && canSeeGerentePanel && (
-                <motion.div key="gerente" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex-1 min-h-0 overflow-auto p-4">
-                  <GerentePanel embedded />
-                </motion.div>
-              )}
-
-              {/* ═══ TAB: ADMIN (Solo Admin de Empresa) ═══ */}
+              {/* ═══ TAB: ADMIN (Solo Admin de Empresa — accessed from header) ═══ */}
               {activeTab === 'admin' && isAdmin && (
                 <motion.div key="admin" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex-1 min-h-0 overflow-auto p-4">
                   <AdminPanel embedded />
                 </motion.div>
               )}
 
-              {/* ═══ TAB: MAINTENANCE / MEJORA CONTINUA ═══ */}
+              {/* ═══ TAB: MAINTENANCE / MEJORA CONTINUA (only when 5S cycle complete) ═══ */}
               {activeTab === 'maintenance' && (
                 <motion.div key="maintenance" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex-1 min-h-0 overflow-auto p-4">
                   <MaintenanceView embedded />
@@ -1262,6 +1282,23 @@ export default function HomePage() {
 
       {/* Role Permissions Modal */}
       <RolePermissions open={showRolePermissions} onClose={() => setShowRolePermissions(false)} />
+
+      {/* Gerencia Panel — Sheet overlay (accessed from header button) */}
+      {showGerencia && (
+        <Sheet open={showGerencia} onOpenChange={setShowGerencia}>
+          <SheetContent side="right" className="w-[90vw] sm:w-[600px] p-0 overflow-auto">
+            <SheetHeader className="p-4 border-b">
+              <SheetTitle className="text-left flex items-center gap-2">
+                <BarChart3 className="h-5 w-5 text-blue-500" />
+                Panel de Gerencia
+              </SheetTitle>
+            </SheetHeader>
+            <div className="p-4">
+              <GerentePanel embedded />
+            </div>
+          </SheetContent>
+        </Sheet>
+      )}
 
 
 
