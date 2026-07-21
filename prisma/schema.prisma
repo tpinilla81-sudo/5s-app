@@ -6,9 +6,8 @@ generator client {
 }
 
 datasource db {
-  provider  = "postgresql"
+  provider  = "sqlite"
   url       = env("DATABASE_URL")
-  directUrl = env("DIRECT_URL")
 }
 
 model User {
@@ -68,6 +67,7 @@ model Project {
   standards          Standard[]
   photos             PhotoLibrary[]
   pdcaItems          PDCAItem[]
+  evaluationSchedules EvaluationSchedule[]
 
   @@index([companyId])
 }
@@ -95,6 +95,7 @@ model Zone {
   standards        Standard[]
   photos           PhotoLibrary[]
   pdcaItems        PDCAItem[]
+  evaluationSchedules EvaluationSchedule[]
 
   @@unique([name, projectId])
   @@index([projectId])
@@ -613,4 +614,23 @@ model SystemConfig {
   value String // JSON string or simple value
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+model EvaluationSchedule {
+  id               String   @id @default(cuid())
+  sStep            Int // 1-5
+  miniStep         Int // 4 (autoevaluación) or 5 (auditoría)
+  fechaProgramada  String? // Scheduled date (YYYY-MM-DD)
+  horaProgramada   String? // Scheduled time (HH:MM)
+  projectId        String
+  zoneId           String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  zone    Zone?   @relation(fields: [zoneId], references: [id], onDelete: Cascade)
+
+  @@unique([sStep, miniStep, projectId, zoneId])
+  @@index([projectId])
+  @@index([projectId, zoneId])
 }

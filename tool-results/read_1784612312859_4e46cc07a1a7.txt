@@ -1,0 +1,502 @@
+  1700→                        value={newItem.price ?? ''}
+  1701→                        onChange={e => setNewItem(prev => ({ ...prev, price: e.target.value ? parseFloat(e.target.value) : null }))}
+  1702→                      />
+  1703→                    </div>
+  1704→                  </div>
+  1705→
+  1706→                  {/* S1: All fields visible and editable — Innecesario + Necesario + Etiquetas */}
+  1707→                  {sStep === 1 ? (
+  1708→                    <>
+  1709→                      {/* S1: Section labels */}
+  1710→                      <div className="flex items-center gap-3 mt-1">
+  1711→                        <div className="flex items-center gap-1.5">
+  1712→                          <div className="h-2.5 w-2.5 rounded bg-red-500" />
+  1713→                          <span className="text-[10px] font-medium text-red-700">Campos de Innecesario</span>
+  1714→                        </div>
+  1715→                        <div className="flex items-center gap-1.5">
+  1716→                          <div className="h-2.5 w-2.5 rounded bg-orange-500" />
+  1717→                          <span className="text-[10px] font-medium text-orange-700">Datos de Etiqueta</span>
+  1718→                        </div>
+  1719→                      </div>
+  1720→
+  1721→                      {/* S1: Innecesario fields — always visible and editable */}
+  1722→                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 items-end p-2 rounded-lg border border-red-200 bg-red-50/30">
+  1723→                        {['estado', 'frecuenciaUso', 'decision'].map(key => {
+  1724→                          const field = config.extraFields.find(f => f.key === key);
+  1725→                          if (!field) return null;
+  1726→                          return (
+  1727→                            <div key={field.key}>
+  1728→                              <label className="text-xs font-medium text-red-700">{field.label}</label>
+  1729→                              {field.type === 'select' && field.options ? (
+  1730→                                <Select
+  1731→                                  value={newItem.extra?.[field.key] ? String(newItem.extra[field.key]) : undefined}
+  1732→                                  onValueChange={val =>
+  1733→                                    setNewItem(prev => {
+  1734→                                      const updated = { ...prev, extra: { ...(prev.extra || {}), [field.key]: val } };
+  1735→                                      // If decision is Eliminar/Tirar: clear quarantine/entry fields
+  1736→                                      if (field.key === 'decision' && (val === 'Eliminar' || val === 'Tirar')) {
+  1737→                                        updated.jaulaFechaEntrada = null;
+  1738→                                        delete updated.extra.diasCuarentena;
+  1739→                                      }
+  1740→                                      // If decision is Jaula: set default entry date and quarantine
+  1741→                                      if (field.key === 'decision' && val === 'Jaula') {
+  1742→                                        if (!updated.jaulaFechaEntrada) updated.jaulaFechaEntrada = new Date().toISOString();
+  1743→                                        if (!updated.extra.diasCuarentena) updated.extra.diasCuarentena = 40;
+  1744→                                      }
+  1745→                                      return updated;
+  1746→                                    })
+  1747→                                  }
+  1748→                                >
+  1749→                                  <SelectTrigger>
+  1750→                                    <SelectValue placeholder={field.label} />
+  1751→                                  </SelectTrigger>
+  1752→                                  <SelectContent>
+  1753→                                    {field.options.filter(opt => opt && opt.trim() !== '').map(opt => (
+  1754→                                      <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+  1755→                                    ))}
+  1756→                                  </SelectContent>
+  1757→                                </Select>
+  1758→                              ) : (
+  1759→                                <Input
+  1760→                                  placeholder={field.label}
+  1761→                                  value={String(newItem.extra?.[field.key] ?? '')}
+  1762→                                  onChange={e =>
+  1763→                                    setNewItem(prev => ({
+  1764→                                      ...prev,
+  1765→                                      extra: { ...(prev.extra || {}), [field.key]: e.target.value },
+  1766→                                    }))
+  1767→                                  }
+  1768→                                />
+  1769→                              )}
+  1770→                            </div>
+  1771→                          );
+  1772→                        })}
+  1773→                        <div className="col-span-full flex items-center gap-1">
+  1774→                          <div className="w-2 h-2 rounded-full bg-red-400" />
+  1775→                          <span className="text-[9px] text-red-600 font-medium">
+  1776→                            {newItem.extra?.decision === 'Eliminar' || newItem.extra?.decision === 'Tirar'
+  1777→                              ? `Decisión: ${newItem.extra.decision} → va a Residuo (sin etiqueta, sin cuarentena)`
+  1778→                              : 'Decisión: Jaula → etiqueta roja con cuarentena'}
+  1779→                          </span>
+  1780→                        </div>
+  1781→                      </div>
+  1782→
+  1783→                      {/* S1: Etiqueta fields — ONLY for Jaula decision (Eliminar/Tirar go to Residuo, no tag/quarantine) */}
+  1784→                      {(!newItem.extra?.decision || newItem.extra.decision === 'Jaula') && (
+  1785→                      <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 items-end p-2 rounded-lg border border-orange-200 bg-orange-50/30">
+  1786→                        <div>
+  1787→                          <label className="text-xs font-medium text-orange-700 flex items-center gap-1">
+  1788→                            <Tag className="h-3 w-3" />
+  1789→                            F. Entrada
+  1790→                          </label>
+  1791→                          <Input
+  1792→                            type="date"
+  1793→                            value={newItem.jaulaFechaEntrada ? new Date(newItem.jaulaFechaEntrada).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]}
+  1794→                            onChange={e => {
+  1795→                              const val = e.target.value ? new Date(e.target.value + 'T12:00:00').toISOString() : null;
+  1796→                              setNewItem(prev => ({ ...prev, jaulaFechaEntrada: val }));
+  1797→                            }}
+  1798→                          />
+  1799→                        </div>
+  1800→                        <div>
+  1801→                          <label className="text-xs font-medium text-orange-700 flex items-center gap-1">
+  1802→                            <Tag className="h-3 w-3" />
+  1803→                            Días cuarentena
+  1804→                          </label>
+  1805→                          <Select
+  1806→                            value={String(newItem.extra?.diasCuarentena ?? 40)}
+  1807→                            onValueChange={val =>
+  1808→                              setNewItem(prev => ({
+  1809→                                ...prev,
+  1810→                                extra: { ...(prev.extra || {}), diasCuarentena: parseInt(val) || 40 },
+  1811→                              }))
+  1812→                            }
+  1813→                          >
+  1814→                            <SelectTrigger>
+  1815→                              <SelectValue />
+  1816→                            </SelectTrigger>
+  1817→                            <SelectContent>
+  1818→                              {[7, 15, 20, 30, 40, 60, 90].map(d => (
+  1819→                                <SelectItem key={d} value={String(d)}>{d} días</SelectItem>
+  1820→                              ))}
+  1821→                            </SelectContent>
+  1822→                          </Select>
+  1823→                        </div>
+  1824→                        <div>
+  1825→                          <label className="text-xs font-medium text-orange-700 flex items-center gap-1">
+  1826→                            <Tag className="h-3 w-3" />
+  1827→                            F. Revisión
+  1828→                          </label>
+  1829→                          <Input
+  1830→                            type="date"
+  1831→                            value={(() => {
+  1832→                              const base = newItem.jaulaFechaEntrada || new Date().toISOString();
+  1833→                              const dias = Number(newItem.extra?.diasCuarentena ?? 40);
+  1834→                              try {
+  1835→                                const d = new Date(base);
+  1836→                                d.setDate(d.getDate() + dias);
+  1837→                                return d.toISOString().split('T')[0];
+  1838→                              } catch { return ''; }
+  1839→                            })()}
+  1840→                            readOnly
+  1841→                            className="bg-orange-50"
+  1842→                          />
+  1843→                        </div>
+  1844→                        <div className="flex items-end">
+  1845→                          <div className="flex items-center gap-1">
+  1846→                            <div className="w-2 h-2 rounded-full bg-orange-500" />
+  1847→                            <span className="text-[9px] text-orange-600 font-medium">Datos para etiqueta roja</span>
+  1848→                          </div>
+  1849→                        </div>
+  1850→                      </div>
+  1851→                      )}
+  1852→                    </>
+  1853→                  ) : (
+  1854→                  /* Non-S1: Original extra fields */
+  1855→                  config.extraFields.length > 0 && (
+  1856→                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 items-end">
+  1857→                      {config.extraFields.map(field => {
+  1858→                        // Dynamic subcategoria: filter options based on selected category
+  1859→                        let effectiveOptions = field.type === 'select' ? field.options : undefined;
+  1860→                        if (field.key === 'subcategoria' && config.desplegables_jerarquicos) {
+  1861→                          const selectedCat = newItem.category;
+  1862→                          if (selectedCat) {
+  1863→                            const catLabel = config.categories.find(c => c.value === selectedCat)?.label;
+  1864→                            const hierEntry = catLabel && config.desplegables_jerarquicos[catLabel]
+  1865→                              ? config.desplegables_jerarquicos[catLabel]
+  1866→                              : config.desplegables_jerarquicos[selectedCat];
+  1867→                            if (hierEntry) {
+  1868→                              effectiveOptions = hierEntry.subcategorias;
+  1869→                            } else {
+  1870→                              effectiveOptions = [];
+  1871→                            }
+  1872→                          } else {
+  1873→                            effectiveOptions = Object.values(config.desplegables_jerarquicos).flatMap(h => h.subcategorias);
+  1874→                          }
+  1875→                        }
+  1876→                        return (
+  1877→                        <div key={field.key}>
+  1878→                          <label className="text-xs font-medium">{field.label}</label>
+  1879→                          {field.type === 'select' && effectiveOptions ? (
+  1880→                            <Select
+  1881→                              value={newItem.extra?.[field.key] ? String(newItem.extra[field.key]) : undefined}
+  1882→                              onValueChange={val =>
+  1883→                                setNewItem(prev => ({
+  1884→                                  ...prev,
+  1885→                                  extra: { ...(prev.extra || {}), [field.key]: val },
+  1886→                                }))
+  1887→                              }
+  1888→                            >
+  1889→                              <SelectTrigger>
+  1890→                                <SelectValue placeholder={field.label} />
+  1891→                              </SelectTrigger>
+  1892→                              <SelectContent>
+  1893→                                {effectiveOptions.filter(opt => opt && opt.trim() !== '').map(opt => (
+  1894→                                  <SelectItem key={opt} value={opt}>
+  1895→                                    {opt}
+  1896→                                  </SelectItem>
+  1897→                                ))}
+  1898→                              </SelectContent>
+  1899→                            </Select>
+  1900→                          ) : field.type === 'number' ? (
+  1901→                            <Input
+  1902→                              type="number"
+  1903→                              min="0"
+  1904→                              max="100"
+  1905→                              placeholder={field.label}
+  1906→                              value={newItem.extra?.[field.key] ?? ''}
+  1907→                              onChange={e =>
+  1908→                                setNewItem(prev => ({
+  1909→                                  ...prev,
+  1910→                                  extra: { ...(prev.extra || {}), [field.key]: parseInt(e.target.value) || 0 },
+  1911→                                }))
+  1912→                              }
+  1913→                            />
+  1914→                          ) : (
+  1915→                            <Input
+  1916→                              placeholder={field.label}
+  1917→                              value={String(newItem.extra?.[field.key] ?? '')}
+  1918→                              onChange={e =>
+  1919→                                setNewItem(prev => ({
+  1920→                                  ...prev,
+  1921→                                  extra: { ...(prev.extra || {}), [field.key]: e.target.value },
+  1922→                                }))
+  1923→                              }
+  1924→                            />
+  1925→                          )}
+  1926→                        </div>
+  1927→                        );
+  1928→                      })}
+  1929→                    </div>
+  1930→                  )
+  1931→                  )}
+  1932→
+  1933→                  {/* Add button + Photo attach */}
+  1934→                  <div className="flex justify-end items-center gap-2">
+  1935→                    {pendingNewPhoto && (
+  1936→                      <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+  1937→                        <div className="w-6 h-6 rounded bg-muted flex items-center justify-center">
+  1938→                          <ImageIcon className="h-3 w-3" />
+  1939→                        </div>
+  1940→                        <span className="max-w-[120px] truncate">{pendingNewPhoto.name}</span>
+  1941→                        <button className="text-destructive hover:text-red-700" onClick={() => setPendingNewPhoto(null)}>
+  1942→                          <X className="h-3 w-3" />
+  1943→                        </button>
+  1944→                      </div>
+  1945→                    )}
+  1946→                    {!isReadOnly && (
+  1947→                      <div className="flex items-center gap-1">
+  1948→                        <Select value={pendingNewPhotoType} onValueChange={setPendingNewPhotoType}>
+  1949→                          <SelectTrigger className="h-7 w-20 text-[10px]">
+  1950→                            <SelectValue />
+  1951→                          </SelectTrigger>
+  1952→                          <SelectContent>
+  1953→                            <SelectItem value="antes">Antes</SelectItem>
+  1954→                            <SelectItem value="despues">Después</SelectItem>
+  1955→                          </SelectContent>
+  1956→                        </Select>
+  1957→                        <label className="inline-flex items-center justify-center h-7 px-2 rounded-md border border-input bg-background text-xs cursor-pointer hover:bg-accent transition-colors gap-1">
+  1958→                          <Camera className="h-3 w-3" />
+  1959→                          Adjuntar Foto
+  1960→                          <input
+  1961→                            type="file"
+  1962→                            accept="image/*"
+  1963→                            capture="environment"
+  1964→                            className="hidden"
+  1965→                            onChange={e => {
+  1966→                              const file = e.target.files?.[0];
+  1967→                              if (file) setPendingNewPhoto(file);
+  1968→                              e.target.value = '';
+  1969→                            }}
+  1970→                          />
+  1971→                        </label>
+  1972→                      </div>
+  1973→                    )}
+  1974→                    <Button
+  1975→                      onClick={handleAddItem}
+  1976→                      disabled={!newItem.name || !newItem.category}
+  1977→                      size="sm"
+  1978→                      style={{ backgroundColor: sStepData?.color }}
+  1979→                    >
+  1980→                      <Plus className="h-4 w-4 mr-1" /> Agregar
+  1981→                    </Button>
+  1982→                  </div>
+  1983→                </div>
+  1984→              </CardContent>
+  1985→            </Card>
+  1986→
+  1987→            {/* ═══ S3: Puntos de Suciedad — Before/After Photos ═══ */}
+  1988→            {sStep === 3 && items.some(i => (itemPhotos[i.id!] || i.photos || []).length > 0) && (
+  1989→              <Card className="border-2 border-orange-200 bg-orange-50/30">
+  1990→                <CardContent className="p-4">
+  1991→                  <div className="flex items-center gap-2 mb-3">
+  1992→                    <Camera className="h-5 w-5 text-orange-600" />
+  1993→                    <h4 className="font-semibold text-orange-800">Puntos de Suciedad — Fotos Antes/Después</h4>
+  1994→                  </div>
+  1995→                  <p className="text-xs text-muted-foreground mb-3">
+  1996→                    Las fotos vinculadas a cada punto de suciedad ayudan a documentar el estado antes y después de la limpieza.
+  1997→                  </p>
+  1998→                  <div className="space-y-3 max-h-64 overflow-y-auto">
+  1999→                    {items.filter(i => (itemPhotos[i.id!] || i.photos || []).length > 0).map(item => {
+  2000→                      const itemPhotoList = itemPhotos[item.id!] || item.photos || [];
+  2001→                      const antesPhotos = itemPhotoList.filter(p => p.photoType === 'antes');
+  2002→                      const despuesPhotos = itemPhotoList.filter(p => p.photoType === 'despues');
+  2003→                      return (
+  2004→                        <div key={item.id} className="flex items-start gap-3 p-2 rounded-lg border bg-white">
+  2005→                          <div className="min-w-0 flex-1">
+  2006→                            <div className="text-sm font-medium truncate">{item.name}</div>
+  2007→                            <div className="text-[10px] text-muted-foreground">{item.location || '—'} · {item.category}</div>
+  2008→                          </div>
+  2009→                          <div className="flex gap-2 flex-shrink-0">
+  2010→                            {/* ANTES */}
+  2011→                            <div className="text-center">
+  2012→                              <span className="text-[9px] font-medium text-amber-700 block mb-1">ANTES</span>
+  2013→                              {antesPhotos.length > 0 ? (
+  2014→                                <div className="flex gap-1">
+  2015→                                  {antesPhotos.map(p => (
+  2016→                                    <img key={p.id} src={p.photoUrl} alt="Antes" className="w-16 h-12 object-cover rounded border cursor-pointer hover:opacity-80" onClick={() => setShowPhotoLightbox(p)} />
+  2017→                                  ))}
+  2018→                                </div>
+  2019→                              ) : (
+  2020→                                <div className="w-16 h-12 bg-amber-50 border border-dashed border-amber-300 rounded flex items-center justify-center">
+  2021→                                  <Camera className="h-3 w-3 text-amber-300" />
+  2022→                                </div>
+  2023→                              )}
+  2024→                            </div>
+  2025→                            {/* DESPUÉS */}
+  2026→                            <div className="text-center">
+  2027→                              <span className="text-[9px] font-medium text-green-700 block mb-1">DESPUÉS</span>
+  2028→                              {despuesPhotos.length > 0 ? (
+  2029→                                <div className="flex gap-1">
+  2030→                                  {despuesPhotos.map(p => (
+  2031→                                    <img key={p.id} src={p.photoUrl} alt="Después" className="w-16 h-12 object-cover rounded border cursor-pointer hover:opacity-80" onClick={() => setShowPhotoLightbox(p)} />
+  2032→                                  ))}
+  2033→                                </div>
+  2034→                              ) : (
+  2035→                                <div className="w-16 h-12 bg-green-50 border border-dashed border-green-300 rounded flex items-center justify-center">
+  2036→                                  <Camera className="h-3 w-3 text-green-300" />
+  2037→                                </div>
+  2038→                              )}
+  2039→                            </div>
+  2040→                          </div>
+  2041→                          {/* Quick attach after photo */}
+  2042→                          {!isReadOnly && item.id && (
+  2043→                            <label className="inline-flex items-center justify-center px-2 py-1 rounded border border-dashed border-green-300 cursor-pointer hover:bg-green-50 text-[9px] text-green-600 gap-1 flex-shrink-0" title="Adjuntar foto DESPUÉS">
+  2044→                              <Camera className="h-3 w-3" /> Después
+  2045→                              <input
+  2046→                                type="file"
+  2047→                                accept="image/*"
+  2048→                                capture="environment"
+  2049→                                className="hidden"
+  2050→                                onChange={e => {
+  2051→                                  const file = e.target.files?.[0];
+  2052→                                  if (file) handleAttachPhoto(item.id!, file, 'despues');
+  2053→                                  e.target.value = '';
+  2054→                                }}
+  2055→                              />
+  2056→                            </label>
+  2057→                          )}
+  2058→                        </div>
+  2059→                      );
+  2060→                    })}
+  2061→                  </div>
+  2062→                </CardContent>
+  2063→              </Card>
+  2064→            )}
+  2065→
+  2066→            {/* ═══ S1: Jaula Items with Photos ═══ */}
+  2067→            {sStep === 1 && items.some(i => i.category === 'innecesario' && (itemPhotos[i.id!] || i.photos || []).length > 0) && (
+  2068→              <Card className="border-2 border-red-200 bg-red-50/30">
+  2069→                <CardContent className="p-4">
+  2070→                  <div className="flex items-center gap-2 mb-3">
+  2071→                    <Camera className="h-5 w-5 text-red-600" />
+  2072→                    <h4 className="font-semibold text-red-800">Elementos en Jaula — Trazabilidad Fotográfica</h4>
+  2073→                  </div>
+  2074→                  <p className="text-xs text-muted-foreground mb-3">
+  2075→                    Las fotos de elementos innecesarios en la Jaula permiten la trazabilidad del material clasificado.
+  2076→                  </p>
+  2077→                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-48 overflow-y-auto">
+  2078→                    {items.filter(i => i.category === 'innecesario' && (itemPhotos[i.id!] || i.photos || []).length > 0).map(item => {
+  2079→                      const itemPhotoList = itemPhotos[item.id!] || item.photos || [];
+  2080→                      return (
+  2081→                        <div key={item.id} className="flex items-center gap-2 p-2 rounded-lg border bg-white">
+  2082→                          <div className="flex -space-x-1">
+  2083→                            {itemPhotoList.slice(0, 3).map(p => (
+  2084→                              <img key={p.id} src={p.photoUrl} alt={p.title} className="w-10 h-10 object-cover rounded border-2 border-white cursor-pointer hover:opacity-80" onClick={() => setShowPhotoLightbox(p)} />
+  2085→                            ))}
+  2086→                          </div>
+  2087→                          <div className="min-w-0 flex-1">
+  2088→                            <div className="text-xs font-medium truncate">{item.name}</div>
+  2089→                            <div className="text-[9px] text-muted-foreground">
+  2090→                              {item.extra?.decision || 'Jaula'} · {itemPhotoList.length} foto{itemPhotoList.length !== 1 ? 's' : ''}
+  2091→                            </div>
+  2092→                          </div>
+  2093→                        </div>
+  2094→                      );
+  2095→                    })}
+  2096→                  </div>
+  2097→                </CardContent>
+  2098→              </Card>
+  2099→            )}
+  2100→
+  2101→            {/* ═══ S3: Plan de Limpieza e Inspección ═══ */}
+  2102→            {sStep === 3 && (
+  2103→              <div className="mt-2">
+  2104→                <CleaningPlanPanel
+  2105→                  sStep={sStep}
+  2106→                  inventoryItems={items.map(i => ({
+  2107→                    name: i.name,
+  2108→                    location: i.location,
+  2109→                    category: i.category,
+  2110→                    extra: i.extra ? JSON.stringify(i.extra) : null,
+  2111→                  }))}
+  2112→                  isReadOnly={isReadOnly}
+  2113→                />
+  2114→              </div>
+  2115→            )}
+  2116→
+  2117→            {/* ═══ S4: Biblioteca de Estándares ═══ */}
+  2118→            {sStep === 4 && (
+  2119→              <div className="mt-2">
+  2120→                <BibliotecaEstandaresView />
+  2121→              </div>
+  2122→            )}
+  2123→
+  2124→            {/* Items table */}
+  2125→            {isLoading ? (
+  2126→              <div className="space-y-2">
+  2127→                {[1, 2, 3].map(i => (
+  2128→                  <div key={i} className="h-10 bg-muted rounded animate-pulse" />
+  2129→                ))}
+  2130→              </div>
+  2131→            ) : items.length === 0 ? (
+  2132→              <div className="text-center py-8 text-muted-foreground">
+  2133→                <ClipboardList className="h-8 w-8 mx-auto mb-2 opacity-50" />
+  2134→                <p className="text-sm">No hay elementos en el inventario</p>
+  2135→                <p className="text-xs mt-1">Importe una plantilla o agregue elementos manualmente</p>
+  2136→              </div>
+  2137→            ) : (
+  2138→              <div className="max-h-80 overflow-y-auto rounded-lg border">
+  2139→                <table className="w-full text-xs border-collapse">
+  2140→                  <thead className="sticky top-0 z-10">
+  2141→                    {/* ── Row 1: Group headers (colored bands like Plan de Acción) ── */}
+  2142→                    {sStep === 1 ? (
+  2143→                      <>
+  2144→                        <tr>
+  2145→                          <th colSpan={3} className="bg-sky-500 text-white px-2 py-1.5 text-center text-xs font-bold border border-sky-600">IDENTIFICACIÓN</th>
+  2146→                          <th colSpan={2} className="bg-emerald-500 text-white px-2 py-1.5 text-center text-xs font-bold border border-emerald-600">CANTIDAD / VALOR</th>
+  2147→                          <th colSpan={4} className="bg-red-500 text-white px-2 py-1.5 text-center text-xs font-bold border border-red-600">CLASIFICACIÓN INNECESARIO</th>
+  2148→                          <th colSpan={2} className="bg-amber-500 text-white px-2 py-1.5 text-center text-xs font-bold border border-amber-600">UBICACIÓN</th>
+  2149→                          <th colSpan={2} className="bg-gray-500 text-white px-2 py-1.5 text-center text-xs font-bold border border-gray-600"></th>
+  2150→                        </tr>
+  2151→                        <tr>
+  2152→                          {/* IDENTIFICACIÓN */}
+  2153→                          <th className="bg-sky-400 text-white px-1 py-1 text-center font-semibold border border-sky-400 whitespace-nowrap">Elemento</th>
+  2154→                          <th className="bg-sky-400 text-white px-1 py-1 text-center font-semibold border border-sky-400 whitespace-nowrap">Ubicación</th>
+  2155→                          <th className="bg-sky-400 text-white px-1 py-1 text-center font-semibold border border-sky-400 whitespace-nowrap">Categoría</th>
+  2156→                          {/* CANTIDAD / VALOR */}
+  2157→                          <th className="bg-emerald-400 text-white px-1 py-1 text-center font-semibold border border-emerald-400 whitespace-nowrap">Cantidad</th>
+  2158→                          <th className="bg-emerald-400 text-white px-1 py-1 text-center font-semibold border border-emerald-400 whitespace-nowrap">Precio (€)</th>
+  2159→                          {/* CLASIFICACIÓN INNECESARIO */}
+  2160→                          <th className="bg-red-400 text-white px-1 py-1 text-center font-semibold border border-red-400 whitespace-nowrap">Estado</th>
+  2161→                          <th className="bg-red-400 text-white px-1 py-1 text-center font-semibold border border-red-400 whitespace-nowrap">Frec. uso</th>
+  2162→                          <th className="bg-red-400 text-white px-1 py-1 text-center font-semibold border border-red-400 whitespace-nowrap">Decisión</th>
+  2163→                          <th className="bg-orange-400 text-white px-1 py-1 text-center font-semibold border border-orange-400 whitespace-nowrap">Días cuar.</th>
+  2164→                          {/* UBICACIÓN */}
+  2165→                          <th className="bg-amber-400 text-white px-1 py-1 text-center font-semibold border border-amber-400 whitespace-nowrap">Z. Origen</th>
+  2166→                          <th className="bg-amber-400 text-white px-1 py-1 text-center font-semibold border border-amber-400 whitespace-nowrap">Z. Destino</th>
+  2167→                          {/* ACCIONES */}
+  2168→                          <th className="bg-gray-400 text-white px-1 py-1 text-center font-semibold border border-gray-400 whitespace-nowrap">Fotos</th>
+  2169→                          <th className="bg-gray-400 text-white px-1 py-1 text-center font-semibold border border-gray-400 w-8"></th>
+  2170→                        </tr>
+  2171→                      </>
+  2172→                    ) : sStep === 2 ? (
+  2173→                      <>
+  2174→                        <tr>
+  2175→                          <th colSpan={3} className="bg-sky-500 text-white px-2 py-1.5 text-center text-xs font-bold border border-sky-600">IDENTIFICACIÓN</th>
+  2176→                          <th colSpan={2} className="bg-emerald-500 text-white px-2 py-1.5 text-center text-xs font-bold border border-emerald-600">CANTIDAD / VALOR</th>
+  2177→                          <th colSpan={2} className="bg-blue-500 text-white px-2 py-1.5 text-center text-xs font-bold border border-blue-600">ORGANIZACIÓN</th>
+  2178→                          <th colSpan={2} className="bg-amber-500 text-white px-2 py-1.5 text-center text-xs font-bold border border-amber-600">UBICACIÓN</th>
+  2179→                          <th colSpan={2} className="bg-gray-500 text-white px-2 py-1.5 text-center text-xs font-bold border border-gray-600"></th>
+  2180→                        </tr>
+  2181→                        <tr>
+  2182→                          <th className="bg-sky-400 text-white px-1 py-1 text-center font-semibold border border-sky-400 whitespace-nowrap">Elemento</th>
+  2183→                          <th className="bg-sky-400 text-white px-1 py-1 text-center font-semibold border border-sky-400 whitespace-nowrap">Ubicación</th>
+  2184→                          <th className="bg-sky-400 text-white px-1 py-1 text-center font-semibold border border-sky-400 whitespace-nowrap">Categoría</th>
+  2185→                          <th className="bg-emerald-400 text-white px-1 py-1 text-center font-semibold border border-emerald-400 whitespace-nowrap">Total</th>
+  2186→                          <th className="bg-emerald-400 text-white px-1 py-1 text-center font-semibold border border-emerald-400 whitespace-nowrap">Precio (€)</th>
+  2187→                          {config.extraFields.slice(0, 2).map(f => (
+  2188→                            <th key={f.key} className="bg-blue-400 text-white px-1 py-1 text-center font-semibold border border-blue-400 whitespace-nowrap">{f.label}</th>
+  2189→                          ))}
+  2190→                          <th className="bg-amber-400 text-white px-1 py-1 text-center font-semibold border border-amber-400 whitespace-nowrap">Z. Origen</th>
+  2191→                          <th className="bg-amber-400 text-white px-1 py-1 text-center font-semibold border border-amber-400 whitespace-nowrap">Z. Destino</th>
+  2192→                          <th className="bg-gray-400 text-white px-1 py-1 text-center font-semibold border border-gray-400 whitespace-nowrap">Fotos</th>
+  2193→                          <th className="bg-gray-400 text-white px-1 py-1 text-center font-semibold border border-gray-400 w-8"></th>
+  2194→                        </tr>
+  2195→                      </>
+  2196→                    ) : sStep === 3 ? (
+  2197→                      <>
+  2198→                        <tr>
+  2199→                          <th colSpan={3} className="bg-sky-500 text-white px-2 py-1.5 text-center text-xs font-bold border border-sky-600">IDENTIFICACIÓN</th>
+
+[showing lines 1700-2199 of 2620; use offset=2200 with limit to continue reading]

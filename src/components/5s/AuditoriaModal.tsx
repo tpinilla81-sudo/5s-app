@@ -30,6 +30,7 @@ import {
   Upload,
   X,
   Image as ImageIcon,
+  Calendar,
 } from 'lucide-react';
 import { use5SStore } from '@/lib/store';
 import {
@@ -67,6 +68,10 @@ export default function AuditoriaModal({ open, onClose, sStep, miniStep }: Audit
   const [auditPhotos, setAuditPhotos] = useState<{ file: File; preview: string; uploading?: boolean; serverUrl?: string }[]>([]);
   const [isUploadingPhotos, setIsUploadingPhotos] = useState(false);
   const photoInputRef = useRef<HTMLInputElement>(null);
+
+  // Scheduling for audit
+  const [fechaProgramada, setFechaProgramada] = useState('');
+  const [horaProgramada, setHoraProgramada] = useState('');
 
   // Load template from API (uses board config if zone has one)
   const { sections, isLoading: isLoadingTemplate, notaMinima: templateNotaMinima } = useChecklistTemplate('auditoria', sStep, open, currentZone?.boardConfigId);
@@ -121,8 +126,48 @@ export default function AuditoriaModal({ open, onClose, sStep, miniStep }: Audit
       const now = new Date();
       setFechaAuditoria(now.toISOString().slice(0, 10));
       setHoraAuditoria(now.toTimeString().slice(0, 5));
+      // Load scheduled date if available
+      loadScheduledDate();
     }
   }, [open, sStep, sections]);
+
+  // Load scheduled date/time for this auditoría
+  const loadScheduledDate = async () => {
+    if (!currentProject?.id || !currentZone?.id) return;
+    try {
+      const res = await fetch(`/api/evaluation-schedule?sStep=${sStep}&miniStep=5&projectId=${currentProject.id}&zoneId=${currentZone.id}`);
+      const json = await res.json();
+      if (json.success && json.data) {
+        setFechaProgramada(json.data.fechaProgramada || '');
+        setHoraProgramada(json.data.horaProgramada || '');
+      }
+    } catch (e) {
+      console.error('Error loading scheduled date:', e);
+    }
+  };
+
+  // Save scheduled date/time
+  const handleSaveSchedule = async () => {
+    if (!currentProject?.id || !currentZone?.id) return;
+    try {
+      await fetch('/api/evaluation-schedule', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sStep,
+          miniStep: 5,
+          projectId: currentProject.id,
+          zoneId: currentZone.id,
+          fechaProgramada,
+          horaProgramada,
+        }),
+      });
+      toast.success('Fecha programada guardada');
+    } catch (e) {
+      console.error('Error saving schedule:', e);
+      toast.error('Error al guardar la fecha programada');
+    }
+  };
 
   const totalItems = sections.reduce((sum, s) => sum + s.items.length, 0) || 26;
 
@@ -586,6 +631,33 @@ export default function AuditoriaModal({ open, onClose, sStep, miniStep }: Audit
                       className="mt-1"
                     />
                   </div>
+                </div>
+                {/* Scheduling section */}
+                <div className="border-t pt-3 mt-1">
+                  <p className="text-xs font-semibold text-blue-700 flex items-center gap-1 mb-2">
+                    <Calendar className="h-3.5 w-3.5" />
+                    Programar Auditoría
+                  </p>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <Label htmlFor="fechaProgAudit" className="text-[10px] text-blue-600">Fecha programada</Label>
+                      <Input id="fechaProgAudit" type="date" value={fechaProgramada}
+                        onChange={e => setFechaProgramada(e.target.value)}
+                        className="h-7 text-xs" />
+                    </div>
+                    <div>
+                      <Label htmlFor="horaProgAudit" className="text-[10px] text-blue-600">Hora programada</Label>
+                      <Input id="horaProgAudit" type="time" value={horaProgramada}
+                        onChange={e => setHoraProgramada(e.target.value)}
+                        className="h-7 text-xs" />
+                    </div>
+                  </div>
+                  {fechaProgramada && (
+                    <Button size="sm" variant="outline" className="h-6 text-[10px] border-blue-300 text-blue-700 mt-2"
+                      onClick={handleSaveSchedule}>
+                      Guardar programación
+                    </Button>
+                  )}
                 </div>
               </CardContent>
             </Card>

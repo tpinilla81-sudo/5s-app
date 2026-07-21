@@ -12,7 +12,8 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { CheckSquare, CheckCircle, XCircle, Camera, ChevronDown, ChevronRight, Maximize2, Minimize2, AlertCircle, Upload, X, Image as ImageIcon } from 'lucide-react';
+import { Label } from '@/components/ui/label';
+import { CheckSquare, CheckCircle, XCircle, Camera, ChevronDown, ChevronRight, Maximize2, Minimize2, AlertCircle, Upload, X, Image as ImageIcon, Calendar } from 'lucide-react';
 import { use5SStore } from '@/lib/store';
 import {
   S_STEPS,
@@ -51,6 +52,12 @@ export default function AutoevaluacionModal({ open, onClose, sStep, miniStep }: 
   const [autoevalPhotos, setAutoevalPhotos] = useState<{ file: File; preview: string; uploading?: boolean; serverUrl?: string }[]>([]);
   const [isUploadingPhotos, setIsUploadingPhotos] = useState(false);
   const photoInputRef = useRef<HTMLInputElement>(null);
+
+  // Date/Time for scheduling and recording the evaluation
+  const [fechaAutoevaluacion, setFechaAutoevaluacion] = useState('');
+  const [horaAutoevaluacion, setHoraAutoevaluacion] = useState('');
+  const [fechaProgramada, setFechaProgramada] = useState('');
+  const [horaProgramada, setHoraProgramada] = useState('');
 
   // Load template from API (uses board config if zone has one)
   const { sections, isLoading: isLoadingTemplate, notaMinima: templateNotaMinima } = useChecklistTemplate('autoevaluacion', sStep, open, currentZone?.boardConfigId);
@@ -94,8 +101,52 @@ export default function AutoevaluacionModal({ open, onClose, sStep, miniStep }: 
       setIsCompleted(false);
       setFinalScore(0);
       setAutoevalPhotos([]);
+      // Auto-fill current date/time for the evaluation
+      const now = new Date();
+      setFechaAutoevaluacion(now.toISOString().split('T')[0]);
+      setHoraAutoevaluacion(now.toTimeString().slice(0, 5));
+      // Load scheduled date if available
+      loadScheduledDate();
     }
   }, [open, sStep, sections]);
+
+  // Load scheduled date/time for this autoevaluación
+  const loadScheduledDate = async () => {
+    if (!currentProject?.id || !currentZone?.id) return;
+    try {
+      const res = await fetch(`/api/evaluation-schedule?sStep=${sStep}&miniStep=4&projectId=${currentProject.id}&zoneId=${currentZone.id}`);
+      const json = await res.json();
+      if (json.success && json.data) {
+        setFechaProgramada(json.data.fechaProgramada || '');
+        setHoraProgramada(json.data.horaProgramada || '');
+      }
+    } catch (e) {
+      console.error('Error loading scheduled date:', e);
+    }
+  };
+
+  // Save scheduled date/time
+  const handleSaveSchedule = async () => {
+    if (!currentProject?.id || !currentZone?.id) return;
+    try {
+      await fetch('/api/evaluation-schedule', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sStep,
+          miniStep: 4,
+          projectId: currentProject.id,
+          zoneId: currentZone.id,
+          fechaProgramada,
+          horaProgramada,
+        }),
+      });
+      toast.success('Fecha programada guardada');
+    } catch (e) {
+      console.error('Error saving schedule:', e);
+      toast.error('Error al guardar la fecha programada');
+    }
+  };
 
   const totalItems = sections.reduce((sum, s) => sum + s.items.length, 0) || 26;
 
@@ -171,6 +222,10 @@ export default function AutoevaluacionModal({ open, onClose, sStep, miniStep }: 
             notaMinima,
             results: Object.values(results),
             observaciones,
+            fechaAutoevaluacion,
+            horaAutoevaluacion,
+            fechaProgramada: fechaProgramada || null,
+            horaProgramada: horaProgramada || null,
           }),
           projectId: currentProject?.id,
           zoneId: currentZone?.id || null,
@@ -525,6 +580,56 @@ export default function AutoevaluacionModal({ open, onClose, sStep, miniStep }: 
                 Evalúa cada punto de verificación. Marca OK si cumple, NOK si hay desviación. 
                 Los NOKs generan hallazgos y puntos de mejora como plan de acción.
               </p>
+            </div>
+
+            {/* Date/Time: Programación y Registro */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+              <div className="space-y-2">
+                <p className="text-xs font-semibold text-blue-700 flex items-center gap-1">
+                  <Calendar className="h-3.5 w-3.5" />
+                  Programar Autoevaluación
+                </p>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <Label htmlFor="fechaProgramada" className="text-[10px] text-blue-600">Fecha programada</Label>
+                    <Input id="fechaProgramada" type="date" value={fechaProgramada}
+                      onChange={e => setFechaProgramada(e.target.value)}
+                      className="h-7 text-xs" />
+                  </div>
+                  <div>
+                    <Label htmlFor="horaProgramada" className="text-[10px] text-blue-600">Hora programada</Label>
+                    <Input id="horaProgramada" type="time" value={horaProgramada}
+                      onChange={e => setHoraProgramada(e.target.value)}
+                      className="h-7 text-xs" />
+                  </div>
+                </div>
+                {fechaProgramada && (
+                  <Button size="sm" variant="outline" className="h-6 text-[10px] border-blue-300 text-blue-700"
+                    onClick={handleSaveSchedule}>
+                    Guardar programación
+                  </Button>
+                )}
+              </div>
+              <div className="space-y-2">
+                <p className="text-xs font-semibold text-blue-700 flex items-center gap-1">
+                  <CheckSquare className="h-3.5 w-3.5" />
+                  Registro de Autoevaluación
+                </p>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <Label htmlFor="fechaAutoeval" className="text-[10px] text-blue-600">Fecha realización</Label>
+                    <Input id="fechaAutoeval" type="date" value={fechaAutoevaluacion}
+                      onChange={e => setFechaAutoevaluacion(e.target.value)}
+                      className="h-7 text-xs" />
+                  </div>
+                  <div>
+                    <Label htmlFor="horaAutoeval" className="text-[10px] text-blue-600">Hora realización</Label>
+                    <Input id="horaAutoeval" type="time" value={horaAutoevaluacion}
+                      onChange={e => setHoraAutoevaluacion(e.target.value)}
+                      className="h-7 text-xs" />
+                  </div>
+                </div>
+              </div>
             </div>
 
             {/* Score indicator */}

@@ -2,19 +2,31 @@ import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 
 // GET /api/inventory/activos
-// Returns all S1 items with category='necesario' (activos/necessary items)
+// Returns all S2 items (Activos/Necessary items organized in Seiton)
+// Also includes S1 items with category='necesario' for backwards compatibility
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
     const projectId = searchParams.get('projectId')
     const zoneId = searchParams.get('zoneId')
 
-    const where: any = {
-      sStep: 1,
-      category: 'necesario',
+    const baseWhere: any = {
+      OR: [
+        { sStep: 2 }, // S2 (Seiton) inventory items — Activos
+        { sStep: 1, category: 'necesario' }, // S1 items classified as necessary (backwards compat)
+      ],
     }
-    if (projectId && projectId !== 'undefined') where.projectId = projectId
-    if (zoneId && zoneId !== 'undefined') where.zoneId = zoneId
+    if (projectId && projectId !== 'undefined') {
+      baseWhere.AND = [{ projectId }]
+    }
+    if (zoneId && zoneId !== 'undefined') {
+      baseWhere.AND = [...(baseWhere.AND || []), { zoneId }]
+    }
+
+    // Build the full where clause
+    const where: any = projectId || zoneId
+      ? { AND: [{ OR: baseWhere.OR }, ...(baseWhere.AND || [])] }
+      : { OR: baseWhere.OR }
 
     const items = await db.inventoryItem.findMany({
       where,

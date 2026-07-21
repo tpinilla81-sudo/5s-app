@@ -1,0 +1,502 @@
+  1501→                // Helper: compute revision date = entry date + diasCuarentena (default 40)
+  1502→                const withRevision = (i: InventoryItemData) => {
+  1503→                  let fechaRevision: string | null = null;
+  1504→                  const dias = Number(i.extra?.diasCuarentena ?? 40);
+  1505→                  if (i.jaulaFechaEntrada) {
+  1506→                    try {
+  1507→                      const d = new Date(i.jaulaFechaEntrada);
+  1508→                      d.setDate(d.getDate() + dias);
+  1509→                      fechaRevision = d.toISOString();
+  1510→                    } catch {}
+  1511→                  }
+  1512→                  return fechaRevision;
+  1513→                };
+  1514→                // Only Jaula decision items get a red tag (Eliminar/Tirar go to Residuo directly, no tag)
+  1515→                const rojaItems = items
+  1516→                  .filter(i => i.category === 'innecesario' && (!i.extra?.decision || i.extra.decision === 'Jaula'))
+  1517→                  .map(i => ({
+  1518→                    nombre: i.name,
+  1519→                    ubicacion: i.location,
+  1520→                    cantidad: i.quantityUnneeded || i.quantity,
+  1521→                    estado: String(i.extra?.estado ?? ''),
+  1522→                    frecuenciaUso: String(i.extra?.frecuenciaUso ?? ''),
+  1523→                    decision: 'Jaula' as string,
+  1524→                    categoria: String(i.category ?? 'Innecesario'),
+  1525→                    fechaEntrada: i.jaulaFechaEntrada,
+  1526→                    fechaRevision: withRevision(i),
+  1527→                    diasCuarentena: Number(i.extra?.diasCuarentena ?? 40),
+  1528→                    zonaOrigen: i.zonaOrigen || i.jaulaOrigen,
+  1529→                  }));
+  1530→                return (
+  1531→                  <div className="flex items-center gap-2 ml-2 pl-2 border-l border-red-300">
+  1532→                    <span className="text-[10px] text-muted-foreground font-medium">Etiquetas:</span>
+  1533→                    {rojaItems.length > 0 && (
+  1534→                      <TagPrinter items={rojaItems} />
+  1535→                    )}
+  1536→                  </div>
+  1537→                );
+  1538→              })()}
+  1539→            </div>
+  1540→
+  1541→            {/* TASK 7: CSV Import Preview */}
+  1542→            {csvPreview && csvPreview.length > 0 && (
+  1543→              <Card className="border-2 border-blue-200 bg-blue-50/30">
+  1544→                <CardContent className="p-4">
+  1545→                  <div className="flex items-center justify-between mb-3">
+  1546→                    <div className="flex items-center gap-2">
+  1547→                      <FileUp className="h-5 w-5 text-blue-600" />
+  1548→                      <h4 className="font-semibold text-blue-800">Vista Previa de Importación</h4>
+  1549→                      <Badge className="bg-blue-200 text-blue-900">{csvPreview.length} elementos</Badge>
+  1550→                    </div>
+  1551→                    <div className="flex items-center gap-2">
+  1552→                      <Button
+  1553→                        variant="outline"
+  1554→                        size="sm"
+  1555→                        className="text-xs"
+  1556→                        onClick={() => setCsvPreview(null)}
+  1557→                      >
+  1558→                        Cancelar
+  1559→                      </Button>
+  1560→                      <Button
+  1561→                        size="sm"
+  1562→                        className="text-xs bg-blue-600 hover:bg-blue-700"
+  1563→                        onClick={handleConfirmCsvImport}
+  1564→                        disabled={isImporting}
+  1565→                      >
+  1566→                        {isImporting ? 'Importando...' : `Confirmar Importación (${csvPreview.length})`}
+  1567→                      </Button>
+  1568→                    </div>
+  1569→                  </div>
+  1570→                  <div className="max-h-48 overflow-y-auto rounded-lg border">
+  1571→                    <Table>
+  1572→                      <TableHeader>
+  1573→                        <TableRow>
+  1574→                          <TableHead className="text-xs">Elemento</TableHead>
+  1575→                          <TableHead className="text-xs">Ubicación</TableHead>
+  1576→                          <TableHead className="text-xs">Categoría</TableHead>
+  1577→                          <TableHead className="text-xs">Cant.</TableHead>
+  1578→                          <TableHead className="text-xs">Precio</TableHead>
+  1579→                        </TableRow>
+  1580→                      </TableHeader>
+  1581→                      <TableBody>
+  1582→                        {csvPreview.map((item, idx) => (
+  1583→                          <TableRow key={idx}>
+  1584→                            <TableCell className="text-xs font-medium">{item.name}</TableCell>
+  1585→                            <TableCell className="text-xs">{item.location}</TableCell>
+  1586→                            <TableCell className="text-xs">{item.category}</TableCell>
+  1587→                            <TableCell className="text-xs text-center">{item.quantity}</TableCell>
+  1588→                            <TableCell className="text-xs text-right">{item.price ? `${item.price.toFixed(2)} €` : '—'}</TableCell>
+  1589→                          </TableRow>
+  1590→                        ))}
+  1591→                      </TableBody>
+  1592→                    </Table>
+  1593→                  </div>
+  1594→                </CardContent>
+  1595→              </Card>
+  1596→            )}
+  1597→
+  1598→            {/* Add item form */}
+  1599→            <Card>
+  1600→              <CardContent className="p-4">
+  1601→                <div className="space-y-3">
+  1602→                  {/* Row 1: Name, Zona (read-only), Category (auto innecesario for S1), Quantity, Price */}
+  1603→                  <div className="grid grid-cols-1 gap-3 items-end sm:grid-cols-5">
+  1604→                    <div className="sm:col-span-2">
+  1605→                      <label className="text-xs font-medium">Elemento *</label>
+  1606→                      <Input
+  1607→                        placeholder="Nombre del elemento"
+  1608→                        value={newItem.name}
+  1609→                        onChange={e => setNewItem(prev => ({ ...prev, name: e.target.value }))}
+  1610→                      />
+  1611→                    </div>
+  1612→                    {sStep === 1 ? (
+  1613→                      /* S1: Zona is pre-filled from current zone, read-only */
+  1614→                      <div>
+  1615→                        <label className="text-xs font-medium flex items-center gap-1">
+  1616→                          <MapPin className="h-3 w-3" />
+  1617→                          Zona
+  1618→                        </label>
+  1619→                        <Input
+  1620→                          value={currentZone?.name || newItem.zonaOrigen || 'Sin zona'}
+  1621→                          readOnly
+  1622→                          className="bg-gray-50 text-gray-600"
+  1623→                        />
+  1624→                      </div>
+  1625→                    ) : (
+  1626→                      /* Non-S1: Zona selectable */
+  1627→                      <div>
+  1628→                        <label className="text-xs font-medium flex items-center gap-1">
+  1629→                          <MapPin className="h-3 w-3" />
+  1630→                          Zona
+  1631→                        </label>
+  1632→                        {currentProject?.zones && currentProject.zones.length > 0 ? (
+  1633→                          <Select
+  1634→                            value={newItem.zonaOrigen || currentZone?.name || undefined}
+  1635→                            onValueChange={val => setNewItem(prev => ({ ...prev, zonaOrigen: val }))}
+  1636→                          >
+  1637→                            <SelectTrigger>
+  1638→                              <SelectValue placeholder="Seleccionar zona" />
+  1639→                            </SelectTrigger>
+  1640→                            <SelectContent>
+  1641→                              {currentProject.zones.map(z => (
+  1642→                                <SelectItem key={z.id} value={z.name}>{z.name}</SelectItem>
+  1643→                              ))}
+  1644→                            </SelectContent>
+  1645→                          </Select>
+  1646→                        ) : (
+  1647→                          <Input
+  1648→                            placeholder="Zona"
+  1649→                            value={newItem.zonaOrigen || currentZone?.name || ''}
+  1650→                            onChange={e => setNewItem(prev => ({ ...prev, zonaOrigen: e.target.value }))}
+  1651→                          />
+  1652→                        )}
+  1653→                      </div>
+  1654→                    )}
+  1655→                    {sStep === 1 ? (
+  1656→                      /* S1: Category is innecesario by default, shown as read-only badge */
+  1657→                      <div>
+  1658→                        <label className="text-xs font-medium">Categoría</label>
+  1659→                        <div className="h-9 flex items-center px-3 rounded-md border bg-red-50 text-red-700 text-sm font-medium">
+  1660→                          Innecesario
+  1661→                        </div>
+  1662→                      </div>
+  1663→                    ) : (
+  1664→                      /* Non-S1: Category selectable */
+  1665→                      <div>
+  1666→                        <label className="text-xs font-medium">Categoría *</label>
+  1667→                        <Select
+  1668→                          value={newItem.category || undefined}
+  1669→                          onValueChange={val => setNewItem(prev => ({ ...prev, category: val, extra: { ...(prev.extra || {}), subcategoria: '' as string } }))}
+  1670→                        >
+  1671→                          <SelectTrigger>
+  1672→                            <SelectValue placeholder="Categoría" />
+  1673→                          </SelectTrigger>
+  1674→                          <SelectContent>
+  1675→                            {config.categories.filter(cat => cat.value && cat.value.trim() !== '').map(cat => (
+  1676→                              <SelectItem key={cat.value} value={cat.value}>
+  1677→                                {cat.label}
+  1678→                              </SelectItem>
+  1679→                            ))}
+  1680→                          </SelectContent>
+  1681→                        </Select>
+  1682→                      </div>
+  1683→                    )}
+  1684→                    <div>
+  1685→                      <label className="text-xs font-medium">{sStep === 1 ? 'Cantidad' : 'Total exist.'}</label>
+  1686→                      <Input
+  1687→                        type="number"
+  1688→                        min="1"
+  1689→                        value={newItem.quantity || 1}
+  1690→                        onChange={e => setNewItem(prev => ({ ...prev, quantity: parseInt(e.target.value) || 1 }))}
+  1691→                      />
+  1692→                    </div>
+  1693→                    <div>
+  1694→                      <label className="text-xs font-medium">Precio (€)</label>
+  1695→                      <Input
+  1696→                        type="number"
+  1697→                        min="0"
+  1698→                        step="0.01"
+  1699→                        placeholder="0.00"
+  1700→                        value={newItem.price ?? ''}
+  1701→                        onChange={e => setNewItem(prev => ({ ...prev, price: e.target.value ? parseFloat(e.target.value) : null }))}
+  1702→                      />
+  1703→                    </div>
+  1704→                  </div>
+  1705→
+  1706→                  {/* S1: All fields visible and editable — Innecesario + Necesario + Etiquetas */}
+  1707→                  {sStep === 1 ? (
+  1708→                    <>
+  1709→                      {/* S1: Section labels */}
+  1710→                      <div className="flex items-center gap-3 mt-1">
+  1711→                        <div className="flex items-center gap-1.5">
+  1712→                          <div className="h-2.5 w-2.5 rounded bg-red-500" />
+  1713→                          <span className="text-[10px] font-medium text-red-700">Campos de Innecesario</span>
+  1714→                        </div>
+  1715→                        <div className="flex items-center gap-1.5">
+  1716→                          <div className="h-2.5 w-2.5 rounded bg-orange-500" />
+  1717→                          <span className="text-[10px] font-medium text-orange-700">Datos de Etiqueta</span>
+  1718→                        </div>
+  1719→                      </div>
+  1720→
+  1721→                      {/* S1: Innecesario fields — always visible and editable */}
+  1722→                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 items-end p-2 rounded-lg border border-red-200 bg-red-50/30">
+  1723→                        {['estado', 'frecuenciaUso', 'decision'].map(key => {
+  1724→                          const field = config.extraFields.find(f => f.key === key);
+  1725→                          if (!field) return null;
+  1726→                          return (
+  1727→                            <div key={field.key}>
+  1728→                              <label className="text-xs font-medium text-red-700">{field.label}</label>
+  1729→                              {field.type === 'select' && field.options ? (
+  1730→                                <Select
+  1731→                                  value={newItem.extra?.[field.key] ? String(newItem.extra[field.key]) : undefined}
+  1732→                                  onValueChange={val =>
+  1733→                                    setNewItem(prev => {
+  1734→                                      const updated = { ...prev, extra: { ...(prev.extra || {}), [field.key]: val } };
+  1735→                                      // If decision is Eliminar/Tirar: clear quarantine/entry fields
+  1736→                                      if (field.key === 'decision' && (val === 'Eliminar' || val === 'Tirar')) {
+  1737→                                        updated.jaulaFechaEntrada = null;
+  1738→                                        delete updated.extra.diasCuarentena;
+  1739→                                      }
+  1740→                                      // If decision is Jaula: set default entry date and quarantine
+  1741→                                      if (field.key === 'decision' && val === 'Jaula') {
+  1742→                                        if (!updated.jaulaFechaEntrada) updated.jaulaFechaEntrada = new Date().toISOString();
+  1743→                                        if (!updated.extra.diasCuarentena) updated.extra.diasCuarentena = 40;
+  1744→                                      }
+  1745→                                      return updated;
+  1746→                                    })
+  1747→                                  }
+  1748→                                >
+  1749→                                  <SelectTrigger>
+  1750→                                    <SelectValue placeholder={field.label} />
+  1751→                                  </SelectTrigger>
+  1752→                                  <SelectContent>
+  1753→                                    {field.options.filter(opt => opt && opt.trim() !== '').map(opt => (
+  1754→                                      <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+  1755→                                    ))}
+  1756→                                  </SelectContent>
+  1757→                                </Select>
+  1758→                              ) : (
+  1759→                                <Input
+  1760→                                  placeholder={field.label}
+  1761→                                  value={String(newItem.extra?.[field.key] ?? '')}
+  1762→                                  onChange={e =>
+  1763→                                    setNewItem(prev => ({
+  1764→                                      ...prev,
+  1765→                                      extra: { ...(prev.extra || {}), [field.key]: e.target.value },
+  1766→                                    }))
+  1767→                                  }
+  1768→                                />
+  1769→                              )}
+  1770→                            </div>
+  1771→                          );
+  1772→                        })}
+  1773→                        <div className="col-span-full flex items-center gap-1">
+  1774→                          <div className="w-2 h-2 rounded-full bg-red-400" />
+  1775→                          <span className="text-[9px] text-red-600 font-medium">
+  1776→                            {newItem.extra?.decision === 'Eliminar' || newItem.extra?.decision === 'Tirar'
+  1777→                              ? `Decisión: ${newItem.extra.decision} → va a Residuo (sin etiqueta, sin cuarentena)`
+  1778→                              : 'Decisión: Jaula → etiqueta roja con cuarentena'}
+  1779→                          </span>
+  1780→                        </div>
+  1781→                      </div>
+  1782→
+  1783→                      {/* S1: Etiqueta fields — ONLY for Jaula decision (Eliminar/Tirar go to Residuo, no tag/quarantine) */}
+  1784→                      {(!newItem.extra?.decision || newItem.extra.decision === 'Jaula') && (
+  1785→                      <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 items-end p-2 rounded-lg border border-orange-200 bg-orange-50/30">
+  1786→                        <div>
+  1787→                          <label className="text-xs font-medium text-orange-700 flex items-center gap-1">
+  1788→                            <Tag className="h-3 w-3" />
+  1789→                            F. Entrada
+  1790→                          </label>
+  1791→                          <Input
+  1792→                            type="date"
+  1793→                            value={newItem.jaulaFechaEntrada ? new Date(newItem.jaulaFechaEntrada).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]}
+  1794→                            onChange={e => {
+  1795→                              const val = e.target.value ? new Date(e.target.value + 'T12:00:00').toISOString() : null;
+  1796→                              setNewItem(prev => ({ ...prev, jaulaFechaEntrada: val }));
+  1797→                            }}
+  1798→                          />
+  1799→                        </div>
+  1800→                        <div>
+  1801→                          <label className="text-xs font-medium text-orange-700 flex items-center gap-1">
+  1802→                            <Tag className="h-3 w-3" />
+  1803→                            Días cuarentena
+  1804→                          </label>
+  1805→                          <Select
+  1806→                            value={String(newItem.extra?.diasCuarentena ?? 40)}
+  1807→                            onValueChange={val =>
+  1808→                              setNewItem(prev => ({
+  1809→                                ...prev,
+  1810→                                extra: { ...(prev.extra || {}), diasCuarentena: parseInt(val) || 40 },
+  1811→                              }))
+  1812→                            }
+  1813→                          >
+  1814→                            <SelectTrigger>
+  1815→                              <SelectValue />
+  1816→                            </SelectTrigger>
+  1817→                            <SelectContent>
+  1818→                              {[7, 15, 20, 30, 40, 60, 90].map(d => (
+  1819→                                <SelectItem key={d} value={String(d)}>{d} días</SelectItem>
+  1820→                              ))}
+  1821→                            </SelectContent>
+  1822→                          </Select>
+  1823→                        </div>
+  1824→                        <div>
+  1825→                          <label className="text-xs font-medium text-orange-700 flex items-center gap-1">
+  1826→                            <Tag className="h-3 w-3" />
+  1827→                            F. Revisión
+  1828→                          </label>
+  1829→                          <Input
+  1830→                            type="date"
+  1831→                            value={(() => {
+  1832→                              const base = newItem.jaulaFechaEntrada || new Date().toISOString();
+  1833→                              const dias = Number(newItem.extra?.diasCuarentena ?? 40);
+  1834→                              try {
+  1835→                                const d = new Date(base);
+  1836→                                d.setDate(d.getDate() + dias);
+  1837→                                return d.toISOString().split('T')[0];
+  1838→                              } catch { return ''; }
+  1839→                            })()}
+  1840→                            readOnly
+  1841→                            className="bg-orange-50"
+  1842→                          />
+  1843→                        </div>
+  1844→                        <div className="flex items-end">
+  1845→                          <div className="flex items-center gap-1">
+  1846→                            <div className="w-2 h-2 rounded-full bg-orange-500" />
+  1847→                            <span className="text-[9px] text-orange-600 font-medium">Datos para etiqueta roja</span>
+  1848→                          </div>
+  1849→                        </div>
+  1850→                      </div>
+  1851→                      )}
+  1852→                    </>
+  1853→                  ) : (
+  1854→                  /* Non-S1: Original extra fields */
+  1855→                  config.extraFields.length > 0 && (
+  1856→                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 items-end">
+  1857→                      {config.extraFields.map(field => {
+  1858→                        // Dynamic subcategoria: filter options based on selected category
+  1859→                        let effectiveOptions = field.type === 'select' ? field.options : undefined;
+  1860→                        if (field.key === 'subcategoria' && config.desplegables_jerarquicos) {
+  1861→                          const selectedCat = newItem.category;
+  1862→                          if (selectedCat) {
+  1863→                            const catLabel = config.categories.find(c => c.value === selectedCat)?.label;
+  1864→                            const hierEntry = catLabel && config.desplegables_jerarquicos[catLabel]
+  1865→                              ? config.desplegables_jerarquicos[catLabel]
+  1866→                              : config.desplegables_jerarquicos[selectedCat];
+  1867→                            if (hierEntry) {
+  1868→                              effectiveOptions = hierEntry.subcategorias;
+  1869→                            } else {
+  1870→                              effectiveOptions = [];
+  1871→                            }
+  1872→                          } else {
+  1873→                            effectiveOptions = Object.values(config.desplegables_jerarquicos).flatMap(h => h.subcategorias);
+  1874→                          }
+  1875→                        }
+  1876→                        return (
+  1877→                        <div key={field.key}>
+  1878→                          <label className="text-xs font-medium">{field.label}</label>
+  1879→                          {field.type === 'select' && effectiveOptions ? (
+  1880→                            <Select
+  1881→                              value={newItem.extra?.[field.key] ? String(newItem.extra[field.key]) : undefined}
+  1882→                              onValueChange={val =>
+  1883→                                setNewItem(prev => ({
+  1884→                                  ...prev,
+  1885→                                  extra: { ...(prev.extra || {}), [field.key]: val },
+  1886→                                }))
+  1887→                              }
+  1888→                            >
+  1889→                              <SelectTrigger>
+  1890→                                <SelectValue placeholder={field.label} />
+  1891→                              </SelectTrigger>
+  1892→                              <SelectContent>
+  1893→                                {effectiveOptions.filter(opt => opt && opt.trim() !== '').map(opt => (
+  1894→                                  <SelectItem key={opt} value={opt}>
+  1895→                                    {opt}
+  1896→                                  </SelectItem>
+  1897→                                ))}
+  1898→                              </SelectContent>
+  1899→                            </Select>
+  1900→                          ) : field.type === 'number' ? (
+  1901→                            <Input
+  1902→                              type="number"
+  1903→                              min="0"
+  1904→                              max="100"
+  1905→                              placeholder={field.label}
+  1906→                              value={newItem.extra?.[field.key] ?? ''}
+  1907→                              onChange={e =>
+  1908→                                setNewItem(prev => ({
+  1909→                                  ...prev,
+  1910→                                  extra: { ...(prev.extra || {}), [field.key]: parseInt(e.target.value) || 0 },
+  1911→                                }))
+  1912→                              }
+  1913→                            />
+  1914→                          ) : (
+  1915→                            <Input
+  1916→                              placeholder={field.label}
+  1917→                              value={String(newItem.extra?.[field.key] ?? '')}
+  1918→                              onChange={e =>
+  1919→                                setNewItem(prev => ({
+  1920→                                  ...prev,
+  1921→                                  extra: { ...(prev.extra || {}), [field.key]: e.target.value },
+  1922→                                }))
+  1923→                              }
+  1924→                            />
+  1925→                          )}
+  1926→                        </div>
+  1927→                        );
+  1928→                      })}
+  1929→                    </div>
+  1930→                  )
+  1931→                  )}
+  1932→
+  1933→                  {/* Add button + Photo attach */}
+  1934→                  <div className="flex justify-end items-center gap-2">
+  1935→                    {pendingNewPhoto && (
+  1936→                      <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+  1937→                        <div className="w-6 h-6 rounded bg-muted flex items-center justify-center">
+  1938→                          <ImageIcon className="h-3 w-3" />
+  1939→                        </div>
+  1940→                        <span className="max-w-[120px] truncate">{pendingNewPhoto.name}</span>
+  1941→                        <button className="text-destructive hover:text-red-700" onClick={() => setPendingNewPhoto(null)}>
+  1942→                          <X className="h-3 w-3" />
+  1943→                        </button>
+  1944→                      </div>
+  1945→                    )}
+  1946→                    {!isReadOnly && (
+  1947→                      <div className="flex items-center gap-1">
+  1948→                        <Select value={pendingNewPhotoType} onValueChange={setPendingNewPhotoType}>
+  1949→                          <SelectTrigger className="h-7 w-20 text-[10px]">
+  1950→                            <SelectValue />
+  1951→                          </SelectTrigger>
+  1952→                          <SelectContent>
+  1953→                            <SelectItem value="antes">Antes</SelectItem>
+  1954→                            <SelectItem value="despues">Después</SelectItem>
+  1955→                          </SelectContent>
+  1956→                        </Select>
+  1957→                        <label className="inline-flex items-center justify-center h-7 px-2 rounded-md border border-input bg-background text-xs cursor-pointer hover:bg-accent transition-colors gap-1">
+  1958→                          <Camera className="h-3 w-3" />
+  1959→                          Adjuntar Foto
+  1960→                          <input
+  1961→                            type="file"
+  1962→                            accept="image/*"
+  1963→                            capture="environment"
+  1964→                            className="hidden"
+  1965→                            onChange={e => {
+  1966→                              const file = e.target.files?.[0];
+  1967→                              if (file) setPendingNewPhoto(file);
+  1968→                              e.target.value = '';
+  1969→                            }}
+  1970→                          />
+  1971→                        </label>
+  1972→                      </div>
+  1973→                    )}
+  1974→                    <Button
+  1975→                      onClick={handleAddItem}
+  1976→                      disabled={!newItem.name || !newItem.category}
+  1977→                      size="sm"
+  1978→                      style={{ backgroundColor: sStepData?.color }}
+  1979→                    >
+  1980→                      <Plus className="h-4 w-4 mr-1" /> Agregar
+  1981→                    </Button>
+  1982→                  </div>
+  1983→                </div>
+  1984→              </CardContent>
+  1985→            </Card>
+  1986→
+  1987→            {/* ═══ S3: Puntos de Suciedad — Before/After Photos ═══ */}
+  1988→            {sStep === 3 && items.some(i => (itemPhotos[i.id!] || i.photos || []).length > 0) && (
+  1989→              <Card className="border-2 border-orange-200 bg-orange-50/30">
+  1990→                <CardContent className="p-4">
+  1991→                  <div className="flex items-center gap-2 mb-3">
+  1992→                    <Camera className="h-5 w-5 text-orange-600" />
+  1993→                    <h4 className="font-semibold text-orange-800">Puntos de Suciedad — Fotos Antes/Después</h4>
+  1994→                  </div>
+  1995→                  <p className="text-xs text-muted-foreground mb-3">
+  1996→                    Las fotos vinculadas a cada punto de suciedad ayudan a documentar el estado antes y después de la limpieza.
+  1997→                  </p>
+  1998→                  <div className="space-y-3 max-h-64 overflow-y-auto">
+  1999→                    {items.filter(i => (itemPhotos[i.id!] || i.photos || []).length > 0).map(item => {
+  2000→                      const itemPhotoList = itemPhotos[item.id!] || item.photos || [];
+
+[showing lines 1501-2000 of 2620; use offset=2001 with limit to continue reading]
