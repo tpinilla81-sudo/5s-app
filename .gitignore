@@ -57,3 +57,6 @@ worklog.md
 .env*
 tool-results/
 5s-app-original/
+
+upload/
+db/
