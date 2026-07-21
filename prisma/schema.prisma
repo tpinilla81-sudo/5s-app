@@ -53,7 +53,7 @@ model Project {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  companyRel         Company?            @relation(fields: [companyId], references: [id])
+  companyRel         Company?            @relation(fields: [companyId], references: [id], onDelete: Cascade)
   zones              Zone[]
   members            ProjectMember[]
   progress           Progress[]

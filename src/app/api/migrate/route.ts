@@ -1,74 +1,50 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { getAuthUser } from '@/lib/auth-helpers'
 import { db } from '@/lib/db'
 
-// POST /api/migrate — Run database migrations
+// POST /api/migrate — Apply pending migrations (gestor only)
+// This endpoint applies the cascade-delete migration for Project→Company
 export async function POST(request: NextRequest) {
   try {
+    const user = await getAuthUser(request)
+    if (!user) {
+      return NextResponse.json({ success: false, error: 'No autenticado' }, { status: 401 })
+    }
+    if (user.role !== 'gestor') {
+      return NextResponse.json({ success: false, error: 'Solo el gestor puede aplicar migraciones' }, { status: 403 })
+    }
+
+    // Apply the cascade-delete migration for Project.companyId → Company.id
+    // This allows deleting a Company to automatically cascade-delete all its Projects
     const results: string[] = []
 
-    // Add plainPassword column to User table
     try {
-      await db.$queryRawUnsafe(`SELECT "plainPassword" FROM "User" LIMIT 1`)
-      results.push('User.plainPassword already exists')
-    } catch {
-      try {
-        await db.$executeRawUnsafe(`ALTER TABLE "User" ADD COLUMN "plainPassword" TEXT`)
-        results.push('User.plainPassword added successfully')
-      } catch (alterErr: any) {
-        results.push(`Error adding User.plainPassword: ${alterErr.message || String(alterErr)}`)
-      }
+      // Drop existing foreign key and re-add with ON DELETE CASCADE
+      await db.$executeRawUnsafe(`
+        ALTER TABLE "Project" DROP CONSTRAINT IF EXISTS "Project_companyId_fkey";
+      `)
+      results.push('Dropped existing Project_companyId_fkey constraint')
+
+      await db.$executeRawUnsafe(`
+        ALTER TABLE "Project" ADD CONSTRAINT "Project_companyId_fkey"
+        FOREIGN KEY ("companyId") REFERENCES "Company"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+      `)
+      results.push('Added Project_companyId_fkey with ON DELETE CASCADE')
+    } catch (migrationError) {
+      const msg = migrationError instanceof Error ? migrationError.message : String(migrationError)
+      results.push(`Migration error: ${msg}`)
     }
-
-    // Also run schema migrations from /api/migrate/schema
-    const addColumnIfMissing = async (table: string, column: string, type: string) => {
-      try {
-        await db.$queryRawUnsafe(`SELECT "${column}" FROM "${table}" LIMIT 1`)
-        results.push(`${table}.${column} already exists`)
-      } catch {
-        try {
-          await db.$executeRawUnsafe(`ALTER TABLE "${table}" ADD COLUMN "${column}" ${type}`)
-          results.push(`${table}.${column} added successfully`)
-        } catch (alterErr: any) {
-          results.push(`Error adding ${table}.${column}: ${alterErr.message || String(alterErr)}`)
-        }
-      }
-    }
-
-    // CompanyMember columns
-    await addColumnIfMissing('CompanyMember', 'invitationEmailSent', 'BOOLEAN NOT NULL DEFAULT false')
-
-    // Company columns
-    await addColumnIfMissing('Company', 'nif', 'TEXT')
-    await addColumnIfMissing('Company', 'sector', 'TEXT')
-    await addColumnIfMissing('Company', 'address', 'TEXT')
-    await addColumnIfMissing('Company', 'city', 'TEXT')
-    await addColumnIfMissing('Company', 'province', 'TEXT')
-    await addColumnIfMissing('Company', 'postalCode', 'TEXT')
-    await addColumnIfMissing('Company', 'country', 'TEXT')
-    await addColumnIfMissing('Company', 'phone', 'TEXT')
-    await addColumnIfMissing('Company', 'website', 'TEXT')
-    await addColumnIfMissing('Company', 'billingEmail', 'TEXT')
-    await addColumnIfMissing('Company', 'billingName', 'TEXT')
-    await addColumnIfMissing('Company', 'billingNif', 'TEXT')
-    await addColumnIfMissing('Company', 'billingAddress', 'TEXT')
-    await addColumnIfMissing('Company', 'billingCity', 'TEXT')
-    await addColumnIfMissing('Company', 'billingPostalCode', 'TEXT')
-    await addColumnIfMissing('Company', 'iban', 'TEXT')
-    await addColumnIfMissing('Company', 'contactName', 'TEXT')
-    await addColumnIfMissing('Company', 'contactEmail', 'TEXT')
-    await addColumnIfMissing('Company', 'contactPhone', 'TEXT')
 
     return NextResponse.json({
       success: true,
-      message: 'Migración completada',
-      results,
+      message: 'Migración aplicada',
+      details: results,
     })
-  } catch (error: any) {
-    console.error('[MIGRATE] Error:', error)
+  } catch (error) {
+    console.error('Migration error:', error)
     return NextResponse.json({
       success: false,
-      error: 'Error al ejecutar migración',
-      details: error.message || String(error),
+      error: error instanceof Error ? error.message : 'Error en migración',
     }, { status: 500 })
   }
 }

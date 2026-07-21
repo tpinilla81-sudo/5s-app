@@ -167,43 +167,30 @@ export async function DELETE(
       return NextResponse.json({ success: false, error: 'Solo el gestor (dueño de la app) puede eliminar empresas' }, { status: 403 })
     }
 
-    // Get company members before deletion to handle orphan admins
-    const companyMembers = await db.companyMember.findMany({
-      where: { companyId },
+    // Get company info before deletion
+    const company = await db.company.findUnique({
+      where: { id: companyId },
       include: {
-        user: {
-          select: { id: true, role: true, active: true },
+        projects: {
+          select: { id: true, name: true },
+        },
+        members: {
+          include: {
+            user: { select: { id: true, role: true, active: true } },
+          },
         },
       },
     })
 
-    // HARD DELETE — always delete everything completely
-
-    // Delete all projects first (cascade will handle project children)
-    let deletedProjectCount = 0
-    const projects = await db.project.findMany({
-      where: { companyId },
-      select: { id: true },
-    })
-
-    for (const project of projects) {
-      try {
-        // Delete project — Prisma cascade will handle:
-        // zones → memberZones, progress, inventoryItems, auditTargets, standards, photos, pdcaItems
-        // members (ProjectMember) → memberZones
-        // progress, employeeProgress, inventoryItems, examAnswers, auditResults,
-        // checklistResponses, actionItems, auditTargets, standards, photoLibrary, pdcaItems
-        await db.project.delete({ where: { id: project.id } })
-        deletedProjectCount++
-      } catch (projectDeleteError) {
-        console.error(`Error deleting project ${project.id}:`, projectDeleteError)
-        // Try to continue with other projects
-      }
+    if (!company) {
+      return NextResponse.json({ success: false, error: 'Empresa no encontrada' }, { status: 404 })
     }
+
+    const projectCount = company.projects.length
 
     // Find orphan admins to delete along with the company
     const orphanAdminIds: string[] = []
-    for (const member of companyMembers) {
+    for (const member of company.members) {
       if (member.user.role === 'admin') {
         const otherMemberships = await db.companyMember.count({
           where: {
@@ -211,10 +198,100 @@ export async function DELETE(
             NOT: { companyId },
           },
         })
-        // If this admin only belongs to this company, mark for deletion
         if (otherMemberships === 0) {
           orphanAdminIds.push(member.userId)
         }
+      }
+    }
+
+    // ── Delete all projects and their related data manually ──
+    // This ensures deletion works even without the CASCADE migration applied
+    let deletedProjectCount = 0
+    const errors: string[] = []
+
+    for (const project of company.projects) {
+      try {
+        // Delete in correct order to avoid FK constraint errors
+        // Project-level data that references the project
+        await db.actionItem.deleteMany({ where: { projectId: project.id } })
+        await db.pDCAItem.deleteMany({ where: { projectId: project.id } })
+        await db.auditResult.deleteMany({ where: { projectId: project.id } })
+        await db.checklistResponse.deleteMany({ where: { projectId: project.id } })
+        await db.examAnswer.deleteMany({ where: { projectId: project.id } })
+        await db.inventoryItem.deleteMany({ where: { projectId: project.id } })
+        await db.employeeProgress.deleteMany({ where: { projectId: project.id } })
+        await db.progress.deleteMany({ where: { projectId: project.id } })
+        await db.photoLibrary.deleteMany({ where: { projectId: project.id } })
+        await db.evaluationSchedule.deleteMany({ where: { projectId: project.id } })
+        await db.auditTarget.deleteMany({ where: { projectId: project.id } })
+        await db.standard.deleteMany({ where: { projectId: project.id } })
+
+        // Zone-level data: get zones and clean their children
+        const zones = await db.zone.findMany({
+          where: { projectId: project.id },
+          select: { id: true },
+        })
+
+        for (const zone of zones) {
+          // Delete member zones referencing this zone
+          await db.memberZone.deleteMany({ where: { zoneId: zone.id } })
+        }
+
+        // Delete board slots and their related data via board configurations
+        const boardConfigs = await db.boardConfiguration.findMany({
+          where: { zones: { some: { projectId: project.id } } },
+          select: { id: true },
+        })
+        for (const bc of boardConfigs) {
+          const slots = await db.boardSlot.findMany({
+            where: { boardConfigId: bc.id },
+            select: { id: true },
+          })
+          for (const slot of slots) {
+            await db.boardSlotTemplate.deleteMany({ where: { slotId: slot.id } })
+            await db.boardSlotStandard.deleteMany({ where: { slotId: slot.id } })
+          }
+          await db.boardSlot.deleteMany({ where: { boardConfigId: bc.id } })
+        }
+
+        // Delete project members (after member zones are deleted)
+        await db.projectMember.deleteMany({ where: { projectId: project.id } })
+
+        // Delete zones (after all zone-related data is deleted)
+        await db.zone.deleteMany({ where: { projectId: project.id } })
+
+        // Delete board configurations that belong to this project's zones
+        await db.boardConfiguration.deleteMany({
+          where: { zones: { some: { projectId: project.id } } },
+        })
+
+        // Finally delete the project itself
+        await db.project.delete({ where: { id: project.id } })
+        deletedProjectCount++
+      } catch (projectDeleteError) {
+        const errMsg = projectDeleteError instanceof Error ? projectDeleteError.message : String(projectDeleteError)
+        console.error(`Error deleting project ${project.id} (${project.name}):`, errMsg)
+        errors.push(`Proyecto "${project.name}": ${errMsg}`)
+      }
+    }
+
+    // If some projects failed to delete, try the cascade approach (works if migration is applied)
+    if (errors.length > 0 && deletedProjectCount < projectCount) {
+      try {
+        await db.company.delete({ where: { id: companyId } })
+        // If we get here, cascade worked
+        return NextResponse.json({
+          success: true,
+          deletedProjectCount: projectCount,
+          deletedAdminCount: 0,
+          message: 'Empresa eliminada permanentemente (via cascade)',
+        })
+      } catch {
+        // Cascade didn't work either, report errors
+        return NextResponse.json({
+          success: false,
+          error: `No se pudieron eliminar todos los proyectos. Errores: ${errors.join('; ')}`,
+        }, { status: 500 })
       }
     }
 
@@ -225,21 +302,18 @@ export async function DELETE(
     let deletedAdminCount = 0
     for (const userId of orphanAdminIds) {
       try {
-        // Clean up user's related records before deletion
         await db.session.deleteMany({ where: { userId } })
         await db.employeeProgress.deleteMany({ where: { userId } })
         await db.memberZone.deleteMany({ where: { member: { userId } } })
         await db.projectMember.deleteMany({ where: { userId } })
-        // CompanyMember already cascade-deleted with company
         await db.user.delete({ where: { id: userId } })
         deletedAdminCount++
       } catch (userDeleteError) {
         console.error(`Error deleting orphan admin ${userId}:`, userDeleteError)
-        // Continue with other admins even if one fails
       }
     }
 
-    const parts: string[] = ['Empresa eliminada']
+    const parts: string[] = ['Empresa eliminada permanentemente']
     if (deletedProjectCount > 0) parts.push(`${deletedProjectCount} proyecto(s) eliminado(s)`)
     if (deletedAdminCount > 0) parts.push(`${deletedAdminCount} administrador(es) eliminado(s)`)
 
@@ -251,6 +325,7 @@ export async function DELETE(
     })
   } catch (error) {
     console.error('Delete company error:', error)
-    return NextResponse.json({ success: false, error: 'Error al eliminar empresa' }, { status: 500 })
+    const errorMessage = error instanceof Error ? error.message : 'Error al eliminar empresa'
+    return NextResponse.json({ success: false, error: errorMessage }, { status: 500 })
   }
 }
