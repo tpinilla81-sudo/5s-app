@@ -277,31 +277,25 @@ export default function HomePage() {
   // Available tabs based on role
   // GESTOR (dueño de la app): ONLY sees "Gestión" tab (company management platform)
   // ADMIN (admin de empresa): sees operational tabs (board, gerencia, admin, mejora continua)
-  const availableTabs: { key: 'board' | 'gerente' | 'admin' | 'maintenance' | 'gestion' | 'actionplan' | 'jaula' | 'activos' | 'puntoLimpio'; label: string; icon: React.ReactNode }[] = [];
+  const availableTabs: { key: 'board' | 'gerente' | 'admin' | 'maintenance' | 'gestion'; label: string; icon: React.ReactNode }[] = [];
 
   if (isGestor) {
     // Gestor ONLY sees the platform management tab
     availableTabs.push({ key: 'gestion', label: 'Gestión', icon: <Crown className="h-3.5 w-3.5" /> });
   } else {
-    // All other roles see the operational tabs
-    availableTabs.push({ key: 'board', label: 'Tablero 5S', icon: <LayoutDashboard className="h-3.5 w-3.5" /> });
-    // Plan de Acción: visible to all EXCEPT auditor
-    const isAuditor = currentUser?.role === 'auditor';
-    if (!isAuditor) {
-      availableTabs.push({ key: 'actionplan', label: 'Plan de Acción', icon: <ListChecks className="h-3.5 w-3.5" /> });
-    }
-    // Jaula, Activos, Punto Limpio tabs
-    availableTabs.push({ key: 'jaula', label: 'Jaula', icon: <Package className="h-3.5 w-3.5" /> });
-    availableTabs.push({ key: 'activos', label: 'Activos', icon: <BoxSelect className="h-3.5 w-3.5" /> });
-    availableTabs.push({ key: 'puntoLimpio', label: 'P. Limpio', icon: <Droplets className="h-3.5 w-3.5" /> });
+    // Tablero 5S — visible for all roles (includes Jaula, Activos, P.Limpio, Plan de Acción)
+    availableTabs.push({ key: 'board', label: 'Tablero', icon: <LayoutDashboard className="h-3.5 w-3.5" /> });
+    // Gerencia — only for roles with view_progress or edit_project permission
     if (canSeeGerentePanel) {
       availableTabs.push({ key: 'gerente', label: 'Gerencia', icon: <BarChart3 className="h-3.5 w-3.5" /> });
     }
     if (isAdmin) {
       availableTabs.push({ key: 'admin', label: 'Admin', icon: <Shield className="h-3.5 w-3.5" /> });
     }
-    // Mejora Continua: always visible (Phase 6 / PDCA)
-    availableTabs.push({ key: 'maintenance', label: 'Mejora Continua', icon: <Sparkles className="h-3.5 w-3.5" /> });
+    // Mejora Continua — solo visible cuando se completa el ciclo completo del tablero (las 5S)
+    if (is5SCompleted()) {
+      availableTabs.push({ key: 'maintenance', label: 'Mejora Continua', icon: <Sparkles className="h-3.5 w-3.5" /> });
+    }
   }
 
   // Loading screen
@@ -519,30 +513,6 @@ export default function HomePage() {
                     <SheetTitle className="text-left">Menú</SheetTitle>
                   </SheetHeader>
                   <div className="flex flex-col p-2 gap-1 overflow-y-auto">
-                    {/* 📦 Inventario */}
-                    {canSeeNotifications && (
-                      <button className="flex items-center gap-3 w-full px-3 py-3 rounded-lg hover:bg-red-50 transition-colors text-left min-h-[44px]"
-                        onClick={() => { setMobileMenuOpen(false); setActiveTab('jaula'); }}>
-                        <Package className="h-5 w-5 text-red-500 shrink-0" />
-                        <span className="text-sm font-medium text-red-600">Jaula</span>
-                      </button>
-                    )}
-                    {/* ✅ Activos */}
-                    {canSeeNotifications && (
-                      <button className="flex items-center gap-3 w-full px-3 py-3 rounded-lg hover:bg-green-50 transition-colors text-left min-h-[44px]"
-                        onClick={() => { setMobileMenuOpen(false); setActiveTab('activos'); }}>
-                        <BoxSelect className="h-5 w-5 text-green-500 shrink-0" />
-                        <span className="text-sm font-medium text-green-600">Activos</span>
-                      </button>
-                    )}
-                    {/* 💧 Punto Limpio */}
-                    {canSeeNotifications && (
-                      <button className="flex items-center gap-3 w-full px-3 py-3 rounded-lg hover:bg-blue-50 transition-colors text-left min-h-[44px]"
-                        onClick={() => { setMobileMenuOpen(false); setActiveTab('puntoLimpio'); }}>
-                        <Droplets className="h-5 w-5 text-blue-500 shrink-0" />
-                        <span className="text-sm font-medium text-blue-600">Punto Limpio</span>
-                      </button>
-                    )}
                     {/* 📸 Fotos */}
                     {canSeeNotifications && (
                       <button className="flex items-center gap-3 w-full px-3 py-3 rounded-lg hover:bg-purple-50 transition-colors text-left min-h-[44px]"
@@ -557,14 +527,6 @@ export default function HomePage() {
                         onClick={() => { setMobileMenuOpen(false); openModal('standards', 3); }}>
                         <BookOpen className="h-5 w-5 text-indigo-500 shrink-0" />
                         <span className="text-sm font-medium text-indigo-600">Estándares</span>
-                      </button>
-                    )}
-                    {/* 📋 Plan de Acción */}
-                    {canSeeNotifications && (
-                      <button className="flex items-center gap-3 w-full px-3 py-3 rounded-lg hover:bg-orange-50 transition-colors text-left min-h-[44px]"
-                        onClick={() => { setMobileMenuOpen(false); setActiveTab('actionplan'); }}>
-                        <ListChecks className="h-5 w-5 text-orange-500 shrink-0" />
-                        <span className="text-sm font-medium text-orange-600">Plan de Acción</span>
                       </button>
                     )}
                     {/* 🔓 Lock/Unlock */}
@@ -645,36 +607,6 @@ export default function HomePage() {
                 )}
               </Button>
             )}
-            {/* 📦 Inventario (Jaula de Excedentes) */}
-            {canSeeNotifications && (
-              <Button variant="outline" size="sm"
-                className="gap-1 text-[10px] h-8 border-red-300 text-red-600 hover:bg-red-50"
-                onClick={() => setActiveTab('jaula')}
-                title="Jaula de Excedentes">
-                <Package className="h-3 w-3" />
-                <span className="hidden sm:inline">Jaula</span>
-              </Button>
-            )}
-            {/* ✅ Activos (Necesarios) */}
-            {canSeeNotifications && (
-              <Button variant="outline" size="sm"
-                className="gap-1 text-[10px] h-8 border-green-300 text-green-600 hover:bg-green-50"
-                onClick={() => setActiveTab('activos')}
-                title="Activos (Necesarios)">
-                <BoxSelect className="h-3 w-3" />
-                <span className="hidden sm:inline">Activos</span>
-              </Button>
-            )}
-            {/* 💧 Punto Limpio */}
-            {canSeeNotifications && (
-              <Button variant="outline" size="sm"
-                className="gap-1 text-[10px] h-8 border-blue-300 text-blue-600 hover:bg-blue-50"
-                onClick={() => setActiveTab('puntoLimpio')}
-                title="Punto Limpio (Suciedad)">
-                <Droplets className="h-3 w-3" />
-                <span className="hidden sm:inline">P. Limpio</span>
-              </Button>
-            )}
             {/* 📸 Biblioteca de Fotos */}
             {canSeeNotifications && (
               <Button variant="outline" size="sm"
@@ -693,16 +625,6 @@ export default function HomePage() {
                 title="Biblioteca de Estándares">
                 <BookOpen className="h-3 w-3" />
                 <span className="hidden sm:inline">Estándares</span>
-              </Button>
-            )}
-            {/* 📋 Plan de Acción General */}
-            {canSeeNotifications && (
-              <Button variant="outline" size="sm"
-                className="gap-1 text-[10px] h-8 border-orange-300 text-orange-600 hover:bg-orange-50"
-                onClick={() => setActiveTab('actionplan')}
-                title="Plan de Acción General">
-                <ListChecks className="h-3 w-3" />
-                <span className="hidden sm:inline">Plan Acc.</span>
               </Button>
             )}
             {/* Free navigation lock */}
@@ -1243,34 +1165,6 @@ export default function HomePage() {
                     </div>
                   </div>
                   )}
-                </motion.div>
-              )}
-
-              {/* ═══ TAB: PLAN DE ACCIÓN ═══ */}
-              {activeTab === 'actionplan' && currentUser?.role !== 'auditor' && (
-                <motion.div key="actionplan" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex-1 min-h-0 overflow-hidden">
-                  <PlanDeAccionView />
-                </motion.div>
-              )}
-
-              {/* ═══ TAB: JAULA ═══ */}
-              {activeTab === 'jaula' && (
-                <motion.div key="jaula" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex-1 min-h-0 overflow-hidden">
-                  <JaulaView />
-                </motion.div>
-              )}
-
-              {/* ═══ TAB: ACTIVOS ═══ */}
-              {activeTab === 'activos' && (
-                <motion.div key="activos" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex-1 min-h-0 overflow-hidden">
-                  <ActivosView />
-                </motion.div>
-              )}
-
-              {/* ═══ TAB: PUNTO LIMPIO ═══ */}
-              {activeTab === 'puntoLimpio' && (
-                <motion.div key="puntoLimpio" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex-1 min-h-0 overflow-hidden">
-                  <PuntoLimpioView />
                 </motion.div>
               )}
 
